@@ -1,4 +1,4 @@
-package data
+package dao
 
 const (
 	// record is deleted
