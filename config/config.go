@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -82,18 +83,49 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 func ParseProfile(args []string) string {
 	profile := "dev" // the default one
 
-	for _, s := range args {
-		var eq int = strings.Index(s, "=")
-		if eq != -1 {
-			if key := s[:eq]; key == "profile" {
-				profile = s[eq+1:]
-				break
-			}
-		}
-	}
+	profile = ExtractArgValue(args, func(key string) bool {
+		return key == "profile"
+	})
 
 	if strings.TrimSpace(profile) == "" {
 		profile = "dev" // the default is dev
 	}
 	return profile
+}
+
+/*
+	Parse Cli Arg to extract a absolute path to the config file
+
+	It looks for the arg that matches the pattern "configFile=[/path/to/configFile]"
+	If none is found, and the profile is empty, it's by default 'app-conf-dev.json'
+	If profile is specified, then it looks for 'app-conf-${profile}.json'
+*/
+func ParseConfigFilePath(args []string, profile string) string {
+	if strings.TrimSpace(profile) == "" {
+		profile = "dev"
+	}
+
+	path := ExtractArgValue(args, func(key string) bool {
+		return key == "configFile"
+	})
+
+	if strings.TrimSpace(path) == "" {
+		path = fmt.Sprintf("app-conf-%v.json", profile)
+	}
+	return path
+}
+
+/*
+	Parse Cli Arg to extract a value from arg, [key]=[value]
+*/
+func ExtractArgValue(args []string, predicate func(key string) bool) string {
+	for _, s := range args {
+		var eq int = strings.Index(s, "=")
+		if eq != -1 {
+			if key := s[:eq]; predicate(key) {
+				return s[eq+1:]
+			}
+		}
+	}
+	return ""
 }
