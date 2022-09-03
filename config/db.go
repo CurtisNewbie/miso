@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-redis/redis"
 	log "github.com/sirupsen/logrus"
 
 	"gorm.io/driver/mysql"
@@ -21,6 +22,22 @@ var (
 	// Global handle to the database
 	dbHandle *gorm.DB
 )
+
+// Init handle to redis
+func InitRedisFromConfig(config *RedisConfig) *redis.Client {
+	return InitRedis(config.Address, config.Port, config.Username, config.Password, config.Database)
+}
+
+// Init handle to redis
+func InitRedis(address string, port string, username string, password string, db int) *redis.Client {
+	log.Printf("Connecting to redis '%v:%v', database: %v", address, port, db)
+	var rdb *redis.Client = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", address, port),
+		Password: password,
+		DB:       db,
+	})
+	return rdb
+}
 
 /* Init Handle to the database */
 func InitDBFromConfig(config *DBConfig) error {
