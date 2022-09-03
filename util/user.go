@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/curtisnewbie/gocommon/weberr"
@@ -22,6 +23,13 @@ type User struct {
 	Username string
 	Role     string
 	Services []string
+}
+
+// Check if role matches, else panic
+func RequireRole(user *User, role Role) {
+	if !IsRole(user, role) {
+		panic(fmt.Sprintf("Role %s is required", role))
+	}
 }
 
 /* Extract User from request headers */

@@ -29,6 +29,11 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 			util.DispatchErrJson(c, err)
 			return
 		}
+		if msg, ok := e.(string); ok {
+			util.DispatchErrMsgJson(c, msg)
+			return
+		}
+
 		util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
 	}))
 

@@ -18,6 +18,11 @@ func DispatchErrJson(c *gin.Context, err error) {
 	c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 }
 
+// Dispatch error response in json format
+func DispatchErrMsgJson(c *gin.Context, msg string) {
+	c.JSON(http.StatusOK, dto.ErrorResp(msg))
+}
+
 // Dispatch an ok response in json format
 func DispatchOk(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OkResp())
