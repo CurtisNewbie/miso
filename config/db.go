@@ -21,6 +21,9 @@ const (
 var (
 	// Global handle to the database
 	dbHandle *gorm.DB
+
+	// Global handle to the redis
+	redisHandle *redis.Client
 )
 
 // Init handle to redis
@@ -36,6 +39,9 @@ func InitRedis(address string, port string, username string, password string, db
 		Password: password,
 		DB:       db,
 	})
+
+	redisHandle = rdb
+
 	return rdb
 }
 
@@ -86,4 +92,12 @@ func GetDB() *gorm.DB {
 		panic("GetDB is called prior to the DB Handle initialization, this is illegal, see InitDB(...) method")
 	}
 	return dbHandle
+}
+
+// Get Redis Handle, must call InitRedis(...) method before this method
+func GetRedis() *redis.Client {
+	if redisHandle == nil {
+		panic("GetRedis is called prior to the Redis Handle initialization, this is illegal, see InitRedis(...) method")
+	}
+	return redisHandle
 }
