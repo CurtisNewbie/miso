@@ -143,3 +143,8 @@ func ExtractArgValue(args []string, predicate func(key string) bool) string {
 	}
 	return ""
 }
+
+// Check if it's for production by looking at the profile
+func IsProd(profile string) bool {
+	return profile == "prod"
+}

@@ -12,10 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func IsProd(profile string) bool {
-	return profile == "prod"
-}
-
 /* Bootstrap Server */
 func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoutesHandler func(*gin.Engine)) error {
 
