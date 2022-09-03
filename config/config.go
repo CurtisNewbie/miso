@@ -19,8 +19,18 @@ type Configuration struct {
 	ServerConf ServerConfig `json:"server"`
 	FileConf   FileConfig   `json:"file"`
 	ClientConf ClientConfig `json:"client"`
+	RedisConf  RedisConfig  `json:"redis"`
 }
 
+// Redis configuration
+type RedisConfig struct {
+	Address  string `json:"address"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database int    `json:"database"`
+}
+
+// Client service configuration
 type ClientConfig struct {
 	// based url for file-service (should not end with '/')
 	FileServiceUrl string `json:"fileServiceUrl"`
@@ -29,6 +39,7 @@ type ClientConfig struct {
 	AuthServiceUrl string `json:"authServiceUrl"`
 }
 
+// Database configuration
 type DBConfig struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
@@ -37,11 +48,13 @@ type DBConfig struct {
 	Port     string `json:"port"`
 }
 
+// Web server configuration
 type ServerConfig struct {
 	Host string `json:"host"`
 	Port string `json:"port"`
 }
 
+// File related configuration
 type FileConfig struct {
 	Base string `json:"base"`
 }
