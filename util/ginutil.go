@@ -6,7 +6,17 @@ import (
 	"github.com/curtisnewbie/gocommon/web/dto"
 
 	"github.com/gin-gonic/gin"
+
+	log "github.com/sirupsen/logrus"
 )
+
+// Must bind json content to the given pointer, else panic
+func MustBindJson(c *gin.Context, ptr any) {
+	if err := c.ShouldBindJSON(ptr); err != nil {
+		log.Errorf("Bind Json failed, %v", err)
+		panic("Illegal Arguments")
+	}
+}
 
 // Dispatch a json response
 func DispatchJson(c *gin.Context, body interface{}) {
