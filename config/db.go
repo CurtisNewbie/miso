@@ -41,6 +41,7 @@ func InitRedis(address string, port string, username string, password string, db
 	})
 
 	redisHandle = rdb
+	log.Println("Redis Handle initialized")
 
 	return rdb
 }
