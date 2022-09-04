@@ -32,6 +32,15 @@ func RequireRole(user *User, role Role) {
 	}
 }
 
+// Extract user from request headers, panic if failed
+func RequireUser(c *gin.Context) *User {
+	u, e := ExtractUser(c)
+	if e != nil {
+		panic(e)
+	}
+	return u
+}
+
 /* Extract User from request headers */
 func ExtractUser(c *gin.Context) (*User, error) {
 	id := c.GetHeader("id")
