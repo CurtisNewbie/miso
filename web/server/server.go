@@ -50,10 +50,10 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 }
 
 // Resolve request path
-func ResolvePath(relPath string, isOpenApi bool) string {
+func ResolvePath(baseUrl string, relPath string, isOpenApi bool) string {
 	if isOpenApi {
-		return "open/api/" + relPath
+		return baseUrl + "/open/api" + relPath
 	}
 
-	return "remote" + relPath
+	return baseUrl + "/remote" + relPath
 }
