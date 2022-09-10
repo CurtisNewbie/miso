@@ -34,6 +34,6 @@ func (t *TTime) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = TTime(pt)
+	*t = TTime(pt.Local())
 	return nil
 }
