@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/curtisnewbie/gocommon/web/dto"
+	"github.com/curtisnewbie/gocommon/weberr"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,7 +15,7 @@ import (
 func MustBindJson(c *gin.Context, ptr any) {
 	if err := c.ShouldBindJSON(ptr); err != nil {
 		log.Errorf("Bind Json failed, %v", err)
-		panic("Illegal Arguments")
+		panic(weberr.NewWebErr("Illegal Arguments"))
 	}
 }
 
