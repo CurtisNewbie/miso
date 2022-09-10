@@ -23,7 +23,6 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 	// register routes
 	router := gin.Default()
 	router.Use(gin.CustomRecovery(func(c *gin.Context, e interface{}) {
-		log.Warnf("(CustomerRecovery) found error: %v", e)
 		if err, ok := e.(error); ok {
 			util.DispatchErrJson(c, err)
 			return

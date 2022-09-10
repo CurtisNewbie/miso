@@ -30,7 +30,8 @@ func (t TTime) MarshalJSON() ([]byte, error) {
 
 func (t *TTime) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
-	pt, err := time.Parse("2006-01-02 15:04:05", s)
+
+	pt, err := time.ParseInLocation("2006-01-02 15:04:05", s, time.Local)
 	if err != nil {
 		return err
 	}
