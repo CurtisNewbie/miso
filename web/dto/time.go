@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -37,4 +38,9 @@ func (t *TTime) UnmarshalJSON(b []byte) error {
 	}
 	*t = TTime(pt)
 	return nil
+}
+
+// pretty print time
+func TimePrettyPrint(t *time.Time) string {
+	return fmt.Sprintf("%s (%s)", t.Format(`"2006-01-02 15:04:05"`), t.Location())
 }
