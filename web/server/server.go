@@ -22,8 +22,6 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 
 	// register routes
 	router := gin.Default()
-	registerRoutesHandler(router)
-
 	router.Use(gin.CustomRecovery(func(c *gin.Context, e interface{}) {
 		log.Warnf("(CustomerRecovery) found error: %v", e)
 		if err, ok := e.(error); ok {
@@ -37,6 +35,8 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 
 		util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
 	}))
+
+	registerRoutesHandler(router)
 
 	// start the server
 	err := router.Run(fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port))
