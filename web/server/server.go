@@ -20,31 +20,23 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// gin
+	engine := gin.Default()
+
+	// register customer recovery func
+	engine.Use(gin.CustomRecovery(DefaultRecovery))
+
 	// register routes
-	router := gin.Default()
-	router.Use(gin.CustomRecovery(func(c *gin.Context, e interface{}) {
-		if err, ok := e.(error); ok {
-			util.DispatchErrJson(c, err)
-			return
-		}
-		if msg, ok := e.(string); ok {
-			util.DispatchErrMsgJson(c, msg)
-			return
-		}
-
-		util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
-	}))
-
-	registerRoutesHandler(router)
+	registerRoutesHandler(engine)
 
 	// start the server
-	err := router.Run(fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port))
+	addr := fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port)
+	err := engine.Run(addr)
 	if err != nil {
 		log.Errorf("Failed to bootstrap gin engine (web server), %v", err)
 		return err
 	}
-
-	log.Printf("Web server bootstrapped on port: %v", serverConf.Port)
+	log.Printf("Web server bootstrapped on address: %s", addr)
 
 	return nil
 }
@@ -56,4 +48,18 @@ func ResolvePath(baseUrl string, relPath string, isOpenApi bool) string {
 	}
 
 	return baseUrl + "/remote" + relPath
+}
+
+// Default Recovery func
+func DefaultRecovery(c *gin.Context, e interface{}) {
+	if err, ok := e.(error); ok {
+		util.DispatchErrJson(c, err)
+		return
+	}
+	if msg, ok := e.(string); ok {
+		util.DispatchErrMsgJson(c, msg)
+		return
+	}
+
+	util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
 }

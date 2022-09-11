@@ -148,3 +148,17 @@ func ExtractArgValue(args []string, predicate func(key string) bool) string {
 func IsProd(profile string) bool {
 	return profile == "prod"
 }
+
+// Get environment variable
+func GetEnv(key string) string {
+	return os.Getenv(key)
+}
+
+// Get environment variable with default value
+func GetEnvElse(key string, defVal string) string {
+	s := GetEnv(key)
+	if s == "" {
+		return defVal
+	}
+	return s
+}
