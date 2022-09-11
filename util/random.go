@@ -9,11 +9,15 @@ var (
 )
 
 const (
-	DEFAULT_LEN = 20
+	DEFAULT_LEN       = 20
+	INIT_SHUFFLE_TIME = 3
 )
 
 func init() {
-	rand.Shuffle(len(letters), func(i, j int) { letters[i], letters[j] = letters[j], letters[i] })
+	swap := func(i, j int) { letters[i], letters[j] = letters[j], letters[i] }
+	for i := 0; i < INIT_SHUFFLE_TIME; i++ {
+		rand.Shuffle(len(letters), swap)
+	}
 }
 
 // generate random string with specified length
