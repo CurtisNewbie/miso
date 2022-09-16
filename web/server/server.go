@@ -41,13 +41,13 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 	return nil
 }
 
-// Resolve request path
-func ResolvePath(baseUrl string, relPath string, isOpenApi bool) string {
+// Resolve handler path
+func ResolvePath(relPath string, isOpenApi bool) string {
 	if isOpenApi {
-		return baseUrl + "/open/api" + relPath
+		return "/open/api" + relPath
 	}
 
-	return baseUrl + "/remote" + relPath
+	return "/remote" + relPath
 }
 
 // Default Recovery func
