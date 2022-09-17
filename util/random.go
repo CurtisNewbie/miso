@@ -10,7 +10,7 @@ var (
 )
 
 const (
-	DEFAULT_LEN       = 20
+	DEFAULT_LEN       = 35
 	INIT_SHUFFLE_TIME = 3
 )
 
