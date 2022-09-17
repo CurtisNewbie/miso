@@ -2,6 +2,7 @@ package util
 
 import (
 	"math/rand"
+	"time"
 )
 
 var (
@@ -14,6 +15,7 @@ const (
 )
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
 	swap := func(i, j int) { letters[i], letters[j] = letters[j], letters[i] }
 	for i := 0; i < INIT_SHUFFLE_TIME; i++ {
 		rand.Shuffle(len(letters), swap)
