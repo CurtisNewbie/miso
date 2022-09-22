@@ -2,6 +2,7 @@ package util
 
 import (
 	"net/http"
+	"reflect"
 
 	"github.com/curtisnewbie/gocommon/web/dto"
 
@@ -9,6 +10,23 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+type JsonHandler func(c *gin.Context, obj any) (any, error)
+
+// Build a Route Handler for JSON-based requests
+func BuildJsonRouteHandler(jsonType reflect.Type, handler JsonHandler) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var t = reflect.New(jsonType)
+		MustBindJson(c, &t)
+		log.Infof("Received request: %+v", t)
+
+		r, err := handler(c, t)
+		if err != nil {
+			panic(err)
+		}
+		DispatchOkWData(c, r)
+	}
+}
 
 // Must bind json content to the given pointer, else panic
 func MustBindJson(c *gin.Context, ptr any) {
