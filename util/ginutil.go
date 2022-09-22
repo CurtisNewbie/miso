@@ -10,10 +10,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type JsonHandler func(c *gin.Context) any
+type RouteHandler func(c *gin.Context) any
+type AuthRouteHandler func(c *gin.Context, user *User) any
 
-// Build a Route Handler for JSON-based requests
-func BuildJsonRouteHandler(handler JsonHandler) func(c *gin.Context) {
+// Build a Route Handler for an authorized request
+func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		user := RequireUser(c)
+		r := handler(c, user)
+		if r != nil {
+			DispatchOkWData(c, r)
+			return
+		}
+		DispatchOk(c)
+	}
+}
+
+// Build a Route Handler
+func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		r := handler(c)
 		if r != nil {
