@@ -10,15 +10,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type JsonHandler func(c *gin.Context, obj any) any
+type JsonHandler func(c *gin.Context) any
 
 // Build a Route Handler for JSON-based requests
-func BuildJsonRouteHandler(obj any, handler JsonHandler) func(c *gin.Context) {
+func BuildJsonRouteHandler(handler JsonHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		MustBindJson(c, &obj)
-		log.Infof("Received request: %+v", obj)
-
-		r := handler(c, obj)
+		r := handler(c)
 		if r != nil {
 			DispatchOkWData(c, r)
 			return
