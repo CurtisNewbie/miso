@@ -10,7 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// router handle, return nil, error, or json response payload
 type RouteHandler func(c *gin.Context) any
+
+// Authenticated router handle, return nil, error, or json response payload
 type AuthRouteHandler func(c *gin.Context, user *User) any
 
 // Build a Route Handler for an authorized request
@@ -19,6 +22,11 @@ func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
 		user := RequireUser(c)
 		r := handler(c, user)
 		if r != nil {
+			// r is an error
+			if e, ok := r.(error); ok {
+				panic(e)
+			}
+			// r is a json response payload
 			DispatchOkWData(c, r)
 			return
 		}
@@ -31,6 +39,11 @@ func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		r := handler(c)
 		if r != nil {
+			// r is an error
+			if e, ok := r.(error); ok {
+				panic(e)
+			}
+			// r is a json response payload
 			DispatchOkWData(c, r)
 			return
 		}
