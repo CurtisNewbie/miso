@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -12,7 +13,8 @@ import (
 var (
 	// Global Configuration for the app, do not modify this
 	GlobalConfig *Configuration
-	isProd       *bool
+	isProd       bool = false
+	isProdLock   sync.Mutex
 )
 
 type Configuration struct {
@@ -182,13 +184,14 @@ func GetEnvElse(key string, defVal string) string {
 
 // mark that we are running in production mode
 func SetIsProdMode(isProdFlag bool) {
-	*isProd = isProdFlag
+	isProdLock.Lock()
+	defer isProdLock.Unlock()
+	isProd = isProdFlag
 }
 
 // check whether we are running in production mode
 func IsProdMode() bool {
-	if isProd == nil {
-		return false
-	}
-	return *isProd
+	isProdLock.Lock()
+	defer isProdLock.Unlock()
+	return isProd
 }
