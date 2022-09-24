@@ -10,45 +10,41 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// router handle, return nil, error, or json response payload
-type RouteHandler func(c *gin.Context) any
+// Router handle
+type RouteHandler func(c *gin.Context) (any, error)
 
-// Authenticated router handle, return nil, error, or json response payload
-type AuthRouteHandler func(c *gin.Context, user *User) any
+// Authenticated router handle
+type AuthRouteHandler func(c *gin.Context, user *User) (any, error)
 
 // Build a Route Handler for an authorized request
 func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		user := RequireUser(c)
-		r := handler(c, user)
-		if r != nil {
-			// r is an error
-			if e, ok := r.(error); ok {
-				panic(e)
-			}
-			// r is a json response payload
-			DispatchOkWData(c, r)
-			return
-		}
-		DispatchOk(c)
+		r, e := handler(c, user)
+		HandleResult(c, r, e)
 	}
 }
 
 // Build a Route Handler
 func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		r := handler(c)
-		if r != nil {
-			// r is an error
-			if e, ok := r.(error); ok {
-				panic(e)
-			}
-			// r is a json response payload
-			DispatchOkWData(c, r)
-			return
-		}
-		DispatchOk(c)
+		r, e := handler(c)
+		HandleResult(c, r, e)
 	}
+}
+
+// Handle route's result
+func HandleResult(c *gin.Context, r any, e error) {
+	if e != nil {
+		DispatchErrJson(c, e)
+		return
+	}
+
+	if r != nil {
+		DispatchOkWData(c, r)
+		return
+	}
+	DispatchOk(c)
 }
 
 // Must bind json content to the given pointer, else panic
