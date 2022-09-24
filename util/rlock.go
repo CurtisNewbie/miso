@@ -3,6 +3,8 @@ package util
 import (
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bsm/redislock"
 	"github.com/curtisnewbie/gocommon/config"
 )
@@ -25,7 +27,7 @@ func ObtainRLocker() *redislock.Client {
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
 func LockRun(key string, runnable LRunnable) (any, error) {
-	return TimedLockRun(key, 10*time.Minute, nil)
+	return TimedLockRun(key, 10*time.Minute, runnable)
 }
 
 /*
@@ -40,7 +42,12 @@ func TimedLockRun(key string, ttl time.Duration, runnable LRunnable) (any, error
 	if err != nil {
 		return nil, err
 	}
-	defer lock.Release()
+	log.Infof("Obtained lock for key '%s'", key)
+
+	defer func() {
+		lock.Release()
+		log.Infof("Released lock for key '%s'", key)
+	}()
 
 	return runnable(), nil
 }
