@@ -14,7 +14,7 @@ var (
 	// Global Configuration for the app, do not modify this
 	GlobalConfig *Configuration
 	isProd       bool = false
-	isProdLock   sync.Mutex
+	isProdLock   sync.RWMutex
 )
 
 type Configuration struct {
@@ -191,7 +191,7 @@ func SetIsProdMode(isProdFlag bool) {
 
 // check whether we are running in production mode
 func IsProdMode() bool {
-	isProdLock.Lock()
-	defer isProdLock.Unlock()
+	isProdLock.RLock()
+	defer isProdLock.RUnlock()
 	return isProd
 }
