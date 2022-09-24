@@ -97,7 +97,7 @@ func GetDB() *gorm.DB {
 		return dbHandle
 	}
 
-	// not debug mode, enable debugging for printing SQLs
+	// not prod mode, enable debugging for printing SQLs
 	return dbHandle.Debug()
 }
 
