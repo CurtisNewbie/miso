@@ -14,6 +14,14 @@ type Resp struct {
 	Data      interface{} `json:"data"`
 }
 
+// Get error in Resp, return nil if it's a success resp
+func GetError(r *Resp) error {
+	if !r.Error {
+		return nil
+	}
+	return weberr.NewWebErr(r.Msg)
+}
+
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error) *Resp {
 	if e != nil {
