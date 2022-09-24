@@ -18,6 +18,7 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 	if isProd {
 		log.Info("Using prod profile, will run with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
+		config.SetIsProdMode(isProd)
 	}
 
 	// gin

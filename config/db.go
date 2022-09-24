@@ -92,7 +92,13 @@ func GetDB() *gorm.DB {
 	if dbHandle == nil {
 		panic("GetDB is called prior to the DB Handle initialization, this is illegal, see InitDB(...) method")
 	}
-	return dbHandle
+
+	if IsProdMode() {
+		return dbHandle
+	}
+
+	// not debug mode, enable debugging for printing SQLs
+	return dbHandle.Debug()
 }
 
 // Get Redis Handle, must call InitRedis(...) method before this method

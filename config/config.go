@@ -12,6 +12,7 @@ import (
 var (
 	// Global Configuration for the app, do not modify this
 	GlobalConfig *Configuration
+	isProd       *bool
 )
 
 type Configuration struct {
@@ -177,4 +178,17 @@ func GetEnvElse(key string, defVal string) string {
 		return defVal
 	}
 	return s
+}
+
+// mark that we are running in production mode
+func SetIsProdMode(isProdFlag bool) {
+	*isProd = isProdFlag
+}
+
+// check whether we are running in production mode
+func IsProdMode() bool {
+	if isProd == nil {
+		return false
+	}
+	return *isProd
 }
