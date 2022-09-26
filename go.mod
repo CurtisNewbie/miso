@@ -3,7 +3,9 @@ module github.com/curtisnewbie/gocommon
 go 1.18
 
 require (
+	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
 	github.com/gin-gonic/gin v1.8.1
+	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/sirupsen/logrus v1.9.0
 	gorm.io/driver/mysql v1.3.6
@@ -11,7 +13,6 @@ require (
 )
 
 require (
-	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -28,9 +29,11 @@ require (
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.18.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
