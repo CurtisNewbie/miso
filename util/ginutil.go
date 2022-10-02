@@ -10,11 +10,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Router handle
+// Route handle
 type RouteHandler func(c *gin.Context) (any, error)
 
-// Authenticated router handle
+// Authenticated route handle
 type AuthRouteHandler func(c *gin.Context, user *User) (any, error)
+
+func BuildGRouteHandler[T any](c *gin.Context) (*T, error) {
+	var t T
+	MustBindJson(c, &t)
+	return &t, nil
+}
 
 // Build a Route Handler for an authorized request
 func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
@@ -29,6 +35,27 @@ func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
 func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		r, e := handler(c)
+		HandleResult(c, r, e)
+	}
+}
+
+// Build a Route Handler for authorized and JSON-based request
+func BuildAuthJRouteHandler[T any](handler func(c *gin.Context, user *User, t *T) (any, error)) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		user := RequireUser(c)
+		var t T
+		MustBindJson(c, &t)
+		r, e := handler(c, user, &t)
+		HandleResult(c, r, e)
+	}
+}
+
+// Build a Route Handler for JSON-based request
+func BuildJRouteHandler[T any](handler func(c *gin.Context, t *T) (any, error)) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var t T
+		MustBindJson(c, &t)
+		r, e := handler(c, &t)
 		HandleResult(c, r, e)
 	}
 }
