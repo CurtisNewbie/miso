@@ -16,12 +16,6 @@ type RouteHandler func(c *gin.Context) (any, error)
 // Authenticated route handle
 type AuthRouteHandler func(c *gin.Context, user *User) (any, error)
 
-func BuildGRouteHandler[T any](c *gin.Context) (*T, error) {
-	var t T
-	MustBindJson(c, &t)
-	return &t, nil
-}
-
 // Build a Route Handler for an authorized request
 func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
