@@ -56,6 +56,7 @@ func DeregisterService(consulConf *config.ConsulConfig) {
 		return
 	}
 
+	logrus.Infof("Deregistering current instance to Consul, service_id: %s", *serviceId)
 	GetConsulClient().Agent().ServiceDeregister(*serviceId)
 }
 
