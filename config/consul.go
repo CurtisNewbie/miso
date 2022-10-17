@@ -13,6 +13,11 @@ var (
 	consulClient *api.Client
 )
 
+// Register a default health check endpoint on GIN
+func RegisterDefaultHealthCheck(engine *gin.Engine) {
+	engine.GET("/health", DefaultHealthCheck)
+}
+
 // Create a default health check endpoint that simply doesn't nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
 	ctx.Status(200)
