@@ -23,6 +23,7 @@ type Configuration struct {
 	FileConf   FileConfig   `json:"file"`
 	ClientConf ClientConfig `json:"client"`
 	RedisConf  RedisConfig  `json:"redis"`
+	ConsulConf ConsulConfig `json:"consul"`
 }
 
 // Redis configuration
@@ -63,6 +64,17 @@ type FileConfig struct {
 	Base string `json:"base"`
 }
 
+// Consul configuration
+type ConsulConfig struct {
+	RegisterId          string `json:"registerId"`
+	RegisterName        string `json:"registerName"`
+	ConsulAddress       string `json:"consulAddress"`
+	HealthCheckUrl      string `json:"healthCheckUrl"`
+	HealthCheckInterval string `json:"healthCheckInterval"`
+	HealthCheckTimeout  string `json:"healthCheckTimeout"`
+}
+
+// Set the globalConfig
 func SetGlobalConfig(c *Configuration) {
 	GlobalConfig = c
 }
