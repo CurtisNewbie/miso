@@ -1,4 +1,4 @@
-package util
+package redis
 
 import (
 	"time"
@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bsm/redislock"
-	"github.com/curtisnewbie/gocommon/config"
 )
 
 type LRunnable func() any
@@ -18,7 +17,7 @@ func IsLockNotObtained(err error) bool {
 
 // Obtain a locker
 func ObtainRLocker() *redislock.Client {
-	return redislock.New(config.GetRedis())
+	return redislock.New(GetRedis())
 }
 
 /*

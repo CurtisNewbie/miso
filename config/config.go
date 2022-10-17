@@ -66,7 +66,6 @@ type FileConfig struct {
 
 // Consul configuration
 type ConsulConfig struct {
-	RegisterId          string `json:"registerId"`
 	RegisterName        string `json:"registerName"`
 	ConsulAddress       string `json:"consulAddress"`
 	HealthCheckUrl      string `json:"healthCheckUrl"`

@@ -1,19 +1,23 @@
-package config
+package consul
 
 import (
 	"fmt"
 	"strconv"
 
+	"github.com/curtisnewbie/gocommon/config"
+	"github.com/curtisnewbie/gocommon/util"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
+	"github.com/sirupsen/logrus"
 )
 
 var (
 	// Global handle to the Consul client
 	consulClient *api.Client
+	serviceId    *string
 )
 
-// Register a default health check endpoint on GIN
+// Register a default health check endpoint ('/health') on GIN
 func RegisterDefaultHealthCheck(engine *gin.Engine) {
 	engine.GET("/health", DefaultHealthCheck)
 }
@@ -47,16 +51,21 @@ func FetchServices() (map[string]*api.AgentService, error) {
 }
 
 // Register current service
-func DeregisterService(consulConf *ConsulConfig) {
-	GetConsulClient().Agent().ServiceDeregister(consulConf.RegisterId)
+func DeregisterService(consulConf *config.ConsulConfig) {
+	if serviceId == nil {
+		return
+	}
+
+	GetConsulClient().Agent().ServiceDeregister(*serviceId)
 }
 
 // Register current instance as a service
-func RegisterService(consulConf *ConsulConfig, serverConf *ServerConfig) error {
+func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerConfig) error {
 	i_port, _ := strconv.Atoi(serverConf.Port)
+	*serviceId = fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
 
 	registration := &api.AgentServiceRegistration{
-		ID:      consulConf.RegisterId,
+		ID:      *serviceId,
 		Name:    consulConf.RegisterName,
 		Port:    i_port,
 		Address: serverConf.Host,
@@ -66,7 +75,7 @@ func RegisterService(consulConf *ConsulConfig, serverConf *ServerConfig) error {
 			Timeout:  consulConf.HealthCheckTimeout,
 		},
 	}
-
+	logrus.Infof("Registering current instance as a service to Consul, service_id: %s, service_name: %s", *serviceId, consulConf.RegisterName)
 	return GetConsulClient().Agent().ServiceRegister(registration)
 }
 
@@ -79,7 +88,7 @@ func GetConsulClient() *api.Client {
 }
 
 // Init new Consul Client
-func InitConsulClient(consulConf *ConsulConfig) (*api.Client, error) {
+func InitConsulClient(consulConf *config.ConsulConfig) (*api.Client, error) {
 	if consulClient != nil {
 		return consulClient, nil
 	}
