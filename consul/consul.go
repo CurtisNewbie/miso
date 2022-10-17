@@ -62,7 +62,8 @@ func DeregisterService(consulConf *config.ConsulConfig) {
 // Register current instance as a service
 func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerConfig) error {
 	i_port, _ := strconv.Atoi(serverConf.Port)
-	*serviceId = fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
+	si := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
+	serviceId = &si
 
 	registration := &api.AgentServiceRegistration{
 		ID:      *serviceId,
