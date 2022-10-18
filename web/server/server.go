@@ -1,27 +1,37 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/curtisnewbie/gocommon/config"
+	"github.com/curtisnewbie/gocommon/consul"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/weberr"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 )
 
-/* Bootstrap Server */
-func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoutesHandler func(*gin.Engine)) error {
+type RegisterRoutesHandler func(*gin.Engine)
 
-	if isProd {
-		log.Info("Using prod profile, will run with ReleaseMode")
+type PostShutdownHandler func()
+
+/* Bootstrap Server */
+func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler RegisterRoutesHandler) {
+
+	if config.IsProdMode() {
+		log.Info("Using prod profile, will run gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
 	}
-	config.SetIsProdMode(isProd)
 
-	// gin
+	// gin engine
 	engine := gin.Default()
 
 	// register customer recovery func
@@ -32,14 +42,28 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool, registerRoute
 
 	// start the server
 	addr := fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port)
-	err := engine.Run(addr)
-	if err != nil {
-		log.Errorf("Failed to bootstrap gin engine (web server), %v", err)
-		return err
-	}
-	log.Printf("Web server bootstrapped on address: %s", addr)
 
-	return nil
+	go func() {
+		err := engine.Run(addr)
+		if err != nil {
+			log.Errorf("Failed to bootstrap gin engine (web server), %v", err)
+			return
+		}
+		log.Printf("Web server bootstrapped on address: %s", addr)
+	}()
+
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	logrus.Println("Shutting down server ...")
+
+	// deregister consul if necessary
+	consul.DeregisterService(&config.GlobalConfig.ConsulConf)
+
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	logrus.Println("Server exited")
 }
 
 // Resolve handler path

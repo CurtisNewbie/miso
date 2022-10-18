@@ -52,7 +52,7 @@ func FetchServices() (map[string]*api.AgentService, error) {
 
 // Register current service
 func DeregisterService(consulConf *config.ConsulConfig) {
-	if serviceId == nil {
+	if consulConf == nil || serviceId == nil {
 		return
 	}
 
