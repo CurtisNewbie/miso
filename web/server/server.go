@@ -14,7 +14,6 @@ import (
 	"github.com/curtisnewbie/gocommon/weberr"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +24,7 @@ type RegisterRoutesHandler func(*gin.Engine)
 func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler RegisterRoutesHandler) {
 
 	if config.IsProdMode() {
-		log.Info("Using prod profile, will run gin with ReleaseMode")
+		logrus.Info("Using prod profile, will run gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -44,15 +43,15 @@ func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler Regi
 	go func() {
 		err := engine.Run(addr)
 		if err != nil {
-			log.Errorf("Failed to bootstrap gin engine (web server), %v", err)
+			logrus.Errorf("Failed to bootstrap gin engine, %v", err)
 			return
 		}
-		log.Printf("Web server bootstrapped on address: %s", addr)
+		logrus.Printf("Server bootstrapped on address: %s", addr)
 	}()
 
-	quit := make(chan os.Signal)
+	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	<-quit // capture signal
 	logrus.Println("Shutting down server ...")
 
 	// deregister consul if necessary
