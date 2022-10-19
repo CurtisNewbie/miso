@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -30,9 +31,10 @@ func DefaultHealthCheck(ctx *gin.Context) {
 // Fetch service address (host:port), this method always call Consul instead of reading from cache
 func FetchServiceAddress(name string) (string, error) {
 	service, err := FetchService(name)
-	if err != nil {
+	if err != nil || service == nil {
 		return "", err
 	}
+
 	return fmt.Sprintf("%s:%d", service.Address, service.Port), nil
 }
 
@@ -47,7 +49,12 @@ func FetchService(name string) (*api.AgentService, error) {
 
 // Fetch all registered services, this method always call Consul instead of reading from cache
 func FetchServices() (map[string]*api.AgentService, error) {
-	return GetConsulClient().Agent().Services()
+	client, e := GetConsulClient()
+	if e != nil {
+		return nil, e
+	}
+
+	return client.Agent().Services()
 }
 
 // Register current service
@@ -57,11 +64,21 @@ func DeregisterService(consulConf *config.ConsulConfig) {
 	}
 
 	logrus.Infof("Deregistering current instance to Consul, service_id: %s", *serviceId)
-	GetConsulClient().Agent().ServiceDeregister(*serviceId)
+	client, e := GetConsulClient()
+	if e != nil {
+		return
+	}
+
+	client.Agent().ServiceDeregister(*serviceId)
 }
 
 // Register current instance as a service
 func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerConfig) error {
+	client, e := GetConsulClient()
+	if e != nil {
+		return e
+	}
+
 	i_port, _ := strconv.Atoi(serverConf.Port)
 	si := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
 	serviceId = &si
@@ -78,15 +95,16 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 		},
 	}
 	logrus.Infof("Registering current instance as a service to Consul, service_id: %s, service_name: %s", *serviceId, consulConf.RegisterName)
-	return GetConsulClient().Agent().ServiceRegister(registration)
+
+	return client.Agent().ServiceRegister(registration)
 }
 
 // Get the initialized Consul client, InitConsulClient should be called first before this method
-func GetConsulClient() *api.Client {
+func GetConsulClient() (*api.Client, error) {
 	if consulClient == nil {
-		panic("Consul Client is not initialized")
+		return nil, errors.New("Consul Client is not initialized")
 	}
-	return consulClient
+	return consulClient, nil
 }
 
 // Init new Consul Client
