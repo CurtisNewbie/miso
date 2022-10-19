@@ -101,9 +101,9 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 
 	ipv4 := util.GetLocalIPV4()
 
-	// only use serverConf.Host when it's localhost
+	// only use serverConf.Host when it's localhost / 127.0.0.1
 	address := serverConf.Host
-	if strings.ToLower(address) != "localhost" {
+	if strings.ToLower(address) != "localhost" && address != "127.0.0.1" {
 		address = ipv4
 	}
 
