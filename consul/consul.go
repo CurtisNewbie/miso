@@ -13,6 +13,10 @@ import (
 )
 
 var (
+	errClientNotInit = errors.New("Consul Client is not initialized")
+)
+
+var (
 	// Global handle to the Consul client
 	consulClient *api.Client
 	serviceId    *string
@@ -102,7 +106,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 // Get the initialized Consul client, InitConsulClient should be called first before this method
 func GetConsulClient() (*api.Client, error) {
 	if consulClient == nil {
-		return nil, errors.New("Consul Client is not initialized")
+		return nil, errClientNotInit
 	}
 	return consulClient, nil
 }
