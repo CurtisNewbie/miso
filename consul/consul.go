@@ -101,7 +101,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 	healthCheckUrl := consulConf.HealthCheckUrl
 	if healthCheckUrl == "" {
 		// default health endpoint (/health)
-		healthCheckUrl = util.GetLocalIPV4() + ":" + serverConf.Port + "/health"
+		healthCheckUrl = "http://" + util.GetLocalIPV4() + ":" + serverConf.Port + "/health"
 		logrus.Infof("Using default health check endpoint: '%s'", healthCheckUrl)
 	}
 
