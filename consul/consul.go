@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	errClientNotInit = errors.New("Consul Client is not initialized")
+	errClientNotInit = errors.New("consul client is not initialized")
 )
 
 var (
@@ -78,6 +78,9 @@ func DeregisterService(consulConf *config.ConsulConfig) {
 
 // Register current instance as a service
 func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerConfig) error {
+	util.NonNil(consulConf, "consulConf is nil")
+	util.NonNil(serverConf, "serverConf is nil")
+
 	client, e := GetConsulClient()
 	if e != nil {
 		return e
@@ -111,11 +114,18 @@ func GetConsulClient() (*api.Client, error) {
 	return consulClient, nil
 }
 
+// Check whether we have Consul client initialized
+func HasConsulClient() bool {
+	return consulClient != nil
+}
+
 // Init new Consul Client
 func InitConsulClient(consulConf *config.ConsulConfig) (*api.Client, error) {
 	if consulClient != nil {
 		return consulClient, nil
 	}
+
+	util.NonNil(consulConf, "consulConf is nil")
 
 	c, err := api.NewClient(&api.Config{
 		Address: consulConf.ConsulAddress,
