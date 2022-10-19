@@ -124,7 +124,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 			Timeout:  consulConf.HealthCheckTimeout,
 		},
 	}
-	logrus.Infof("Registering current instance as a service to Consul, service_id: %s, service_name: %s", *serviceId, consulConf.RegisterName)
+	logrus.Infof("Registering current instance as a service to Consul, registration: %+v", registration)
 
 	return client.Agent().ServiceRegister(registration)
 }
