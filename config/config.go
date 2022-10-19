@@ -18,9 +18,9 @@ var (
 )
 
 type Configuration struct {
-	DBConf     DBConfig      `json:"db"`
 	ServerConf ServerConfig  `json:"server"`
 	FileConf   FileConfig    `json:"file"`
+	DBConf     *DBConfig     `json:"db"`
 	ClientConf *ClientConfig `json:"client"`
 	RedisConf  *RedisConfig  `json:"redis"`
 	ConsulConf *ConsulConfig `json:"consul"`
@@ -28,6 +28,7 @@ type Configuration struct {
 
 // Redis configuration
 type RedisConfig struct {
+	Enabled  bool   `json:"enabled"`
 	Address  string `json:"address"`
 	Port     string `json:"port"`
 	Username string `json:"username"`
@@ -46,6 +47,7 @@ type ClientConfig struct {
 
 // Database configuration
 type DBConfig struct {
+	Enabled  bool   `json:"enabled"`
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Database string `json:"database"`

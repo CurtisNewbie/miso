@@ -10,6 +10,8 @@ import (
 
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/consul"
+	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/weberr"
 
@@ -21,12 +23,24 @@ import (
 // Routes registar
 type RoutesRegistar func(*gin.Engine)
 
-// Bootstrap Server With Gin
+// Bootstrap Server
 func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) {
 
 	if config.IsProdMode() {
 		logrus.Info("Using prod profile, will run gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// mysql
+	if conf.DBConf != nil && conf.DBConf.Enabled {
+		if err := mysql.InitDBFromConfig(conf.DBConf); err != nil {
+			panic(err)
+		}
+	}
+
+	// redis
+	if conf.RedisConf != nil && conf.RedisConf.Enabled {
+		redis.InitRedisFromConfig(conf.RedisConf)
 	}
 
 	// gin engine
