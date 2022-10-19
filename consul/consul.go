@@ -98,10 +98,11 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 	si := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
 	serviceId = &si
 
+	ipv4 := util.GetLocalIPV4()
 	healthCheckUrl := consulConf.HealthCheckUrl
 	if healthCheckUrl == "" {
 		// default health endpoint (/health)
-		healthCheckUrl = "http://" + util.GetLocalIPV4() + ":" + serverConf.Port + "/health"
+		healthCheckUrl = "http://" + ipv4 + ":" + serverConf.Port + "/health"
 		logrus.Infof("Using default health check endpoint: '%s'", healthCheckUrl)
 	}
 
@@ -109,7 +110,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 		ID:      *serviceId,
 		Name:    consulConf.RegisterName,
 		Port:    i_port,
-		Address: serverConf.Host,
+		Address: ipv4,
 		Check: &api.AgentServiceCheck{
 			HTTP:     healthCheckUrl,
 			Interval: consulConf.HealthCheckInterval,
