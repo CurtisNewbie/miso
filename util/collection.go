@@ -12,6 +12,15 @@ func RandomOne[T any](items []*T) *T {
 }
 
 // Get values from map
+func ValuesOfStMap[T any](m map[string]*T) []*T {
+	var values []*T = []*T{}
+	for k := range m {
+		values = append(values, m[k])
+	}
+	return values
+}
+
+// Get values from map
 func ValuesOfMap[T any](m map[any]*T) []*T {
 	var values []*T = []*T{}
 	for k := range m {
