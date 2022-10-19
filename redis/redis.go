@@ -2,10 +2,10 @@ package redis
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 // Get Redis Handle, must call InitRedis(...) method before this method
 func GetRedis() *redis.Client {
 	if redisHandle == nil {
-		panic("GetRedis is called prior to the Redis Handle initialization, this is illegal, see InitRedis(...) method")
+		panic("GetRedis is called prior to the Redis Handle initialization, this is illegal")
 	}
 	return redisHandle
 }
@@ -29,7 +29,7 @@ func InitRedisFromConfig(config *config.RedisConfig) *redis.Client {
 
 // Init handle to redis
 func InitRedis(address string, port string, username string, password string, db int) *redis.Client {
-	log.Printf("Connecting to redis '%v:%v', database: %v", address, port, db)
+	logrus.Infof("Connecting to redis '%v:%v', database: %v", address, port, db)
 	var rdb *redis.Client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", address, port),
 		Password: password,
@@ -37,7 +37,7 @@ func InitRedis(address string, port string, username string, password string, db
 	})
 
 	redisHandle = rdb
-	log.Println("Redis Handle initialized")
+	logrus.Info("Redis Handle initialized")
 
 	return rdb
 }
