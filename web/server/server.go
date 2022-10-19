@@ -18,10 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type RegisterRoutesHandler func(*gin.Engine)
+// Routes registar
+type RoutesRegistar func(*gin.Engine)
 
-/* Bootstrap Server */
-func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler RegisterRoutesHandler) {
+// Bootstrap Server With Gin
+func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) {
 
 	if config.IsProdMode() {
 		logrus.Info("Using prod profile, will run gin with ReleaseMode")
@@ -35,12 +36,11 @@ func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler Regi
 	engine.Use(gin.CustomRecovery(DefaultRecovery))
 
 	// register routes
-	registerRoutesHandler(engine)
+	routesRegistar(engine)
 
 	// start the server
-	addr := fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port)
-
 	go func() {
+		addr := fmt.Sprintf("%v:%v", conf.ServerConf.Host, conf.ServerConf.Port)
 		err := engine.Run(addr)
 		if err != nil {
 			logrus.Errorf("Failed to bootstrap gin engine, %v", err)
@@ -49,15 +49,18 @@ func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler Regi
 		logrus.Printf("Server bootstrapped on address: %s", addr)
 	}()
 
+	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit // capture signal
-	logrus.Println("Shutting down server ...")
+	<-quit
+	logrus.Info("Shutting down server gracefully")
 
 	// deregister consul if necessary
-	consul.DeregisterService(&config.GlobalConfig.ConsulConf)
+	if config.GlobalConfig.ConsulConf != nil {
+		consul.DeregisterService(config.GlobalConfig.ConsulConf)
+	}
 
-	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second) // at most 5 seconds
 	defer cancel()
 
 	logrus.Println("Server exited")

@@ -18,12 +18,12 @@ var (
 )
 
 type Configuration struct {
-	DBConf     DBConfig     `json:"db"`
-	ServerConf ServerConfig `json:"server"`
-	FileConf   FileConfig   `json:"file"`
-	ClientConf ClientConfig `json:"client"`
-	RedisConf  RedisConfig  `json:"redis"`
-	ConsulConf ConsulConfig `json:"consul"`
+	DBConf     DBConfig      `json:"db"`
+	ServerConf ServerConfig  `json:"server"`
+	FileConf   FileConfig    `json:"file"`
+	ClientConf *ClientConfig `json:"client"`
+	RedisConf  *RedisConfig  `json:"redis"`
+	ConsulConf *ConsulConfig `json:"consul"`
 }
 
 // Redis configuration
@@ -62,6 +62,7 @@ type ServerConfig struct {
 // File related configuration
 type FileConfig struct {
 	Base string `json:"base"`
+	Temp string `json:"temp"`
 }
 
 // Consul configuration
