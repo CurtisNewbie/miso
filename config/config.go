@@ -67,6 +67,7 @@ type FileConfig struct {
 
 // Consul configuration
 type ConsulConfig struct {
+	Enabled             bool   `json:"enabled"`
 	RegisterName        string `json:"registerName"`
 	ConsulAddress       string `json:"consulAddress"`
 	HealthCheckUrl      string `json:"healthCheckUrl"`

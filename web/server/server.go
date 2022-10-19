@@ -49,14 +49,25 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		logrus.Printf("Server bootstrapped on address: %s", addr)
 	}()
 
+	// register on consul
+	if conf.ConsulConf != nil && conf.ConsulConf.Enabled {
+		if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
+			panic(err)
+		}
+
+		if err := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); err != nil {
+			panic(err)
+		}
+	}
+
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	logrus.Info("Shutting down server gracefully")
 
-	// deregister consul if necessary
-	if config.GlobalConfig.ConsulConf != nil {
+	// deregister on consul if necessary
+	if config.GlobalConfig.ConsulConf != nil && conf.ConsulConf.Enabled {
 		consul.DeregisterService(config.GlobalConfig.ConsulConf)
 	}
 
