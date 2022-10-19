@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/util"
@@ -104,6 +105,12 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 		// default health endpoint (/health)
 		healthCheckUrl = "http://" + ipv4 + ":" + serverConf.Port + "/health"
 		logrus.Infof("Using default health check endpoint: '%s'", healthCheckUrl)
+	}
+
+	// only use serverConf.Host when it's localhost
+	address := serverConf.Host
+	if strings.ToLower(address) != "localhost" {
+		address = ipv4
 	}
 
 	registration := &api.AgentServiceRegistration{
