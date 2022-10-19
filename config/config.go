@@ -90,7 +90,9 @@ func DefaultParseProfConf() (profile string, conf *Configuration) {
 	if err != nil {
 		panic(err)
 	}
+
 	SetGlobalConfig(conf)
+	SetIsProdMode(IsProd(profile))
 	return
 }
 

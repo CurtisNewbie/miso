@@ -21,8 +21,6 @@ import (
 
 type RegisterRoutesHandler func(*gin.Engine)
 
-type PostShutdownHandler func()
-
 /* Bootstrap Server */
 func BootstrapServer(serverConf *config.ServerConfig, registerRoutesHandler RegisterRoutesHandler) {
 
