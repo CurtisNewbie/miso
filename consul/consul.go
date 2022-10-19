@@ -32,23 +32,31 @@ func DefaultHealthCheck(ctx *gin.Context) {
 	ctx.Status(200)
 }
 
-// Fetch service address (host:port), this method always call Consul instead of reading from cache
+// Fetch service address (host:port, without protocol), this method always call Consul instead of reading from cache
 func FetchServiceAddress(name string) (string, error) {
-	service, err := FetchService(name)
-	if err != nil || service == nil {
+	services, err := FetchServicesByName(name)
+	if err != nil {
 		return "", err
 	}
-
-	return fmt.Sprintf("%s:%d", service.Address, service.Port), nil
+	agent := util.RandomOne(util.ValuesOfStMap(services))
+	if agent != nil {
+		return fmt.Sprintf("%s:%d", agent.Address, agent.Port), nil
+	}
+	return "", nil
 }
 
 // Fetch registered service by name, this method always call Consul instead of reading from cache
-func FetchService(name string) (*api.AgentService, error) {
-	services, err := FetchServices()
+func FetchServicesByName(name string) (map[string]*api.AgentService, error) {
+	client, err := GetConsulClient()
 	if err != nil {
 		return nil, err
 	}
-	return services[name], nil
+
+	services, err := client.Agent().ServicesWithFilter(fmt.Sprintf("Service == \"%s\"", name))
+	if err != nil {
+		panic(err)
+	}
+	return services, nil
 }
 
 // Fetch all registered services, this method always call Consul instead of reading from cache
