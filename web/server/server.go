@@ -27,7 +27,7 @@ type RoutesRegistar func(*gin.Engine)
 func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) {
 
 	if config.IsProdMode() {
-		logrus.Info("Using prod profile, will run gin with ReleaseMode")
+		logrus.Info("Using 'prod' profile, will run gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -36,11 +36,15 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		if err := mysql.InitDBFromConfig(conf.DBConf); err != nil {
 			panic(err)
 		}
+	} else {
+		logrus.Infof("MySQL config disabled, will not connect MySQL on server startup")
 	}
 
 	// redis
 	if conf.RedisConf != nil && conf.RedisConf.Enabled {
 		redis.InitRedisFromConfig(conf.RedisConf)
+	} else {
+		logrus.Infof("Redis config disabled, will not connect Redis on server startup")
 	}
 
 	// gin engine
@@ -72,6 +76,8 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		if err := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); err != nil {
 			panic(err)
 		}
+	} else {
+		logrus.Infof("Consul config disabled, will not register to consul on server startup")
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully

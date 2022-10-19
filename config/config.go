@@ -85,10 +85,10 @@ func SetGlobalConfig(c *Configuration) {
 /* Default way to parse profile and configuration from os.Args, panic if failed */
 func DefaultParseProfConf() (profile string, conf *Configuration) {
 	profile = ParseProfile(os.Args)
-	log.Printf("Using profile: %v", profile)
+	log.Printf("Using profile: '%v'", profile)
 
 	configFile := ParseConfigFilePath(os.Args[1:], profile)
-	log.Printf("Looking for config file: %v", configFile)
+	log.Printf("Looking for config file: '%v'", configFile)
 
 	conf, err := ParseJsonConfig(configFile)
 	if err != nil {
