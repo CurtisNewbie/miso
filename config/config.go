@@ -107,25 +107,25 @@ func SetGlobalConfig(c *Configuration) {
 
 	Apart from read the json config file, it also does extra configuration, e.g.,
 	resolving ServerConf.Host if absent, generating healthCheckUrl if necessary and so on
+
+	The Configuration parsed will be accessible through config.GlobalConfig
 */
 func DefaultParseProfConf(args []string) (profile string, conf *Configuration) {
 	profile = ParseProfile(args)
 	logrus.Printf("Using profile: '%v'", profile)
 
 	configFile := ParseConfigFilePath(args[1:], profile)
-	logrus.Printf("Looking for config file: '%v'", configFile)
+	logrus.Printf("Looking for config file: '%s'", configFile)
 
 	conf, err := ParseJsonConfig(configFile)
 	if err != nil {
 		panic(err)
 	}
 
-	// use the ipv4 extract from net interface unless localhost or 127.0.0.1 is specified
+	// if consul enabled, generate healthCheckUrl and RegisterAddress if absent
 	serverHost := conf.ServerConf.Host
-
-	if conf.ConsulConf != nil {
-
-		// default health endpoint (/health)
+	if conf.ConsulConf != nil && conf.ConsulConf.Enabled {
+		// default health endpoint '/health'
 		if conf.ConsulConf.HealthCheckUrl == "" {
 			conf.ConsulConf.HealthCheckUrl = "/health"
 			logrus.Infof("Using default health check endpoint: '%s'", conf.ConsulConf.HealthCheckUrl)
