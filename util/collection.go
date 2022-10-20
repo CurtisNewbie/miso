@@ -1,6 +1,11 @@
 package util
 
-import "math/rand"
+import (
+	"math/rand"
+)
+
+type Void struct{}
+type Set[T comparable] map[T]Void
 
 // Select random one from the slice
 func RandomOne[T any](items []*T) *T {
@@ -27,6 +32,15 @@ func ValuesOfMap[T any](m map[any]*T) []*T {
 		values = append(values, m[k])
 	}
 	return values
+}
+
+// Get keys from set
+func KeysOfSet[T comparable](s Set[T]) []T {
+	var keys []T = []T{}
+	for k := range s {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // Get keys from map
