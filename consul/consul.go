@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/util"
@@ -15,18 +14,11 @@ import (
 
 var (
 	errClientNotInit = errors.New("consul client is not initialized")
-)
 
-var (
 	// Global handle to the Consul client
 	consulClient *api.Client
 	serviceId    *string
 )
-
-// Register a default health check endpoint ('/health') on GIN
-func RegisterDefaultHealthCheck(engine *gin.Engine) {
-	engine.GET("/health", DefaultHealthCheck)
-}
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
@@ -99,33 +91,18 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 	si := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
 	serviceId = &si
 
-	ipv4 := util.GetLocalIPV4()
-
-	// only use serverConf.Host when it's localhost / 127.0.0.1
-	address := serverConf.Host
-	if strings.ToLower(address) != "localhost" && address != "127.0.0.1" {
-		address = ipv4
-	}
-
-	healthCheckUrl := consulConf.HealthCheckUrl
-	if healthCheckUrl == "" {
-		// default health endpoint (/health)
-		healthCheckUrl = "http://" + address + ":" + serverConf.Port + "/health"
-		logrus.Infof("Using default health check endpoint: '%s'", healthCheckUrl)
-	}
-
 	registration := &api.AgentServiceRegistration{
 		ID:      *serviceId,
 		Name:    consulConf.RegisterName,
 		Port:    i_port,
-		Address: address,
+		Address: consulConf.RegisterAddress,
 		Check: &api.AgentServiceCheck{
-			HTTP:     healthCheckUrl,
+			HTTP:     "http:" + serverConf.Host + ":" + serverConf.Port + consulConf.HealthCheckUrl,
 			Interval: consulConf.HealthCheckInterval,
 			Timeout:  consulConf.HealthCheckTimeout,
 		},
 	}
-	logrus.Infof("Registering current instance as a service to Consul, registration: %+v", registration)
+	logrus.Infof("Registering current instance as a service on Consul, registration: %+v, check: %+v", registration, registration.Check)
 
 	return client.Agent().ServiceRegister(registration)
 }

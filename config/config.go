@@ -7,7 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/curtisnewbie/gocommon/util"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -36,6 +37,11 @@ type RedisConfig struct {
 	Database int    `json:"database"`
 }
 
+func (pt *RedisConfig) String() string {
+	return fmt.Sprintf("{Enabled:%t Address:%s, Port:%s, Username:%s, Password:***, Database:%d}", pt.Enabled, pt.Address,
+		pt.Port, pt.Username, pt.Database)
+}
+
 // Client service configuration
 type ClientConfig struct {
 	// based url for file-service (should not end with '/')
@@ -43,6 +49,10 @@ type ClientConfig struct {
 
 	// based url for auth-service (should not end with '/')
 	AuthServiceUrl string `json:"authServiceUrl"`
+}
+
+func (pt *ClientConfig) String() string {
+	return fmt.Sprintf("{FileServiceUrl:%s AuthServiceUrl:%s}", pt.FileServiceUrl, pt.AuthServiceUrl)
 }
 
 // Database configuration
@@ -53,6 +63,10 @@ type DBConfig struct {
 	Database string `json:"database"`
 	Host     string `json:"host"`
 	Port     string `json:"port"`
+}
+
+func (pt *DBConfig) String() string {
+	return fmt.Sprintf("{Enabled:%t User:%s Password:*** Database:%s Host:%s Port:%s}", pt.Enabled, pt.User, pt.Database, pt.Host, pt.Port)
 }
 
 // Web server configuration
@@ -71,10 +85,16 @@ type FileConfig struct {
 type ConsulConfig struct {
 	Enabled             bool   `json:"enabled"`
 	RegisterName        string `json:"registerName"`
+	RegisterAddress     string `json:"registerAddress"`
 	ConsulAddress       string `json:"consulAddress"`
 	HealthCheckUrl      string `json:"healthCheckUrl"`
 	HealthCheckInterval string `json:"healthCheckInterval"`
 	HealthCheckTimeout  string `json:"healthCheckTimeout"`
+}
+
+func (pt *ConsulConfig) String() string {
+	return fmt.Sprintf("{Enabled:%t RegisterName:%s, ConsulAddress:%s, HealthCheckUrl:%s, HealthCheckInterval:%s, HealthCheckTimeout:%s}",
+		pt.Enabled, pt.RegisterName, pt.ConsulAddress, pt.HealthCheckUrl, pt.HealthCheckInterval, pt.HealthCheckTimeout)
 }
 
 // Set the globalConfig
@@ -82,21 +102,45 @@ func SetGlobalConfig(c *Configuration) {
 	GlobalConfig = c
 }
 
-/* Default way to parse profile and configuration from os.Args, panic if failed */
-func DefaultParseProfConf() (profile string, conf *Configuration) {
-	profile = ParseProfile(os.Args)
-	log.Printf("Using profile: '%v'", profile)
+/*
+	Default way to parse profile and configuration from os.Args, panic if failed
 
-	configFile := ParseConfigFilePath(os.Args[1:], profile)
-	log.Printf("Looking for config file: '%v'", configFile)
+	Apart from read the json config file, it also does extra configuration, e.g.,
+	resolving ServerConf.Host if absent, generating healthCheckUrl if necessary and so on
+*/
+func DefaultParseProfConf(args []string) (profile string, conf *Configuration) {
+	profile = ParseProfile(args)
+	logrus.Printf("Using profile: '%v'", profile)
+
+	configFile := ParseConfigFilePath(args[1:], profile)
+	logrus.Printf("Looking for config file: '%v'", configFile)
 
 	conf, err := ParseJsonConfig(configFile)
 	if err != nil {
 		panic(err)
 	}
 
+	// use the ipv4 extract from net interface unless localhost or 127.0.0.1 is specified
+	serverHost := conf.ServerConf.Host
+
+	if conf.ConsulConf != nil {
+
+		// default health endpoint (/health)
+		if conf.ConsulConf.HealthCheckUrl == "" {
+			conf.ConsulConf.HealthCheckUrl = "/health"
+			logrus.Infof("Using default health check endpoint: '%s'", conf.ConsulConf.HealthCheckUrl)
+		}
+
+		// default address used to register on consul
+		if conf.ConsulConf.RegisterAddress == "" {
+			conf.ConsulConf.RegisterAddress = ResolveServerHost(serverHost)
+			logrus.Infof("Will register on Consul using address: '%s'", conf.ConsulConf.RegisterAddress)
+		}
+	}
+
 	SetGlobalConfig(conf)
 	SetIsProdMode(IsProd(profile))
+	logrus.Infof("Using conf file: %+v", *conf)
 	return
 }
 
@@ -105,7 +149,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Errorf("Failed to open config file, %v", err)
+		logrus.Errorf("Failed to open config file, %v", err)
 		return nil, err
 	}
 
@@ -116,11 +160,11 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 	configuration := Configuration{}
 	err = jsonDecoder.Decode(&configuration)
 	if err != nil {
-		log.Errorf("Failed to decode config file as json, %v", err)
+		logrus.Errorf("Failed to decode config file as json, %v", err)
 		return nil, err
 	}
 
-	log.Printf("Parsed json config file: '%v'", filePath)
+	logrus.Printf("Parsed json config file: '%v'", filePath)
 	return &configuration, nil
 }
 
@@ -211,4 +255,12 @@ func IsProdMode() bool {
 	isProdLock.RLock()
 	defer isProdLock.RUnlock()
 	return isProd
+}
+
+// Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
+func ResolveServerHost(address string) string {
+	if util.IsStrEmpty(address) || address == util.LOCAL_IP_ANY {
+		address = util.GetLocalIPV4()
+	}
+	return address
 }

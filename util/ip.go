@@ -1,6 +1,15 @@
 package util
 
-import "net"
+import (
+	"net"
+	"strings"
+)
+
+const (
+	LOOPBACK_LOCALHOST = "localhost"
+	LOOPBACK_127       = "127.0.0.1"
+	LOCAL_IP_ANY       = "0.0.0.0"
+)
 
 // Get local ipv4 address (excluding loopback address)
 func GetLocalIPV4() string {
@@ -17,4 +26,9 @@ func GetLocalIPV4() string {
 		}
 	}
 	return ""
+}
+
+// Check whether the address is local (localhost/127.0.0.1)
+func IsLocalAddress(address string) bool {
+	return address == LOOPBACK_127 || strings.ToLower(address) == LOOPBACK_LOCALHOST
 }

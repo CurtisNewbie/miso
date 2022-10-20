@@ -23,11 +23,17 @@ import (
 // Routes registar
 type RoutesRegistar func(*gin.Engine)
 
-// Bootstrap Server
+// Bootstrap server
+//
+// This func will attempt to connect MySQL, Redis, Consul if possible
+// depending on whether the associated config is found in *config.Configuration
+//
+// It also handles service registration/de-registration on Consul before Gin bootstraped and after
+// SIGTERM/INTERRUPT signals are received
 func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) {
 
 	if config.IsProdMode() {
-		logrus.Info("Using 'prod' profile, will run gin with ReleaseMode")
+		logrus.Info("Bootstraping Gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -37,14 +43,14 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 			panic(err)
 		}
 	} else {
-		logrus.Infof("MySQL config disabled, will not connect MySQL on server startup")
+		logrus.Infof("MySQL config disabled, will not connect MySQL")
 	}
 
 	// redis
 	if conf.RedisConf != nil && conf.RedisConf.Enabled {
 		redis.InitRedisFromConfig(conf.RedisConf)
 	} else {
-		logrus.Infof("Redis config disabled, will not connect Redis on server startup")
+		logrus.Infof("Redis config disabled, will not connect Redis")
 	}
 
 	// gin engine
@@ -53,8 +59,28 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 	// register customer recovery func
 	engine.Use(gin.CustomRecovery(DefaultRecovery))
 
-	// register routes
+	// whether consul is enabled
+	isConsulEnabled := conf.ConsulConf != nil && conf.ConsulConf.Enabled
+
+	// register consul health check
+	if isConsulEnabled {
+		engine.GET(conf.ConsulConf.HealthCheckUrl, consul.DefaultHealthCheck)
+	}
+
+	// register custom routes
 	routesRegistar(engine)
+
+	// register on consul
+	if isConsulEnabled {
+		if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
+			panic(err)
+		}
+		if err := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); err != nil {
+			panic(err)
+		}
+	} else {
+		logrus.Infof("Consul config disabled, will not register on consul")
+	}
 
 	// start the server
 	go func() {
@@ -67,33 +93,21 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		logrus.Printf("Server bootstrapped on address: %s", addr)
 	}()
 
-	// register on consul
-	if conf.ConsulConf != nil && conf.ConsulConf.Enabled {
-		if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
-			panic(err)
-		}
-
-		if err := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); err != nil {
-			panic(err)
-		}
-	} else {
-		logrus.Infof("Consul config disabled, will not register to consul on server startup")
-	}
-
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	logrus.Info("Shutting down server gracefully")
 
+	// starting to shutdown gracefully
 	// deregister on consul if necessary
-	if config.GlobalConfig.ConsulConf != nil && conf.ConsulConf.Enabled {
+	if isConsulEnabled {
 		consul.DeregisterService(config.GlobalConfig.ConsulConf)
 	}
 
-	_, cancel := context.WithTimeout(context.Background(), 5*time.Second) // at most 5 seconds
+	// wait at most 5 seconds
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	logrus.Println("Server exited")
 }
 

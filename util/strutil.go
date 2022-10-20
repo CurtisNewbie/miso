@@ -9,3 +9,8 @@ func IsEmpty(s *string) bool {
 	}
 	return false
 }
+
+// Check if the string is empty
+func IsStrEmpty(s string) bool {
+	return s == "" || strings.TrimSpace(s) == ""
+}
