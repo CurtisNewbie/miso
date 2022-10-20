@@ -97,7 +97,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 		Port:    i_port,
 		Address: consulConf.RegisterAddress,
 		Check: &api.AgentServiceCheck{
-			HTTP:     "http:" + serverConf.Host + ":" + serverConf.Port + consulConf.HealthCheckUrl,
+			HTTP:     "http://" + serverConf.Host + ":" + serverConf.Port + consulConf.HealthCheckUrl,
 			Interval: consulConf.HealthCheckInterval,
 			Timeout:  consulConf.HealthCheckTimeout,
 		},
