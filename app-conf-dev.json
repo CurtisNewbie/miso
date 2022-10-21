@@ -1,6 +1,6 @@
 {
   "db": {
-    "enabled": true,
+    "enabled": false,
     "user": "root",
     "password": "",
     "database": "fileServer",
@@ -8,7 +8,7 @@
     "port": "3306"
   },
   "redis": {
-    "enabled": true,
+    "enabled": false,
     "address": "localhost",
     "port": "6379",
     "username": "",
@@ -17,7 +17,8 @@
   },
   "server": {
     "host": "localhost",
-    "port": "8081"
+    "port": "8081",
+    "gracefulShutdownTimeSec": 5
   },
   "file": {
     "base": "test-base",

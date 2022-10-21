@@ -69,10 +69,11 @@ func (pt *DBConfig) String() string {
 	return fmt.Sprintf("{Enabled:%t User:%s Password:*** Database:%s Host:%s Port:%s}", pt.Enabled, pt.User, pt.Database, pt.Host, pt.Port)
 }
 
-// Web server configuration
+// Server configuration
 type ServerConfig struct {
-	Host string `json:"host"`
-	Port string `json:"port"`
+	Host                    string `json:"host"`
+	Port                    string `json:"port"`
+	GracefulShutdownTimeSec int    `json:"gracefulShutdownTimeSec"`
 }
 
 // File related configuration

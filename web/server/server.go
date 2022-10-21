@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,32 +44,32 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 			panic(err)
 		}
 	} else {
-		logrus.Infof("MySQL config disabled, will not connect MySQL")
+		logrus.Infof("MySQL config disabled, will not connect to MySQL")
 	}
 
 	// redis
 	if conf.RedisConf != nil && conf.RedisConf.Enabled {
 		redis.InitRedisFromConfig(conf.RedisConf)
 	} else {
-		logrus.Infof("Redis config disabled, will not connect Redis")
+		logrus.Infof("Redis config disabled, will not connect to Redis")
 	}
 
-	// gin engine
-	engine := gin.Default()
+	// gin router
+	router := gin.Default()
 
 	// register customer recovery func
-	engine.Use(gin.CustomRecovery(DefaultRecovery))
+	router.Use(gin.CustomRecovery(DefaultRecovery))
 
 	// whether consul is enabled
 	isConsulEnabled := conf.ConsulConf != nil && conf.ConsulConf.Enabled
 
 	// register consul health check
 	if isConsulEnabled {
-		engine.GET(conf.ConsulConf.HealthCheckUrl, consul.DefaultHealthCheck)
+		router.GET(conf.ConsulConf.HealthCheckUrl, consul.DefaultHealthCheck)
 	}
 
 	// register custom routes
-	routesRegistar(engine)
+	routesRegistar(router)
 
 	// register on consul
 	if isConsulEnabled {
@@ -79,18 +80,21 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 			panic(err)
 		}
 	} else {
-		logrus.Infof("Consul config disabled, will not register on consul")
+		logrus.Infof("Consul config disabled, will not register on Consul")
 	}
 
-	// start the server
+	addr := fmt.Sprintf("%v:%v", conf.ServerConf.Host, conf.ServerConf.Port)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+
+	// start the web server
 	go func() {
-		addr := fmt.Sprintf("%v:%v", conf.ServerConf.Host, conf.ServerConf.Port)
-		err := engine.Run(addr)
-		if err != nil {
-			logrus.Errorf("Failed to bootstrap gin engine, %v", err)
-			return
+		logrus.Infof("Listening and serving HTTP on %s", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Fatalf("ListenAndServe: %s", err)
 		}
-		logrus.Printf("Server bootstrapped on address: %s", addr)
 	}()
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
@@ -105,9 +109,17 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		consul.DeregisterService(config.GlobalConfig.ConsulConf)
 	}
 
-	// wait at most 5 seconds
-	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// by default wait for at most 5 seconds
+	timeout := conf.ServerConf.GracefulShutdownTimeSec
+	if timeout <= 0 {
+		timeout = 5
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	defer cancel()
+
+	// shutdown web server with the timeout
+	server.Shutdown(ctx)
+
 	logrus.Println("Server exited")
 }
 
