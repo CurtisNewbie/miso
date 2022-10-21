@@ -84,18 +84,19 @@ type FileConfig struct {
 
 // Consul configuration
 type ConsulConfig struct {
-	Enabled             bool   `json:"enabled"`
-	RegisterName        string `json:"registerName"`
-	RegisterAddress     string `json:"registerAddress"`
-	ConsulAddress       string `json:"consulAddress"`
-	HealthCheckUrl      string `json:"healthCheckUrl"`
-	HealthCheckInterval string `json:"healthCheckInterval"`
-	HealthCheckTimeout  string `json:"healthCheckTimeout"`
+	Enabled                          bool   `json:"enabled"`
+	RegisterName                     string `json:"registerName"`
+	RegisterAddress                  string `json:"registerAddress"`
+	ConsulAddress                    string `json:"consulAddress"`
+	HealthCheckUrl                   string `json:"healthCheckUrl"`
+	HealthCheckInterval              string `json:"healthCheckInterval"`
+	HealthCheckTimeout               string `json:"healthCheckTimeout"`
+	HealthCheckFailedDeregisterAfter string `json:"healthCheckFailedDeregisterAfter"`
 }
 
 func (pt *ConsulConfig) String() string {
-	return fmt.Sprintf("{Enabled:%t RegisterName:%s, ConsulAddress:%s, HealthCheckUrl:%s, HealthCheckInterval:%s, HealthCheckTimeout:%s}",
-		pt.Enabled, pt.RegisterName, pt.ConsulAddress, pt.HealthCheckUrl, pt.HealthCheckInterval, pt.HealthCheckTimeout)
+	return fmt.Sprintf("{Enabled:%t RegisterName:%s, ConsulAddress:%s, HealthCheckUrl:%s, HealthCheckInterval:%s, HealthCheckTimeout:%s, HealthCheckFailedDeregisterAfter:%s}",
+		pt.Enabled, pt.RegisterName, pt.ConsulAddress, pt.HealthCheckUrl, pt.HealthCheckInterval, pt.HealthCheckTimeout, pt.HealthCheckFailedDeregisterAfter)
 }
 
 // Set the globalConfig

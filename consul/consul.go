@@ -165,9 +165,10 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 		Port:    i_port,
 		Address: consulConf.RegisterAddress,
 		Check: &api.AgentServiceCheck{
-			HTTP:     "http://" + serverConf.Host + ":" + serverConf.Port + consulConf.HealthCheckUrl,
-			Interval: consulConf.HealthCheckInterval,
-			Timeout:  consulConf.HealthCheckTimeout,
+			HTTP:                           "http://" + serverConf.Host + ":" + serverConf.Port + consulConf.HealthCheckUrl,
+			Interval:                       consulConf.HealthCheckInterval,
+			Timeout:                        consulConf.HealthCheckTimeout,
+			DeregisterCriticalServiceAfter: consulConf.HealthCheckFailedDeregisterAfter,
 		},
 	}
 	logrus.Infof("Registering current instance as a service on Consul, registration: %+v, check: %+v", registration, registration.Check)

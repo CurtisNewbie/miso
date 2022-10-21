@@ -30,7 +30,8 @@
     "consulAddress": "localhost:8500",
     "healthCheckUrl": "/some/health",
     "healthCheckInterval": "5s",
-    "healthCheckTimeout": "5s"
+    "healthCheckTimeout": "5s",
+    "healthCheckFailedDeregisterAfter": "30s"
   },
   "client": {
     "fileServiceUrl": "http://localhost:8080",
