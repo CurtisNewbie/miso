@@ -13,6 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	STATUS_PASSING = "passing"
+)
+
 var (
 	// Consul client is not initialized
 	errClientNotInit = errors.New("consul client is not initialized")
@@ -169,6 +173,7 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 			Interval:                       consulConf.HealthCheckInterval,
 			Timeout:                        consulConf.HealthCheckTimeout,
 			DeregisterCriticalServiceAfter: consulConf.HealthCheckFailedDeregisterAfter,
+			Status:                         STATUS_PASSING,
 		},
 	}
 	logrus.Infof("Registering current instance as a service on Consul, registration: %+v, check: %+v", registration, registration.Check)
