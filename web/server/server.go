@@ -88,6 +88,8 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 	// register on consul
 	if isConsulEnabled {
 		if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
+			logrus.Errorf("Failed to init Concul client, %v", err)
+			shutdownServer(conf, server)
 			panic(err)
 		}
 
@@ -101,7 +103,7 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 
 			retry--
 			if retry == 0 {
-				shutdownServer(isConsulEnabled, conf, server)
+				shutdownServer(conf, server)
 				panic(fmt.Sprintf("failed to register on consul, has retried 5 times: %v", regerr))
 			}
 			time.Sleep(1 * time.Second)
@@ -117,16 +119,14 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 
 	// start to shutdown gracefully
 	logrus.Info("Shutting down server gracefully")
-	shutdownServer(isConsulEnabled, conf, server)
+	shutdownServer(conf, server)
 }
 
 // shutdown server, register on Consul if necessary
-func shutdownServer(isConsulEnabled bool, conf *config.Configuration, server *http.Server) {
+func shutdownServer(conf *config.Configuration, server *http.Server) {
 	// deregister on consul if necessary
-	if isConsulEnabled {
-		if e := consul.DeregisterService(config.GlobalConfig.ConsulConf); e != nil {
-			logrus.Errorf("Failed to de-register on consul, err: %v", e)
-		}
+	if e := consul.DeregisterService(); e != nil {
+		logrus.Errorf("Failed to de-register on consul, err: %v", e)
 	}
 
 	// by default wait for at most 5 seconds

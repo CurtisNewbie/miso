@@ -135,16 +135,13 @@ func FetchServices() (map[string]*api.AgentService, error) {
 }
 
 // Register current service
-func DeregisterService(consulConf *config.ConsulConfig) error {
-	if consulConf == nil || serviceId == nil {
+func DeregisterService() error {
+	logrus.Infof("Deregistering current instance on Consul, service_id: %s", *serviceId)
+	if !HasConsulClient() {
 		return nil
 	}
-	logrus.Infof("Deregistering current instance on Consul, service_id: %s", *serviceId)
-	client, e := GetConsulClient()
-	if e != nil {
-		return e
-	}
 
+	client, _ := GetConsulClient()
 	return client.Agent().ServiceDeregister(*serviceId)
 }
 
