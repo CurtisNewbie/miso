@@ -135,18 +135,17 @@ func FetchServices() (map[string]*api.AgentService, error) {
 }
 
 // Register current service
-func DeregisterService(consulConf *config.ConsulConfig) {
+func DeregisterService(consulConf *config.ConsulConfig) error {
 	if consulConf == nil || serviceId == nil {
-		return
+		return nil
 	}
-
 	logrus.Infof("Deregistering current instance on Consul, service_id: %s", *serviceId)
 	client, e := GetConsulClient()
 	if e != nil {
-		return
+		return e
 	}
 
-	client.Agent().ServiceDeregister(*serviceId)
+	return client.Agent().ServiceDeregister(*serviceId)
 }
 
 // Register current instance as a service
@@ -154,17 +153,18 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 	util.NonNil(consulConf, "consulConf is nil")
 	util.NonNil(serverConf, "serverConf is nil")
 
-	client, e := GetConsulClient()
-	if e != nil {
+	var client *api.Client
+	var e error
+
+	if client, e = GetConsulClient(); e != nil {
 		return e
 	}
 
 	i_port, _ := strconv.Atoi(serverConf.Port)
-	si := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
-	serviceId = &si
+	proposedServiceId := fmt.Sprintf("%s:%s:%s", consulConf.RegisterName, serverConf.Port, util.RandStr(5))
 
 	registration := &api.AgentServiceRegistration{
-		ID:      *serviceId,
+		ID:      proposedServiceId,
 		Name:    consulConf.RegisterName,
 		Port:    i_port,
 		Address: consulConf.RegisterAddress,
@@ -178,7 +178,13 @@ func RegisterService(consulConf *config.ConsulConfig, serverConf *config.ServerC
 	}
 	logrus.Infof("Registering current instance as a service on Consul, registration: %+v, check: %+v", registration, registration.Check)
 
-	return client.Agent().ServiceRegister(registration)
+	if e = client.Agent().ServiceRegister(registration); e != nil {
+		logrus.Errorf("Failed to register on Consul, err: %v", e)
+		return e
+	}
+
+	serviceId = &proposedServiceId
+	return nil
 }
 
 // Get the initialized Consul client, InitConsulClient should be called first before this method
