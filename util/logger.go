@@ -7,6 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	logrus.SetFormatter(CustomFormatter())
+}
+
 type CTFormatter struct {
 }
 
