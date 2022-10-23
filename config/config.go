@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -13,9 +14,10 @@ import (
 
 var (
 	// Global Configuration for the app, do not modify this
-	GlobalConfig *Configuration
-	isProd       bool = false
-	isProdLock   sync.RWMutex
+	GlobalConfig     *Configuration
+	isProd           bool = false
+	isProdLock       sync.RWMutex
+	resolveArgRegexp = regexp.MustCompile(`^\${[a-zA-Z0-9\\-\\_]+}$`)
 )
 
 type Configuration struct {
@@ -104,6 +106,44 @@ func SetGlobalConfig(c *Configuration) {
 	GlobalConfig = c
 }
 
+// Resolve args for *configuration by interpolating the values if necessary
+func ResolveArgsForConfiguration(c *Configuration) {
+	c.ServerConf.Host = ResolveArg(c.ServerConf.Host)
+	c.ServerConf.Port = ResolveArg(c.ServerConf.Port)
+	c.FileConf.Base = ResolveArg(c.FileConf.Base)
+	c.FileConf.Temp = ResolveArg(c.FileConf.Temp)
+	if c.DBConf != nil {
+		db := c.DBConf
+		db.User = ResolveArg(db.User)
+		db.Password = ResolveArg(db.Password)
+		db.Database = ResolveArg(db.Database)
+		db.Host = ResolveArg(db.Host)
+		db.Port = ResolveArg(db.Port)
+	}
+	if c.ClientConf != nil {
+		cc := c.ClientConf
+		cc.FileServiceUrl = ResolveArg(cc.FileServiceUrl)
+		cc.AuthServiceUrl = ResolveArg(cc.AuthServiceUrl)
+	}
+	if c.RedisConf != nil {
+		cr := c.RedisConf
+		cr.Address = ResolveArg(cr.Address)
+		cr.Port = ResolveArg(cr.Port)
+		cr.Username = ResolveArg(cr.Username)
+		cr.Password = ResolveArg(cr.Password)
+	}
+	if c.ConsulConf != nil {
+		cc := c.ConsulConf
+		cc.RegisterName = ResolveArg(cc.RegisterName)
+		cc.RegisterAddress = ResolveArg(cc.RegisterAddress)
+		cc.ConsulAddress = ResolveArg(cc.ConsulAddress)
+		cc.HealthCheckUrl = ResolveArg(cc.HealthCheckUrl)
+		cc.HealthCheckInterval = ResolveArg(cc.HealthCheckInterval)
+		cc.HealthCheckTimeout = ResolveArg(cc.HealthCheckTimeout)
+		cc.HealthCheckFailedDeregisterAfter = ResolveArg(cc.HealthCheckFailedDeregisterAfter)
+	}
+}
+
 /*
 	Default way to parse profile and configuration from os.Args, panic if failed
 
@@ -167,6 +207,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 	}
 
 	logrus.Printf("Parsed json config file: '%v'", filePath)
+	ResolveArgsForConfiguration(&configuration)
 	return &configuration, nil
 }
 
@@ -236,6 +277,11 @@ func GetEnv(key string) string {
 	return os.Getenv(key)
 }
 
+// Set environment variable
+func SetEnv(key string, val string) {
+	os.Setenv(key, val)
+}
+
 // Get environment variable with default value
 func GetEnvElse(key string, defVal string) string {
 	s := GetEnv(key)
@@ -265,4 +311,21 @@ func ResolveServerHost(address string) string {
 		address = util.GetLocalIPV4()
 	}
 	return address
+}
+
+// Resolve argument, e.g., for arg like '${someArg}', it will in fact look for 'someArg' in os.Env
+func ResolveArg(arg string) string {
+	if !resolveArgRegexp.MatchString(arg) {
+		return arg
+	}
+
+	r := []rune(arg)
+	key := string(r[2 : len(r)-1])
+	val := GetEnv(key)
+	if val == "" {
+		val = arg
+	}
+
+	logrus.Infof("Tried to resolve key '%s', value: '%s'", arg, val)
+	return val
 }
