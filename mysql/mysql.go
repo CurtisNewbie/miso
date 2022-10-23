@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/gocommon/config"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -33,17 +33,17 @@ func InitDB(user string, password string, dbname string, host string, port strin
 
 	params := "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s"
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?%v", user, password, host, port, dbname, params)
-	log.Printf("Connecting to database '%v:%v' with params: '%v'", host, port, params)
+	logrus.Infof("Connecting to database '%v:%v' with params: '%v'", host, port, params)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("Failed to Open DB Handle, err: %v", err)
+		logrus.Infof("Failed to Open DB Handle, err: %v", err)
 		return err
 	}
 
 	sqlDb, err := db.DB()
 	if err != nil {
-		log.Printf("Get DB Handle from gorm failed, %v", err)
+		logrus.Infof("Get DB Handle from gorm failed, %v", err)
 		return err
 	}
 
@@ -53,11 +53,11 @@ func InitDB(user string, password string, dbname string, host string, port strin
 
 	err = sqlDb.Ping() // make sure the handle is actually connected
 	if err != nil {
-		log.Printf("Ping DB Error, %v, connection may not be established", err)
+		logrus.Infof("Ping DB Error, %v, connection may not be established", err)
 		return err
 	}
 
-	log.Println("DB Handle initialized")
+	logrus.Infof("DB Handle initialized")
 
 	dbHandle = db
 

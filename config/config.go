@@ -154,10 +154,10 @@ func ResolveArgsForConfiguration(c *Configuration) {
 */
 func DefaultParseProfConf(args []string) (profile string, conf *Configuration) {
 	profile = ParseProfile(args)
-	logrus.Printf("Using profile: '%v'", profile)
+	logrus.Infof("Using profile: '%v'", profile)
 
 	configFile := ParseConfigFilePath(args[1:], profile)
-	logrus.Printf("Looking for config file: '%s'", configFile)
+	logrus.Infof("Looking for config file: '%s'", configFile)
 
 	conf, err := ParseJsonConfig(configFile)
 	if err != nil {
@@ -206,7 +206,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 		return nil, err
 	}
 
-	logrus.Printf("Parsed json config file: '%v'", filePath)
+	logrus.Infof("Parsed json config file: '%v'", filePath)
 	ResolveArgsForConfiguration(&configuration)
 	return &configuration, nil
 }

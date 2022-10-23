@@ -139,7 +139,7 @@ func shutdownServer(conf *config.Configuration, server *http.Server) {
 
 	// shutdown web server with the timeout
 	server.Shutdown(ctx)
-	logrus.Println("Server exited")
+	logrus.Infof("Server exited")
 }
 
 // Resolve handler path
