@@ -326,6 +326,6 @@ func ResolveArg(arg string) string {
 		val = arg
 	}
 
-	logrus.Infof("Tried to resolve key '%s'", arg)
+	// logrus.Infof("Tried to resolve key '%s'", arg)
 	return val
 }
