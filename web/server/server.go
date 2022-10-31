@@ -96,15 +96,14 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 		// at most retry 5 times
 		retry := 5
 		for {
-			var regerr error = nil
-			if regerr = consul.RegisterService(conf.ConsulConf, &conf.ServerConf); regerr == nil {
+			if regerr := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); regerr == nil {
 				break
 			}
 
 			retry--
 			if retry == 0 {
 				shutdownServer(conf, server)
-				panic(fmt.Sprintf("failed to register on consul, has retried 5 times: %v", regerr))
+				panic("failed to register on consul, has retried 5 times.")
 			}
 			time.Sleep(1 * time.Second)
 		}
