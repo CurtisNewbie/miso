@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -23,6 +24,11 @@ import (
 
 // Routes registar
 type RoutesRegistar func(*gin.Engine)
+
+var (
+	shuttingDown   bool = false
+	shutingDownRwm sync.RWMutex
+)
 
 // Bootstrap server
 //
@@ -87,26 +93,31 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 
 	// register on consul
 	if isConsulEnabled {
-		if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
-			logrus.Errorf("Failed to init Concul client, %v", err)
-			shutdownServer(conf, server)
-			panic(err)
-		}
+		logrus.Infof("Consul enabled, will register as a service")
 
-		// at most retry 5 times
-		retry := 5
-		for {
-			if regerr := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); regerr == nil {
-				break
-			}
-
-			retry--
-			if retry == 0 {
+		// register on consul, retry until we success
+		go func() {
+			if _, err := consul.InitConsulClient(conf.ConsulConf); err != nil {
+				logrus.Errorf("Failed to init Concul client, %v", err)
 				shutdownServer(conf, server)
-				panic("failed to register on consul, has retried 5 times.")
+				panic(err)
 			}
-			time.Sleep(1 * time.Second)
-		}
+
+			retry := 0
+			for {
+				if IsShuttingDown() {
+					break
+				}
+
+				if regerr := consul.RegisterService(conf.ConsulConf, &conf.ServerConf); regerr == nil {
+					break
+				}
+
+				logrus.Errorf("Failed to register on consul, has retried %d times.", retry)
+				retry++
+				time.Sleep(1 * time.Second)
+			}
+		}()
 	} else {
 		logrus.Infof("Consul config disabled, will not register on Consul")
 	}
@@ -123,6 +134,8 @@ func BootstrapServer(conf *config.Configuration, routesRegistar RoutesRegistar) 
 
 // shutdown server, register on Consul if necessary
 func shutdownServer(conf *config.Configuration, server *http.Server) {
+	MarkServerShuttingDown()
+
 	// deregister on consul if necessary
 	if e := consul.DeregisterService(); e != nil {
 		logrus.Errorf("Failed to de-register on consul, err: %v", e)
@@ -162,4 +175,18 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	}
 
 	util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
+}
+
+// check if the server is shutting down
+func IsShuttingDown() bool {
+	shutingDownRwm.RLock()
+	defer shutingDownRwm.RUnlock()
+	return shuttingDown
+}
+
+// mark that the server is shutting down
+func MarkServerShuttingDown() {
+	shutingDownRwm.Lock()
+	defer shutingDownRwm.Unlock()
+	shuttingDown = true
 }
