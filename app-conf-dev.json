@@ -1,5 +1,5 @@
 {
-  "db": {
+  "mysql": {
     "enabled": false,
     "user": "root",
     "password": "123456",
