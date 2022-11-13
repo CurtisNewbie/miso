@@ -10,9 +10,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
 const (
-
 	// Connection max lifetime, hikari recommends 1800000, so we do the same thing
 	CONN_MAX_LIFE_TIME = time.Minute * 30
 
@@ -110,7 +108,7 @@ func InitMySql(user string, password string, dbname string, host string, port st
 
 	sqlDb, err := db.DB()
 	if err != nil {
-		logrus.Infof("Failed db handle from gorm, %v", err)
+		logrus.Infof("Failed to obtain MySQL conn from gorm, %v", err)
 		return err
 	}
 

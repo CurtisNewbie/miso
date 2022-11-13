@@ -7,7 +7,7 @@ const (
 	/*
 		------------------------------------
 
-		Prop for Consul 
+		Prop for Consul
 
 		------------------------------------
 	*/
@@ -23,7 +23,7 @@ const (
 	/*
 		------------------------------------
 
-		Prop for Redis 
+		Prop for Redis
 
 		------------------------------------
 	*/
@@ -37,7 +37,7 @@ const (
 	/*
 		------------------------------------
 
-		Prop for MySQL 
+		Prop for MySQL
 
 		------------------------------------
 	*/
@@ -58,4 +58,13 @@ const (
 	PROP_SERVER_HOST                       = "server.host"
 	PROP_SERVER_PORT                       = "server.port"
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC = "server.gracefulShutdownTimeSec"
+
+	/*
+		------------------------------------
+
+		Prop for SQLite
+
+		------------------------------------
+	*/
+	PROP_SQLITE_FILE    = "sqlite.file"
 )
