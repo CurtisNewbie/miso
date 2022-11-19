@@ -11,7 +11,7 @@ import (
 type LRunnable func() any
 
 // Check whether the error is 'redislock.ErrNotObtained'
-func IsLockNotObtained(err error) bool {
+func IsRLockNotObtainedErr(err error) bool {
 	return err == redislock.ErrNotObtained
 }
 
@@ -26,8 +26,8 @@ func ObtainRLocker() *redislock.Client {
 	The maximum time wait for the lock is 1 min.
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func LockRun(key string, runnable LRunnable) (any, error) {
-	return TimedLockRun(key, 1*time.Minute, runnable)
+func RLockRun(key string, runnable LRunnable) (any, error) {
+	return TimedRLockRun(key, 1*time.Minute, runnable)
 }
 
 /*
@@ -36,7 +36,7 @@ func LockRun(key string, runnable LRunnable) (any, error) {
 	The ttl is the maximum time wait for the lock.
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func TimedLockRun(key string, ttl time.Duration, runnable LRunnable) (any, error) {
+func TimedRLockRun(key string, ttl time.Duration, runnable LRunnable) (any, error) {
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, ttl, nil)
 
