@@ -65,32 +65,38 @@ func init() {
 	SetDefProp(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "130s")
 }
 
-// Subscribe to server list
+// Subscribe to server list, refresh server list every 30s
 func SubscribeServerList() {
+	DoSubscribeServerList(30)
+}
+
+
+// Subscribe to server list
+func DoSubscribeServerList(everyNSec int) {
 	serverListPSub.mu.Lock()
 	defer serverListPSub.mu.Unlock()
 
 	if serverListPSub.sub != nil {
 		return
 	}
+
+	serverListPSub.sub = time.NewTimer(time.Duration(everyNSec) * time.Second)
+	go func() {
+		PollServiceListInstances()
+		<-serverListPSub.sub.C
+	}()
 }
 
-// Unsubscribe to server list
+// stop refreshing server list
 func UnsubscribeServerList() {
 	serverListPSub.mu.Lock()
 	defer serverListPSub.mu.Unlock()
 
 	if serverListPSub.sub == nil {
 		return
-	} else {
-		serverListPSub.sub.Stop()
 	}
 
-	serverListPSub.sub = time.NewTimer(30 * time.Second)
-	go func() {
-		PollServiceListInstances()
-		<-serverListPSub.sub.C
-	}()
+	serverListPSub.sub.Stop()
 }
 
 /*
@@ -201,7 +207,7 @@ func FetchServices() (map[string]*api.AgentService, error) {
 	return client.Agent().Services()
 }
 
-// Register current service 
+// Register current service
 func DeregisterService() error {
 	if !IsConsulClientInitialized() {
 		return nil
