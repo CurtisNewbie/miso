@@ -10,9 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	. "github.com/curtisnewbie/gocommon/common"
-	. "github.com/curtisnewbie/gocommon/mysql"
-	. "github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/consul"
+	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
@@ -29,9 +30,9 @@ var (
 )
 
 func init() {
-	SetDefProp(PROP_SERVER_HOST, "localhost")
-	SetDefProp(PROP_SERVER_PORT, 8080)
-	SetDefProp(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
+	common.SetDefProp(common.PROP_SERVER_HOST, "localhost")
+	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
+	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
 }
 
 /*
@@ -57,21 +58,21 @@ func AddRoutesRegistar(reg RoutesRegistar) {
 */
 func BootstrapServer() {
 
-	if IsProdMode() {
+	if common.IsProdMode() {
 		logrus.Info("Bootstraping Gin with ReleaseMode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// mysql
-	if IsMySqlEnabled() {
-		if err := InitMySqlFromProp(); err != nil {
+	if mysql.IsMySqlEnabled() {
+		if err := mysql.InitMySqlFromProp(); err != nil {
 			panic(err)
 		}
 	}
 
 	// redis
-	if IsRedisEnabled() {
-		InitRedisFromProp()
+	if redis.IsRedisEnabled() {
+		redis.InitRedisFromProp()
 	}
 
 	// gin router
@@ -81,8 +82,8 @@ func BootstrapServer() {
 	router.Use(gin.CustomRecovery(DefaultRecovery))
 
 	// register consul health check
-	if IsConsulEnabled() {
-		router.GET(GetPropStr(PROP_CONSUL_HEALTHCHECK_URL), DefaultHealthCheck)
+	if consul.IsConsulEnabled() {
+		router.GET(common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL), consul.DefaultHealthCheck)
 	}
 
 	// register custom routes
@@ -90,7 +91,7 @@ func BootstrapServer() {
 		registar(router)
 	}
 
-	addr := fmt.Sprintf("%s:%s", GetPropStr(PROP_SERVER_HOST), GetPropStr(PROP_SERVER_PORT))
+	addr := fmt.Sprintf("%s:%s", common.GetPropStr(common.PROP_SERVER_HOST), common.GetPropStr(common.PROP_SERVER_PORT))
 	server := &http.Server{
 		Addr:    addr,
 		Handler: router,
@@ -105,12 +106,12 @@ func BootstrapServer() {
 	}()
 
 	// register on consul
-	if IsConsulEnabled() {
+	if consul.IsConsulEnabled() {
 		logrus.Infof("Consul enabled, will register as a service")
 
 		// register on consul, retry until we success
 		go func() {
-			if _, err := GetConsulClient(); err != nil {
+			if _, err := consul.GetConsulClient(); err != nil {
 				logrus.Errorf("Failed to init Concul client, %v", err)
 				shutdownServer(server)
 				panic(err)
@@ -122,7 +123,7 @@ func BootstrapServer() {
 					break
 				}
 
-				if regerr := RegisterService(); regerr == nil {
+				if regerr := consul.RegisterService(); regerr == nil {
 					break
 				}
 
@@ -156,14 +157,14 @@ func shutdownServer(server *http.Server) {
 	MarkServerShuttingDown()
 
 	// deregister on consul if necessary
-	if e := DeregisterService(); e != nil {
+	if e := consul.DeregisterService(); e != nil {
 		logrus.Errorf("Failed to de-register on consul, err: %v", e)
 	}
 
-	UnsubscribeServerList()
+	consul.UnsubscribeServerList()
 
 	// set timeout for graceful shutdown
-	timeout := GetPropInt(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC)
+	timeout := common.GetPropInt(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC)
 	if timeout <= 0 {
 		timeout = 5
 	}
@@ -196,7 +197,7 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 		return
 	}
 
-	DispatchErrJson(c, NewWebErr("Unknown error, please try again later"))
+	DispatchErrJson(c, common.NewWebErr("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down

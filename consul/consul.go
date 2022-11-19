@@ -1,10 +1,11 @@
-package common
+package consul
 
 import (
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
 	"github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ var (
 	// Holder (cache) of service list and their instances
 	serviceListHolder = &ServiceListHolder{
 		Instances:   map[string][]*api.AgentService{},
-		ServiceList: Set[string]{},
+		ServiceList: common.Set[string]{},
 	}
 
 	// server list polling subscription
@@ -53,16 +54,16 @@ type serviceRegistration struct {
 type ServiceListHolder struct {
 	mu          sync.Mutex
 	Instances   map[string][]*api.AgentService
-	ServiceList Set[string]
+	ServiceList common.Set[string]
 }
 
 func init() {
-	SetDefProp(PROP_CONSUL_ENABLED, false)
-	SetDefProp(PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_URL, "/health")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_INTERVAL, "60s")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "130s")
+	common.SetDefProp(common.PROP_CONSUL_ENABLED, false)
+	common.SetDefProp(common.PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_URL, "/health")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_INTERVAL, "60s")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "130s")
 }
 
 // Subscribe to server list, refresh server list every 30s
@@ -107,7 +108,7 @@ func UnsubscribeServerList() {
 		PROP_CONSUL_ENABLED
 */
 func IsConsulEnabled() bool {
-	return GetPropBool(PROP_CONSUL_ENABLED)
+	return common.GetPropBool(common.PROP_CONSUL_ENABLED)
 }
 
 // Poll all service list and cache them
@@ -130,7 +131,7 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	if err != nil {
 		return nil, err
 	}
-	serviceListHolder.Instances[name] = ValuesOfStMap(services)
+	serviceListHolder.Instances[name] = common.ValuesOfStMap(services)
 	return services, err
 }
 
@@ -145,7 +146,7 @@ func ResolveServiceAddress(name string) (string, error) {
 	serviceListHolder.mu.Lock()
 	defer serviceListHolder.mu.Unlock()
 
-	serviceListHolder.ServiceList[name] = Void{}
+	serviceListHolder.ServiceList[name] = common.Void{}
 	instances := serviceListHolder.Instances[name]
 	if instances == nil {
 		_fetchAndCacheServicesByName(name)
@@ -156,7 +157,7 @@ func ResolveServiceAddress(name string) (string, error) {
 	if instances == nil || len(instances) < 1 {
 		return "", fmt.Errorf("unable to find any available service instance for '%s'", name)
 	}
-	return extractServiceAddress(RandomOne(instances)), nil
+	return extractServiceAddress(common.RandomOne(instances)), nil
 }
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
@@ -178,7 +179,7 @@ func FetchServiceAddress(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	agent := RandomOne(ValuesOfStMap(services))
+	agent := common.RandomOne(common.ValuesOfStMap(services))
 	return extractServiceAddress(agent), nil
 }
 
@@ -264,20 +265,20 @@ func RegisterService() error {
 		return nil
 	}
 
-	serverPort := GetPropInt(PROP_SERVER_PORT)
-	registerName := GetPropStr(PROP_CONSUL_REGISTER_NAME)
-	registerAddress := GetPropStr(PROP_CONSUL_REGISTER_ADDRESS)
-	healthCheckUrl := GetPropStr(PROP_CONSUL_HEALTHCHECK_URL)
-	healthCheckInterval := GetPropStr(PROP_CONSUL_HEALTHCHECK_INTERVAL)
-	healthCheckTimeout := GetPropStr(PROP_CONSUL_HEALTHCHECK_TIMEOUT)
-	healthCheckDeregAfter := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER)
+	serverPort := common.GetPropInt(common.PROP_SERVER_PORT)
+	registerName := common.GetPropStr(common.PROP_CONSUL_REGISTER_NAME)
+	registerAddress := common.GetPropStr(common.PROP_CONSUL_REGISTER_ADDRESS)
+	healthCheckUrl := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL)
+	healthCheckInterval := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_INTERVAL)
+	healthCheckTimeout := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT)
+	healthCheckDeregAfter := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER)
 
 	// registerAddress not specified, resolve the ip address used for the server
 	if registerAddress == "" {
-		registerAddress = ResolveServerHost(GetPropStr(PROP_SERVER_HOST))
+		registerAddress = common.ResolveServerHost(common.GetPropStr(common.PROP_SERVER_HOST))
 	}
 
-	proposedServiceId := fmt.Sprintf("%s:%d:%s", registerName, serverPort, RandStr(5))
+	proposedServiceId := fmt.Sprintf("%s:%d:%s", registerName, serverPort, common.RandStr(5))
 	registration := &api.AgentServiceRegistration{
 		ID:      proposedServiceId,
 		Name:    registerName,
@@ -322,7 +323,7 @@ func GetConsulClient() (*api.Client, error) {
 	}
 
 	c, err := api.NewClient(&api.Config{
-		Address: GetPropStr(PROP_CONSUL_CONSUL_ADDRESS),
+		Address: common.GetPropStr(common.PROP_CONSUL_CONSUL_ADDRESS),
 	})
 	if err != nil {
 		return nil, err

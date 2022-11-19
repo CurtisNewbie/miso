@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	. "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -13,7 +13,7 @@ import (
 type RouteHandler func(c *gin.Context) (any, error)
 
 // Authenticated route handle
-type AuthRouteHandler func(c *gin.Context, user *User) (any, error)
+type AuthRouteHandler func(c *gin.Context, user *common.User) (any, error)
 
 // Build a Route Handler for an authorized request
 func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
@@ -33,7 +33,7 @@ func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
 }
 
 // Build a Route Handler for authorized and JSON-based request
-func BuildAuthJRouteHandler[T any](handler func(c *gin.Context, user *User, t *T) (any, error)) func(c *gin.Context) {
+func BuildAuthJRouteHandler[T any](handler func(c *gin.Context, user *common.User, t *T) (any, error)) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		user := RequireUser(c)
 		var t T
@@ -82,26 +82,26 @@ func DispatchJson(c *gin.Context, body interface{}) {
 
 // Dispatch error response in json format
 func DispatchErrJson(c *gin.Context, err error) {
-	c.JSON(http.StatusOK, WrapResp(nil, err))
+	c.JSON(http.StatusOK, common.WrapResp(nil, err))
 }
 
 // Dispatch error response in json format
 func DispatchErrMsgJson(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, ErrorResp(msg))
+	c.JSON(http.StatusOK, common.ErrorResp(msg))
 }
 
 // Dispatch an ok response in json format
 func DispatchOk(c *gin.Context) {
-	c.JSON(http.StatusOK, OkResp())
+	c.JSON(http.StatusOK, common.OkResp())
 }
 
 // Dispatch an ok response with data in json format
 func DispatchOkWData(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, OkRespWData(data))
+	c.JSON(http.StatusOK, common.OkRespWData(data))
 }
 
 // Extract user from request headers, panic if failed
-func RequireUser(c *gin.Context) *User {
+func RequireUser(c *gin.Context) *common.User {
 	u, e := ExtractUser(c)
 	if e != nil {
 		panic(e)
@@ -109,11 +109,11 @@ func RequireUser(c *gin.Context) *User {
 	return u
 }
 
-/* Extract User from request headers */
-func ExtractUser(c *gin.Context) (*User, error) {
+/* Extract common.User from request headers */
+func ExtractUser(c *gin.Context) (*common.User, error) {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nil, NewWebErr("Please sign up first")
+		return nil, common.NewWebErr("Please sign up first")
 	}
 
 	var services []string
@@ -124,7 +124,7 @@ func ExtractUser(c *gin.Context) (*User, error) {
 		services = strings.Split(servicesStr, ",")
 	}
 
-	return &User{
+	return &common.User{
 		UserId:   id,
 		Username: c.GetHeader("username"),
 		UserNo:   c.GetHeader("userno"),
