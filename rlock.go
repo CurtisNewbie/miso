@@ -21,16 +21,18 @@ func ObtainRLocker() *redislock.Client {
 }
 
 /*
-	Lock and run the runnable.
-	The maximum time wait for the lock is 10 min.
+	Lock and run the runnable using Redis
+
+	The maximum time wait for the lock is 1 min.
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
 func LockRun(key string, runnable LRunnable) (any, error) {
-	return TimedLockRun(key, 10*time.Minute, runnable)
+	return TimedLockRun(key, 1*time.Minute, runnable)
 }
 
 /*
-	Lock and run the runnable.
+	Lock and run the runnable using Redis
+
 	The ttl is the maximum time wait for the lock.
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
