@@ -20,10 +20,31 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var fn string = ""
 
 	if entry.HasCaller() {
-		fn = " " + getShortFnName(clr.Function) 
+		fn = " " + getShortFnName(clr.Function)
 	}
-	s := fmt.Sprintf("[%s] %s%s - %s\n", strings.ToUpper(entry.Level.String()), entry.Time.Format("2006-01-02 15:04:05"), fn, entry.Message)
+	s := fmt.Sprintf("[%s] %s%s - %s\n", toLevelStr(entry.Level), entry.Time.Format("2006-01-02 15:04:05"), fn, entry.Message)
 	return []byte(s), nil
+}
+
+func toLevelStr(level logrus.Level) string {
+	switch level {
+	case logrus.TraceLevel:
+		return "TRACE"
+	case logrus.DebugLevel:
+		return "DEBUG"
+	case logrus.InfoLevel:
+		return "INFO"
+	case logrus.WarnLevel:
+		return "WARN"
+	case logrus.ErrorLevel:
+		return "ERROR"
+	case logrus.FatalLevel:
+		return "FATAL"
+	case logrus.PanicLevel:
+		return "PANIC"
+	}
+
+	return "UNOWN"
 }
 
 func getShortFnName(fn string) string {
