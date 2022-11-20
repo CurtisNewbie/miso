@@ -22,6 +22,11 @@ func (rw RuneWrp) Substr(start int, end int) string {
 	return string(rw.c[start:end])
 }
 
+// Get substring
+func (rw RuneWrp) SubstrFrom(start int) string {
+	return string(rw.c[start:rw.Len()])
+}
+
 // Check if the string is empty
 func IsEmpty(s *string) bool {
 	if s == nil || strings.TrimSpace(*s) == "" {
@@ -31,7 +36,7 @@ func IsEmpty(s *string) bool {
 }
 
 // Get RuneWrp from string
-func GetRuneWRp(s string) RuneWrp {
+func GetRuneWrp(s string) RuneWrp {
 	return RuneWrp{c: []rune(s)}
 }
 

@@ -29,7 +29,7 @@ func TestLastChar(t *testing.T) {
 
 func TestRuneWrp(t *testing.T) {
 	s := "abcde   "
-	rw := GetRuneWRp(s)
+	rw := GetRuneWrp(s)
 
 	if rw.StrAt(0) != "a" {
 		t.Error()

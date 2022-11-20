@@ -8,6 +8,7 @@ import (
 )
 
 func init() {
+	logrus.SetReportCaller(true)
 	logrus.SetFormatter(CustomFormatter())
 }
 
@@ -15,8 +16,23 @@ type CTFormatter struct {
 }
 
 func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	s := fmt.Sprintf("[%s] %s - %s\n", strings.ToUpper(entry.Level.String()), entry.Time.Format("2006-01-02 15:04:05"), entry.Message)
+	clr := entry.Caller
+	var fn string = ""
+
+	if entry.HasCaller() {
+		fn = " " + getShortFnName(clr.Function) 
+	}
+	s := fmt.Sprintf("[%s] %s%s - %s\n", strings.ToUpper(entry.Level.String()), entry.Time.Format("2006-01-02 15:04:05"), fn, entry.Message)
 	return []byte(s), nil
+}
+
+func getShortFnName(fn string) string {
+	i := strings.LastIndex(fn, ".")
+	if i < 0 {
+		return fn
+	}
+	rw := GetRuneWrp(fn)
+	return rw.SubstrFrom(i + 1)
 }
 
 // Get custom formatter logrus
