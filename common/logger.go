@@ -44,7 +44,7 @@ func toLevelStr(level logrus.Level) string {
 		return "PANIC"
 	}
 
-	return "UNOWN"
+	return "UNKNOWN"
 }
 
 func getShortFnName(fn string) string {
