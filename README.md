@@ -1,5 +1,27 @@
 # gocommon
+
 Common stuff for go
+
+## Command Line Arguments
+
+- To specify profile: `profile=${PROFILE_NAME}`
+- To specify where the config file is: `configFile=${PATH_TO_CONFIG_FILE}` 
+
+By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.json` and load the configuration properties from it. 
+
+e.g.,
+
+```sh
+# both profile and configFile are specified
+./main profile='prod' configFile=/myapp/my-conf.json
+
+# only profile is specified, the configFile will be 'app-conf-prod.json' 
+./main profile='prod'
+
+# using default profile 'dev', the configFile will be 'app-conf-dev.json' 
+./main 
+```
+
 
 ## Properties-Based Configuration
 
@@ -7,7 +29,7 @@ Common stuff for go
 
 | property | description | default value |
 | --- | --- | --- | 
-| profile | name of the profile used | dev |
+| profile | Name of the profile used. If 'prod' is specified, then it will be using production mode for libraries, e.g., GORM | dev |
 
 ### Web Server Properties
 
@@ -23,8 +45,8 @@ Common stuff for go
 | --- | --- | --- | 
 | consul.enabled | whether Consul is enabled | false |
 | consul.registerName | registered service name | | 
-| consul.registerAddress | registered service address | \${server.host}:${server.port} |  
-| consul.consulAddress | address of the Consul server | localhost:8500 | 
+| consul.registerAddress | registered service address | `${server.host}:${server.port}` |  
+| consul.consulAddress | address of the Consul server | `localhost:8500` | 
 | consul.healthCheckUrl | health check url | /health |
 | consul.healthCheckInterval | health check interval | 60s |
 | consul.healthCheckTimeout | health check timeout | 3s |
@@ -38,7 +60,7 @@ Common stuff for go
 | mysql.user | username  | root |
 | mysql.password | password |  |
 | mysql.database | database | |  
-| mysql.host | host | localhost |
+| mysql.host | host | `localhost` |
 | mysql.port | port | 3306 |
 
 ### Redis Properties
@@ -46,7 +68,7 @@ Common stuff for go
 | property | description | default value |
 | --- | --- | --- | 
 | redis.enabled | whether Redis is enabled | false |
-| redis.address | address of Redis server | localhost |
+| redis.address | address of Redis server | `localhost` |
 | redis.port | port of Redis server | 6379 |
 | redis.username | username | |
 | redis.password | password | | 
