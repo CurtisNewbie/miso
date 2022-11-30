@@ -51,9 +51,14 @@ func TestResolveArgForParsedConf(t *testing.T) {
 
 	args := make([]string, 2)
 	args[0] = "profile=dev"
-	args[1] = "configFile=app-conf-test.json"
+	args[1] = "configFile=../app-conf-test.json"
 	DefaultReadConfig(args)
 
+	t.Logf("PRODUCTION MODE: %t", GetPropBool(PROP_PRODUCTION_MODE))
+	t.Logf("Is PROD MODE: %t", IsProdMode())
+
+	if m := GetPropBool(PROP_PRODUCTION_MODE); m { t.Error(m) }
+	if IsProdMode() { t.Error() }
 	if s := GetPropStr(PROP_MYSQL_USER); s != "root" { t.Error(s) }
 	if s := GetPropStr(PROP_MYSQL_PASSWORD); s != "123456" { t.Error(s) }
 	if s := GetPropStr(PROP_MYSQL_DATABASE); s != "fileServer" { t.Error(s) }

@@ -1,4 +1,7 @@
 {
+  "mode": {
+    "production": true
+  },
   "mysql": {
     "enabled": false,
     "user": "root",

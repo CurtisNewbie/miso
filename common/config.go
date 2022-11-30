@@ -13,10 +13,6 @@ import (
 )
 
 var (
-	// is 'prod' mode
-	isProd     bool = false
-	isProdLock sync.RWMutex
-
 	// regex for arg expansion
 	resolveArgRegexp = regexp.MustCompile(`^\${[a-zA-Z0-9\\-\\_]+}$`)
 
@@ -26,6 +22,7 @@ var (
 
 func init() {
 	SetDefProp(PROP_PROFILE, "dev")
+	SetDefProp(PROP_PRODUCTION_MODE, "false")
 }
 
 // Set default value for the prop
@@ -97,12 +94,15 @@ func _getPropString(prop string) string {
 */
 func DefaultReadConfig(args []string) {
 	profile := GuessProfile(args)
+	SetProfile(profile)
 	logrus.Infof("Using profile: '%v'", profile)
 
 	configFile := GuessConfigFilePath(args, profile)
 	logrus.Infof("Looking for config file: '%s'", configFile)
 
-	SetIsProdMode(IsProd(profile))
+	if strings.ToLower(profile) == "prod" {
+		SetProp(PROP_PRODUCTION_MODE, true)
+	}
 	LoadConfigFromFile(configFile)
 }
 
@@ -196,15 +196,6 @@ func ExtractArgValue(args []string, predicate Predicate[string]) string {
 	return ""
 }
 
-/*
-	Check if it's for production by looking at the profile
-
-	profile should be in lower case
-*/
-func IsProd(profile string) bool {
-	return profile == "prod"
-}
-
 // Get environment variable
 func GetEnv(key string) string {
 	return os.Getenv(key)
@@ -224,18 +215,17 @@ func GetEnvElse(key string, defVal string) string {
 	return s
 }
 
-// mark that we are running in production mode
-func SetIsProdMode(isProdFlag bool) {
-	isProdLock.Lock()
-	defer isProdLock.Unlock()
-	isProd = isProdFlag
-}
-
-// check whether we are running in production mode
+// Check whether we are running in production mode
+//
+// This func looks for prop: PROP_PRODUCTION_MODE,
+// if the prop value equals to true (case insensitive), then
+// true is returned else false
 func IsProdMode() bool {
-	isProdLock.RLock()
-	defer isProdLock.RUnlock()
-	return isProd
+	if !ContainsProp(PROP_PRODUCTION_MODE) {
+		return false
+	}
+	mode := GetPropBool(PROP_PRODUCTION_MODE)
+	return mode 
 }
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'

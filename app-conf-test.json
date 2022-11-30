@@ -1,4 +1,7 @@
 {
+  "mode": {
+    "production": false 
+  },
   "mysql": {
     "enabled": false,
     "user": "${DB_USER}",

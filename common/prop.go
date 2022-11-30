@@ -3,6 +3,8 @@ package common
 const (
 	// name of the profile used
 	PROP_PROFILE = "profile"
+	// whether production mode is turned on (true/false)
+	PROP_PRODUCTION_MODE = "mode.production"
 
 	/*
 		------------------------------------
