@@ -6,7 +6,11 @@ import (
 )
 
 var (
-	letters = []rune("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	letters    = []rune("0123456789" + "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	digits     = []rune("0123456789")
+	alphabets  = []rune("abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	upperAlpha = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	lowerAlpha = []rune("abcdefghijklmnopqrstuvwxyz")
 )
 
 const (
@@ -22,11 +26,46 @@ func init() {
 	}
 }
 
-// generate random string with specified length
+// Generate random string with specified length
+//
+// the generated string will contains [a-zA-Z0-9]
 func RandStr(n int) string {
+	return doRand(n, letters)
+}
+
+// Generate random numeric string with specified length
+//
+// the generated string will contains [0-9]
+func RandNum(n int) string {
+	return doRand(n, digits)
+}
+
+// Generate random alphabetic string with specified length
+//
+// the generated string will contains [a-zA-Z]
+func RandAlpha(n int) string {
+	return doRand(n, alphabets)
+}
+
+// Generate random alphabetic, uppercase string with specified length
+//
+// the generated string will contains [A-Z]
+func RandUpperAlpha(n int) string {
+	return doRand(n, upperAlpha)
+}
+
+// Generate random alphabetic, lowercase string with specified length
+//
+// the generated string will contains [a-z]
+func RandLowerAlpha(n int) string {
+	return doRand(n, lowerAlpha)
+}
+
+// generate randon str based on given length and charset
+func doRand(n int, set []rune) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = set[rand.Intn(len(set))]
 	}
 	return string(b)
 }
