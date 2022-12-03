@@ -28,7 +28,7 @@ var (
 	// Holder (cache) of service list and their instances
 	serviceListHolder = &ServiceListHolder{
 		Instances:   map[string][]*api.AgentService{},
-		ServiceList: common.Set[string]{},
+		ServiceList: common.NewSet[string](),
 	}
 
 	// server list polling subscription
@@ -117,7 +117,7 @@ func PollServiceListInstances() {
 	defer serviceListHolder.mu.Unlock()
 
 	logrus.Info("Polling service list")
-	for k := range serviceListHolder.ServiceList {
+	for k := range serviceListHolder.ServiceList.Keys {
 		_, err := _fetchAndCacheServicesByName(k)
 		if err != nil {
 			logrus.Warnf("Failed to poll service service for '%s', err: %v", k, err)
@@ -146,7 +146,7 @@ func ResolveServiceAddress(name string) (string, error) {
 	serviceListHolder.mu.Lock()
 	defer serviceListHolder.mu.Unlock()
 
-	serviceListHolder.ServiceList[name] = common.Void{}
+	serviceListHolder.ServiceList.Add(name)
 	instances := serviceListHolder.Instances[name]
 	if instances == nil {
 		_fetchAndCacheServicesByName(name)

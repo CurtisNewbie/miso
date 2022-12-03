@@ -17,7 +17,7 @@ func TestGetIdPerf(t *testing.T) {
 }
 
 func TestGetId(t *testing.T) {
-	var set Set[string] = Set[string]{}
+	var set Set[string] = NewSet[string]()
 	var mu sync.Mutex
 
 	threadCnt := 50
@@ -26,22 +26,22 @@ func TestGetId(t *testing.T) {
 	var wg sync.WaitGroup
 	for j := 0; j < threadCnt; j++ {
 		wg.Add(1)
-		go func(idSet Set[string], threadId int) {
+		go func(idSet *Set[string], threadId int) {
 			defer wg.Done()
 			for i := 0; i < loopCnt; i++ {
 				id := GenId()
 
 				mu.Lock()
-				if _, ok := idSet[id]; ok {
+				if idSet.Has(id) {
 					t.Errorf("[%d] Map already contains id: %s", threadId, id)
 					return
 				} else {
-					idSet[id] = Void{}
+					idSet.Add(id)
 					t.Logf("[%d] id: %s", threadId, id)
 				}
 				mu.Unlock()
 			}
-		}(set, j)
+		}(&set, j)
 	}
 
 	wg.Wait()
