@@ -22,6 +22,25 @@ e.g.,
 ./main 
 ```
 
+## Examples
+
+To bootstrap the server:
+
+```go
+// Read json config file
+common.DefaultReadConfig(os.Args)
+
+// Add route registar
+server.AddRoutesRegistar(func(engine *gin.Engine) {
+    engine.GET("/some/path", func(ctx *gin.Context) {
+        logrus.Info("Received request")
+    })
+})
+
+// Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
+server.BootstrapServer()
+```
+
 
 ## Properties-Based Configuration
 
@@ -80,3 +99,30 @@ e.g.,
 | property | description | default value |
 | --- | --- | --- | 
 | sqlite.file | path to SQLite database file | 
+
+
+## Json Configuration File Example
+
+The following configuration file will be loaded as:  
+
+- mode.production=true
+- mysql
+    - enabled=false
+    - user=root
+    - password=123456
+
+```json
+{
+  "mode": {
+    "production": true
+  },
+  "mysql": {
+    "enabled": false,
+    "user": "root",
+    "password": "123456",
+    "database": "fileServer",
+    "host": "localhost",
+    "port": "3306"
+  }
+}
+````
