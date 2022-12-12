@@ -68,5 +68,74 @@ const (
 
 		------------------------------------
 	*/
-	PROP_SQLITE_FILE    = "sqlite.file"
+	PROP_SQLITE_FILE = "sqlite.file"
+
+	/*
+		------------------------------------
+
+		Prop for RabbitMQ
+
+		------------------------------------
+	*/
+	PROP_RABBITMQ_HOST     = "rabbitmq.host"
+	PROP_RABBITMQ_PORT     = "rabbitmq.port"
+	PROP_RABBITMQ_USERNAME = "rabbitmq.username"
+	PROP_RABBITMQ_PASSWORD = "rabbitmq.password"
+	PROP_RABBITMQ_VHOST    = "rabbitmq.vhost"
+
+	/*
+		durable, non auto-delete queue name (slice)
+
+			{
+				"rabbitmq": {
+					"declaration": {
+						"queue": [
+							"my-first-queue",
+							"my-second-queue"
+						]
+					}
+				}
+			}
+	*/
+	PROP_RABBITMQ_DEC_QUEUE = "rabbitmq.declaration.queue"
+
+	/*
+		durable, non auto-delete, 'direct' exchange name (slice)
+
+			{
+				"rabbitmq": {
+					"declaration": {
+						"exchange": [
+							"my-exchange-one",
+							"my-exchange-two"
+						]
+					}
+				}
+			}
+	*/
+	PROP_RABBITMQ_DEC_EXCHANGE = "rabbitmq.declaration.exchange"
+
+	/*
+		Binding between queue and exchange, it's always queue -> exchange
+
+		So, in our json configuration:
+
+			{
+				"rabbitmq": {
+					"declaration": {
+						"binding": {
+							"my-first-queue": {
+								"key": "myKey1",
+								"exchange": "my-exchange-one"
+							},
+							"my-second-queue": {
+								"key": "mykey2",
+								"exchange": "my-exchange-two"
+							}
+						}
+					}
+				}
+			}
+	*/
+	PROP_RABBITMQ_DEC_BINDING = "rabbitmq.declaration.binding"
 )

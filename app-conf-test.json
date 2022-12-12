@@ -39,5 +39,15 @@
   "client": {
     "fileServiceUrl": "${CLIENT_FS}",
     "authServiceUrl": "${CLIENT_AS}"
+  },
+  "rabbitmq": {
+    "declaration": {
+      "queue": [
+      ],
+      "exchange": [
+      ],
+      "binding": {
+      }
+    }
   }
 }

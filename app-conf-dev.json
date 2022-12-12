@@ -39,5 +39,27 @@
   "client": {
     "fileServiceUrl": "http://localhost:8080",
     "authServiceUrl": "http://localhost:8081"
+  },
+  "rabbitmq": {
+    "declaration": {
+      "queue": [
+        "my-first-queue",
+        "my-second-queue"
+      ],
+      "exchange": [
+        "my-exchange-one",
+        "my-exchange-two"
+      ],
+      "binding": {
+        "my-first-queue": {
+          "key": "myKey1",
+          "exchange": "my-exchange-one"
+        },
+        "my-second-queue": {
+          "key": "mykey2",
+          "exchange": "my-exchange-two"
+        }
+      }
+    }
   }
 }
