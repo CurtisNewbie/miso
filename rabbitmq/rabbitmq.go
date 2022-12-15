@@ -1,8 +1,11 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -11,8 +14,10 @@ import (
 
 var (
 	// TODO Only one connection and channel for now
-	conn *amqp.Connection
-	mu   sync.Mutex
+	conn         *amqp.Connection
+	msgListeners []MsgListener
+	mu           sync.Mutex
+	qos          = 250
 )
 
 func init() {
@@ -21,6 +26,20 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_USERNAME, "")
 	common.SetDefProp(common.PROP_RABBITMQ_PASSWORD, "")
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
+}
+
+type MsgListener struct {
+	QueueName string
+	Handler   func(payload []byte, contentType string, messageId string) error
+}
+
+/*
+	Add message Listener
+*/
+func AddListener(listener MsgListener) {
+	mu.Lock()
+	defer mu.Unlock()
+	msgListeners = append(msgListeners, listener)
 }
 
 /*
@@ -108,7 +127,7 @@ func declareExchanges(ch *amqp.Channel) error {
 	directExchange := common.GetPropStringSlice(common.PROP_RABBITMQ_DEC_EXCHANGE)
 	for _, v := range directExchange {
 		// exchange type, only direct exchange supported for now
-		exg_type := "direct" 
+		exg_type := "direct"
 		e := ch.ExchangeDeclare(v, exg_type, true, false, false, false, nil)
 		if e != nil {
 			return e
@@ -119,34 +138,104 @@ func declareExchanges(ch *amqp.Channel) error {
 }
 
 /*
+	Start RabbitMQ Client (Asynchronous)
+*/
+func StartRabbitMqClient(ctx context.Context) {
+	go func() {
+		for {
+			notifyCloseChan, err := initConnection(ctx)
+			if err != nil {
+				logrus.Infof("Error connecting to RabbitMQ: %v", err)
+				time.Sleep(time.Second * 5)
+				continue
+			}
+			select {
+			// block until connection is closed, then reconnect
+			case <-notifyCloseChan:
+				continue
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+/*
 	Init RabbitMQ Connection
 */
-func InitConnection() error {
+func initConnection(ctx context.Context) (chan *amqp.Error, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	if conn != nil {
-		return nil
+
+	if conn == nil {
+		logrus.Info("Connecting to RabbitMQ")
+		c := amqp.Config{}
+		username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
+		password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
+		vhost := common.GetPropStr(common.PROP_RABBITMQ_VHOST)
+		host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
+		port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
+		dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
+		cn, e := amqp.DialConfig(dialUrl, c)
+		if e != nil {
+			return nil, e
+		}
+		conn = cn
 	}
 
-	c := amqp.Config{}
-	username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
-	password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
-	vhost := common.GetPropStr(common.PROP_RABBITMQ_VHOST)
-	host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
-	port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
-	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
-	conn, e := amqp.DialConfig(dialUrl, c)
-	if e != nil {
-		return e
-	}
+	notifyCloseChan := make(chan *amqp.Error)
+	conn.NotifyClose(notifyCloseChan)
 
+	logrus.Infof("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	declareQueues(ch)
 	declareExchanges(ch)
 	declareBindings(ch)
-	return nil
+
+	e = ch.Qos(qos, 0, false)
+	if e != nil {
+		return nil, e
+	}
+
+	// register consumers for queues
+	for _, v := range msgListeners {
+		listener := v
+		msgs, err := ch.Consume(listener.QueueName, "", false, false, false, false, nil)
+		if err != nil {
+			log.Fatalf("Failed to listen to '%s', err: %v", listener.QueueName, err)
+		}
+
+		// go routine for each queue
+		go func() {
+			logrus.Infof("Created RabbitMQ Consumer for queue: '%s'", listener.QueueName)
+			for msg := range msgs {
+				e := listener.Handler(msg.Body, msg.ContentType, msg.MessageId)
+				if e != nil {
+					logrus.Warnf("Failed to handle message for queue: '%s', err: %v, body: %v, msgId: %s", listener.QueueName, e, msg.Body, msg.MessageId)
+					msg.Nack(false, true)
+				} else {
+					msg.Ack(false)
+				}
+			}
+			logrus.Infof("RabbitMQ Consumer for queue '%s' is closed", listener.QueueName)
+		}()
+	}
+
+	// close channel when ctx is done
+	go func() {
+		<-ctx.Done()
+		if ch == nil {
+			return
+		}
+
+		logrus.Info("Closing Channel for RabbitMQ")
+		if err := ch.Close(); err != nil {
+			logrus.Errorf("Failed to close Channel for RabbitMQ, err: %v", err)
+		}
+	}()
+	return notifyCloseChan, nil
 }
