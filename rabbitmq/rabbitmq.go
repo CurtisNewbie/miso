@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	// TODO Only one connection and channel for now
 	conn         *amqp.Connection
 	msgListeners []MsgListener
 	mu           sync.Mutex
@@ -28,13 +27,20 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
 }
 
+/*
+	Message Listener for Queue
+*/
 type MsgListener struct {
+	/* Name of the queue */
 	QueueName string
+	/* Handler of message */
 	Handler   func(payload []byte, contentType string, messageId string) error
 }
 
 /*
 	Add message Listener
+
+	Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
 */
 func AddListener(listener MsgListener) {
 	mu.Lock()
@@ -101,11 +107,21 @@ func declareBindings(ch *amqp.Channel) error {
 	return nil
 }
 
+/*
+	Get prop key for routing key of queue
+
+		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".key"
+*/
 func bindRoutingKeyProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".key"
 	return
 }
 
+/*
+	Get prop key for exchange name of queue
+
+		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".exchange"
+*/
 func bindExchangeProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".exchange"
 	return
@@ -139,6 +155,15 @@ func declareExchanges(ch *amqp.Channel) error {
 
 /*
 	Start RabbitMQ Client (Asynchronous)
+
+	This func will attempt to establish connection to broker, declare queues, exchanges and bindings. 
+
+	Listeners are also created once the intial setup is done. 
+
+	When connection is lost, it will attmpt to reconnect to recover, unless the given context is done.
+
+	To register listener, please use 'AddListener' func 
+
 */
 func StartRabbitMqClient(ctx context.Context) {
 	go func() {
@@ -150,14 +175,31 @@ func StartRabbitMqClient(ctx context.Context) {
 				continue
 			}
 			select {
-			// block until connection is closed, then reconnect
+			// block until connection is closed, then reconnect, thus continue
 			case <-notifyCloseChan:
 				continue
-			case <-ctx.Done():
+			// context is done, close the connection, and exit 
+			case <-ctx.Done(): 
+				if err := closeConnection(); err != nil {
+					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
+				}
 				return
 			}
 		}
 	}()
+}
+
+/*
+	Try to close RabbitMQ Connection
+*/
+func closeConnection() (error) {
+	mu.Lock()
+	defer mu.Unlock()
+	if conn == nil {
+		return nil
+	}
+
+	return conn.Close()
 }
 
 /*
@@ -225,17 +267,5 @@ func initConnection(ctx context.Context) (chan *amqp.Error, error) {
 		}()
 	}
 
-	// close channel when ctx is done
-	go func() {
-		<-ctx.Done()
-		if ch == nil {
-			return
-		}
-
-		logrus.Info("Closing Channel for RabbitMQ")
-		if err := ch.Close(); err != nil {
-			logrus.Errorf("Failed to close Channel for RabbitMQ, err: %v", err)
-		}
-	}()
 	return notifyCloseChan, nil
 }
