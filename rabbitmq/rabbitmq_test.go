@@ -20,7 +20,7 @@ func TestInitConnection(t *testing.T) {
 	}})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, e := initConnection(ctx)
+	_, e := initClient(ctx)
 	if e != nil {
 		t.Error(e)
 	}

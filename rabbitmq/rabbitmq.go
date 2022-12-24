@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -13,10 +14,15 @@ import (
 )
 
 var (
-	conn         *amqp.Connection
+	_conn        *amqp.Connection
 	msgListeners []MsgListener
 	mu           sync.Mutex
 	qos          = 250
+	pubChan      *amqp.Channel
+	pubChanRwm   sync.RWMutex
+
+	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
+	errMsgNotPublished = errors.New("message not published")
 )
 
 func init() {
@@ -34,7 +40,35 @@ type MsgListener struct {
 	/* Name of the queue */
 	QueueName string
 	/* Handler of message */
-	Handler   func(payload []byte, contentType string, messageId string) error
+	Handler func(payload []byte, contentType string, messageId string) error
+}
+
+/*
+	Publish message with confirmation
+*/
+func PublishMsg(msg string, exchange string, routingKey string) error {
+	pubChanRwm.RLock()
+	defer pubChanRwm.RUnlock()
+
+	if pubChan == nil || pubChan.IsClosed() {
+		return errPubChanClosed
+	}
+
+	publishing := amqp.Publishing{
+		ContentType:  "text/plain",
+		DeliveryMode: 2,
+		Body:         []byte(msg),
+	}
+	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, true, true, publishing)
+	if err != nil {
+		return err
+	}
+
+	if !confirm.Wait() {
+		return errMsgNotPublished
+	}
+
+	return nil
 }
 
 /*
@@ -156,19 +190,19 @@ func declareExchanges(ch *amqp.Channel) error {
 /*
 	Start RabbitMQ Client (Asynchronous)
 
-	This func will attempt to establish connection to broker, declare queues, exchanges and bindings. 
+	This func will attempt to establish connection to broker, declare queues, exchanges and bindings.
 
-	Listeners are also created once the intial setup is done. 
+	Listeners are also created once the intial setup is done.
 
 	When connection is lost, it will attmpt to reconnect to recover, unless the given context is done.
 
-	To register listener, please use 'AddListener' func 
+	To register listener, please use 'AddListener' func
 
 */
 func StartRabbitMqClient(ctx context.Context) {
 	go func() {
 		for {
-			notifyCloseChan, err := initConnection(ctx)
+			notifyCloseChan, err := initClient(ctx)
 			if err != nil {
 				logrus.Infof("Error connecting to RabbitMQ: %v", err)
 				time.Sleep(time.Second * 5)
@@ -178,8 +212,8 @@ func StartRabbitMqClient(ctx context.Context) {
 			// block until connection is closed, then reconnect, thus continue
 			case <-notifyCloseChan:
 				continue
-			// context is done, close the connection, and exit 
-			case <-ctx.Done(): 
+			// context is done, close the connection, and exit
+			case <-ctx.Done():
 				if err := closeConnection(); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
@@ -190,39 +224,68 @@ func StartRabbitMqClient(ctx context.Context) {
 }
 
 /*
-	Try to close RabbitMQ Connection
+	Close RabbitMQ Connection
 */
-func closeConnection() (error) {
+func closeConnection() error {
 	mu.Lock()
 	defer mu.Unlock()
-	if conn == nil {
+	if _conn == nil {
 		return nil
 	}
 
-	return conn.Close()
+	return _conn.Close()
+}
+
+func hasConn() bool {
+	return _conn != nil && !_conn.IsClosed()
+}
+
+func tryEstablishConn() (*amqp.Connection, error) {
+	if hasConn() {
+		return _conn, nil
+	}
+
+	logrus.Info("Establish connection to RabbitMQ")
+	c := amqp.Config{}
+	username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
+	password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
+	vhost := common.GetPropStr(common.PROP_RABBITMQ_VHOST)
+	host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
+	port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
+	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
+	cn, e := amqp.DialConfig(dialUrl, c)
+	if e != nil {
+		return nil, e
+	}
+	_conn = cn
+	return _conn, nil
+}
+
+func declareComponents(ch *amqp.Channel) error {
+	declareQueues(ch)
+	declareExchanges(ch)
+	declareBindings(ch)
+
+	e := ch.Qos(qos, 0, false)
+	if e != nil {
+		return e
+	}
+	return nil
 }
 
 /*
-	Init RabbitMQ Connection
+	Init RabbitMQ Client
+
+	return notifyCloseChannel for connection and error
 */
-func initConnection(ctx context.Context) (chan *amqp.Error, error) {
+func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if conn == nil {
-		logrus.Info("Connecting to RabbitMQ")
-		c := amqp.Config{}
-		username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
-		password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
-		vhost := common.GetPropStr(common.PROP_RABBITMQ_VHOST)
-		host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
-		port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
-		dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
-		cn, e := amqp.DialConfig(dialUrl, c)
-		if e != nil {
-			return nil, e
-		}
-		conn = cn
+	// Establish connection if necessary
+	conn, err := tryEstablishConn()
+	if err != nil {
+		return nil, err
 	}
 
 	notifyCloseChan := make(chan *amqp.Error)
@@ -234,16 +297,24 @@ func initConnection(ctx context.Context) (chan *amqp.Error, error) {
 		return nil, e
 	}
 
-	declareQueues(ch)
-	declareExchanges(ch)
-	declareBindings(ch)
-
-	e = ch.Qos(qos, 0, false)
+	// queues, exchanges, bindings
+	e = declareComponents(ch)
 	if e != nil {
 		return nil, e
 	}
 
-	// register consumers for queues
+	// TODO handle partial failure? connection and consumers may be established, but not the publisher
+
+	// consumers
+	bootstrapConsumers(ch)
+
+	// publisher
+	bootstrapPublisher(conn)
+
+	return notifyCloseChan, nil
+}
+
+func bootstrapConsumers(ch *amqp.Channel) {
 	for _, v := range msgListeners {
 		listener := v
 		msgs, err := ch.Consume(listener.QueueName, "", false, false, false, false, nil)
@@ -266,6 +337,22 @@ func initConnection(ctx context.Context) (chan *amqp.Error, error) {
 			logrus.Infof("RabbitMQ Consumer for queue '%s' is closed", listener.QueueName)
 		}()
 	}
+}
 
-	return notifyCloseChan, nil
+func bootstrapPublisher(conn *amqp.Connection) error {
+	pubChanRwm.Lock()
+	defer pubChanRwm.Unlock()
+
+	if pubChan != nil && !pubChan.IsClosed() {
+		return nil
+	}
+
+	pc, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+	pc.Confirm(true)
+
+	pubChan = pc
+	return nil
 }
