@@ -77,11 +77,13 @@ const (
 
 		------------------------------------
 	*/
-	PROP_RABBITMQ_HOST     = "rabbitmq.host"
-	PROP_RABBITMQ_PORT     = "rabbitmq.port"
-	PROP_RABBITMQ_USERNAME = "rabbitmq.username"
-	PROP_RABBITMQ_PASSWORD = "rabbitmq.password"
-	PROP_RABBITMQ_VHOST    = "rabbitmq.vhost"
+	PROP_RABBITMQ_HOST               = "rabbitmq.host"
+	PROP_RABBITMQ_PORT               = "rabbitmq.port"
+	PROP_RABBITMQ_USERNAME           = "rabbitmq.username"
+	PROP_RABBITMQ_PASSWORD           = "rabbitmq.password"
+	PROP_RABBITMQ_VHOST              = "rabbitmq.vhost"
+	PROP_RABBITMQ_CONSUMER_QOS       = "rabbitmq.consumer.qos"
+	PROP_RABBITMQ_CONSUMER_PARALLISM = "rabbitmq.consumer.parallism"
 
 	/*
 		durable, non auto-delete queue name (slice)

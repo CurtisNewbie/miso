@@ -41,6 +41,9 @@
     "authServiceUrl": "http://localhost:8081"
   },
   "rabbitmq": {
+    "consumer": {
+      "parallism" : 1
+    },
     "declaration": {
       "queue": [
         "my-first-queue",

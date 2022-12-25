@@ -94,6 +94,18 @@ server.BootstrapServer()
 | redis.password | password | | 
 | redis.database | 0 | |  
 
+### RabbitMQ Properties
+
+| property | description | default value |
+| --- | --- | --- | 
+| rabbitmq.host | host of the RabbitMQ server | `localhost` | 
+| rabbitmq.port | port of the RabbitMQ server | 5672 | 
+| rabbitmq.username | username used to connect to server | | 
+| rabbitmq.password | password used to connect to server | | 
+| rabbitmq.vhost | virtual host | | 
+| rabbitmq.consumer.qos | consumer QOS | 68 | 
+| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 1 | 
+
 ### SQLite Properties
 
 | property | description | default value |

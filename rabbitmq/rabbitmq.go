@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -14,12 +13,25 @@ import (
 )
 
 var (
-	_conn        *amqp.Connection
-	msgListeners []MsgListener
-	mu           sync.Mutex
-	qos          = 250
-	pubChan      *amqp.Channel
-	pubChanRwm   sync.RWMutex
+
+	// Connection pointer, accessing it require obtaining 'mu' lock
+	_conn *amqp.Connection
+	// Global Mutex for connection and initialization stuff
+	mu sync.Mutex
+
+	/*
+		Publisher
+	*/
+	pubChan    *amqp.Channel
+	pubChanRwm sync.RWMutex
+	pubWg      sync.WaitGroup
+
+	/*
+		Consumer
+	*/
+	defaultQos       = 68
+	defaultParallism = 1
+	msgListeners     []MsgListener
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published")
@@ -31,6 +43,8 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_USERNAME, "")
 	common.SetDefProp(common.PROP_RABBITMQ_PASSWORD, "")
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, defaultQos)
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, defaultParallism)
 }
 
 /*
@@ -40,7 +54,7 @@ type MsgListener struct {
 	/* Name of the queue */
 	QueueName string
 	/* Handler of message */
-	Handler func(payload []byte, contentType string, messageId string) error
+	Handler func(payload string) error
 }
 
 /*
@@ -49,6 +63,8 @@ type MsgListener struct {
 func PublishMsg(msg string, exchange string, routingKey string) error {
 	pubChanRwm.RLock()
 	defer pubChanRwm.RUnlock()
+	pubWg.Add(1)
+	defer pubWg.Done()
 
 	if pubChan == nil || pubChan.IsClosed() {
 		return errPubChanClosed
@@ -56,10 +72,10 @@ func PublishMsg(msg string, exchange string, routingKey string) error {
 
 	publishing := amqp.Publishing{
 		ContentType:  "text/plain",
-		DeliveryMode: 2,
+		DeliveryMode: amqp.Persistent,
 		Body:         []byte(msg),
 	}
-	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, true, true, publishing)
+	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
 		return err
 	}
@@ -196,7 +212,7 @@ func declareExchanges(ch *amqp.Channel) error {
 
 	When connection is lost, it will attmpt to reconnect to recover, unless the given context is done.
 
-	To register listener, please use 'AddListener' func
+	To register listener, please use 'AddListener' func.
 
 */
 func StartRabbitMqClient(ctx context.Context) {
@@ -214,7 +230,8 @@ func StartRabbitMqClient(ctx context.Context) {
 				continue
 			// context is done, close the connection, and exit
 			case <-ctx.Done():
-				if err := closeConnection(); err != nil {
+				logrus.Info("Context done, trying to close RabbitMQ connection")
+				if err := ClientDisconnect(); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
 				return
@@ -223,25 +240,21 @@ func StartRabbitMqClient(ctx context.Context) {
 	}()
 }
 
-/*
-	Close RabbitMQ Connection
-*/
-func closeConnection() error {
+// Disconnect from RabbitMQ server
+func ClientDisconnect() error {
 	mu.Lock()
 	defer mu.Unlock()
 	if _conn == nil {
 		return nil
 	}
 
+	pubWg.Wait()
 	return _conn.Close()
 }
 
-func hasConn() bool {
-	return _conn != nil && !_conn.IsClosed()
-}
-
+// Try to establish Connection
 func tryEstablishConn() (*amqp.Connection, error) {
-	if hasConn() {
+	if _conn != nil && !_conn.IsClosed() {
 		return _conn, nil
 	}
 
@@ -261,13 +274,15 @@ func tryEstablishConn() (*amqp.Connection, error) {
 	return _conn, nil
 }
 
+// Declare Queus, Exchanges, and Bindings
 func declareComponents(ch *amqp.Channel) error {
-	declareQueues(ch)
-	declareExchanges(ch)
-	declareBindings(ch)
-
-	e := ch.Qos(qos, 0, false)
-	if e != nil {
+	if e := declareQueues(ch); e != nil {
+		return e
+	}
+	if e := declareExchanges(ch); e != nil {
+		return e
+	}
+	if e := declareBindings(ch); e != nil {
 		return e
 	}
 	return nil
@@ -302,41 +317,69 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	if e != nil {
 		return nil, e
 	}
-
-	// TODO handle partial failure? connection and consumers may be established, but not the publisher
+	ch.Close()
 
 	// consumers
-	bootstrapConsumers(ch)
+	if e = bootstrapConsumers(conn); e != nil {
+		logrus.Errorf("Failed to bootstrap consumer: %v", e)
+	}
 
 	// publisher
-	bootstrapPublisher(conn)
+	if e = bootstrapPublisher(conn); e != nil {
+		logrus.Errorf("Failed to bootstrap publisher: %v", e)
+	}
 
+	logrus.Info("RabbitMQ client initialization finished")
 	return notifyCloseChan, nil
 }
 
-func bootstrapConsumers(ch *amqp.Channel) {
+func bootstrapConsumers(conn *amqp.Connection) error {
+	qos := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_QOS)
+	parallism := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_PARALLISM)
+	if parallism < 1 {
+		parallism = 1
+	}
+	logrus.Infof("RabbitMQ consumer parallism: %d", parallism)
+
 	for _, v := range msgListeners {
 		listener := v
-		msgs, err := ch.Consume(listener.QueueName, "", false, false, false, false, nil)
-		if err != nil {
-			log.Fatalf("Failed to listen to '%s', err: %v", listener.QueueName, err)
+
+		ch, e := conn.Channel()
+		if e != nil {
+			return e
 		}
 
-		// go routine for each queue
-		go func() {
-			logrus.Infof("Created RabbitMQ Consumer for queue: '%s'", listener.QueueName)
-			for msg := range msgs {
-				e := listener.Handler(msg.Body, msg.ContentType, msg.MessageId)
-				if e != nil {
-					logrus.Warnf("Failed to handle message for queue: '%s', err: %v, body: %v, msgId: %s", listener.QueueName, e, msg.Body, msg.MessageId)
-					msg.Nack(false, true)
-				} else {
-					msg.Ack(false)
+		e = ch.Qos(qos, 0, false)
+		if e != nil {
+			return e
+		}
+
+		msgs, err := ch.Consume(listener.QueueName, "", false, false, false, false, nil)
+		if err != nil {
+			logrus.Errorf("Failed to listen to '%s', err: %v", listener.QueueName, err)
+		}
+
+		for i := 0; i < parallism; i++ {
+			ic := i
+			go func() {
+				logrus.Infof("[%d] Created RabbitMQ consumer for queue: '%s'", ic, listener.QueueName)
+				for msg := range msgs {
+					payload := string(msg.Body)
+					e := listener.Handler(payload)
+					if e != nil {
+						logrus.Errorf("Failed to handle message for queue: '%s', err: '%v', payload: '%v', msgId: '%s'", listener.QueueName, e, payload, msg.MessageId)
+						msg.Nack(false, true)
+					} else {
+						msg.Ack(false)
+					}
 				}
-			}
-			logrus.Infof("RabbitMQ Consumer for queue '%s' is closed", listener.QueueName)
-		}()
+				logrus.Infof("[%d] RabbitMQ consumer for queue '%s' is closed", ic, listener.QueueName)
+			}()
+		}
 	}
+
+	logrus.Info("RabbitMQ consumer initialization finished")
+	return nil
 }
 
 func bootstrapPublisher(conn *amqp.Connection) error {
@@ -344,6 +387,7 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 	defer pubChanRwm.Unlock()
 
 	if pubChan != nil && !pubChan.IsClosed() {
+		logrus.Info("RabbitMQ publisher is already initialized")
 		return nil
 	}
 
@@ -351,8 +395,10 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 	if err != nil {
 		return err
 	}
-	pc.Confirm(true)
-
+	if err = pc.Confirm(false); err != nil {
+		return fmt.Errorf("publishing channel could not be put into confirm mode: %s", err)
+	}
 	pubChan = pc
+	logrus.Info("RabbitMQ publisher initialization finished")
 	return nil
 }
