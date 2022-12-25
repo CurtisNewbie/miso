@@ -104,7 +104,8 @@ server.BootstrapServer()
 | rabbitmq.password | password used to connect to server | | 
 | rabbitmq.vhost | virtual host | | 
 | rabbitmq.consumer.qos | consumer QOS | 68 | 
-| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 1 | 
+| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 2 | 
+| rabbitmq.consumer.retry | maximum number of retry for message received by consumer: `-1` means never retry, and the message will simply be Nack(ed); if retry is set to greater than -1, then whenever all the retry is used, the message is acked to prevent infinite redelivery | -1 | 
 
 ### SQLite Properties
 

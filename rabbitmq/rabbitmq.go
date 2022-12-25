@@ -32,6 +32,7 @@ var (
 	defaultQos       = 68
 	defaultParallism = 1
 	msgListeners     []MsgListener
+	defaultRetry         int = -1
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published")
@@ -45,6 +46,7 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, defaultQos)
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, defaultParallism)
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_RETRY, defaultRetry)
 }
 
 /*
@@ -361,25 +363,49 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 		for i := 0; i < parallism; i++ {
 			ic := i
-			go func() {
-				logrus.Infof("[%d] Created RabbitMQ consumer for queue: '%s'", ic, listener.QueueName)
-				for msg := range msgs {
-					payload := string(msg.Body)
-					e := listener.Handler(payload)
-					if e != nil {
-						logrus.Errorf("Failed to handle message for queue: '%s', err: '%v', payload: '%v', msgId: '%s'", listener.QueueName, e, payload, msg.MessageId)
-						msg.Nack(false, true)
-					} else {
-						msg.Ack(false)
-					}
-				}
-				logrus.Infof("[%d] RabbitMQ consumer for queue '%s' is closed", ic, listener.QueueName)
-			}()
+			startListening(msgs, listener, ic)
 		}
 	}
 
 	logrus.Info("RabbitMQ consumer initialization finished")
 	return nil
+}
+
+func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int) {
+	go func() {
+		maxRetry := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_RETRY)
+
+		logrus.Infof("[T%d] Created RabbitMQ consumer for queue: '%s'", routineNo, listener.QueueName)
+		for msg := range msgs {
+			retry := maxRetry 
+			payload := string(msg.Body)
+
+			for {
+				e := listener.Handler(payload)
+				if e == nil {
+					msg.Ack(false)
+					break
+				}
+				logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v' (retry: %d)", listener.QueueName, payload, e, retry)
+
+				// last retry
+				if retry == 0 { 
+					msg.Ack(false)
+					break
+				}
+
+				// disable retry, simply nack it
+				if retry < 0 {
+					msg.Nack(false, true)
+					break
+				}
+				
+				retry -= 1
+				time.Sleep(time.Millisecond * 500) // sleep 500ms for every retry
+			}
+		}
+		logrus.Infof("[T%d] RabbitMQ consumer for queue '%s' is closed", routineNo, listener.QueueName)
+	}()
 }
 
 func bootstrapPublisher(conn *amqp.Connection) error {
