@@ -120,7 +120,7 @@ func LoadConfigFromFile(configFile string) {
 		if err != nil {
 			panic(err)
 		}
-		viper.SetConfigType("json")
+		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
 			panic(err)
 		}
@@ -170,7 +170,7 @@ func GuessConfigFilePath(args []string, profile string) string {
 
 	path := ExtractArgValue(args, func(key string) bool { return key == "configFile" })
 	if strings.TrimSpace(path) == "" {
-		path = fmt.Sprintf("app-conf-%v.json", profile)
+		path = fmt.Sprintf("app-conf-%v.yml", profile)
 	}
 	return path
 }

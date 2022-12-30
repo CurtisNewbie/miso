@@ -7,18 +7,18 @@ Common stuff for go
 - To specify profile: `profile=${PROFILE_NAME}`
 - To specify where the config file is: `configFile=${PATH_TO_CONFIG_FILE}` 
 
-By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.json` and load the configuration properties from it. 
+By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.yml` and load the configuration properties from it. 
 
 e.g.,
 
 ```sh
 # both profile and configFile are specified
-./main profile='prod' configFile=/myapp/my-conf.json
+./main profile='prod' configFile=/myapp/my-conf.yml
 
-# only profile is specified, the configFile will be 'app-conf-prod.json' 
+# only profile is specified, the configFile will be 'app-conf-prod.yml' 
 ./main profile='prod'
 
-# using default profile 'dev', the configFile will be 'app-conf-dev.json' 
+# using default profile 'dev', the configFile will be 'app-conf-dev.yml' 
 ./main 
 ```
 
@@ -27,7 +27,7 @@ e.g.,
 To bootstrap the server:
 
 ```go
-// Read json config file
+// Read yml config file
 common.DefaultReadConfig(os.Args)
 
 // Add route registar
@@ -114,28 +114,16 @@ server.BootstrapServer()
 | sqlite.file | path to SQLite database file | 
 
 
-## Json Configuration File Example
+## Yaml Configuration File Example
 
-The following configuration file will be loaded as:  
+```yml
+mode.production: true
 
-- mode.production=true
-- mysql
-    - enabled=false
-    - user=root
-    - password=123456
-
-```json
-{
-  "mode": {
-    "production": true
-  },
-  "mysql": {
-    "enabled": false,
-    "user": "root",
-    "password": "123456",
-    "database": "fileServer",
-    "host": "localhost",
-    "port": "3306"
-  }
-}
+mysql:
+  enabled: false
+  user: root
+  password: 123456
+  database: fileServer
+  host: localhost
+  port: 3306
 ````

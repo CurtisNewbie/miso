@@ -26,6 +26,47 @@ func TestParseProfile(t *testing.T) {
 	}
 }
 
+func TestParseArg(t *testing.T) {
+	args := make([]string, 2)
+	args[0] = "profile=dev"
+	args[1] = "configFile=../app-conf-dev.yml"
+	DefaultReadConfig(args)
+
+	if m := GetPropBool(PROP_PRODUCTION_MODE); !m { t.Error(m) }
+	if !IsProdMode() { t.Error() }
+	if s := GetPropStr(PROP_MYSQL_USER); s != "root" { t.Error(s) }
+	if s := GetPropStr(PROP_MYSQL_PASSWORD); s != "123456" { t.Error(s) }
+	if s := GetPropStr(PROP_MYSQL_DATABASE); s != "fileServer" { t.Error(s) }
+	if s := GetPropStr(PROP_MYSQL_HOST); s != "localhost" { t.Error(s) }
+	if s := GetPropStr(PROP_MYSQL_PORT); s != "3306" { t.Error(s) }
+
+	if s := GetPropBool(PROP_REDIS_ENABLED); s { t.Error(s) }
+	if s := GetPropStr(PROP_REDIS_ADDRESS); s != "localhost" { t.Error(s) }
+	if s := GetPropStr(PROP_REDIS_PORT); s != "6379" { t.Error(s) }
+	if s := GetPropStr(PROP_REDIS_USERNAME); s != "" { t.Error(s) }
+	if s := GetPropStr(PROP_REDIS_PASSWORD); s != "" { t.Error(s) }
+
+	if s := GetPropStr(PROP_SERVER_HOST); s != "localhost" { t.Error(s) }
+	if s := GetPropStr(PROP_SERVER_PORT); s != "8081" { t.Error(s) }
+	if s := GetPropStr(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC); s != "5" { t.Error(s) }
+
+	if s := GetPropStr("file.base"); s != "test-base" { t.Error(s) }
+	if s := GetPropStr("file.temp"); s != "temp" { t.Error(s) }
+
+	if s := GetPropStr(PROP_CONSUL_REGISTER_NAME); s != "test-service" { t.Error(s) }
+	if s := GetPropStr(PROP_CONSUL_CONSUL_ADDRESS); s != "localhost:8500" { t.Error(s) }
+	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_URL); s != "/some/health" { t.Error(s) }
+	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_INTERVAL); s != "5s" { t.Error(s) }
+	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_TIMEOUT); s != "5s" { t.Error(s) }
+	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER); s != "30s" { t.Error(s) }
+
+	if s := GetPropStr("client.fileServiceUrl"); s != "http://localhost:8080" { t.Error(s) }
+	if s := GetPropStr("client.authServiceUrl"); s != "http://localhost:8081" { t.Error(s) }
+
+	if sl := GetPropStringSlice("rabbitmq.declaration.queue"); len(sl) != 2 { t.Error(sl) }
+
+}
+
 func TestResolveArgForParsedConf(t *testing.T) {
 	SetEnv("DB_USER", "root")
 	SetEnv("DB_PASSWORD", "123456")
@@ -51,7 +92,7 @@ func TestResolveArgForParsedConf(t *testing.T) {
 
 	args := make([]string, 2)
 	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-test.json"
+	args[1] = "configFile=../app-conf-test.yml"
 	DefaultReadConfig(args)
 
 	t.Logf("PRODUCTION MODE: %t", GetPropBool(PROP_PRODUCTION_MODE))
@@ -83,7 +124,8 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER); s != "30s" { t.Error(s) }
 
 	if s := GetPropStr("client.fileServiceUrl"); s != "http://localhost:8080" { t.Error(s) }
-	if s := GetPropStr("client.authServiceUrl"); s != "http://localhost:8081" { t.Error(s) }}
+	if s := GetPropStr("client.authServiceUrl"); s != "http://localhost:8081" { t.Error(s) }
+}
 
 func TestResolveArg(t *testing.T) {
 	SetEnv("abc", "123")
