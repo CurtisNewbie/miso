@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/consul"
 	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/rabbitmq"
 	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/sirupsen/logrus"
 
@@ -57,6 +58,7 @@ func AddRoutesRegistar(reg RoutesRegistar) {
 	To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go
 */
 func BootstrapServer() {
+	ctx, cancel := context.WithCancel(context.Background()) 
 
 	if common.IsProdMode() {
 		logrus.Info("Bootstraping Gin with ReleaseMode")
@@ -136,10 +138,16 @@ func BootstrapServer() {
 		logrus.Infof("Consul config disabled, will not register on Consul")
 	}
 
+	if rabbitmq.IsEnabled() {
+		logrus.Infof("RabbitMQ enabled, initializing client")
+		rabbitmq.StartRabbitMqClient(ctx)
+	}
+
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
+	cancel()
 
 	// start to shutdown gracefully
 	logrus.Info("Shutting down server gracefully")

@@ -39,6 +39,7 @@ client:
   authServiceUrl: http://localhost:8081
 
 rabbitmq: 
+  enabled: true
   consumer: 
     parallism: 1
   declaration: 

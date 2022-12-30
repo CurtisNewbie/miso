@@ -39,6 +39,7 @@ var (
 )
 
 func init() {
+	common.SetDefProp(common.PROP_RABBITMQ_ENABLED, false)
 	common.SetDefProp(common.PROP_RABBITMQ_HOST, "localhost")
 	common.SetDefProp(common.PROP_RABBITMQ_PORT, 5672)
 	common.SetDefProp(common.PROP_RABBITMQ_USERNAME, "")
@@ -47,6 +48,11 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, defaultQos)
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, defaultParallism)
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_RETRY, defaultRetry)
+}
+
+/* Is RabbitMQ Enabled */
+func IsEnabled() bool {
+	return common.GetPropBool(common.PROP_RABBITMQ_ENABLED)
 }
 
 /*

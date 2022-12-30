@@ -98,6 +98,7 @@ server.BootstrapServer()
 
 | property | description | default value |
 | --- | --- | --- | 
+| rabbitmq.enabled | whether RabbitMQ client is enabled | false | 
 | rabbitmq.host | host of the RabbitMQ server | `localhost` | 
 | rabbitmq.port | port of the RabbitMQ server | 5672 | 
 | rabbitmq.username | username used to connect to server | | 
