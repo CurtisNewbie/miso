@@ -253,6 +253,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
 			if !IsRequestAuthenticated(c) {
+				logrus.Infof("Unauthenticated request rejected, url: '%s'", url)
 				DispatchErrMsgJson(c, "Please sign up first")
 				c.Abort()
 				return
