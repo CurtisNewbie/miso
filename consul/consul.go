@@ -84,8 +84,8 @@ func DoSubscribeServerList(everyNSec int) {
 	c := serverListPSub.sub.C
 	go func() {
 		for {
-			<-c
 			PollServiceListInstances()
+			<-c
 		}
 	}()
 }
