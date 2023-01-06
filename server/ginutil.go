@@ -132,3 +132,10 @@ func ExtractUser(c *gin.Context) (*common.User, error) {
 		Services: services,
 	}, nil
 }
+
+// Check whether current request is authenticated
+func IsRequestAuthenticated(c *gin.Context) bool {
+	id := c.GetHeader("id")
+	return id != ""
+}
+

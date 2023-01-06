@@ -118,7 +118,7 @@ func PollServiceListInstances() {
 	serviceListHolder.mu.Lock()
 	defer serviceListHolder.mu.Unlock()
 
-	logrus.Info("Polling service list")
+	// logrus.Info("Polling service list")
 	for k := range serviceListHolder.ServiceList.Keys {
 		_, err := _fetchAndCacheServicesByName(k)
 		if err != nil {

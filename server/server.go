@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -22,6 +23,10 @@ import (
 
 // Routes registar
 type RoutesRegistar func(*gin.Engine)
+
+const (
+	OPEN_API_PREFIX = "/open/api"
+)
 
 var (
 	routesRegiatarList []RoutesRegistar = []RoutesRegistar{}
@@ -105,6 +110,7 @@ func BootstrapServer() {
 
 	// gin router
 	router := gin.New()
+	router.Use(AuthMiddleware())
 
 	if !common.IsProdMode() {
 		router.Use(gin.Logger())
@@ -206,7 +212,7 @@ func shutdownServer(server *http.Server) {
 // Resolve handler path
 func ResolvePath(relPath string, isOpenApi bool) string {
 	if isOpenApi {
-		return "/open/api" + relPath
+		return OPEN_API_PREFIX + relPath
 	}
 
 	return "/remote" + relPath
@@ -238,4 +244,20 @@ func MarkServerShuttingDown() {
 	shutingDownRwm.Lock()
 	defer shutingDownRwm.Unlock()
 	shuttingDown = true
+}
+
+// Authentication Middleware, only works for request url that starts with "/open/api"  
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		url := c.Request.RequestURI
+
+		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
+			if !IsRequestAuthenticated(c) {
+				DispatchErrMsgJson(c, "Please sign up first")
+				c.Abort()
+				return
+			}
+		}
+		c.Next()
+	}
 }
