@@ -48,7 +48,7 @@ server.BootstrapServer()
 
 | property | description | default value |
 | --- | --- | --- | 
-| profile | name of the profile used. If 'prod' is specified, then it will be using production mode for libraries, e.g., GORM | dev |
+| profile | name of the profile used | dev |
 | mode.production | whether production mode is turned on | false |
 
 ### Web Server Properties
