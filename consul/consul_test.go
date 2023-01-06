@@ -10,7 +10,7 @@ import (
 func PreTest() {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-dev.json"
+	args[1] = "configFile=../app-conf-dev.yml"
 	common.DefaultReadConfig(args)
 }
 

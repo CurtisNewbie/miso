@@ -10,7 +10,7 @@ import (
 )
 
 func TestInitClient(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.json")
+	common.LoadConfigFromFile("../app-conf-dev.yml")
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 
@@ -34,7 +34,7 @@ func TestInitClient(t *testing.T) {
 }
 
 func TestPublishMessage(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.json")
+	common.LoadConfigFromFile("../app-conf-dev.yml")
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 

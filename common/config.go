@@ -159,9 +159,9 @@ func GuessProfile(args []string) string {
 
 	- It looks for the arg that matches the pattern "configFile=/path/to/configFile".
 
-	- If none is found, and the profile is empty, it's by default 'app-conf-dev.json'.
+	- If none is found, and the profile is empty, it's by default 'app-conf-dev.yml'.
 
-	- If profile is specified, then it looks for 'app-conf-${profile}.json'.
+	- If profile is specified, then it looks for 'app-conf-${profile}.yml'.
 */
 func GuessConfigFilePath(args []string, profile string) string {
 	if strings.TrimSpace(profile) == "" {
