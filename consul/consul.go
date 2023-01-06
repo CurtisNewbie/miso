@@ -306,6 +306,19 @@ func RegisterService() error {
 }
 
 /*
+	Must initialize Consul client
+
+	This func internally call GetConsulClient, and will panic if fail
+*/
+func MustInitConsulClient() {
+	_, e := GetConsulClient()
+	if e != nil	{
+		logrus.Errorf("Failed to init Concul client, %v", e)
+		panic(e)
+	}
+}
+
+/*
 	Get or init new consul client
 
 	For the first time that the consul client is initialized, this func will look for prop:

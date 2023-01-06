@@ -60,6 +60,29 @@ func IsMySqlEnabled() bool {
 }
 
 /*
+	Init connection to mysql, if failed, panic
+
+	If mysql client has been initialized, current func call will be ignored.
+
+	This func looks for following props:
+
+		PROP_MYSQL_USER
+		PROP_MYSQL_PASSWORD
+		PROP_MYSQL_DATABASE
+		PROP_MYSQL_HOST
+		PROP_MYSQL_PORT
+	
+	This func is essentially the same as: 
+		InitMySqlFromProp
+*/
+func MustInitMySqlFromProp() {
+	e := InitMySqlFromProp()
+	if e != nil {
+		panic(e)
+	}
+}
+
+/*
 	Init connection to mysql
 
 	If mysql client has been initialized, current func call will be ignored.

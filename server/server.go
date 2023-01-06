@@ -28,12 +28,33 @@ var (
 
 	shuttingDown   bool = false
 	shutingDownRwm sync.RWMutex
+
+	shutdownHook []func()
+	shmu         sync.Mutex
 )
 
 func init() {
 	common.SetDefProp(common.PROP_SERVER_HOST, "localhost")
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
+}
+
+// Register shutdown hook, hook should never panic
+func AddShutdownHook(hook func()) {
+	shmu.Lock()
+	defer shmu.Unlock()
+	shutdownHook = append(shutdownHook, hook)
+}
+
+// Trigger shutdown hook
+func triggerShutdownHook() {
+	shmu.Lock()
+	defer shmu.Unlock()
+
+	logrus.Info("Triggering shutdown hook")
+	for _, hook := range shutdownHook {
+		hook()
+	}
 }
 
 /*
@@ -43,6 +64,13 @@ func init() {
 */
 func AddRoutesRegistar(reg RoutesRegistar) {
 	routesRegiatarList = append(routesRegiatarList, reg)
+}
+
+// Register GIN route for consul healthcheck
+func registerRouteForConsulHealthcheck(router *gin.Engine) {
+	if consul.IsConsulEnabled() {
+		router.GET(common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL), consul.DefaultHealthCheck)
+	}
 }
 
 /*
@@ -58,7 +86,7 @@ func AddRoutesRegistar(reg RoutesRegistar) {
 	To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go
 */
 func BootstrapServer() {
-	ctx, cancel := context.WithCancel(context.Background()) 
+	defer triggerShutdownHook()
 
 	if common.IsProdMode() {
 		logrus.Info("Bootstraping Gin with ReleaseMode")
@@ -67,9 +95,7 @@ func BootstrapServer() {
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
-		if err := mysql.InitMySqlFromProp(); err != nil {
-			panic(err)
-		}
+		mysql.MustInitMySqlFromProp()
 	}
 
 	// redis
@@ -84,9 +110,7 @@ func BootstrapServer() {
 	router.Use(gin.CustomRecovery(DefaultRecovery))
 
 	// register consul health check
-	if consul.IsConsulEnabled() {
-		router.GET(common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL), consul.DefaultHealthCheck)
-	}
+	registerRouteForConsulHealthcheck(router)
 
 	// register custom routes
 	for _, registar := range routesRegiatarList {
@@ -106,19 +130,16 @@ func BootstrapServer() {
 			logrus.Fatalf("HttpServer ListenAndServe: %s", err)
 		}
 	}()
+	AddShutdownHook(func() { shutdownServer(server) })
 
 	// register on consul
 	if consul.IsConsulEnabled() {
-		logrus.Infof("Consul enabled, will register as a service")
+		// create consul client
+		consul.MustInitConsulClient()
+		AddShutdownHook(func() { consul.UnsubscribeServerList() })
 
-		// register on consul, retry until we success
+		// register on consul, retry until we success, the Consul server may not be ready or may be down temporarily 
 		go func() {
-			if _, err := consul.GetConsulClient(); err != nil {
-				logrus.Errorf("Failed to init Concul client, %v", err)
-				shutdownServer(server)
-				panic(err)
-			}
-
 			retry := 0
 			for {
 				if IsShuttingDown() {
@@ -126,7 +147,7 @@ func BootstrapServer() {
 				}
 
 				if regerr := consul.RegisterService(); regerr == nil {
-					break
+					break // success
 				}
 
 				logrus.Errorf("Failed to register on consul, has retried %d times.", retry)
@@ -134,12 +155,11 @@ func BootstrapServer() {
 				time.Sleep(1 * time.Second)
 			}
 		}()
-	} else {
-		logrus.Infof("Consul config disabled, will not register on Consul")
 	}
 
 	if rabbitmq.IsEnabled() {
-		logrus.Infof("RabbitMQ enabled, initializing client")
+		ctx, cancel := context.WithCancel(context.Background())
+		AddShutdownHook(func() { cancel() })
 		rabbitmq.StartRabbitMqClient(ctx)
 	}
 
@@ -147,11 +167,6 @@ func BootstrapServer() {
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	cancel()
-
-	// start to shutdown gracefully
-	logrus.Info("Shutting down server gracefully")
-	shutdownServer(server)
 }
 
 /*
@@ -162,14 +177,13 @@ func BootstrapServer() {
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC
 */
 func shutdownServer(server *http.Server) {
+	logrus.Info("Shutting down server gracefully")
 	MarkServerShuttingDown()
 
 	// deregister on consul if necessary
 	if e := consul.DeregisterService(); e != nil {
-		logrus.Errorf("Failed to de-register on consul, err: %v", e)
+		logrus.Errorf("Failed to deregister on consul, err: %v", e)
 	}
-
-	consul.UnsubscribeServerList()
 
 	// set timeout for graceful shutdown
 	timeout := common.GetPropInt(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC)
@@ -182,7 +196,7 @@ func shutdownServer(server *http.Server) {
 
 	// shutdown web server with the timeout
 	server.Shutdown(ctx)
-	logrus.Infof("Server exited")
+	logrus.Infof("HttpServer exited")
 }
 
 // Resolve handler path
