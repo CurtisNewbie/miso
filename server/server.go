@@ -104,7 +104,11 @@ func BootstrapServer() {
 	}
 
 	// gin router
-	router := gin.Default()
+	router := gin.New()
+
+	if !common.IsProdMode() {
+		router.Use(gin.Logger())
+	}
 
 	// register customer recovery func
 	router.Use(gin.CustomRecovery(DefaultRecovery))
