@@ -292,7 +292,7 @@ func RegisterService() error {
 			// Status:                         STATUS_PASSING,
 		},
 	}
-	logrus.Infof("Registering current instance as a service on Consul, registration: %+v, check: %+v", registration, registration.Check)
+	logrus.Infof("Registering current instance as a service on Consul, serviceId: '%s'", proposedServiceId)
 
 	if e = client.Agent().ServiceRegister(registration); e != nil {
 		logrus.Errorf("Failed to register on Consul, err: %v", e)
