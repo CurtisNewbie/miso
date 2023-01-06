@@ -35,7 +35,7 @@ var (
 	defaultRetry         int = -1
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
-	errMsgNotPublished = errors.New("message not published")
+	errMsgNotPublished = errors.New("message not published, server failed to confirm")
 )
 
 func init() {
@@ -367,9 +367,10 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 			logrus.Errorf("Failed to listen to '%s', err: %v", listener.QueueName, err)
 		}
 
+		maxRetry := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_RETRY)
 		for i := 0; i < parallism; i++ {
 			ic := i
-			startListening(msgs, listener, ic)
+			startListening(msgs, listener, ic, maxRetry)
 		}
 	}
 
@@ -377,10 +378,8 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int) {
+func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int, maxRetry int) {
 	go func() {
-		maxRetry := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_RETRY)
-
 		logrus.Infof("[T%d] Created RabbitMQ consumer for queue: '%s'", routineNo, listener.QueueName)
 		for msg := range msgs {
 			retry := maxRetry 
