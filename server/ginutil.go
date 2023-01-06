@@ -109,6 +109,42 @@ func RequireUser(c *gin.Context) *common.User {
 	return u
 }
 
+// Extract role from request header
+//
+// return: 
+// 	role, isOk
+func Role(c *gin.Context) (string, bool) {
+	id := c.GetHeader("role")
+	if id == "" {
+		return "", false 
+	}
+	return id, true
+}
+
+// Extract userNo from request header
+//
+// return: 
+// 	userNo, isOk
+func UserNo(c *gin.Context) (string, bool) {
+	id := c.GetHeader("userno")
+	if id == "" {
+		return "", false 
+	}
+	return id, true
+}
+
+// Extract user id from request header
+//
+// return: 
+// 	userId, isOk
+func UserId(c *gin.Context) (string, bool) {
+	id := c.GetHeader("id")
+	if id == "" {
+		return "", false 
+	}
+	return id, true
+}
+
 /* Extract common.User from request headers */
 func ExtractUser(c *gin.Context) (*common.User, error) {
 	id := c.GetHeader("id")
