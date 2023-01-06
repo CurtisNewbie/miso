@@ -36,7 +36,7 @@ var (
 )
 
 type serverListPollingSubscription struct {
-	sub *time.Timer
+	sub *time.Ticker
 	mu  sync.Mutex
 }
 
@@ -71,7 +71,6 @@ func SubscribeServerList() {
 	DoSubscribeServerList(30)
 }
 
-
 // Subscribe to server list
 func DoSubscribeServerList(everyNSec int) {
 	serverListPSub.mu.Lock()
@@ -81,10 +80,13 @@ func DoSubscribeServerList(everyNSec int) {
 		return
 	}
 
-	serverListPSub.sub = time.NewTimer(time.Duration(everyNSec) * time.Second)
+	serverListPSub.sub = time.NewTicker(time.Duration(everyNSec) * time.Second)
+	c := serverListPSub.sub.C
 	go func() {
-		PollServiceListInstances()
-		<-serverListPSub.sub.C
+		for {
+			<-c
+			PollServiceListInstances()
+		}
 	}()
 }
 
