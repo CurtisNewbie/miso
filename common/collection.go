@@ -66,19 +66,10 @@ func RandomOne[T any](items []*T) *T {
 }
 
 // Get values from map
-func ValuesOfStMap[T any](m map[string]*T) []*T {
-	var values []*T = []*T{}
-	for k := range m {
-		values = append(values, m[k])
-	}
-	return values
-}
-
-// Get values from map
-func ValuesOfMap[T any](m map[any]*T) []*T {
-	var values []*T = []*T{}
-	for k := range m {
-		values = append(values, m[k])
+func ValuesOfMap[K comparable, V any](m *map[K]V) []V {
+	var values []V = []V{}
+	for k := range *m {
+		values = append(values, (*m)[k])
 	}
 	return values
 }
@@ -93,18 +84,18 @@ func KeysOfSet[T comparable](s Set[T]) []T {
 }
 
 // Get keys from map
-func KeysOfMap[T comparable](m map[T]any) []T {
+func KeysOfMap[T comparable, V any](m *map[T]V) []T {
 	var keys []T = []T{}
-	for k := range m {
+	for k := range *m {
 		keys = append(keys, k)
 	}
 	return keys
 }
 
 // Get first from map
-func GetFirstInMap[T any](m map[any]*T) *T {
-	for k := range m {
-		return m[k]
+func GetFirstInMap[K comparable, V any](m *map[K]*V) *V {
+	for k := range *m {
+		return (*m)[k]
 	}
 	return nil
 }

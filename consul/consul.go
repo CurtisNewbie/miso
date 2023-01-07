@@ -133,7 +133,7 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	if err != nil {
 		return nil, err
 	}
-	serviceListHolder.Instances[name] = common.ValuesOfStMap(services)
+	serviceListHolder.Instances[name] = common.ValuesOfMap(&services)
 	return services, err
 }
 
@@ -181,7 +181,7 @@ func FetchServiceAddress(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	agent := common.RandomOne(common.ValuesOfStMap(services))
+	agent := common.RandomOne(common.ValuesOfMap(&services))
 	return extractServiceAddress(agent), nil
 }
 
