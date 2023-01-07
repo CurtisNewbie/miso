@@ -238,7 +238,7 @@ func StartRabbitMqClient(ctx context.Context) {
 				continue
 			// context is done, close the connection, and exit
 			case <-ctx.Done():
-				logrus.Info("Context done, trying to close RabbitMQ connection")
+				logrus.Info("Server context done, trying to close RabbitMQ connection")
 				if err := ClientDisconnect(); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}

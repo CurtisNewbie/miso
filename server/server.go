@@ -91,7 +91,11 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 	To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go
 */
 func BootstrapServer() {
+	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	AddShutdownHook(func() { cancel() })
 
 	if common.IsProdMode() {
 		logrus.Info("Bootstraping Gin with ReleaseMode")
@@ -148,30 +152,32 @@ func BootstrapServer() {
 		consul.MustInitConsulClient()
 		AddShutdownHook(func() { consul.UnsubscribeServerList() })
 
-		// register on consul, retry until we success, the Consul server may not be ready or may be down temporarily 
+		// register on consul, retry until we success, the Consul server may not be ready or may be down temporarily
 		go func() {
 			retry := 0
 			for {
-				if IsShuttingDown() {
-					break
-				}
+				select {
+				case <-ctx.Done():
+					logrus.Info("Aborting consul registration")
+					return
+				default:
+					if regerr := consul.RegisterService(); regerr == nil {
+						return // success
+					}
 
-				if regerr := consul.RegisterService(); regerr == nil {
-					break // success
+					logrus.Errorf("Failed to register on consul, has retried %d times.", retry)
+					retry++
+					time.Sleep(1 * time.Second)
 				}
-
-				logrus.Errorf("Failed to register on consul, has retried %d times.", retry)
-				retry++
-				time.Sleep(1 * time.Second)
 			}
 		}()
 	}
 
 	if rabbitmq.IsEnabled() {
-		ctx, cancel := context.WithCancel(context.Background())
-		AddShutdownHook(func() { cancel() })
 		rabbitmq.StartRabbitMqClient(ctx)
 	}
+	end := time.Now().UnixMilli()
+	logrus.Infof("Server bootstraped, took: %dms", end - start)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
@@ -246,7 +252,7 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
-// Authentication Middleware, only works for request url that starts with "/open/api"  
+// Authentication Middleware, only works for request url that starts with "/open/api"
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url := c.Request.RequestURI
