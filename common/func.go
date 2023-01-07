@@ -1,4 +1,10 @@
 package common
 
-// Predicate func
-type Predicate[T any] func(key T) bool
+// Predicate
+type Predicate[T any] func(t T) bool
+
+// Convert t to v 
+type Converter[T any, V any] func (t T) (V, error)
+
+// Consume t 
+type Consumer[T any] func(t T) (error)
