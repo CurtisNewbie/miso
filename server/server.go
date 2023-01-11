@@ -36,6 +36,9 @@ var (
 
 	shutdownHook []func()
 	shmu         sync.Mutex
+
+	routesAuthWhitelist []common.Predicate[string] = []common.Predicate[string]{}
+	rawlmu              sync.RWMutex
 )
 
 func init() {
@@ -177,7 +180,7 @@ func BootstrapServer() {
 		rabbitmq.StartRabbitMqClient(ctx)
 	}
 	end := time.Now().UnixMilli()
-	logrus.Infof("Server bootstraped, took: %dms", end - start)
+	logrus.Infof("Server bootstraped, took: %dms", end-start)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
@@ -252,13 +255,33 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
+func AddRouteAuthWhitelist(pred common.Predicate[string]) {
+	rawlmu.Lock()
+	defer rawlmu.Unlock()
+
+	routesAuthWhitelist = append(routesAuthWhitelist, pred)
+}
+
+func IsRouteWhitelist(url string) bool {
+	rawlmu.RLock()
+	defer rawlmu.RUnlock()
+
+	for _, predicate := range routesAuthWhitelist {
+		if isok := predicate(url); isok {
+			return true
+		}
+	}
+	return false
+}
+
 // Authentication Middleware, only works for request url that starts with "/open/api"
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url := c.Request.RequestURI
 
 		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
-			if !IsRequestAuthenticated(c) {
+
+			if !IsRouteWhitelist(url) && !IsRequestAuthenticated(c) {
 				logrus.Infof("Unauthenticated request rejected, url: '%s'", url)
 				DispatchErrMsgJson(c, "Please sign up first")
 				c.Abort()
