@@ -89,4 +89,14 @@ const (
 	PROP_RABBITMQ_DEC_QUEUE          = "rabbitmq.declaration.queue"
 	PROP_RABBITMQ_DEC_EXCHANGE       = "rabbitmq.declaration.exchange"
 	PROP_RABBITMQ_DEC_BINDING        = "rabbitmq.declaration.binding"
+
+	/*
+		------------------------------------
+
+		Prop for Tracing 
+
+		------------------------------------
+	*/
+	PROP_TRACING_PROPAGATION_KEYS = "tracing.propagation.keys"
+
 )

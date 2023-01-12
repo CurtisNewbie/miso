@@ -288,6 +288,20 @@ func AuthMiddleware() gin.HandlerFunc {
 				return
 			}
 		}
+
+		ctx := c.Request.Context()	
+		if spanId := c.GetHeader(common.X_B3_SPANID); spanId != "" {
+			ctx = context.WithValue(ctx, common.X_B3_SPANID, spanId)
+		}
+
+		if traceId := c.GetHeader(common.X_B3_TRACEID); traceId != "" {
+			ctx = context.WithValue(ctx, common.X_B3_TRACEID, traceId)
+		}
+
+		r2 := c.Request.WithContext(ctx)
+		c.Request = r2
+
+		// follow the chain
 		c.Next()
 	}
 }
