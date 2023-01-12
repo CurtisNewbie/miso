@@ -81,6 +81,22 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 	}
 }
 
+func startHttpServer(ctx context.Context, server *http.Server) {
+	logrus.Infof("Listening and serving HTTP on %s", server.Addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logrus.Fatalf("HttpServer ListenAndServe: %s", err)
+	}
+}
+
+func createHttpServer(router http.Handler) *http.Server {
+	addr := fmt.Sprintf("%s:%s", common.GetPropStr(common.PROP_SERVER_HOST), common.GetPropStr(common.PROP_SERVER_PORT))
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+	return server
+}
+
 /*
 	Bootstrap server
 
@@ -134,19 +150,9 @@ func BootstrapServer() {
 		registar(router)
 	}
 
-	addr := fmt.Sprintf("%s:%s", common.GetPropStr(common.PROP_SERVER_HOST), common.GetPropStr(common.PROP_SERVER_PORT))
-	server := &http.Server{
-		Addr:    addr,
-		Handler: router,
-	}
-
-	// start the web server
-	go func() {
-		logrus.Infof("Listening and serving HTTP on %s", addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.Fatalf("HttpServer ListenAndServe: %s", err)
-		}
-	}()
+	// start the http server
+	server := createHttpServer(router)
+	go startHttpServer(ctx, server)
 	AddShutdownHook(func() { shutdownServer(server) })
 
 	// register on consul
@@ -161,7 +167,7 @@ func BootstrapServer() {
 			for {
 				select {
 				case <-ctx.Done():
-					logrus.Info("Aborting consul registration")
+					logrus.Info("Aborting consul registration", ctx.Err())
 					return
 				default:
 					if regerr := consul.RegisterService(); regerr == nil {
@@ -289,7 +295,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		ctx := c.Request.Context()	
+		ctx := c.Request.Context()
 		if spanId := c.GetHeader(common.X_B3_SPANID); spanId != "" {
 			ctx = context.WithValue(ctx, common.X_B3_SPANID, spanId)
 		}
