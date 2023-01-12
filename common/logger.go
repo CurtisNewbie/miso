@@ -17,10 +17,10 @@ type CTFormatter struct {
 }
 
 func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	clr := entry.Caller
 	var fn string = ""
 
 	if entry.HasCaller() {
+		clr := entry.Caller
 		fn = " " + getShortFnName(clr.Function)
 	}
 
@@ -39,7 +39,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		spanId = ""
 	}
 
-	s := fmt.Sprintf("[%s] [%v,%v] %s%s - %s\n", toLevelStr(entry.Level), traceId, spanId, entry.Time.Format("2006-01-02 15:04:05"), fn, entry.Message)
+	s := fmt.Sprintf("%s %s [%-16v,%-16v] %s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, fn, entry.Message)
 	return []byte(s), nil
 }
 
@@ -88,44 +88,4 @@ func PreConfiguredFormatter() logrus.Formatter {
 // Return logger with tracing infomation
 func WithTrace(ctx context.Context) *logrus.Entry {
 	return logrus.WithFields(logrus.Fields{X_B3_SPANID: ctx.Value(X_B3_SPANID), X_B3_TRACEID: ctx.Value(X_B3_TRACEID)})
-}
-
-// logrus.Fatal with tracing information 
-func Fatal(ctx context.Context, args ...interface{}) {
-	WithTrace(ctx).Fatal(args...)
-}
-
-// logrus.Fatalf with tracing information 
-func Fatalf(ctx context.Context, fmtstr string, args ...interface{}) {
-	WithTrace(ctx).Fatalf(fmtstr, args...)
-}
-
-// logrus.Error with tracing information 
-func Error(ctx context.Context, args ...interface{}) {
-	WithTrace(ctx).Error(args...)
-}
-
-// logrus.Errorf with tracing information 
-func Errorf(ctx context.Context, fmtstr string, args ...interface{}) {
-	WithTrace(ctx).Errorf(fmtstr, args...)
-}
-
-// logrus.Warn with tracing information 
-func Warn(ctx context.Context, args ...interface{}) {
-	WithTrace(ctx).Warn(args...)
-}
-
-// logrus.Warnf with tracing information 
-func Warnf(ctx context.Context, fmtstr string, args ...interface{}) {
-	WithTrace(ctx).Warnf(fmtstr, args...)
-}
-
-// logrus.Info with tracing information 
-func Info(ctx context.Context, args ...interface{}) {
-	WithTrace(ctx).Info(args...)
-}
-
-// logrus.Infof with tracing information 
-func Infof(ctx context.Context, fmtstr string, args ...interface{}) {
-	WithTrace(ctx).Infof(fmtstr, args...)
 }
