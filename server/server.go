@@ -65,11 +65,63 @@ func triggerShutdownHook() {
 	}
 }
 
-/*
-	Add RoutesRegistar
+// Register GET request route, route is whitelisted, no authentication requires
+func PubGet(url string, handlers ...gin.HandlerFunc) {
+	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
+	AddRouteAuthWhitelist(PrefixPredicate(url))
+	Get(url, handlers...)
+}
 
-	This func should be called before BootstrapServer
-*/
+// Register POST request route, route is whitelisted, no authentication requires
+func PubPost(url string, handlers ...gin.HandlerFunc) {
+	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
+	AddRouteAuthWhitelist(PrefixPredicate(url))
+	Post(url, handlers...)
+}
+
+// Register PUT request route, route is whitelisted, no authentication requires
+func PubPut(url string, handlers ...gin.HandlerFunc) {
+	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
+	AddRouteAuthWhitelist(PrefixPredicate(url))
+	Put(url, handlers...)
+}
+
+// Register DELETE request route, route is whitelisted, no authentication requires
+func PubDelete(url string, handlers ...gin.HandlerFunc) {
+	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
+	AddRouteAuthWhitelist(PrefixPredicate(url))
+	Delete(url, handlers...)
+}
+
+// Add RoutesRegistar for Get request
+func Get(url string, handlers ...gin.HandlerFunc) {
+	AddRoutesRegistar(func(e *gin.Engine) {
+		e.GET(url, handlers...)
+	})
+}
+
+// Add RoutesRegistar for Post request
+func Post(url string, handlers ...gin.HandlerFunc) {
+	AddRoutesRegistar(func(e *gin.Engine) {
+		e.POST(url, handlers...)
+	})
+}
+
+// Add RoutesRegistar for Put request
+func Put(url string, handlers ...gin.HandlerFunc) {
+	AddRoutesRegistar(func(e *gin.Engine) {
+		e.PUT(url, handlers...)
+	})
+}
+
+// Add RoutesRegistar for Delete request
+func Delete(url string, handlers ...gin.HandlerFunc) {
+	AddRoutesRegistar(func(e *gin.Engine) {
+		e.DELETE(url, handlers...)
+	})
+}
+
+// Add RoutesRegistar
 func AddRoutesRegistar(reg RoutesRegistar) {
 	routesRegiatarList = append(routesRegiatarList, reg)
 }
@@ -224,8 +276,22 @@ func shutdownServer(server *http.Server) {
 	logrus.Infof("HttpServer exited")
 }
 
+// Resolve handler path for open api
+func OpenApiPath(relPath string) string {
+	return ResolvePath(relPath, true)
+}
+
+// Resolve handler path for internal endpoints
+func InternalApiPath(relPath string) string {
+	return ResolvePath(relPath, false)
+}
+
 // Resolve handler path
 func ResolvePath(relPath string, isOpenApi bool) string {
+	if !strings.HasPrefix(relPath, "/") {
+		relPath = "/" + relPath
+	}
+
 	if isOpenApi {
 		return OPEN_API_PREFIX + relPath
 	}
@@ -261,10 +327,16 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
+// Create a predicate based on whether the given string has the prefix
+func PrefixPredicate(prefix string) common.Predicate[string] {
+	return func(s string) bool {
+		return strings.HasPrefix(s, prefix)
+	}
+}
+
 func AddRouteAuthWhitelist(pred common.Predicate[string]) {
 	rawlmu.Lock()
 	defer rawlmu.Unlock()
-
 	routesAuthWhitelist = append(routesAuthWhitelist, pred)
 }
 
