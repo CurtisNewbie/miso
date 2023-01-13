@@ -68,28 +68,28 @@ func triggerShutdownHook() {
 // Register GET request route, route is whitelisted, no authentication requires
 func PubGet(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(PrefixPredicate(url))
+	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 	Get(url, handlers...)
 }
 
 // Register POST request route, route is whitelisted, no authentication requires
 func PubPost(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(PrefixPredicate(url))
+	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 	Post(url, handlers...)
 }
 
 // Register PUT request route, route is whitelisted, no authentication requires
 func PubPut(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(PrefixPredicate(url))
+	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 	Put(url, handlers...)
 }
 
 // Register DELETE request route, route is whitelisted, no authentication requires
 func PubDelete(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(PrefixPredicate(url))
+	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 	Delete(url, handlers...)
 }
 
@@ -330,19 +330,27 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
-// Create a predicate based on whether the given string has the prefix
-func PrefixPredicate(prefix string) common.Predicate[string] {
-	return func(s string) bool {
-		return strings.HasPrefix(s, prefix)
+// Create a predicate that tries to match the given url against the pattern (excluding query parameters)
+func UrlMatchPredicate(pattern string) common.Predicate[string] {
+	return func(url string) bool {
+		uurl := url
+		j := strings.Index(uurl, "?")
+		if j > -1 {
+			rw := common.GetRuneWrp(uurl)
+			uurl = rw.Substr(0, j)
+		}
+		return strings.EqualFold(uurl, pattern)
 	}
 }
 
+// Add route authentication whitelist predicate 
 func AddRouteAuthWhitelist(pred common.Predicate[string]) {
 	rawlmu.Lock()
 	defer rawlmu.Unlock()
 	routesAuthWhitelist = append(routesAuthWhitelist, pred)
 }
 
+// Check whether url is in route whitelist
 func IsRouteWhitelist(url string) bool {
 	rawlmu.RLock()
 	defer rawlmu.RUnlock()
