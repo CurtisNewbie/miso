@@ -363,22 +363,22 @@ func AuthMiddleware() gin.HandlerFunc {
 		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
 
 			if !IsRouteWhitelist(url) && !IsRequestAuthenticated(c) {
-				logrus.Infof("Unauthenticated request rejected, url: '%s'", url)
+				logrus.Infof("Unauthenticated request rejected: %v '%s'", c.Request.Method, url)
 				DispatchErrMsgJson(c, "Please sign up first")
 				c.Abort()
 				return
 			}
 		}
 
+		// propagate tracing key/value pairs with context
 		ctx := c.Request.Context()
-		if spanId := c.GetHeader(common.X_B3_SPANID); spanId != "" {
-			ctx = context.WithValue(ctx, common.X_B3_SPANID, spanId)
-		}
+		propagatedKeys := append(common.GetPropagationKeys(), common.X_SPANID, common.X_TRACEID)
 
-		if traceId := c.GetHeader(common.X_B3_TRACEID); traceId != "" {
-			ctx = context.WithValue(ctx, common.X_B3_TRACEID, traceId)
+		for _, k := range propagatedKeys {
+			if h := c.GetHeader(k); h != "" {
+				ctx = context.WithValue(ctx, k, h)
+			}
 		}
-
 		c.Request = c.Request.WithContext(ctx)
 
 		// follow the chain

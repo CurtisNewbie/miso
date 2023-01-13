@@ -3,6 +3,7 @@ package consul
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -136,6 +137,28 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	}
 	serviceListHolder.Instances[name] = common.ValuesOfMap(&services)
 	return services, err
+}
+
+/*
+	Resolve request url for the given service.
+
+		"http://" + host ":" + port + "/" + relUrl
+
+	This func will first read the cache, trying to resolve the services address
+	without actually requesting consul, and only when the cache missed, it then
+	requests the consul.
+*/
+func ResolveRequestUrl(serviceName string, relUrl string) string {
+	if !strings.HasPrefix(relUrl, "/") {
+		relUrl = "/" + relUrl
+	}
+
+	address, err := ResolveServiceAddress(serviceName)
+	if err == nil && address != "" {
+		return "http://" + address + relUrl
+	}
+
+	panic(fmt.Sprintf("Unable to request request url for service '%s'", serviceName))
 }
 
 /*

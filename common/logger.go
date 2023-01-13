@@ -26,11 +26,13 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	var traceId any
 	var spanId any
+	var username any
 
 	fields := entry.Data
 	if fields != nil {
-		traceId = fields[X_B3_TRACEID]
-		spanId = fields[X_B3_SPANID]
+		traceId = fields[X_TRACEID]
+		spanId = fields[X_SPANID]
+		username = fields[X_USERNAME]
 	}
 	if traceId == nil {
 		traceId = ""
@@ -38,8 +40,11 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	if spanId == nil {
 		spanId = ""
 	}
+	if username == nil {
+		username = ""
+	}
 
-	s := fmt.Sprintf("%s %s [%-16v,%-16v] %s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, fn, entry.Message)
+	s := fmt.Sprintf("%s %s [%-16v,%-16v,%v]%s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, username, fn, entry.Message)
 	return []byte(s), nil
 }
 
@@ -87,5 +92,5 @@ func PreConfiguredFormatter() logrus.Formatter {
 
 // Return logger with tracing infomation
 func WithTrace(ctx context.Context) *logrus.Entry {
-	return logrus.WithFields(logrus.Fields{X_B3_SPANID: ctx.Value(X_B3_SPANID), X_B3_TRACEID: ctx.Value(X_B3_TRACEID)})
+	return logrus.WithFields(logrus.Fields{X_SPANID: ctx.Value(X_SPANID), X_TRACEID: ctx.Value(X_TRACEID), X_USERNAME: ctx.Value(X_USERNAME)})
 }

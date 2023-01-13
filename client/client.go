@@ -20,6 +20,11 @@ type TResponse struct {
 	Err  error
 }
 
+// Close Response
+func (tr *TResponse) Close() error {
+	return tr.Resp.Body.Close()
+}
+
 // Read response as []bytes
 func (tr *TResponse) ReadBytes() ([]byte, error) {
 	return io.ReadAll(tr.Resp.Body)
