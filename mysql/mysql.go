@@ -40,20 +40,12 @@ func init() {
 	SetDefProp(PROP_MYSQL_PORT, 3306)
 }
 
-func initDefault() {
-	SetDefProp(PROP_MYSQL_ENABLED, false)
-	SetDefProp(PROP_MYSQL_USER, "root")
-	SetDefProp(PROP_MYSQL_PASSWORD, "")
-	SetDefProp(PROP_MYSQL_HOST, "localhost")
-	SetDefProp(PROP_MYSQL_PORT, 3306)
-}
-
 /*
 	Check if mysql is enabled
 
 	This func looks for following prop:
 
-		PROP_MYSQL_ENABLED
+		"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
 	return GetPropBool(PROP_MYSQL_ENABLED)
@@ -66,11 +58,11 @@ func IsMySqlEnabled() bool {
 
 	This func looks for following props:
 
-		PROP_MYSQL_USER
-		PROP_MYSQL_PASSWORD
-		PROP_MYSQL_DATABASE
-		PROP_MYSQL_HOST
-		PROP_MYSQL_PORT
+		"mysql.user"
+		"mysql.password"
+		"mysql.database"
+		"mysql.host"
+		"mysql.port"
 	
 	This func is essentially the same as: 
 		InitMySqlFromProp
@@ -89,11 +81,11 @@ func MustInitMySqlFromProp() {
 
 	This func looks for following props:
 
-		PROP_MYSQL_USER
-		PROP_MYSQL_PASSWORD
-		PROP_MYSQL_DATABASE
-		PROP_MYSQL_HOST
-		PROP_MYSQL_PORT
+		"mysql.user"
+		"mysql.password"
+		"mysql.database"
+		"mysql.host"
+		"mysql.port"
 */
 func InitMySqlFromProp() error {
 	return InitMySql(GetPropStr(PROP_MYSQL_USER),

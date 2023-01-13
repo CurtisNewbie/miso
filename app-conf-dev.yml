@@ -56,3 +56,10 @@ rabbitmq:
       my-second-queue: 
         key: mykey2
         exchange: my-exchange-two
+
+tracing.propagation.keys:
+  - id
+  - userno
+  - username
+  - role
+  - services

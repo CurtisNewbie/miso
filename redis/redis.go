@@ -33,7 +33,8 @@ func init() {
 
 	This func looks for following prop:
 
-		PROP_REDIS_ENABLED
+		"redis.enabled"
+
 */
 func IsRedisEnabled() bool {
 	return common.GetPropBool(common.PROP_REDIS_ENABLED)
@@ -61,11 +62,11 @@ func GetRedis() *redis.Client {
 
 	This func looks for following prop:
 
-		PROP_REDIS_ADDRESS
-		PROP_REDIS_PORT
-		PROP_REDIS_USERNAME
-		PROP_REDIS_PASSWORD
-		PROP_REDIS_DATABASE
+		"redis.address"
+		"redis.port"
+		"redis.username"
+		"redis.password"
+		"redis.database"
 */
 func InitRedisFromProp() *redis.Client {
 	return InitRedis(

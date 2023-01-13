@@ -173,6 +173,9 @@ func BootstrapServer() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// Load propagation keys for tracing
+	common.LoadPropagationKeyProp()
+
 	// mysql
 	if mysql.IsMySqlEnabled() {
 		mysql.MustInitMySqlFromProp()
@@ -251,7 +254,7 @@ func BootstrapServer() {
 
 	This func looks for following prop:
 
-	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC
+		"server.gracefulShutdownTimeSec"
 */
 func shutdownServer(server *http.Server) {
 	logrus.Info("Shutting down server gracefully")
@@ -376,8 +379,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			ctx = context.WithValue(ctx, common.X_B3_TRACEID, traceId)
 		}
 
-		r2 := c.Request.WithContext(ctx)
-		c.Request = r2
+		c.Request = c.Request.WithContext(ctx)
 
 		// follow the chain
 		c.Next()

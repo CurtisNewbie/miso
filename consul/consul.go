@@ -2,6 +2,7 @@ package consul
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -107,7 +108,7 @@ func UnsubscribeServerList() {
 
 	This func looks for following prop:
 
-		PROP_CONSUL_ENABLED
+		"consul.enabled"
 */
 func IsConsulEnabled() bool {
 	return common.GetPropBool(common.PROP_CONSUL_ENABLED)
@@ -164,7 +165,7 @@ func ResolveServiceAddress(name string) (string, error) {
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
-	ctx.Status(200)
+	ctx.String(http.StatusOK, "SUCCESS")
 }
 
 // Extract service address (host:port) from Agent.Service
@@ -243,13 +244,13 @@ func DeregisterService() error {
 
 	This func looks for following prop:
 
-		PROP_SERVER_PORT
-		PROP_CONSUL_REGISTER_NAME
-		PROP_CONSUL_HEALTHCHECK_INTERVAL
-		PROP_CONSUL_REGISTER_ADDRESS
-		PROP_CONSUL_HEALTHCHECK_URL
-		PROP_CONSUL_HEALTHCHECK_TIMEOUT
-		PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER
+		"server.port"
+		"consul.registerName"
+		"consul.healthCheckInterval"
+		"consul.registerAddress"
+		"consul.healthCheckUrl"
+		"consul.healthCheckTimeout"
+		"consul.healthCheckFailedDeregisterAfter"
 */
 func RegisterService() error {
 	var client *api.Client
@@ -312,7 +313,7 @@ func RegisterService() error {
 */
 func MustInitConsulClient() {
 	_, e := GetConsulClient()
-	if e != nil	{
+	if e != nil {
 		logrus.Errorf("Failed to init Concul client, %v", e)
 		panic(e)
 	}
@@ -323,7 +324,7 @@ func MustInitConsulClient() {
 
 	For the first time that the consul client is initialized, this func will look for prop:
 
-		PROP_CONSUL_CONSUL_ADDRESS
+		"consul.consulAddress"
 */
 func GetConsulClient() (*api.Client, error) {
 	if IsConsulClientInitialized() {

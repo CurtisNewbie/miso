@@ -111,7 +111,7 @@ func AddListener(listener MsgListener) {
 
 	It looks for PROP:
 
-		PROP_RABBITMQ_DEC_QUEUE
+		"rabbitmq.declaration.queue"
 */
 func declareQueues(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
@@ -135,9 +135,9 @@ func declareQueues(ch *amqp.Channel) error {
 
 	It looks for PROP:
 
-		PROP_RABBITMQ_DEC_QUEUE
-		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".key"
-		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".exchange"
+		"rabbitmq.declaration.queue"
+		"rabbitmq.declaration.binding." + queueName + ".key"
+		"rabbitmq.declaration.binding." + queueName + ".exchange"
 */
 func declareBindings(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
@@ -168,7 +168,7 @@ func declareBindings(ch *amqp.Channel) error {
 /*
 	Get prop key for routing key of queue
 
-		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".key"
+		"rabbitmq.declaration.binding" + "." + queueName + ".key"
 */
 func bindRoutingKeyProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".key"
@@ -178,7 +178,7 @@ func bindRoutingKeyProp(queue string) (propKey string) {
 /*
 	Get prop key for exchange name of queue
 
-		PROP_RABBITMQ_DEC_BINDING + "." + queueName + ".exchange"
+		"rabbitmq.declaration.binding." + queueName + ".exchange"
 */
 func bindExchangeProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".exchange"
@@ -190,7 +190,7 @@ func bindExchangeProp(queue string) (propKey string) {
 
 	It looks for PROP:
 
-		PROP_RABBITMQ_DEC_EXCHANGE
+		"rabbitmq.declaration.exchange"
 */
 func declareExchanges(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
