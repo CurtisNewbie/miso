@@ -90,7 +90,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string) e
 
 	switch value.Kind() {
 	case reflect.Pointer:
-		if rule == NOT_NIL && value.Interface() == nil {
+		if rule == NOT_NIL && value.IsNil() {
 			return &ValidationError{Field: fname, ValidationMsg: "cannot be nil"}
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
