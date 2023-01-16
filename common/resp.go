@@ -31,6 +31,10 @@ func WrapResp(data interface{}, e error) *Resp {
 			}
 		}
 
+		if ve, ok := e.(*ValidationError); ok {
+			return ErrorResp(ve.Error())
+		}
+
 		// not a WebError, just return some generic msg
 		log.Errorf("Unknown error, %v", e)
 		return ErrorResp("Unknown system error, please try again later")
