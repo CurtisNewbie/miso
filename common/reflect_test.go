@@ -9,8 +9,9 @@ type Dummy struct {
 }
 
 func TestIntrospector(t *testing.T) {
-	var dummy *Dummy
+	var dummy Dummy = Dummy{}
 	it := Introspect(dummy)
+
 	if len(it.Fields) < 1 {
 		t.FailNow()
 	}
@@ -35,7 +36,7 @@ func TestIntrospector(t *testing.T) {
 	}
 
 	if tag != "name" {
-		t.FailNow()
+		t.Fatalf("tag: %v", tag)
 	}
 
 	tagRetriever, ok := it.TagRetriever("Name")
@@ -44,11 +45,11 @@ func TestIntrospector(t *testing.T) {
 	}
 
 	if n := tagRetriever("json"); n != "name" {
-		t.Fatalf(n)
+		t.Fatalf("%v", n)
 	}
 
 	if n := tagRetriever("validation"); n != "notEmpty" {
-		t.Fatal(n)
+		t.Fatalf("%v", n)
 	}
 }
 
