@@ -10,7 +10,7 @@ type ForEachField func(index int, field reflect.StructField) (breakIteration boo
 type TagRetriever func(tagName string) string
 
 type Introspector struct {
-	PtrType       reflect.Type
+	Type          reflect.Type
 	Fields        []reflect.StructField
 	fieldIndexMap map[string]int
 }
@@ -52,14 +52,12 @@ func (it *Introspector) Tag(fieldName string, tagName string) (tag string, isFie
 
 // Get field by name
 func (it *Introspector) Field(fieldName string) (field reflect.StructField, isFieldFound bool) {
-	i, ok := it.fieldIndexMap[fieldName]
-	if !ok {
-		field = reflect.StructField{}
+	i, isFieldFound := it.fieldIndexMap[fieldName]
+	if !isFieldFound {
 		return
 	}
 
 	field = it.Fields[i]
-	isFieldFound = true
 	return
 }
 
@@ -77,7 +75,7 @@ func Introspect(ptr any) Introspector {
 		indexMap[v.Name] = i
 	}
 
-	return Introspector{PtrType: el, Fields: fields, fieldIndexMap: indexMap}
+	return Introspector{Type: el, Fields: fields, fieldIndexMap: indexMap}
 }
 
 // Get Fields of A Type
