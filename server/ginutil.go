@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -9,17 +10,37 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Route handle
+// Route handler
 type RouteHandler func(c *gin.Context) (any, error)
 
-// Authenticated route handle
+// Authenticated route handler
 type AuthRouteHandler func(c *gin.Context, user *common.User) (any, error)
+
+// Router handler with context, user (optional, may be nil), and logger prepared
+type TRouteHandler func(c *gin.Context, req InboundRequest) (any, error)
+
+// Prepared inbound request 
+type InboundRequest struct {
+	Ctx  context.Context // request context
+	User *common.User    // optional, may be nil
+	Log  *logrus.Entry   // logger with tracing info
+}
 
 // Build a Route Handler for an authorized request
 func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		user := RequireUser(c)
 		r, e := handler(c, user)
+		HandleResult(c, r, e)
+	}
+}
+
+// Build TRouteHandler with context, user (optional, may be nil), and logger prepared
+func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		user, _ := ExtractUser(c) // optional
+		ctx := c.Request.Context()
+		r, e := handler(c, InboundRequest{Ctx: ctx, User: user, Log: common.TraceLogger(ctx)})
 		HandleResult(c, r, e)
 	}
 }
@@ -111,36 +132,36 @@ func RequireUser(c *gin.Context) *common.User {
 
 // Extract role from request header
 //
-// return: 
+// return:
 // 	role, isOk
 func Role(c *gin.Context) (string, bool) {
 	id := c.GetHeader("role")
 	if id == "" {
-		return "", false 
+		return "", false
 	}
 	return id, true
 }
 
 // Extract userNo from request header
 //
-// return: 
+// return:
 // 	userNo, isOk
 func UserNo(c *gin.Context) (string, bool) {
 	id := c.GetHeader("userno")
 	if id == "" {
-		return "", false 
+		return "", false
 	}
 	return id, true
 }
 
 // Extract user id from request header
 //
-// return: 
+// return:
 // 	userId, isOk
 func UserId(c *gin.Context) (string, bool) {
 	id := c.GetHeader("id")
 	if id == "" {
-		return "", false 
+		return "", false
 	}
 	return id, true
 }
@@ -174,4 +195,3 @@ func IsRequestAuthenticated(c *gin.Context) bool {
 	id := c.GetHeader("id")
 	return id != ""
 }
-

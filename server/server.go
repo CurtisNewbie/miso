@@ -189,6 +189,7 @@ func BootstrapServer() {
 	// gin router
 	router := gin.New()
 	router.Use(AuthMiddleware())
+	router.Use(TraceMiddleware())
 
 	if !common.IsProdMode() {
 		router.Use(gin.Logger())
@@ -343,7 +344,7 @@ func UrlMatchPredicate(pattern string) common.Predicate[string] {
 	}
 }
 
-// Add route authentication whitelist predicate 
+// Add route authentication whitelist predicate
 func AddRouteAuthWhitelist(pred common.Predicate[string]) {
 	rawlmu.Lock()
 	defer rawlmu.Unlock()
@@ -363,21 +364,9 @@ func IsRouteWhitelist(url string) bool {
 	return false
 }
 
-// Authentication Middleware, only works for request url that starts with "/open/api"
-func AuthMiddleware() gin.HandlerFunc {
+// Tracing Middleware
+func TraceMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		url := c.Request.RequestURI
-
-		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
-
-			if !IsRouteWhitelist(url) && !IsRequestAuthenticated(c) {
-				logrus.Infof("Unauthenticated request rejected: %v '%s'", c.Request.Method, url)
-				DispatchErrMsgJson(c, "Please sign up first")
-				c.Abort()
-				return
-			}
-		}
-
 		// propagate tracing key/value pairs with context
 		ctx := c.Request.Context()
 		propagatedKeys := append(common.GetPropagationKeys(), common.X_SPANID, common.X_TRACEID)
@@ -387,7 +376,29 @@ func AuthMiddleware() gin.HandlerFunc {
 				ctx = context.WithValue(ctx, k, h)
 			}
 		}
+
+		// replace the context
 		c.Request = c.Request.WithContext(ctx)
+
+		// follow the chain
+		c.Next()
+	}
+}
+
+// Authentication Middleware, only validates request url that starts with "/open/api"
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		url := c.Request.RequestURI
+
+		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
+
+			if !IsRouteWhitelist(url) && !IsRequestAuthenticated(c) {
+				logrus.Infof("Unauthenticated request rejected: %v '%s'", c.Request.Method, url)
+				DispatchErrMsgJson(c, "Please sign in first")
+				c.Abort()
+				return // request rejected 
+			}
+		}
 
 		// follow the chain
 		c.Next()

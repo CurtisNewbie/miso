@@ -91,6 +91,6 @@ func PreConfiguredFormatter() logrus.Formatter {
 }
 
 // Return logger with tracing infomation
-func WithTrace(ctx context.Context) *logrus.Entry {
+func TraceLogger(ctx context.Context) *logrus.Entry {
 	return logrus.WithFields(logrus.Fields{X_SPANID: ctx.Value(X_SPANID), X_TRACEID: ctx.Value(X_TRACEID), X_USERNAME: ctx.Value(X_USERNAME)})
 }
