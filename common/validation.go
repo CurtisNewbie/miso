@@ -25,6 +25,7 @@ const (
 	NEGATIVE         = "negative"       // less than 0, only supports int... or string type
 	NEGATIVE_OR_ZERO = "negativeOrZero" // less than or equal to 0, only supports int... or string type
 	NOT_ZERO         = "notZero"        // not zero, only supports int... or string type
+	VALIDATED        = "validated"      // mark a nested struct or pointer validated, nil pointer is ignored, one may combine "notNil,validated"
 )
 
 var (
@@ -39,12 +40,24 @@ func init() {
 	rules.Add(NEGATIVE)
 	rules.Add(NEGATIVE_OR_ZERO)
 	rules.Add(NOT_ZERO)
+	rules.Add(VALIDATED)
 }
 
 // Validation Error
 type ValidationError struct {
 	Field         string
 	ValidationMsg string
+}
+
+func ChainValidationError(parentField string, e error) error {
+	if e == nil {
+		return nil
+	}
+
+	if ve, ok := e.(*ValidationError); ok {
+		return &ValidationError{Field: parentField + "." + ve.Field, ValidationMsg: ve.ValidationMsg}
+	}
+	return e
 }
 
 func (ve *ValidationError) Error() string {
@@ -90,8 +103,16 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string) e
 
 	switch value.Kind() {
 	case reflect.Pointer:
-		if rule == NOT_NIL && value.IsNil() {
-			return &ValidationError{Field: fname, ValidationMsg: "cannot be nil"}
+		switch rule {
+		case NOT_NIL:
+			if value.IsNil() {
+				return &ValidationError{Field: fname, ValidationMsg: "cannot be nil"}
+			}
+		case VALIDATED:
+			if !value.IsNil() {
+				// not nil pointer, dereference and validate recursively
+				return ChainValidationError(fname, Validate(value.Elem().Interface()))
+			}
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		ival := value.Int()
@@ -137,6 +158,11 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string) e
 			if value.Len() < 1 {
 				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
 			}
+		}
+	case reflect.Struct:
+		if rule == VALIDATED {
+			// nested struct, validate recursively
+			return ChainValidationError(fname, Validate(value.Interface()))
 		}
 	}
 	return nil
