@@ -216,10 +216,10 @@ func FetchServicesByName(name string) (map[string]*api.AgentService, error) {
 		return nil, err
 	}
 
-	logrus.Infof("Requesting services for '%s' from Consul", name)
+	// logrus.Infof("Requesting services for '%s' from Consul", name)
 	services, err := client.Agent().ServicesWithFilter(fmt.Sprintf("Service == \"%s\"", name))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return services, nil
 }
