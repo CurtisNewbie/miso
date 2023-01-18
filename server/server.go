@@ -69,57 +69,46 @@ func triggerShutdownHook() {
 func PubGet(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
 	AddRouteAuthWhitelist(UrlMatchPredicate(url))
-	Get(url, handlers...)
+	AddRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
 // Register POST request route, route is whitelisted, no authentication requires
 func PubPost(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
 	AddRouteAuthWhitelist(UrlMatchPredicate(url))
-	Post(url, handlers...)
+	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
 // Register PUT request route, route is whitelisted, no authentication requires
 func PubPut(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
 	AddRouteAuthWhitelist(UrlMatchPredicate(url))
-	Put(url, handlers...)
+	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
 // Register DELETE request route, route is whitelisted, no authentication requires
 func PubDelete(url string, handlers ...gin.HandlerFunc) {
 	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
 	AddRouteAuthWhitelist(UrlMatchPredicate(url))
-	Delete(url, handlers...)
+	AddRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
 // Add RoutesRegistar for Get request
-func Get(url string, handlers ...gin.HandlerFunc) {
-	AddRoutesRegistar(func(e *gin.Engine) {
-		e.GET(url, handlers...)
-	})
+func Get(url string, handler TRouteHandler) {
+	AddRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Post request
-func Post(url string, handlers ...gin.HandlerFunc) {
-	AddRoutesRegistar(func(e *gin.Engine) {
-		e.POST(url, handlers...)
-	})
-}
+func Post(url string, handler TRouteHandler) {
+	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) }) }
 
 // Add RoutesRegistar for Put request
-func Put(url string, handlers ...gin.HandlerFunc) {
-	AddRoutesRegistar(func(e *gin.Engine) {
-		e.PUT(url, handlers...)
-	})
-}
+func Put(url string, handler TRouteHandler) {
+	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) }) }
 
 // Add RoutesRegistar for Delete request
-func Delete(url string, handlers ...gin.HandlerFunc) {
-	AddRoutesRegistar(func(e *gin.Engine) {
-		e.DELETE(url, handlers...)
-	})
-}
+func Delete(url string, handler TRouteHandler) {
+	AddRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) }) }
 
 // Add RoutesRegistar
 func AddRoutesRegistar(reg RoutesRegistar) {
@@ -396,7 +385,7 @@ func AuthMiddleware() gin.HandlerFunc {
 				logrus.Infof("Unauthenticated request rejected: %v '%s'", c.Request.Method, url)
 				DispatchErrMsgJson(c, "Please sign in first")
 				c.Abort()
-				return // request rejected 
+				return // request rejected
 			}
 		}
 

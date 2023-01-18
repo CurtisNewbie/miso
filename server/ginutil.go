@@ -10,6 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	nilUser = common.User{}
+)
+
 // Route handler
 type RouteHandler func(c *gin.Context) (any, error)
 
@@ -19,11 +23,34 @@ type AuthRouteHandler func(c *gin.Context, user *common.User) (any, error)
 // Router handler with context, user (optional, may be nil), and logger prepared
 type TRouteHandler func(c *gin.Context, req InboundRequest) (any, error)
 
-// Prepared inbound request 
+// Prepared inbound request
 type InboundRequest struct {
 	Ctx  context.Context // request context
-	User *common.User    // optional, may be nil
+	User common.User     // optional, use Authenticated() first before reading this value
 	Log  *logrus.Entry   // logger with tracing info
+	auth bool
+}
+
+// Check whether current request is authenticated, if so, one may read User from InboundRequest
+func (in *InboundRequest) Authenticated() bool {
+	return in.auth
+}
+
+// Create empty InboundRequest
+func EmptyInboundRequest() InboundRequest {
+	return NewInboundRequest(context.Background(), nil)
+}
+
+// Create new InboundRequest
+func NewInboundRequest(ctx context.Context, user *common.User) InboundRequest {
+	hasUser := user != nil
+	var u common.User
+	if hasUser {
+		u = *user
+	} else {
+		u = nilUser
+	}
+	return InboundRequest{Ctx: ctx, User: u, Log: common.TraceLogger(ctx)}
 }
 
 // Build a Route Handler for an authorized request
@@ -40,7 +67,7 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		user, _ := ExtractUser(c) // optional
 		ctx := c.Request.Context()
-		r, e := handler(c, InboundRequest{Ctx: ctx, User: user, Log: common.TraceLogger(ctx)})
+		r, e := handler(c, NewInboundRequest(ctx, user))
 		HandleResult(c, r, e)
 	}
 }
