@@ -67,29 +67,25 @@ func triggerShutdownHook() {
 
 // Register GET request route, route is whitelisted, no authentication requires
 func PubGet(url string, handlers ...gin.HandlerFunc) {
-	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(UrlMatchPredicate(url))
+	AddUrlBasedRouteAuthWhitelist(url)
 	AddRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
 // Register POST request route, route is whitelisted, no authentication requires
 func PubPost(url string, handlers ...gin.HandlerFunc) {
-	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(UrlMatchPredicate(url))
+	AddUrlBasedRouteAuthWhitelist(url)
 	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
 // Register PUT request route, route is whitelisted, no authentication requires
 func PubPut(url string, handlers ...gin.HandlerFunc) {
-	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(UrlMatchPredicate(url))
+	AddUrlBasedRouteAuthWhitelist(url)
 	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
 // Register DELETE request route, route is whitelisted, no authentication requires
 func PubDelete(url string, handlers ...gin.HandlerFunc) {
-	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
-	AddRouteAuthWhitelist(UrlMatchPredicate(url))
+	AddUrlBasedRouteAuthWhitelist(url)
 	AddRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
@@ -100,15 +96,18 @@ func Get(url string, handler TRouteHandler) {
 
 // Add RoutesRegistar for Post request
 func Post(url string, handler TRouteHandler) {
-	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) }) }
+	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
+}
 
 // Add RoutesRegistar for Put request
 func Put(url string, handler TRouteHandler) {
-	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) }) }
+	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
+}
 
 // Add RoutesRegistar for Delete request
 func Delete(url string, handler TRouteHandler) {
-	AddRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) }) }
+	AddRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
+}
 
 // Add RoutesRegistar
 func AddRoutesRegistar(reg RoutesRegistar) {
@@ -331,6 +330,12 @@ func UrlMatchPredicate(pattern string) common.Predicate[string] {
 		}
 		return strings.EqualFold(uurl, pattern)
 	}
+}
+
+// Add url based route authentication whitelist
+func AddUrlBasedRouteAuthWhitelist(url string) {
+	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
+	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 }
 
 // Add route authentication whitelist predicate
