@@ -16,6 +16,7 @@ import (
 
 // Helper type for handling HTTP responses
 type TResponse struct {
+	Ctx  context.Context
 	Resp *http.Response
 	Err  error
 }
@@ -62,7 +63,7 @@ type TClient struct {
 	// request headers
 	Headers map[string][]string
 	// context provided by caller
-	ctx context.Context
+	Ctx context.Context
 	// enable tracing
 	Trace bool
 	// http client used
@@ -80,7 +81,7 @@ func (t *TClient) Get(queryParams map[string][]string) *TResponse {
 	url := concatQueryParam(t.Url, queryParams)
 	req, e := NewGetRequest(url)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	return t.send(req)
 }
@@ -89,7 +90,7 @@ func (t *TClient) Get(queryParams map[string][]string) *TResponse {
 func (t *TClient) PostJson(body any) *TResponse {
 	jsonBody, e := json.Marshal(body)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	t.AddHeaders(map[string]string{
 		"content-type": "application/json",
@@ -101,7 +102,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 func (t *TClient) Post(body io.Reader) *TResponse {
 	req, e := NewPostRequest(t.Url, body)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	return t.send(req)
 }
@@ -110,7 +111,7 @@ func (t *TClient) Post(body io.Reader) *TResponse {
 func (t *TClient) PutJson(body any) *TResponse {
 	jsonBody, e := json.Marshal(body)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	t.AddHeaders(map[string]string{
 		"content-type": "application/json",
@@ -122,7 +123,7 @@ func (t *TClient) PutJson(body any) *TResponse {
 func (t *TClient) Put(body io.Reader) *TResponse {
 	req, e := NewPutRequest(t.Url, body)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	return t.send(req)
 }
@@ -132,7 +133,7 @@ func (t *TClient) Delete(queryParams map[string][]string) *TResponse {
 	url := concatQueryParam(t.Url, queryParams)
 	req, e := NewDeleteRequest(url)
 	if e != nil {
-		return &TResponse{Resp: nil, Err: e}
+		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
 	return t.send(req)
 }
@@ -140,14 +141,14 @@ func (t *TClient) Delete(queryParams map[string][]string) *TResponse {
 // Send request
 func (t *TClient) send(req *http.Request) *TResponse {
 	if t.Trace {
-		req = TraceRequest(t.ctx, req)
+		req = TraceRequest(t.Ctx, req)
 	}
 
 	AddHeaders(req, t.Headers)
 
-	logrus.Infof("TClient: %s '%s'", req.Method, req.URL)
+	common.TraceLogger(t.Ctx).Infof("TClient: %s '%s'", req.Method, req.URL)
 	r, e := t.client.Do(req)
-	return &TResponse{Resp: r, Err: e}
+	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx}
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
@@ -169,7 +170,7 @@ func NewDefaultTClient(ctx context.Context, url string) *TClient {
 
 // Create new TClient
 func NewTClient(ctx context.Context, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, ctx: ctx, client: client}
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ctx, client: client}
 }
 
 // Concatenate url and query parameters
