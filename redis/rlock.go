@@ -8,7 +8,7 @@ import (
 	"github.com/bsm/redislock"
 )
 
-type LRunnable func() any
+type LRunnable func() (any, error)
 
 // Check whether the error is 'redislock.ErrNotObtained'
 func IsRLockNotObtainedErr(err error) bool {
@@ -46,9 +46,9 @@ func TimedRLockRun(key string, ttl time.Duration, runnable LRunnable) (any, erro
 	log.Infof("Obtained lock for key '%s'", key)
 
 	defer func() {
-		lock.Release()
-		log.Infof("Released lock for key '%s'", key)
+		re := lock.Release()
+		log.Infof("Released lock for key '%s', err: %v", key, re)
 	}()
 
-	return runnable(), nil
+	return runnable()
 }
