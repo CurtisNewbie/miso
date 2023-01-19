@@ -55,5 +55,8 @@ func GetPropagationKeys() []string {
 	for k := range propagationKeys.keys.Keys {
 		keys = append(keys, k)
 	}
+
+	keys = append(keys, X_TRACEID)
+	keys = append(keys, X_SPANID)
 	return keys
 }
