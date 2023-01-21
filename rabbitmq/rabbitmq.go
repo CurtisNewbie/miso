@@ -68,7 +68,7 @@ type MsgListener struct {
 /*
 	Publish message with confirmation
 */
-func PublishMsg(msg string, exchange string, routingKey string) error {
+func PublishMsg(msg []byte, exchange string, routingKey string) error {
 	pubChanRwm.RLock()
 	defer pubChanRwm.RUnlock()
 	pubWg.Add(1)
@@ -81,7 +81,7 @@ func PublishMsg(msg string, exchange string, routingKey string) error {
 	publishing := amqp.Publishing{
 		ContentType:  "text/plain",
 		DeliveryMode: amqp.Persistent,
-		Body:         []byte(msg),
+		Body:         msg,
 	}
 	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
