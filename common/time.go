@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,6 +22,9 @@ type WTime time.Time
 /* same as time.Time but will be serialized/deserialized using format '2006-01-02 15:04:05' */
 type TTime time.Time
 
+/* EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds */
+type ETime time.Time
+
 var (
 	/*
 		yyyy : 2006
@@ -36,9 +40,9 @@ var (
 	formatDict map[string]string
 
 	// format for WTime
-	wTimeFormat string 
+	wTimeFormat string
 	// format for TTime
-	tTimeFormat string 
+	tTimeFormat string
 )
 
 func init() {
@@ -99,5 +103,25 @@ func (t WTime) String() string {
 
 // pretty print time
 func TimePrettyPrint(t *time.Time) string {
-	return fmt.Sprintf("%s (%s)", t.Format(`"` + tTimeFormat + `"`), t.Location())
+	return fmt.Sprintf("%s (%s)", t.Format(`"`+tTimeFormat+`"`), t.Location())
+}
+
+func (t ETime) MarshalJSON() ([]byte, error) {
+	tt := time.Time(t)
+	return []byte(fmt.Sprintf("%d", tt.UnixMilli())), nil
+}
+
+func (t *ETime) UnmarshalJSON(b []byte) error {
+	millisec, err := strconv.ParseInt(string(b), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	pt := time.UnixMilli(millisec)
+	*t = ETime(pt)
+	return nil
+}
+
+func (t ETime) String() string {
+	return time.Time(t).String()
 }
