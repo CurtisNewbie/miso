@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -32,7 +33,7 @@ var (
 	defaultQos       = 68
 	defaultParallism = 1
 	msgListeners     []MsgListener
-	defaultRetry         int = -1
+	defaultRetry     int = -1
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
@@ -65,10 +66,24 @@ type MsgListener struct {
 	Handler func(payload string) error
 }
 
+// Publish json message with confirmation
+func PublishJson(obj any, exchange string, routingKey string) error {
+	j, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	return PublishMsg(j, exchange, routingKey, "application/json")
+}
+
+// Publish plain text message with confirmation
+func PublishText(msg string, exchange string, routingKey string) error {
+	return PublishMsg([]byte(msg), exchange, routingKey, "text/plain")
+}
+
 /*
 	Publish message with confirmation
 */
-func PublishMsg(msg []byte, exchange string, routingKey string) error {
+func PublishMsg(msg []byte, exchange string, routingKey string, contentType string) error {
 	pubChanRwm.RLock()
 	defer pubChanRwm.RUnlock()
 	pubWg.Add(1)
@@ -79,7 +94,7 @@ func PublishMsg(msg []byte, exchange string, routingKey string) error {
 	}
 
 	publishing := amqp.Publishing{
-		ContentType:  "text/plain",
+		ContentType:  contentType,
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 	}
@@ -382,7 +397,7 @@ func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo i
 	go func() {
 		logrus.Infof("[T%d] Created RabbitMQ consumer for queue: '%s'", routineNo, listener.QueueName)
 		for msg := range msgs {
-			retry := maxRetry 
+			retry := maxRetry
 			payload := string(msg.Body)
 
 			for {
@@ -394,7 +409,7 @@ func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo i
 				logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v' (retry: %d)", listener.QueueName, payload, e, retry)
 
 				// last retry
-				if retry == 0 { 
+				if retry == 0 {
 					msg.Ack(false)
 					break
 				}
@@ -404,7 +419,7 @@ func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo i
 					msg.Nack(false, true)
 					break
 				}
-				
+
 				retry -= 1
 				time.Sleep(time.Millisecond * 500) // sleep 500ms for every retry
 			}
