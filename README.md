@@ -1,4 +1,4 @@
-# gocommon
+# gocommon v1.0.1
 
 Common stuff for Go. **This is not a general library for everyone, it's developed for my personal need :D**
 
