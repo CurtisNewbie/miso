@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,6 +30,9 @@ const (
 )
 
 var (
+	loggerOut io.Writer = os.Stdout
+	loggerErrOut io.Writer = os.Stderr
+
 	routesRegiatarList []RoutesRegistar = []RoutesRegistar{}
 
 	shuttingDown   bool = false
@@ -42,6 +46,7 @@ var (
 )
 
 func init() {
+	common.SetDefProp(common.PROP_SERVER_WEB_ENABLED, true)
 	common.SetDefProp(common.PROP_SERVER_HOST, "localhost")
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
@@ -138,6 +143,24 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 /*
+	Default way to Bootstrap server, basically the same as:
+
+*/
+func DefaultBootstrapServer(args []string) {
+	// default way to load configuration
+	common.DefaultReadConfig(args)
+
+	// determine the writer that we will use for logging 
+	if common.IsProdMode() && common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
+		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
+		loggerErrOut = loggerOut
+	}
+	logrus.SetOutput(loggerOut)
+
+	BootstrapServer()
+}
+
+/*
 	Bootstrap server
 
 	This func will attempt to connect MySQL, Redis, Consul based on the props loaded
@@ -156,14 +179,6 @@ func BootstrapServer() {
 	ctx, cancel := context.WithCancel(context.Background())
 	AddShutdownHook(func() { cancel() })
 
-	if common.IsProdMode() {
-		logrus.Info("Bootstraping Gin with ReleaseMode")
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	// Load propagation keys for tracing
-	common.LoadPropagationKeyProp()
-
 	// mysql
 	if mysql.IsMySqlEnabled() {
 		mysql.MustInitMySqlFromProp()
@@ -171,36 +186,55 @@ func BootstrapServer() {
 
 	// redis
 	if redis.IsRedisEnabled() {
-		redis.InitRedisFromProp()
+		redis.MustInitMySqlFromProp()
 	}
 
-	// gin router
-	router := gin.New()
-	router.Use(AuthMiddleware())
-	router.Use(TraceMiddleware())
-
-	if !common.IsProdMode() {
-		router.Use(gin.Logger())
+	// rabbitmq
+	if rabbitmq.IsEnabled() {
+		rabbitmq.StartRabbitMqClientAsync(ctx)
 	}
 
-	// register customer recovery func
-	router.Use(gin.CustomRecovery(DefaultRecovery))
+	// web server
+	if common.GetPropBool(common.PROP_SERVER_WEB_ENABLED) {
+		logrus.Info("Starting web server")
 
-	// register consul health check
-	registerRouteForConsulHealthcheck(router)
+		// Load propagation keys for tracing
+		common.LoadPropagationKeyProp()
 
-	// register custom routes
-	for _, registar := range routesRegiatarList {
-		registar(router)
+		if common.IsProdMode() {
+			gin.SetMode(gin.ReleaseMode)
+		}
+
+		// gin router
+		router := gin.New()
+		router.Use(AuthMiddleware())
+		router.Use(TraceMiddleware())
+
+		if !common.IsProdMode() {
+			router.Use(gin.Logger()) // default logger for debugging
+		}
+
+		// register customer recovery func
+		router.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
+
+		// register consul health check
+		registerRouteForConsulHealthcheck(router)
+
+		// register custom routes
+		for _, registar := range routesRegiatarList {
+			registar(router)
+		}
+
+		// start the http server
+		server := createHttpServer(router)
+		go startHttpServer(ctx, server)
+		AddShutdownHook(func() { shutdownServer(server) })
 	}
 
-	// start the http server
-	server := createHttpServer(router)
-	go startHttpServer(ctx, server)
-	AddShutdownHook(func() { shutdownServer(server) })
-
-	// register on consul
+	// consul
 	if consul.IsConsulEnabled() {
+		logrus.Info("Creating consul client")
+
 		// create consul client
 		consul.MustInitConsulClient()
 		AddShutdownHook(func() { consul.UnsubscribeServerList() })
@@ -226,9 +260,13 @@ func BootstrapServer() {
 		}()
 	}
 
-	if rabbitmq.IsEnabled() {
-		rabbitmq.StartRabbitMqClient(ctx)
+	// scheduler
+	if common.HasScheduler() {
+		logrus.Info("Starting scheduler asynchronously")
+		common.GetScheduler().StartAsync()
+		AddShutdownHook(func() { common.GetScheduler().Stop() })
 	}
+
 	end := time.Now().UnixMilli()
 	logrus.Infof("Server bootstraped, took: %dms", end-start)
 
@@ -334,7 +372,6 @@ func UrlMatchPredicate(pattern string) common.Predicate[string] {
 
 // Add url based route authentication whitelist
 func AddUrlBasedRouteAuthWhitelist(url string) {
-	logrus.Infof("Adding '%s' to route whitelist, no authentication is required", url)
 	AddRouteAuthWhitelist(UrlMatchPredicate(url))
 }
 

@@ -138,7 +138,7 @@ func InitMySql(user string, password string, dbname string, host string, port st
 		return err
 	}
 
-	logrus.Infof("MySQL conn initialized")
+	logrus.Infof("MySQL connection established")
 	mysqlp.mysql = db
 
 	return nil

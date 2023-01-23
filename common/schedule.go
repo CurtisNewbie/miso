@@ -15,6 +15,13 @@ var (
 	scheLock sync.Mutex
 )
 
+// Whether scheduler is initialized
+func HasScheduler() bool {
+	scheLock.Lock()
+	defer scheLock.Unlock()
+	return scheduler != nil 
+}
+
 // Get the lazy-initialized, cached scheduler
 func GetScheduler() *gocron.Scheduler {
 	scheLock.Lock()

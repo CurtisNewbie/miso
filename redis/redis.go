@@ -68,7 +68,7 @@ func GetRedis() *redis.Client {
 		"redis.password"
 		"redis.database"
 */
-func InitRedisFromProp() *redis.Client {
+func InitRedisFromProp() (*redis.Client, error) {
 	return InitRedis(
 		common.GetPropStr(common.PROP_REDIS_ADDRESS),
 		common.GetPropStr(common.PROP_REDIS_PORT),
@@ -78,20 +78,41 @@ func InitRedisFromProp() *redis.Client {
 }
 
 /*
+	Initialize redis client from configuration, if failed, panic
+
+	If redis client has been initialized, current func call will be ignored.
+
+	This func looks for following prop:
+
+		"redis.address"
+		"redis.port"
+		"redis.username"
+		"redis.password"
+		"redis.database"
+*/
+func MustInitMySqlFromProp() {
+	_, e := InitRedisFromProp()
+	if e != nil {
+		panic(e)
+	}
+}
+
+
+/*
 	Initialize redis client
 
 	If redis client has been initialized, current func call will be ignored
 */
-func InitRedis(address string, port string, username string, password string, db int) *redis.Client {
+func InitRedis(address string, port string, username string, password string, db int) (*redis.Client, error) {
 	if IsRedisClientInitialized() {
-		return GetRedis()
+		return GetRedis(), nil
 	}
 
 	redisp.mu.Lock()
 	defer redisp.mu.Unlock()
 
 	if redisp.client != nil {
-		return redisp.client
+		return redisp.client, nil
 	}
 
 	logrus.Infof("Connecting to redis '%v:%v', database: %v", address, port, db)
@@ -101,9 +122,14 @@ func InitRedis(address string, port string, username string, password string, db
 		DB:       db,
 	})
 
-	logrus.Info("Redis Handle initialized")
+	cmd := rdb.Ping()
+	if cmd.Err() != nil {
+		return nil, cmd.Err()
+	}
+
+	logrus.Info("Redis connection initialized")
 	redisp.client = rdb
-	return rdb
+	return rdb, nil
 }
 
 // Check whether redis client is initialized

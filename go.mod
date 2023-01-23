@@ -8,6 +8,7 @@ require (
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/hashicorp/consul/api v1.15.3
+	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/viper v1.14.0
@@ -63,6 +64,7 @@ require (
 	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

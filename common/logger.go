@@ -3,8 +3,10 @@ package common
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
+	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,6 +48,17 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	s := fmt.Sprintf("%s %s [%-16v,%-16v,%v]%s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, username, fn, entry.Message)
 	return []byte(s), nil
+}
+
+// Create rolling file based logger
+func BuildRollingLogFileWriter(logFile string) io.Writer {
+	return &lumberjack.Logger{
+			Filename:  logFile,
+			MaxSize:   100, // megabytes
+			MaxAge:    15,  //days
+			LocalTime: true,
+			Compress:  false,
+		}
 }
 
 func toLevelStr(level logrus.Level) string {

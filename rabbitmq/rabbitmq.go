@@ -238,7 +238,7 @@ func declareExchanges(ch *amqp.Channel) error {
 	To register listener, please use 'AddListener' func.
 
 */
-func StartRabbitMqClient(ctx context.Context) {
+func StartRabbitMqClientAsync(ctx context.Context) {
 	go func() {
 		for {
 			notifyCloseChan, err := initClient(ctx)

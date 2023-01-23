@@ -17,6 +17,7 @@ redis:
   database: 0
 
 server: 
+  web.enabled: true
   host: "${SERVER_HOST}" 
   port: "${SERVER_PORT}" 
   gracefulShutdownTimeSec: 5

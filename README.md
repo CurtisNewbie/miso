@@ -1,4 +1,4 @@
-# gocommon v1.0.1
+# gocommon v1.0.2
 
 Common stuff for Go. **This is not a general library for everyone, it's developed for my personal need :D**
 
@@ -55,6 +55,7 @@ server.BootstrapServer()
 
 | property | description | default value |
 | --- | --- | --- | 
+| server.web.enabled | enable http server | true |   
 | server.host | http server host | localhost |   
 | server.port | http server port | 8080 |
 | server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 5 | 
@@ -112,7 +113,13 @@ server.BootstrapServer()
 
 | property | description | default value |
 | --- | --- | --- | 
-| sqlite.file | path to SQLite database file | 
+| sqlite.file | path to SQLite database file |  | 
+
+### Logger Properties
+
+| property | description | default value |
+| --- | --- | --- | 
+| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr |  | 
 
 
 ## Yaml Configuration File Example

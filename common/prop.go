@@ -57,6 +57,7 @@ const (
 
 		------------------------------------
 	*/
+	PROP_SERVER_WEB_ENABLED                = "server.web.enabled"
 	PROP_SERVER_HOST                       = "server.host"
 	PROP_SERVER_PORT                       = "server.port"
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC = "server.gracefulShutdownTimeSec"
@@ -93,10 +94,18 @@ const (
 	/*
 		------------------------------------
 
-		Prop for Tracing 
+		Prop for Tracing
 
 		------------------------------------
 	*/
 	PROP_TRACING_PROPAGATION_KEYS = "tracing.propagation.keys"
 
+	/*
+		------------------------------------
+
+		Prop for Logging
+
+		------------------------------------
+	*/
+	PROP_LOGGING_ROLLING_FILE = "logging.rolling.file"
 )
