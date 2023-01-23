@@ -88,9 +88,6 @@ func _getPropString(prop string) string {
 
 	You can also use ReadConfig to load your custom configFile.
 
-	If property "logging.rolling.file" is configured, and prod mode is turned on, 
-	it will attempt to setup rolling log file.
-
 	It's essentially:
 
 		LoadConfigFromFile(GuessConfigFilePath(args, GuessProfile(args)))

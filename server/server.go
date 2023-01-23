@@ -143,14 +143,17 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 /*
-	Default way to Bootstrap server, basically the same as:
+	Default way to Bootstrap server, basically the same as follows:
 
+		common.DefaultReadConfig(args)
+		// ... plus some configuration for logging
+		BootstrapServer()
 */
 func DefaultBootstrapServer(args []string) {
 	// default way to load configuration
 	common.DefaultReadConfig(args)
 
-	// determine the writer that we will use for logging 
+	// determine the writer that we will use for logging, and so on
 	if common.IsProdMode() && common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
 		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
 		loggerErrOut = loggerOut
