@@ -179,6 +179,8 @@ func BootstrapServer() {
 	ctx, cancel := context.WithCancel(context.Background())
 	AddShutdownHook(func() { cancel() })
 
+	logrus.Info("\n\n############# Bootstrapping Server #############\n")
+
 	// mysql
 	if mysql.IsMySqlEnabled() {
 		mysql.MustInitMySqlFromProp()
@@ -268,7 +270,7 @@ func BootstrapServer() {
 	}
 
 	end := time.Now().UnixMilli()
-	logrus.Infof("Server bootstraped, took: %dms", end-start)
+	logrus.Infof("\n\n############# Server Bootstraped (took: %dms) #############\n", end-start)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
