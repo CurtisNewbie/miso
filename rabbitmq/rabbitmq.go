@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -17,9 +19,9 @@ const (
 	/*
 		Consumer default values
 	*/
-	DEFAULT_QOS           = 68
-	DEFAULT_PARALLISM     = 1
-	DEFAULT_RETRY      int = -1
+	DEFAULT_QOS       = 68
+	DEFAULT_PARALLISM = 1
+	DEFAULT_RETRY     = -1
 )
 
 var (
@@ -70,6 +72,15 @@ type MsgListener struct {
 	QueueName string
 	/* Handler of message */
 	Handler func(payload string) error
+}
+
+func (m MsgListener) String() string {
+	var funcName string = "nil"
+	if m.Handler != nil {
+		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
+	}
+
+	return fmt.Sprintf("MsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
 }
 
 // Publish json message with confirmation
@@ -401,7 +412,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int, maxRetry int) {
 	go func() {
-		logrus.Infof("[T%d] Created RabbitMQ consumer for queue: '%s'", routineNo, listener.QueueName)
+		logrus.Infof("Started %v", listener)
 		for msg := range msgs {
 			retry := maxRetry
 			payload := string(msg.Body)
