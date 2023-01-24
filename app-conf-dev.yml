@@ -42,6 +42,9 @@ rabbitmq:
   enabled: true
   consumer: 
     parallism: 1
+  username: guest
+  password: guest
+  vhost: "/"
   declaration: 
     queue: 
       - my-first-queue

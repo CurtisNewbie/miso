@@ -9,16 +9,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func msgHandler(payload string) error {
+	logrus.Infof("Received message %s", payload)
+	// return errors.New("nack intentionally")
+	return nil
+}
+
 func TestInitClient(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	common.SetProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, 2)
 
-	AddListener(MsgListener{QueueName: "my-first-queue", Handler: func(payload string) error {
-		logrus.Infof("Received message %s", payload)
-		// return errors.New("nack intentionally") 
-		return nil
-	}})
+	AddListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	_, e := initClient(ctx)
@@ -47,7 +50,7 @@ func TestPublishMessage(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
-	for i := 0; i < 10; i ++ {
+	for i := 0; i < 10; i++ {
 		e = PublishText("yo check me out", "my-exchange-one", "myKey1")
 		if e != nil {
 			t.Error(e)

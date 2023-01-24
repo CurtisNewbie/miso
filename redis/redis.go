@@ -78,27 +78,6 @@ func InitRedisFromProp() (*redis.Client, error) {
 }
 
 /*
-	Initialize redis client from configuration, if failed, panic
-
-	If redis client has been initialized, current func call will be ignored.
-
-	This func looks for following prop:
-
-		"redis.address"
-		"redis.port"
-		"redis.username"
-		"redis.password"
-		"redis.database"
-*/
-func MustInitMySqlFromProp() {
-	_, e := InitRedisFromProp()
-	if e != nil {
-		panic(e)
-	}
-}
-
-
-/*
 	Initialize redis client
 
 	If redis client has been initialized, current func call will be ignored

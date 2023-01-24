@@ -248,7 +248,7 @@ func DeregisterService() error {
 		return nil
 	}
 
-	logrus.Infof("Deregistering current instance on Consul, service_id: %s", regSub.serviceId)
+	logrus.Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
 	client, _ := GetConsulClient()
 	err := client.Agent().ServiceDeregister(regSub.serviceId)
 
@@ -327,19 +327,6 @@ func RegisterService() error {
 	regSub.serviceId = proposedServiceId
 
 	return nil
-}
-
-/*
-	Must initialize Consul client
-
-	This func internally call GetConsulClient, and will panic if fail
-*/
-func MustInitConsulClient() {
-	_, e := GetConsulClient()
-	if e != nil {
-		logrus.Errorf("Failed to init Concul client, %v", e)
-		panic(e)
-	}
 }
 
 /*

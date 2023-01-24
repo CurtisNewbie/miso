@@ -243,6 +243,10 @@ func declareExchanges(ch *amqp.Channel) error {
 	return nil
 }
 
+// TODO this implementation is somehow unnecessarily complex, try to simplify it a bit
+// 	maybe it's possible to make initial connection synchronous, and then implement the 
+// 	auto-reconnection separately ?
+
 /*
 	Start RabbitMQ Client (Asynchronous)
 
@@ -412,7 +416,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int, maxRetry int) {
 	go func() {
-		logrus.Infof("Started %v", listener)
+		logrus.Infof("[R%d] %v started", routineNo, listener)
 		for msg := range msgs {
 			retry := maxRetry
 			payload := string(msg.Body)
@@ -441,7 +445,7 @@ func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo i
 				time.Sleep(time.Millisecond * 500) // sleep 500ms for every retry
 			}
 		}
-		logrus.Infof("[T%d] RabbitMQ consumer for queue '%s' is closed", routineNo, listener.QueueName)
+		logrus.Infof("[R%d] %v stopped", routineNo, listener)
 	}()
 }
 

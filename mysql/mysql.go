@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
 const (
 	// Connection max lifetime, hikari recommends 1800000, so we do the same thing
 	CONN_MAX_LIFE_TIME = time.Minute * 30
@@ -49,29 +50,6 @@ func init() {
 */
 func IsMySqlEnabled() bool {
 	return GetPropBool(PROP_MYSQL_ENABLED)
-}
-
-/*
-	Init connection to mysql, if failed, panic
-
-	If mysql client has been initialized, current func call will be ignored.
-
-	This func looks for following props:
-
-		"mysql.user"
-		"mysql.password"
-		"mysql.database"
-		"mysql.host"
-		"mysql.port"
-	
-	This func is essentially the same as: 
-		InitMySqlFromProp
-*/
-func MustInitMySqlFromProp() {
-	e := InitMySqlFromProp()
-	if e != nil {
-		panic(e)
-	}
 }
 
 /*
