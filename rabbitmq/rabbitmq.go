@@ -13,6 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	/*
+		Consumer default values
+	*/
+	DEFAULT_QOS           = 68
+	DEFAULT_PARALLISM     = 1
+	DEFAULT_RETRY      int = -1
+)
+
 var (
 
 	// Connection pointer, accessing it require obtaining 'mu' lock
@@ -30,10 +39,7 @@ var (
 	/*
 		Consumer
 	*/
-	defaultQos       = 68
-	defaultParallism = 1
-	msgListeners     []MsgListener
-	defaultRetry     int = -1
+	msgListeners []MsgListener
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
@@ -46,9 +52,9 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_USERNAME, "")
 	common.SetDefProp(common.PROP_RABBITMQ_PASSWORD, "")
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, defaultQos)
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, defaultParallism)
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_RETRY, defaultRetry)
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, DEFAULT_PARALLISM)
+	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_RETRY, DEFAULT_RETRY)
 }
 
 /* Is RabbitMQ Enabled */
