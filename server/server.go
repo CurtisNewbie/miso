@@ -104,6 +104,11 @@ func Post(url string, handler TRouteHandler) {
 	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
+// Add RoutesRegistar for Post request with json payload
+func PostJ[T any](url string, handler JTRouteHandler[T]) {
+	AddRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewJTRouteHandler(handler)) })
+}
+
 // Add RoutesRegistar for Put request
 func Put(url string, handler TRouteHandler) {
 	AddRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
