@@ -292,6 +292,7 @@ func ClientDisconnect() error {
 		return nil
 	}
 
+	logrus.Info("Disconnecting RabbitMQ Connection")
 	pubWg.Wait()
 	return _conn.Close()
 }

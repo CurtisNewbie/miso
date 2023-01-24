@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bsm/redislock"
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/go-redis/redis"
 )
 
@@ -38,23 +39,23 @@ func (r *LazyRCache) rcache() *RCache {
 }
 
 // Put value to cache
-func (r *LazyRCache) Put(key string, val string) error {
-	return r.rcache().Put(key, val)
+func (r *LazyRCache) Put(ec common.ExecContext, key string, val string) error {
+	return r.rcache().Put(ec, key, val)
 }
 
 // Get from cache
-func (r *LazyRCache) Get(key string) (val string, e error) {
-	return r.rcache().Get(key)
+func (r *LazyRCache) Get(ec common.ExecContext, key string) (val string, e error) {
+	return r.rcache().Get(ec, key)
 }
 
 // Get from cache else run supplier
-func (r *LazyRCache) GetElse(key string, supplier func() string) (val string, e error) {
-	return r.rcache().GetElse(key, supplier)
+func (r *LazyRCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
+	return r.rcache().GetElse(ec, key, supplier)
 }
 
 // Put value to cache
-func (r *RCache) Put(key string, val string) error {
-	_, e := RLockRun("rcache:"+key, func() (any, error) {
+func (r *RCache) Put(ec common.ExecContext, key string, val string) error {
+	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
 		scmd := r.rclient.Set(key, val, r.exp)
 		if scmd.Err() != nil {
 			return nil, scmd.Err()
@@ -69,13 +70,13 @@ func (r *RCache) Put(key string, val string) error {
 }
 
 // Get from cache
-func (r *RCache) Get(key string) (val string, e error) {
-	return r.GetElse(key, nil)
+func (r *RCache) Get(ec common.ExecContext, key string) (val string, e error) {
+	return r.GetElse(ec, key, nil)
 }
 
 // Get from cache else run supplier
-func (r *RCache) GetElse(key string, supplier func() string) (val string, e error) {
-	res, e := RLockRun("rcache:"+key, func() (any, error) {
+func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
+	res, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
 		cmd := r.rclient.Get(key)
 
 		// key not found

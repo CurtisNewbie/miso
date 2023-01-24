@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/sirupsen/logrus"
 )
 
 // Helper type for handling HTTP responses
@@ -48,7 +47,7 @@ func (tr *TResponse) ReadJson(ptr any) error {
 	}
 
 	if e = json.Unmarshal(body, ptr); e != nil {
-		logrus.Errorf("Failed to unmarchal '%s' as %v, %v", string(body), reflect.TypeOf(ptr), e)
+		common.TraceLogger(tr.Ctx).Errorf("Failed to unmarchal '%s' as %v, %v", string(body), reflect.TypeOf(ptr), e)
 		return e
 	}
 	return nil

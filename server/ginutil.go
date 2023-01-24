@@ -6,7 +6,6 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // Route handler
@@ -83,7 +82,7 @@ func HandleResult(c *gin.Context, r any, e error) {
 // Must bind json content to the given pointer, else panic
 func MustBindJson(c *gin.Context, ptr any) {
 	if err := c.ShouldBindJSON(ptr); err != nil {
-		logrus.Errorf("Bind Json failed, %v", err)
+		common.TraceLogger(c.Request.Context()).Errorf("Bind Json failed, %v", err)
 		panic("Illegal Arguments")
 	}
 }

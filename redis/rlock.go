@@ -3,7 +3,7 @@ package redis
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/curtisnewbie/gocommon/common"
 
 	"github.com/bsm/redislock"
 )
@@ -26,8 +26,8 @@ func ObtainRLocker() *redislock.Client {
 	The maximum time wait for the lock is 1 min.
 	May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun(key string, runnable LRunnable) (any, error) {
-	return TimedRLockRun(key, 1*time.Minute, runnable)
+func RLockRun(ec common.ExecContext, key string, runnable LRunnable) (any, error) {
+	return TimedRLockRun(ec, key, 1*time.Minute, runnable)
 }
 
 /*
@@ -36,18 +36,18 @@ func RLockRun(key string, runnable LRunnable) (any, error) {
 	The ttl is the maximum time wait for the lock.
 	May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func TimedRLockRun(key string, ttl time.Duration, runnable LRunnable) (any, error) {
+func TimedRLockRun(ec common.ExecContext, key string, ttl time.Duration, runnable LRunnable) (any, error) {
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, ttl, nil)
 
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Obtained lock for key '%s'", key)
+	ec.Log.Infof("Obtained lock for key '%s'", key)
 
 	defer func() {
 		re := lock.Release()
-		log.Infof("Released lock for key '%s', err: %v", key, re)
+		ec.Log.Infof("Released lock for key '%s', err: %v", key, re)
 	}()
 
 	return runnable()

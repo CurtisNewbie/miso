@@ -148,17 +148,17 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	without actually requesting consul, and only when the cache missed, it then
 	requests the consul.
 */
-func ResolveRequestUrl(serviceName string, relUrl string) string {
+func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 	if !strings.HasPrefix(relUrl, "/") {
 		relUrl = "/" + relUrl
 	}
 
 	address, err := ResolveServiceAddress(serviceName)
-	if err == nil && address != "" {
-		return "http://" + address + relUrl
+	if err != nil {
+		return "", err	
 	}
 
-	panic(fmt.Sprintf("Unable to request request url for service '%s'", serviceName))
+	return "http://" + address + relUrl, nil
 }
 
 /*
@@ -315,13 +315,12 @@ func RegisterService() error {
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
-			// Status:                         STATUS_PASSING,
+			Status:                         STATUS_PASSING, // for responsiveness
 		},
 	}
 	logrus.Infof("Registering current instance as a service on Consul, serviceId: '%s'", proposedServiceId)
 
 	if e = client.Agent().ServiceRegister(registration); e != nil {
-		logrus.Errorf("Failed to register on Consul, err: %v", e)
 		return e
 	}
 	regSub.serviceId = proposedServiceId

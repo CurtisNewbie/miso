@@ -26,12 +26,16 @@ func TestInitClient(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, e := initClient(ctx)
 	if e != nil {
-		t.Error(e)
+		t.Fatal(e)
 	}
 
 	// make sure that the consumer is created before we cancel the context
 	time.Sleep(time.Second * 1)
 	cancel()
+	if e := ClientDisconnect(); e != nil {
+		t.Fatal(e)
+	}
+
 	logrus.Info("Cancelling background context")
 	time.Sleep(time.Second * 3)
 }
