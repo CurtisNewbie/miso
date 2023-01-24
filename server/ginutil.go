@@ -8,20 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Route handler
-type RouteHandler func(c *gin.Context) (any, error)
-
-// Authenticated route handler
-type AuthRouteHandler func(c *gin.Context, user *common.User) (any, error)
-
 // Router handler with context, user (optional, may be nil), and logger prepared
 type TRouteHandler func(c *gin.Context, req common.ExecContext) (any, error)
 
-// Build a Route Handler for an authorized request
-func BuildAuthRouteHandler(handler AuthRouteHandler) func(c *gin.Context) {
+// Router handler with the required json object, context, user (optional, may be nil), and logger prepared
+type JTRouteHandler[T any] func(c *gin.Context, req common.ExecContext, t T) (any, error)
+
+// Build JTRouteHandler with the required json object, context, user (optional, may be nil), and logger prepared
+func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		user := RequireUser(c)
-		r, e := handler(c, user)
+		user, _ := ExtractUser(c) // optional
+		ctx := c.Request.Context()
+		var t T
+		MustBindJson(c, &t)
+		r, e := handler(c, common.NewExecContext(ctx, user), t)
 		HandleResult(c, r, e)
 	}
 }
@@ -32,35 +32,6 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 		user, _ := ExtractUser(c) // optional
 		ctx := c.Request.Context()
 		r, e := handler(c, common.NewExecContext(ctx, user))
-		HandleResult(c, r, e)
-	}
-}
-
-// Build a Route Handler
-func BuildRouteHandler(handler RouteHandler) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		r, e := handler(c)
-		HandleResult(c, r, e)
-	}
-}
-
-// Build a Route Handler for authorized and JSON-based request
-func BuildAuthJRouteHandler[T any](handler func(c *gin.Context, user *common.User, t *T) (any, error)) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		user := RequireUser(c)
-		var t T
-		MustBindJson(c, &t)
-		r, e := handler(c, user, &t)
-		HandleResult(c, r, e)
-	}
-}
-
-// Build a Route Handler for JSON-based request
-func BuildJRouteHandler[T any](handler func(c *gin.Context, t *T) (any, error)) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		var t T
-		MustBindJson(c, &t)
-		r, e := handler(c, &t)
 		HandleResult(c, r, e)
 	}
 }
