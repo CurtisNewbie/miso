@@ -48,7 +48,7 @@ func TestPublishMessage(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	for i := 0; i < 10; i ++ {
-		e = PublishMsg("yo check me out", "my-exchange-one", "myKey1")
+		e = PublishText("yo check me out", "my-exchange-one", "myKey1")
 		if e != nil {
 			t.Error(e)
 		}
