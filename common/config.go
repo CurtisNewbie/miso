@@ -18,6 +18,8 @@ var (
 
 	// mutex for viper
 	viperMutex sync.Mutex
+
+	PRODUCTION_PROFILE_NAME = "prod"
 )
 
 func init() {
@@ -94,15 +96,13 @@ func _getPropString(prop string) string {
 */
 func DefaultReadConfig(args []string) {
 	profile := GuessProfile(args)
-	logrus.Infof("Using profile: '%v'", profile)
 	SetProfile(profile)
 
-	if strings.ToLower(profile) == "prod" {
+	if strings.ToLower(profile) == PRODUCTION_PROFILE_NAME {
 		SetProp(PROP_PRODUCTION_MODE, true)
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
-	logrus.Infof("Loading config file: '%s'", configFile)
 	LoadConfigFromFile(configFile)
 }
 
@@ -113,16 +113,13 @@ func DefaultReadConfig(args []string) {
 */
 func LoadConfigFromFile(configFile string) {
 	doWithViperLock(func() {
-		// read using viper
-		// viper.AddConfigPath(configFile)
-
 		f, err := os.Open(configFile)
 		if err != nil {
-			panic(err)
+			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
 		}
 		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
-			panic(err)
+			logrus.Fatalf("Failed to load config file: '%s', %v", configFile, err)
 		}
 	})
 }
@@ -225,7 +222,7 @@ func IsProdMode() bool {
 		return false
 	}
 	mode := GetPropBool(PROP_PRODUCTION_MODE)
-	return mode 
+	return mode
 }
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'

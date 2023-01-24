@@ -13,7 +13,7 @@ var (
 // Prepared execution context
 type ExecContext struct {
 	Ctx  context.Context // request context
-	User User     // optional, use Authenticated() first before reading this value
+	User User            // optional, use Authenticated() first before reading this value
 	Log  *logrus.Entry   // logger with tracing info
 	auth bool
 }

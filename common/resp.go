@@ -1,8 +1,6 @@
 package common
 
-import (
-	log "github.com/sirupsen/logrus"
-)
+import "github.com/sirupsen/logrus"
 
 // Web Endpoint's Resp
 type Resp struct {
@@ -36,7 +34,7 @@ func WrapResp(data interface{}, e error) *Resp {
 		}
 
 		// not a WebError, just return some generic msg
-		log.Errorf("Unknown error, %v", e)
+		logrus.Errorf("Unknown error, %v", e)
 		return ErrorResp("Unknown system error, please try again later")
 	}
 

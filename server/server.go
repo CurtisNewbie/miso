@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -159,12 +158,12 @@ func DefaultBootstrapServer(args []string) {
 	}
 	logrus.SetOutput(loggerOut)
 
-	// bootstraping 
+	// bootstraping
 	BootstrapServer()
 }
 
 /*
-	Bootstrap server 
+	Bootstrap server
 
 	This func will attempt to create http server, connect to MySQL, Redis or Consul based on the configuration loaded.
 
@@ -249,7 +248,7 @@ func BootstrapServer() {
 
 		// create consul client
 		if _, e := consul.GetConsulClient(); e != nil {
-			log.Fatalf("Failed to establish connection to Consul, %v", e)
+			logrus.Fatalf("Failed to establish connection to Consul, %v", e)
 		}
 
 		// deregister on shutdown
@@ -260,7 +259,7 @@ func BootstrapServer() {
 		})
 
 		if e := consul.RegisterService(); e != nil {
-			log.Fatalf("Failed to register on Consul, %v", e)
+			logrus.Fatalf("Failed to register on Consul, %v", e)
 		}
 	}
 
