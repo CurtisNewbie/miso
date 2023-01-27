@@ -98,10 +98,6 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 
 		// key not found
 		if cmd == nil {
-			if supplier == nil {
-				return "", nil
-			}
-
 			s := supplier()
 			scmd := r.rclient.Set(key, s, r.exp)
 			if scmd.Err() != nil {
