@@ -49,3 +49,15 @@ func NewExecContext(ctx context.Context, user *User) ExecContext {
 	}
 	return ExecContext{Ctx: ctx, User: u, Log: TraceLogger(ctx)}
 }
+
+func GetCtxStr(ctx context.Context, key string) string {
+	v := ctx.Value(key)
+	if v == nil {
+		return ""
+	}
+	sv, ok := v.(string)
+	if ok {
+		return sv
+	}
+	return ""
+}

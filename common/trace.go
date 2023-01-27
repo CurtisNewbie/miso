@@ -1,15 +1,21 @@
 package common
 
 import (
+	"context"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	X_TRACEID  = "X-B3-Traceid" 
-	X_SPANID   = "X-B3-Spanid"
+	X_TRACEID = "X-B3-Traceid"
+	X_SPANID  = "X-B3-Spanid"
+
+	X_USER_ID  = "id"
 	X_USERNAME = "username"
+	X_USERNO   = "userno"
+	X_ROLE     = "role"
+	X_SERVICES = "services"
 )
 
 var (
@@ -59,4 +65,16 @@ func GetPropagationKeys() []string {
 	keys = append(keys, X_TRACEID)
 	keys = append(keys, X_SPANID)
 	return keys
+}
+
+func GetCtxUserNo(ctx context.Context) string {
+	return GetCtxStr(ctx, X_USERNO)
+}
+
+func GetCtxUsername(ctx context.Context) string {
+	return GetCtxStr(ctx, X_USERNAME)
+}
+
+func GetCtxUserId(ctx context.Context) string {
+	return GetCtxStr(ctx, X_USER_ID)
 }
