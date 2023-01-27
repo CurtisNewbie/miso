@@ -43,6 +43,8 @@ var (
 
 	routesAuthWhitelist []common.Predicate[string] = []common.Predicate[string]{}
 	rawlmu              sync.RWMutex
+
+	serverBootstrapListener []func() = []func(){}
 )
 
 func init() {
@@ -167,6 +169,21 @@ func DefaultBootstrapServer(args []string) {
 	BootstrapServer()
 }
 
+// Add listener that is invoked when server is finally bootstrapped
+func OnServerBootstrapped(callback func()) {
+	if callback == nil {
+		return
+	}
+	serverBootstrapListener = append(serverBootstrapListener, callback)
+}
+
+func callServerBootstrappedListeners() {
+	logrus.Info("Invoking OnServerBootstrapped callbacks")
+	for _, callback := range serverBootstrapListener {
+		callback()
+	}
+}
+
 /*
 	Bootstrap server
 
@@ -205,7 +222,9 @@ func BootstrapServer() {
 
 	// rabbitmq
 	if rabbitmq.IsEnabled() {
-		rabbitmq.StartRabbitMqClientAsync(ctx)
+		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
+			logrus.Fatalf("Failed to establish connection to RabbitMQ, %v", e)
+		}
 	}
 
 	// web server
@@ -277,6 +296,9 @@ func BootstrapServer() {
 
 	end := time.Now().UnixMilli()
 	logrus.Infof("\n\n############# Server Bootstraped (took: %dms) #############\n", end-start)
+
+	// invoke listener for serverBootstraped event
+	callServerBootstrappedListeners()
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)

@@ -243,12 +243,8 @@ func declareExchanges(ch *amqp.Channel) error {
 	return nil
 }
 
-// TODO this implementation is somehow unnecessarily complex, try to simplify it a bit
-// 	maybe it's possible to make initial connection synchronous, and then implement the 
-// 	auto-reconnection separately ?
-
 /*
-	Start RabbitMQ Client (Asynchronous)
+	Start RabbitMQ Client (synchronous for the first time, then auto-reconnect later in another goroutine)
 
 	This func will attempt to establish connection to broker, declare queues, exchanges and bindings.
 
@@ -259,15 +255,27 @@ func declareExchanges(ch *amqp.Channel) error {
 	To register listener, please use 'AddListener' func.
 
 */
-func StartRabbitMqClientAsync(ctx context.Context) {
-	go func() {
+func StartRabbitMqClient(ctx context.Context) error {
+	notifyCloseChan, err := initClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	go func(notifyCloseChan chan *amqp.Error) {
+		isInitial := true
+
 		for {
-			notifyCloseChan, err := initClient(ctx)
-			if err != nil {
-				logrus.Infof("Error connecting to RabbitMQ: %v", err)
-				time.Sleep(time.Second * 5)
-				continue
+			if isInitial {
+				isInitial = false
+			} else {
+				notifyCloseChan, err = initClient(ctx)
+				if err != nil {
+					logrus.Infof("Error connecting to RabbitMQ: %v", err)
+					time.Sleep(time.Second * 5)
+					continue
+				}
 			}
+
 			select {
 			// block until connection is closed, then reconnect, thus continue
 			case <-notifyCloseChan:
@@ -281,7 +289,9 @@ func StartRabbitMqClientAsync(ctx context.Context) {
 				return
 			}
 		}
-	}()
+	}(notifyCloseChan)
+
+	return nil
 }
 
 // Disconnect from RabbitMQ server

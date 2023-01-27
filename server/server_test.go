@@ -15,7 +15,7 @@ func TestBootstrapServer(t *testing.T) {
 	common.DefaultReadConfig(args)
 
 	go func() {
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 		if IsShuttingDown() {
 			t.Error()
 			return
