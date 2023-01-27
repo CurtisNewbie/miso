@@ -9,10 +9,10 @@ import (
 )
 
 // Router handler with context, user (optional, may be nil), and logger prepared
-type TRouteHandler func(c *gin.Context, req common.ExecContext) (any, error)
+type TRouteHandler func(c *gin.Context, ec common.ExecContext) (any, error)
 
 // Router handler with the required json object, context, user (optional, may be nil), and logger prepared
-type JTRouteHandler[T any] func(c *gin.Context, req common.ExecContext, t T) (any, error)
+type JTRouteHandler[T any] func(c *gin.Context, ec common.ExecContext, t T) (any, error)
 
 // Build JTRouteHandler with the required json object, context, user (optional, may be nil), and logger prepared
 func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
