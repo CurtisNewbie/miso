@@ -1,5 +1,13 @@
 package common
 
+/*
+	TODO:
+
+		Scheduling now only works when there is only one single instance, or the jobs can be ran repeatedly by different nodes.
+
+		Should find a way to make sure that only one node runs, making it distributed.
+*/
+
 import (
 	"sync"
 	"time"
@@ -19,7 +27,7 @@ var (
 func HasScheduler() bool {
 	scheLock.Lock()
 	defer scheLock.Unlock()
-	return scheduler != nil 
+	return scheduler != nil
 }
 
 // Get the lazy-initialized, cached scheduler
