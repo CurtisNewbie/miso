@@ -72,7 +72,7 @@ func (r *RCache) Get(ec common.ExecContext, key string) (val string, e error) {
 	return r.GetElse(ec, key, nil)
 }
 
-// Get from cache else run supplier
+// Get from cache else run supplier, if supplier provides empty str, then the value is returned directly without call SET in redis
 func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
 
 	// for the query, we try not to lock the operation, we only lock the write part
@@ -98,12 +98,16 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 
 		// key not found
 		if cmd == nil {
-			s := supplier()
-			scmd := r.rclient.Set(key, s, r.exp)
+			supplied := supplier()
+			if supplied == "" {
+				return "", nil
+			}
+
+			scmd := r.rclient.Set(key, supplied, r.exp)
 			if scmd.Err() != nil {
 				return "", scmd.Err()
 			}
-			return s, nil
+			return supplied, nil
 		}
 
 		// cmd failed
