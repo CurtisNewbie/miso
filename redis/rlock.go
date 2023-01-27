@@ -10,6 +10,14 @@ import (
 
 type LRunnable func() (any, error)
 
+var (
+	muteLog bool = true
+)
+
+func UnmuteLog() {
+	muteLog = false
+}
+
 // Check whether the error is 'redislock.ErrNotObtained'
 func IsRLockNotObtainedErr(err error) bool {
 	return err == redislock.ErrNotObtained
@@ -43,11 +51,21 @@ func TimedRLockRun(ec common.ExecContext, key string, ttl time.Duration, runnabl
 	if err != nil {
 		return nil, err
 	}
-	ec.Log.Infof("Obtained lock for key '%s'", key)
+
+	if !muteLog {
+		ec.Log.Infof("Obtained lock for key '%s'", key)
+	}
 
 	defer func() {
 		re := lock.Release()
-		ec.Log.Infof("Released lock for key '%s', err: %v", key, re)
+
+		if re != nil {
+			ec.Log.Errorf("Failed to release lock for key '%s', err: %v", key, re)
+		} else {
+			if !muteLog {
+				ec.Log.Infof("Released lock for key '%s'", key)
+			}
+		}
 	}()
 
 	return runnable()
