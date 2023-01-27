@@ -25,7 +25,17 @@ func (in *ExecContext) Authenticated() bool {
 
 // Create empty ExecContext
 func EmptyExecContext() ExecContext {
-	return NewExecContext(context.Background(), nil)
+	ctx := context.Background()
+
+	if ctx.Value(X_SPANID) == nil {
+		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16))
+	}
+
+	if ctx.Value(X_TRACEID) == nil {
+		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16))
+	}
+
+	return NewExecContext(ctx, nil)
 }
 
 // Create new ExecContext
