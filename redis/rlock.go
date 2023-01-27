@@ -14,7 +14,7 @@ var (
 	muteLog bool = true
 )
 
-func UnmuteLog() {
+func UnmuteLockLog() {
 	muteLog = false
 }
 

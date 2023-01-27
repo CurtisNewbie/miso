@@ -8,6 +8,7 @@ import (
 )
 
 func TestRCache(t *testing.T) {
+	UnmuteLockLog()
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	InitRedisFromProp()
 	c := common.EmptyExecContext()
@@ -31,6 +32,7 @@ func TestRCache(t *testing.T) {
 }
 
 func TestLKazyRCache(t *testing.T) {
+	UnmuteLockLog()
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	InitRedisFromProp()
 	c := common.EmptyExecContext()

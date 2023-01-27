@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bsm/redislock"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/go-redis/redis"
 )
@@ -12,7 +11,6 @@ import (
 // RCache
 type RCache struct {
 	rclient *redis.Client
-	rlocker *redislock.Client
 	exp     time.Duration
 }
 
@@ -76,7 +74,26 @@ func (r *RCache) Get(ec common.ExecContext, key string) (val string, e error) {
 
 // Get from cache else run supplier
 func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
+
+	// for the query, we try not to lock the operation, we only lock the write part
+	cmd := r.rclient.Get(key)
+	if cmd != nil {
+		if e = cmd.Err(); e != nil {
+			return
+		}
+
+		val = cmd.Val()
+		return
+	}
+
+	// both the key and the supplier are missing, there is nothing we can do
+	if supplier == nil {
+		return
+	}
+
+	// attempts to load the missing value for the key
 	res, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
+
 		cmd := r.rclient.Get(key)
 
 		// key not found
@@ -111,7 +128,7 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 
 // Create new RCache
 func NewRCache(exp time.Duration) RCache {
-	return RCache{rclient: GetRedis(), rlocker: ObtainRLocker(), exp: exp}
+	return RCache{rclient: GetRedis(), exp: exp}
 }
 
 // Create new lazy RCache
