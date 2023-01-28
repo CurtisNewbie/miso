@@ -19,9 +19,21 @@ func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		user, _ := ExtractUser(c) // optional
 		ctx := c.Request.Context()
+
+		// json binding
 		var t T
 		MustBindJson(c, &t)
+
+		// json validation
+		if e := common.Validate(t); e != nil {
+			HandleResult(c, nil, e)
+			return
+		}
+
+		// actual handling
 		r, e := handler(c, common.NewExecContext(ctx, user), t)
+
+		// wrap result and error
 		HandleResult(c, r, e)
 	}
 }
