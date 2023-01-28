@@ -17,12 +17,21 @@ func TestRCache(t *testing.T) {
 	exp := 60 * time.Second
 
 	rcache := NewRCache(exp)
-	e := rcache.Put(c, keypre + "1", "2")
+
+	val, e := rcache.Get(c, "absent key")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if val != "" {
+		t.Fatal(val)
+	}
+
+	e = rcache.Put(c, keypre + "1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e := rcache.GetElse(c, keypre + "1", nil)
+	val, e = rcache.GetElse(c, keypre + "1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}

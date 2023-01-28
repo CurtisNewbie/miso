@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -77,11 +78,12 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 
 	// for the query, we try not to lock the operation, we only lock the write part
 	cmd := r.rclient.Get(key)
-	if cmd != nil {
-		if e = cmd.Err(); e != nil {
+	if cmd.Err() != nil {
+		if !errors.Is(cmd.Err(), redis.Nil) { // trying to GET key that is not present is a valid case
+			e = cmd.Err()
 			return
 		}
-
+	} else { // no error, return the value we retrieved
 		val = cmd.Val()
 		return
 	}
@@ -97,7 +99,13 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 		cmd := r.rclient.Get(key)
 
 		// key not found
-		if cmd == nil {
+		if cmd.Err() != nil {
+
+			if !errors.Is(cmd.Err(), redis.Nil) {
+				return "", cmd.Err() // cmd failed
+			}
+
+			// the key is still missing, tries to run the value supplier for the key
 			supplied := supplier()
 			if supplied == "" {
 				return "", nil
@@ -110,11 +118,7 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 			return supplied, nil
 		}
 
-		// cmd failed
-		if cmd.Err() != nil {
-			return "", cmd.Err()
-		}
-
+		// key is present, return the value
 		return cmd.Val(), nil
 	})
 
