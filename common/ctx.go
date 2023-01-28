@@ -23,6 +23,21 @@ func (in *ExecContext) Authenticated() bool {
 	return in.auth
 }
 
+// Get username if found, else empty string
+func (in *ExecContext) Username() string {
+	return in.User.Username
+}
+
+// Get user id if found, else empty string
+func (in *ExecContext) UserId() string {
+	return in.User.UserId
+}
+
+// Get user no if found, else empty string
+func (in *ExecContext) UserNo() string {
+	return in.User.UserNo
+}
+
 // Create empty ExecContext
 func EmptyExecContext() ExecContext {
 	ctx := context.Background()
