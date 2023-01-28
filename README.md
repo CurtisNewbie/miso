@@ -48,6 +48,7 @@ server.BootstrapServer()
 
 | property | description | default value |
 | --- | --- | --- | 
+| app.name | name of the application, if `consul.registerName` is missing, this will be used for the service registration | |
 | profile | name of the profile used | dev |
 | mode.production | whether production mode is turned on | false |
 
