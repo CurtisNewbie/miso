@@ -1,7 +1,9 @@
 package common
 
 import (
+	"database/sql/driver"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +24,11 @@ type WTime time.Time
 /* same as time.Time but will be serialized/deserialized using format '2006-01-02 15:04:05' */
 type TTime time.Time
 
-/* EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds */
+/*
+	EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds
+
+	This type can be safely used in GORM just like time.Time
+*/
 type ETime time.Time
 
 var (
@@ -43,6 +49,8 @@ var (
 	wTimeFormat string
 	// format for TTime
 	tTimeFormat string
+
+	sqlTimeFormat string
 )
 
 func init() {
@@ -61,6 +69,7 @@ func init() {
 
 	wTimeFormat = TranslateFormat("dd/MM/yyyy HH:mm")
 	tTimeFormat = TranslateFormat("yyyy-MM-dd HH:mm:ss")
+	sqlTimeFormat = TranslateFormat("yyyy/MM/dd HH:mm:ss")
 }
 
 // Translate yyyy-MM-dd HH:mm:ss style format of time
@@ -124,4 +133,24 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 
 func (t ETime) String() string {
 	return time.Time(t).String()
+}
+
+// database driver -> ETime
+func (et *ETime) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
+		*et = ETime(time.UnixMilli(reflect.Indirect(reflect.ValueOf(v)).Int()))
+	default:
+		err = fmt.Errorf("invalid field type %#v for ETimeSerializer, only int, uint supported", v)
+	}
+	return
+}
+
+// ETime -> database driver
+func (et ETime) Value() (driver.Value, error) {
+	t := time.Time(et)
+	if t.IsZero() {
+		return nil, nil
+	}
+	return t.Format(sqlTimeFormat), nil
 }
