@@ -35,6 +35,14 @@ func IsEmpty(s *string) bool {
 	return false
 }
 
+// Check if the string is empty, if so, return the defaultStr
+func IfStrEmptyThen(s string, defaultStr string) string {
+	if strings.TrimSpace(s) == "" {
+		return defaultStr
+	}
+	return s
+}
+
 // Get RuneWrp from string
 func GetRuneWrp(s string) RuneWrp {
 	return RuneWrp{c: []rune(s)}
@@ -42,7 +50,7 @@ func GetRuneWrp(s string) RuneWrp {
 
 // Check if the string is empty
 func IsStrEmpty(s string) bool {
-	return s == "" || strings.TrimSpace(s) == ""
+	return strings.TrimSpace(s) == ""
 }
 
 // Substring (rune)
@@ -77,4 +85,17 @@ func LastChar(s string) (length int, lastChar string) {
 	}
 
 	return l, string(rs[l-1])
+}
+
+// Get first char
+func FirstChar(s string) (length int, firstChar string) {
+	rs := []rune(s)
+	l := len(rs)
+
+	// empty string
+	if l < 1 {
+		return l, ""
+	}
+
+	return l, string(rs[0])
 }

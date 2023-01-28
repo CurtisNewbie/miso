@@ -4,6 +4,29 @@ import (
 	"testing"
 )
 
+func TestFirstChar(t *testing.T) {
+	var l int
+	var c string
+	var cp *string = &c
+	if l, *cp = FirstChar(""); l != 0 || *cp != "" {
+		t.Error()
+		return
+	}
+	t.Logf("l: %d, c: '%s'", l, *cp)
+
+	if l, *cp = FirstChar("A"); l != 1 || *cp != "A" {
+		t.Error()
+		return
+	}
+	t.Logf("l: %d, c: '%s'", l, *cp)
+
+	if l, *cp = FirstChar("abccc d"); l != 7 || *cp != "a" {
+		t.Error()
+		return
+	}
+	t.Logf("l: %d, c: '%s'", l, *cp)
+}
+
 func TestLastChar(t *testing.T) {
 	var l int
 	var c string
