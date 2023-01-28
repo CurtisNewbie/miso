@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+/*
+
+	TODO
+
+		Support some thing like:
+
+		maxLen:10
+		minLen:10
+		greaterThan:100
+		lessThan:211
+*/
+
 const (
 	TAG_VALIDATION = "validation" // name of validation tag
 
