@@ -138,10 +138,16 @@ func (t ETime) String() string {
 // database driver -> ETime
 func (et *ETime) Scan(value interface{}) (err error) {
 	switch v := value.(type) {
+	case time.Time:
+		*et = ETime(v)
+	case []byte:
+		var t time.Time
+		t, err = time.Parse(sqlTimeFormat, string(v))
+		*et = ETime(t)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
 		*et = ETime(time.UnixMilli(reflect.Indirect(reflect.ValueOf(v)).Int()))
 	default:
-		err = fmt.Errorf("invalid field type %#v for ETimeSerializer, only int, uint supported", v)
+		err = fmt.Errorf("invalid field type '%v' for ETime, unable to convert, %#v", reflect.TypeOf(value), v)
 	}
 	return
 }
