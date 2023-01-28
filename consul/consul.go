@@ -155,7 +155,7 @@ func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 
 	address, err := ResolveServiceAddress(serviceName)
 	if err != nil {
-		return "", err	
+		return "", err
 	}
 
 	return "http://" + address + relUrl, nil
@@ -293,6 +293,9 @@ func RegisterService() error {
 
 	serverPort := common.GetPropInt(common.PROP_SERVER_PORT)
 	registerName := common.GetPropStr(common.PROP_CONSUL_REGISTER_NAME)
+	if registerName == "" { // fallback to app.name
+		registerName = common.GetPropStr(common.PROP_APP_NAME)
+	}
 	registerAddress := common.GetPropStr(common.PROP_CONSUL_REGISTER_ADDRESS)
 	healthCheckUrl := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL)
 	healthCheckInterval := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_INTERVAL)

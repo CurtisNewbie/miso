@@ -159,14 +159,19 @@ func DefaultBootstrapServer(args []string) {
 	common.DefaultReadConfig(args)
 
 	// determine the writer that we will use for logging and so on
+	prepLoggerOut()
+
+	// bootstraping
+	BootstrapServer()
+}
+
+// determine the writer that we will use for logging (loggerOut and loggerErrOut)
+func prepLoggerOut() {
 	if common.IsProdMode() && common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
 		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
 		loggerErrOut = loggerOut
 	}
 	logrus.SetOutput(loggerOut)
-
-	// bootstraping
-	BootstrapServer()
 }
 
 // Add listener that is invoked when server is finally bootstrapped
@@ -204,7 +209,12 @@ func BootstrapServer() {
 	ctx, cancel := context.WithCancel(context.Background())
 	AddShutdownHook(func() { cancel() })
 
-	logrus.Info("\n\n############# Bootstrapping Server #############\n")
+	appName := common.GetPropStr(common.PROP_APP_NAME)
+	if appName == "" {
+		appName = "Server"
+	}
+
+	logrus.Infof("\n\n############# Bootstrapping %s #############\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
@@ -295,7 +305,7 @@ func BootstrapServer() {
 	}
 
 	end := time.Now().UnixMilli()
-	logrus.Infof("\n\n############# Server Bootstraped (took: %dms) #############\n", end-start)
+	logrus.Infof("\n\n############# %s Bootstraped (took: %dms) #############\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	callServerBootstrappedListeners()
