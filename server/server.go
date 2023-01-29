@@ -158,15 +158,19 @@ func DefaultBootstrapServer(args []string) {
 	// default way to load configuration
 	common.DefaultReadConfig(args)
 
-	// determine the writer that we will use for logging and so on
-	prepLoggerOut()
+	// configure logging
+	ConfigureLogging()
 
 	// bootstraping
 	BootstrapServer()
 }
 
-// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-func prepLoggerOut() {
+// Configurae Logging, e.g., formatter, logger's output
+func ConfigureLogging() {
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(common.CustomFormatter())
+
+	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if common.IsProdMode() && common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
 		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
 		loggerErrOut = loggerOut

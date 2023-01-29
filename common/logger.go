@@ -10,11 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(CustomFormatter())
-}
-
 type CTFormatter struct {
 }
 
