@@ -1,36 +1,19 @@
 package common
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-/*
-
-	TODO
-
-		Support some thing like:
-
-		maxLen:10
-		minLen:10
-		greaterThan:100
-		lessThan:211
-*/
-
 const (
 	TAG_VALIDATION = "validation" // name of validation tag
 
-	NOT_EMPTY = "notEmpty" // not empty, supports string, array, slice, map, chan
-	NOT_NIL   = "notNil"   // not nil, only validates pointer
+	MAX_LEN = "maxLen" // max length of a string, array, slice (e.g., 'maxLen:10')
 
-	/*
-		-----------------------------
-
-		For Numbers
-
-		-----------------------------
-	*/
+	NOT_EMPTY = "notEmpty" // not empty, supports string, array, slice, map
+	NOT_NIL   = "notNil"   // not nil, only validates slice, map, pointer, func
 
 	POSITIVE         = "positive"       // greater than 0, only supports int... or string type
 	POSITIVE_OR_ZERO = "positiveOrZero" // greater than or equal to 0, only supports int... or string type
@@ -45,19 +28,21 @@ var (
 )
 
 func init() {
-	rules.Add(NOT_EMPTY)
-	rules.Add(NOT_NIL)
-	rules.Add(POSITIVE)
-	rules.Add(POSITIVE_OR_ZERO)
-	rules.Add(NEGATIVE)
-	rules.Add(NEGATIVE_OR_ZERO)
-	rules.Add(NOT_ZERO)
-	rules.Add(VALIDATED)
+	rules.AddThen(MAX_LEN).
+		AddThen(NOT_EMPTY).
+		AddThen(NOT_NIL).
+		AddThen(POSITIVE).
+		AddThen(POSITIVE_OR_ZERO).
+		AddThen(NEGATIVE).
+		AddThen(NEGATIVE_OR_ZERO).
+		AddThen(NOT_ZERO).
+		Add(VALIDATED)
 }
 
 // Validation Error
 type ValidationError struct {
 	Field         string
+	Rule          string
 	ValidationMsg string
 }
 
@@ -67,7 +52,7 @@ func ChainValidationError(parentField string, e error) error {
 	}
 
 	if ve, ok := e.(*ValidationError); ok {
-		return &ValidationError{Field: parentField + "." + ve.Field, ValidationMsg: ve.ValidationMsg}
+		return &ValidationError{Field: parentField + "." + ve.Field, Rule: ve.Rule, ValidationMsg: ve.ValidationMsg}
 	}
 	return e
 }
@@ -85,12 +70,28 @@ func Validate(target any) error {
 	forEach := func(i int, field reflect.StructField) (breakIteration bool) {
 		vtag := field.Tag.Get(TAG_VALIDATION)
 		if vtag != "" {
-			validations := strings.Split(vtag, ",")
+			taggedRules := strings.Split(vtag, ",")
 			fval := targetVal.Field(i)
 
-			for _, v := range validations {
-				if rules.Has(v) {
-					if e := ValidateRule(field, fval, v); e != nil {
+			// for each rule
+			for _, rul := range taggedRules {
+				rul = strings.TrimSpace(rul)
+
+				// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
+				splited := strings.Split(rul, ":")
+				for i := range splited {
+					splited[i] = strings.TrimSpace(splited[i])
+				}
+
+				rul = splited[0] // rule is the one before ':'
+				param := ""      // param is those joined after the first ':'
+
+				if len(splited) > 1 { // contains extra parameters
+					param = strings.Join(splited[1:], ":")
+				}
+
+				if rules.Has(rul) { // is a valid rule
+					if e := ValidateRule(field, fval, rul, param); e != nil {
 						verr = e
 						return true
 					}
@@ -104,8 +105,7 @@ func Validate(target any) error {
 	return verr
 }
 
-// Validate field against the rule
-func ValidateRule(field reflect.StructField, value reflect.Value, rule string) error {
+func ValidateRule(field reflect.StructField, value reflect.Value, rule string, ruleParam string) error {
 	fname := field.Name
 	if !IsFieldExposed(fname) {
 		return nil
@@ -113,94 +113,81 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string) e
 
 	// logrus.Infof("Validating '%s' with value '%v' against rule '%s'", fname, value, rule)
 
-	switch value.Kind() {
-	case reflect.Pointer:
-		switch rule {
-		case NOT_NIL:
-			if value.IsNil() {
-				return &ValidationError{Field: fname, ValidationMsg: "cannot be nil"}
-			}
-		case VALIDATED:
-			if !value.IsNil() {
-				// not nil pointer, dereference and validate recursively
-				return ChainValidationError(fname, Validate(value.Elem().Interface()))
+	switch rule {
+	case MAX_LEN:
+		switch value.Kind() {
+		case reflect.String, reflect.Slice, reflect.Array:
+			i, e := strconv.Atoi(ruleParam)
+			if e == nil && i > -1 && value.Len() > i {
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeds max length %d", i)}
 			}
 		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		ival := value.Int()
-		return ValidateIntRule(ival, rule, fname)
-	case reflect.String:
-		sval := value.String()
-		switch rule {
-		case NOT_EMPTY:
+	case NOT_EMPTY:
+		switch value.Kind() {
+		case reflect.String:
+			sval := value.String()
 			if trimed := strings.TrimSpace(sval); trimed == "" {
-				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
 			}
-		case POSITIVE, POSITIVE_OR_ZERO, NEGATIVE, NEGATIVE_OR_ZERO:
-			ival, e := strconv.Atoi(sval)
+		case reflect.Array, reflect.Slice, reflect.Map:
+			if value.Len() < 1 {
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
+			}
+		}
+	case NOT_NIL:
+		switch value.Kind() {
+		case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Func:
+			if value.IsNil() {
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "cannot be nil"}
+			}
+		}
+	case POSITIVE, POSITIVE_OR_ZERO, NEGATIVE, NEGATIVE_OR_ZERO, NOT_ZERO:
+		switch value.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return ValidateIntRule(value.Int(), rule, fname, ruleParam)
+		case reflect.String:
+			ival, e := strconv.Atoi(value.String())
 			if e != nil {
-				return &ValidationError{Field: fname, ValidationMsg: "is not an integer"}
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "is not an integer"}
 			}
-			return ValidateIntRule(int64(ival), rule, fname)
+			return ValidateIntRule(int64(ival), rule, fname, ruleParam)
 		}
-	case reflect.Array:
-		switch rule {
-		case NOT_EMPTY:
-			if value.Len() < 1 {
-				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
-			}
-		}
-	case reflect.Slice:
-		switch rule {
-		case NOT_EMPTY:
-			if value.Len() < 1 {
-				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
-			}
-		}
-	case reflect.Map:
-		switch rule {
-		case NOT_EMPTY:
-			if value.Len() < 1 {
-				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
-			}
-		}
-	case reflect.Chan:
-		switch rule {
-		case NOT_EMPTY:
-			if value.Len() < 1 {
-				return &ValidationError{Field: fname, ValidationMsg: "must not be empty"}
-			}
-		}
-	case reflect.Struct:
-		if rule == VALIDATED {
+	case VALIDATED:
+		switch value.Kind() {
+		case reflect.Struct:
 			// nested struct, validate recursively
 			return ChainValidationError(fname, Validate(value.Interface()))
+		case reflect.Pointer:
+			// not nil pointer, dereference and validate recursively
+			if !value.IsNil() {
+				return ChainValidationError(fname, Validate(value.Elem().Interface()))
+			}
 		}
 	}
 	return nil
 }
 
-func ValidateIntRule(ival int64, rule string, fname string) error {
+func ValidateIntRule(ival int64, rule string, fname string, param string) error {
 	switch rule {
 	case POSITIVE:
 		if ival <= 0 {
-			return &ValidationError{Field: fname, ValidationMsg: "must be greater than zero"}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be greater than zero"}
 		}
 	case POSITIVE_OR_ZERO:
 		if ival < 0 {
-			return &ValidationError{Field: fname, ValidationMsg: "must be grater than or equal to zero"}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be grater than or equal to zero"}
 		}
 	case NEGATIVE:
 		if ival >= 0 {
-			return &ValidationError{Field: fname, ValidationMsg: "must be less than zero"}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be less than zero"}
 		}
 	case NEGATIVE_OR_ZERO:
 		if ival > 0 {
-			return &ValidationError{Field: fname, ValidationMsg: "must be less than or equal to zero"}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be less than or equal to zero"}
 		}
 	case NOT_ZERO:
 		if ival == 0 {
-			return &ValidationError{Field: fname, ValidationMsg: "must not be zero"}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be zero"}
 		}
 	}
 	return nil

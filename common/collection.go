@@ -41,6 +41,12 @@ func (s *Set[T]) Add(key T) bool {
 	return true
 }
 
+// Add key to set (same as Add, but used for method chaining)
+func (s *Set[T]) AddThen(key T) *Set[T] {
+	(s.Keys)[key] = Void{}
+	return s
+}
+
 // Check if the Set is empty
 func (s *Set[T]) IsEmpty() bool {
 	return s.Size() < 1
