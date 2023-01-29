@@ -117,7 +117,43 @@ mysql:
   port: 3306
 ```
 
-## Examples 
+## More about the code
+
+### server.go
+
+`gocommon` supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
+
+```go
+func main() {
+  // load configuration from 'myconf.yml'
+	LoadConfigFromFile("myconf.yml")
+
+  // Add route registar
+  server.AddRoutesRegistar(func(engine *gin.Engine) {
+      engine.GET("/some/path", func(ctx *gin.Context) {
+          logrus.Info("Received request")
+      })
+  })
+
+  // Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
+  server.BootstrapServer()
+}
+```
+
+Since `gocommon` is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
+
+```go
+func main() {
+  // maybe some scheduling (not distributed)
+	common.ScheduleCron("0 0/15 * * * *", myJob)
+
+  // register routes and handlers
+	server.PostJ(server.OpenApiPath("/path"), myHandler)
+
+  // default way to determine profile used, find config file, load configuration, and bootstrap server
+	server.DefaultBootstrapServer(os.Args)
+}
+```
 
 ### validation.go
 
@@ -128,6 +164,18 @@ For example,
 ```go
 type Dummy struct {
 	Favourite string `validation:"notEmpty"`
+}
+```
+
+To validate a struct, just call `common.Validate(...)` as follows:
+
+```go
+func TestValidate(t *testing.T) {
+  v := Dummy{}
+  e := Validate(v)
+  if e != nil {
+    t.Fatal(e)
+  }
 }
 ```
 
@@ -164,27 +212,3 @@ type ValidatedDummy struct {
 It's required that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
 
 Rule `validated` is very special. It doesn't actually check the value of the field, instaed, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value referred is validated. Else, if the field is just a simple struct, then the struct is scanned.
-
-<!-- 
-
-## Examples
-
-To bootstrap the server:
-
-```go
-// Read yml config file
-common.DefaultReadConfig(os.Args)
-
-// Add route registar
-server.AddRoutesRegistar(func(engine *gin.Engine) {
-    engine.GET("/some/path", func(ctx *gin.Context) {
-        logrus.Info("Received request")
-    })
-})
-
-// Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
-server.BootstrapServer()
-```
-
-
--->
