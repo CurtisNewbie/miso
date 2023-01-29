@@ -1,6 +1,6 @@
 # gocommon v1.0.3
 
-Common stuff for Go. **This is not a general library for everyone, it's developed for my personal need :D**
+Common stuff for Go. **This is not a general library for everyone, it's developed for my personal projects :D You are very welcome to read the code tho.**
 
 ## Command Line Arguments
 
@@ -21,26 +21,6 @@ e.g.,
 # using default profile 'dev', the configFile will be 'app-conf-dev.yml' 
 ./main 
 ```
-
-## Examples
-
-To bootstrap the server:
-
-```go
-// Read yml config file
-common.DefaultReadConfig(os.Args)
-
-// Add route registar
-server.AddRoutesRegistar(func(engine *gin.Engine) {
-    engine.GET("/some/path", func(ctx *gin.Context) {
-        logrus.Info("Received request")
-    })
-})
-
-// Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
-server.BootstrapServer()
-```
-
 
 ## Properties-Based Configuration
 
@@ -135,4 +115,76 @@ mysql:
   database: fileServer
   host: localhost
   port: 3306
-````
+```
+
+## Examples 
+
+### validation.go
+
+`validation.go` is used for validating parameters against some pre-defined rules. This is enabled by adding tag "validation" on the fields.
+
+For example,
+
+```go
+type Dummy struct {
+	Favourite string `validation:"notEmpty"`
+}
+```
+
+The rules available are (see constants and documentation in `validation.go`):
+
+- maxLen
+- notEmpty
+- notNil
+- positive
+- positiveOrZero
+- negative
+- negativeOrZero
+- notZero
+- validated
+
+A field can have more than one rule, these rules are sapareted using ',', and the rules are validated in the order in which they are declared, for example:
+
+```go
+type ValidatedDummy struct {
+	DummyPtr *AnotherDummy `validation:"notNil,validated"`
+}
+```
+
+The `DummyPtr` field is then validated against rule `notNil` first, and then the rule `validated`.
+
+Some rules require parameters (only `maxLen` for now), these are specified in the format: `[RULE_NAME]:[PARAM]`, for example:
+
+```go
+type ValidatedDummy struct {
+	Name string `validation:"maxLen:10,notEmpty"`
+}
+```
+
+It's required that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
+
+Rule `validated` is very special. It doesn't actually check the value of the field, instaed, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value referred is validated. Else, if the field is just a simple struct, then the struct is scanned.
+
+<!-- 
+
+## Examples
+
+To bootstrap the server:
+
+```go
+// Read yml config file
+common.DefaultReadConfig(os.Args)
+
+// Add route registar
+server.AddRoutesRegistar(func(engine *gin.Engine) {
+    engine.GET("/some/path", func(ctx *gin.Context) {
+        logrus.Info("Received request")
+    })
+})
+
+// Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
+server.BootstrapServer()
+```
+
+
+-->
