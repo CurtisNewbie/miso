@@ -2,10 +2,11 @@ package mysql
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
-	. "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/sirupsen/logrus"
 
 	"gorm.io/driver/mysql"
@@ -34,11 +35,12 @@ type mysqlHolder struct {
 }
 
 func init() {
-	SetDefProp(PROP_MYSQL_ENABLED, false)
-	SetDefProp(PROP_MYSQL_USER, "root")
-	SetDefProp(PROP_MYSQL_PASSWORD, "")
-	SetDefProp(PROP_MYSQL_HOST, "localhost")
-	SetDefProp(PROP_MYSQL_PORT, 3306)
+	common.SetDefProp(common.PROP_MYSQL_ENABLED, false)
+	common.SetDefProp(common.PROP_MYSQL_USER, "root")
+	common.SetDefProp(common.PROP_MYSQL_PASSWORD, "")
+	common.SetDefProp(common.PROP_MYSQL_HOST, "localhost")
+	common.SetDefProp(common.PROP_MYSQL_PORT, 3306)
+	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s")
 }
 
 /*
@@ -49,7 +51,7 @@ func init() {
 		"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
-	return GetPropBool(PROP_MYSQL_ENABLED)
+	return common.GetPropBool(common.PROP_MYSQL_ENABLED)
 }
 
 /*
@@ -64,13 +66,15 @@ func IsMySqlEnabled() bool {
 		"mysql.database"
 		"mysql.host"
 		"mysql.port"
+		"mysql.connection.parameters"
 */
 func InitMySqlFromProp() error {
-	return InitMySql(GetPropStr(PROP_MYSQL_USER),
-		GetPropStr(PROP_MYSQL_PASSWORD),
-		GetPropStr(PROP_MYSQL_DATABASE),
-		GetPropStr(PROP_MYSQL_HOST),
-		GetPropStr(PROP_MYSQL_PORT))
+	return InitMySql(common.GetPropStr(common.PROP_MYSQL_USER),
+		common.GetPropStr(common.PROP_MYSQL_PASSWORD),
+		common.GetPropStr(common.PROP_MYSQL_DATABASE),
+		common.GetPropStr(common.PROP_MYSQL_HOST),
+		common.GetPropStr(common.PROP_MYSQL_PORT),
+		common.GetPropStr(common.PROP_MYSQL_CONN_PARAM))
 }
 
 /*
@@ -78,7 +82,7 @@ func InitMySqlFromProp() error {
 
 	If mysql client has been initialized, current func call will be ignored.
 */
-func InitMySql(user string, password string, dbname string, host string, port string) error {
+func InitMySql(user string, password string, dbname string, host string, port string, connParam string) error {
 	if IsMySqlInitialized() {
 		return nil
 	}
@@ -90,9 +94,13 @@ func InitMySql(user string, password string, dbname string, host string, port st
 		return nil
 	}
 
-	params := "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s"
-	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?%v", user, password, host, port, dbname, params)
-	logrus.Infof("Connecting to database '%v:%v' with params: '%v'", host, port, params)
+	connParam = strings.TrimSpace(connParam)
+	if connParam != "" && !strings.HasPrefix(connParam, "?") {
+		connParam = "?" + connParam
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s", user, password, host, port, dbname, connParam)
+	logrus.Infof("Connecting to database '%s:%s' with params: '%s'", host, port, connParam)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -135,7 +143,7 @@ func GetMySql() *gorm.DB {
 		panic("MySQL Connection hasn't been initialized yet")
 	}
 
-	if IsProdMode() {
+	if common.IsProdMode() {
 		return mysqlp.mysql
 	}
 

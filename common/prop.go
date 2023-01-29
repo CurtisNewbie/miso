@@ -52,12 +52,13 @@ const (
 
 		------------------------------------
 	*/
-	PROP_MYSQL_ENABLED  = "mysql.enabled"
-	PROP_MYSQL_USER     = "mysql.user"
-	PROP_MYSQL_PASSWORD = "mysql.password"
-	PROP_MYSQL_DATABASE = "mysql.database"
-	PROP_MYSQL_HOST     = "mysql.host"
-	PROP_MYSQL_PORT     = "mysql.port"
+	PROP_MYSQL_ENABLED    = "mysql.enabled"
+	PROP_MYSQL_USER       = "mysql.user"
+	PROP_MYSQL_PASSWORD   = "mysql.password"
+	PROP_MYSQL_DATABASE   = "mysql.database"
+	PROP_MYSQL_HOST       = "mysql.host"
+	PROP_MYSQL_PORT       = "mysql.port"
+	PROP_MYSQL_CONN_PARAM = "mysql.connection.parameters"
 
 	/*
 		------------------------------------

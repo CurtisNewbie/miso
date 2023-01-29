@@ -64,6 +64,7 @@ e.g.,
 | mysql.database | database | |  
 | mysql.host | host | `localhost` |
 | mysql.port | port | 3306 |
+| mysql.connection.parameters | query parameters declared on connection url | `charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s` |
 
 ### Redis Properties
 

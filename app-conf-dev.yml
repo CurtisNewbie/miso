@@ -9,6 +9,7 @@ mysql:
   database: fileServer
   host: localhost
   port: 3306
+  connection.parameters: "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=3s&writeTimeout=3s&timeout=3s"
 
 redis:
   enabled: false
@@ -28,7 +29,7 @@ file:
   temp: temp
 
 consul: 
-  enabled: true
+  enabled: false
   registerName: test-service
   consulAddress: localhost:8500
   healthCheckUrl: /some/health
@@ -41,7 +42,7 @@ client:
   authServiceUrl: http://localhost:8081
 
 rabbitmq: 
-  enabled: true
+  enabled: false
   consumer: 
     parallism: 1
   username: guest
