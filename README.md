@@ -126,7 +126,7 @@ mysql:
 ```go
 func main() {
   // load configuration from 'myconf.yml'
-	LoadConfigFromFile("myconf.yml")
+  LoadConfigFromFile("myconf.yml")
 
   // Add route registar
   server.AddRoutesRegistar(func(engine *gin.Engine) {
@@ -145,13 +145,13 @@ Since `gocommon` is mainly written for my personal projects, it indeed provides 
 ```go
 func main() {
   // maybe some scheduling (not distributed)
-	common.ScheduleCron("0 0/15 * * * *", myJob)
+  common.ScheduleCron("0 0/15 * * * *", myJob)
 
   // register routes and handlers
-	server.PostJ(server.OpenApiPath("/path"), myHandler)
+  server.PostJ(server.OpenApiPath("/path"), myHandler)
 
   // default way to determine profile used, find config file, load configuration, and bootstrap server
-	server.DefaultBootstrapServer(os.Args)
+  server.DefaultBootstrapServer(os.Args)
 }
 ```
 
@@ -163,7 +163,7 @@ For example,
 
 ```go
 type Dummy struct {
-	Favourite string `validation:"notEmpty"`
+  Favourite string `validation:"notEmpty"`
 }
 ```
 
@@ -195,7 +195,7 @@ A field can have more than one rule, these rules are sapareted using ',', and th
 
 ```go
 type ValidatedDummy struct {
-	DummyPtr *AnotherDummy `validation:"notNil,validated"`
+  DummyPtr *AnotherDummy `validation:"notNil,validated"`
 }
 ```
 
@@ -205,7 +205,7 @@ Some rules require parameters (only `maxLen` for now), these are specified in th
 
 ```go
 type ValidatedDummy struct {
-	Name string `validation:"maxLen:10,notEmpty"`
+  Name string `validation:"maxLen:10,notEmpty"`
 }
 ```
 
