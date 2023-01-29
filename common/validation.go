@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -115,11 +116,19 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 
 	switch rule {
 	case MAX_LEN:
-		switch value.Kind() {
-		case reflect.String, reflect.Slice, reflect.Array:
-			i, e := strconv.Atoi(ruleParam)
-			if e == nil && i > -1 && value.Len() > i {
-				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeds max length %d", i)}
+		maxLen, e := strconv.Atoi(ruleParam)
+		if e == nil && maxLen > -1 {
+			switch value.Kind() {
+			case reflect.Slice, reflect.Array:
+				currLen := value.Len()
+				if currLen > maxLen {
+					return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
+				}
+			case reflect.String:
+				currLen := utf8.RuneCountInString(value.String())
+				if currLen > maxLen {
+					return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
+				}
 			}
 		}
 	case NOT_EMPTY:

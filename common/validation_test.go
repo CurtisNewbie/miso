@@ -1,6 +1,8 @@
 package common
 
-import "testing"
+import (
+	"testing"
+)
 
 type ValidatedDummy struct {
 	Name       string        `json:"name" validation:"maxLen  : 10 , notEmpty"`
@@ -51,11 +53,12 @@ func TestValidate(t *testing.T) {
 	}
 
 	v = validDummy()
-	v.Name = "aaaaaaaaaaaaaaaa" // exceeds max len
+	v.Name = "イタリアイタリアイタリア" // exceeds max len
 	e = Validate(v)
 	if e == nil {
 		t.Fatalf("Name's validation should fail, %v", v.Name)
 	}
+	// t.Logf("%v", e)
 	if ve, _ := e.(*ValidationError); ve.Field != "Name" || ve.Rule != "maxLen" {
 		t.Fatalf("Validation should fail because of Name/maxLen")
 	}
