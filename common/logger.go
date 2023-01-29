@@ -41,7 +41,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		username = ""
 	}
 
-	s := fmt.Sprintf("%s %s [%-16v,%-16v,%v]%s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, username, fn, entry.Message)
+	s := fmt.Sprintf("%s %-5s [%-16v,%-16v,%v]%s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, username, fn, entry.Message)
 	return []byte(s), nil
 }
 

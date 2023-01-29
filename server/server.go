@@ -218,7 +218,7 @@ func BootstrapServer() {
 		appName = "Server"
 	}
 
-	logrus.Infof("\n\n############# Bootstrapping %s #############\n", appName)
+	logrus.Infof("\n\n############# starting %s #############\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
@@ -309,7 +309,7 @@ func BootstrapServer() {
 	}
 
 	end := time.Now().UnixMilli()
-	logrus.Infof("\n\n############# %s Bootstraped (took: %dms) #############\n", appName, end-start)
+	logrus.Infof("\n\n############# %s started (took: %dms) #############\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	callServerBootstrappedListeners()
@@ -442,7 +442,7 @@ func TraceMiddleware() gin.HandlerFunc {
 
 		for _, k := range propagatedKeys {
 			if h := c.GetHeader(k); h != "" {
-				ctx = context.WithValue(ctx, k, h)
+				ctx = context.WithValue(ctx, k, h) //lint:ignore SA1029 keys must be exposed for the users to retrieve the values
 			}
 		}
 
