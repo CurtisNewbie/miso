@@ -10,16 +10,16 @@ type Resp struct {
 	Data      interface{} `json:"data"`
 }
 
-// Get error in Resp, return nil if it's a success resp
-func GetError(r *Resp) error {
-	if !r.Error {
-		return nil
-	}
-	return NewWebErr(r.Msg)
+// Generic version of Resp
+type GnResp[T any] struct {
+	ErrorCode string `json:"errorCode"`
+	Msg       string `json:"msg"`
+	Error     bool   `json:"error"`
+	Data      T      `json:"data"`
 }
 
 /** Wrap with a response object */
-func WrapResp(data interface{}, e error) *Resp {
+func WrapResp(data interface{}, e error) Resp {
 	if e != nil {
 		if we, ok := e.(*WebError); ok {
 			if HasCode(we) {
@@ -42,8 +42,8 @@ func WrapResp(data interface{}, e error) *Resp {
 }
 
 // Build error Resp
-func ErrorResp(msg string) *Resp {
-	return &Resp{
+func ErrorResp(msg string) Resp {
+	return Resp{
 		ErrorCode: "XXXX", // just some random code
 		Msg:       msg,
 		Error:     true,
@@ -51,8 +51,8 @@ func ErrorResp(msg string) *Resp {
 }
 
 // Build error Resp
-func ErrorRespWCode(code string, msg string) *Resp {
-	return &Resp{
+func ErrorRespWCode(code string, msg string) Resp {
+	return Resp{
 		ErrorCode: code,
 		Msg:       msg,
 		Error:     true,
@@ -60,19 +60,19 @@ func ErrorRespWCode(code string, msg string) *Resp {
 }
 
 // Build OK Resp
-func OkResp() *Resp {
-	return &Resp{
+func OkResp() Resp {
+	return Resp{
 		Error: false,
 	}
 }
 
 // Build OK Resp with data
-func OkRespWData(data interface{}) *Resp {
+func OkRespWData(data interface{}) Resp {
 	if data == nil {
 		return OkResp()
 	}
 
-	return &Resp{
+	return Resp{
 		Data:  data,
 		Error: false,
 	}
