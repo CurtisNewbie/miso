@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/consul"
 )
 
 // Helper type for handling HTTP responses
@@ -57,7 +58,7 @@ func (tr *TResponse) ReadJson(ptr any) error {
 //
 // Provides convenients methods to build requests, use http.Client and propagate tracing information
 type TClient struct {
-	// request url
+	// request url (absolute or relative)
 	Url string
 	// request headers
 	Headers map[string][]string
@@ -67,6 +68,43 @@ type TClient struct {
 	Trace bool
 	// http client used
 	client *http.Client
+	// service name
+	serviceName string
+	// is service discovery enabled
+	discoverService bool
+}
+
+// Prepare request url, if service discovery is enabled, serviceName will be resolved (currently supported by Consul)
+func (t *TClient) prepReqUrl() (string, error) {
+	if t.discoverService {
+		return consul.ResolveRequestUrl(t.serviceName, t.Url)
+	}
+	return t.Url, nil
+}
+
+/*
+	Enable service discovery, the Url specified when creating the TClient must be relative, starting with '/'
+
+	For example:
+
+		tr := NewDynTClient(ctx, "/open/api/gallery/brief/owned", "fantahsea").
+			AddHeaders(map[string]string{
+				"TestCase": "TestGet",
+			}).
+			EnableTracing().
+			Get(map[string][]string{
+				"name": {"yongj.zhuang", "zhuangyongj"},
+				"age":  {"103"},
+			})
+
+	The resolved request url will be (imagine that the service 'fantahsea' is hosted on 'localhost:8081'):
+
+		"http://localhost:8081/open/api/gallery/brief/owned?name=yongj.zhuang&name=zhuangyongj&age=103"
+*/
+func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
+	t.serviceName = serviceName
+	t.discoverService = true
+	return t
 }
 
 // Enable tracing by putting propagation key/value pairs on http headers
@@ -77,8 +115,13 @@ func (t *TClient) EnableTracing() *TClient {
 
 // Send GET request
 func (t *TClient) Get(queryParams map[string][]string) *TResponse {
-	url := concatQueryParam(t.Url, queryParams)
-	req, e := NewGetRequest(url)
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return &TResponse{Err: e, Ctx: t.Ctx}
+	}
+
+	u = concatQueryParam(u, queryParams)
+	req, e := NewGetRequest(u)
 	if e != nil {
 		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
@@ -99,7 +142,12 @@ func (t *TClient) PostJson(body any) *TResponse {
 
 // Send POST request
 func (t *TClient) Post(body io.Reader) *TResponse {
-	req, e := NewPostRequest(t.Url, body)
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return &TResponse{Err: e, Ctx: t.Ctx}
+	}
+
+	req, e := NewPostRequest(u, body)
 	if e != nil {
 		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
@@ -120,7 +168,12 @@ func (t *TClient) PutJson(body any) *TResponse {
 
 // Send PUT request
 func (t *TClient) Put(body io.Reader) *TResponse {
-	req, e := NewPutRequest(t.Url, body)
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return &TResponse{Err: e, Ctx: t.Ctx}
+	}
+
+	req, e := NewPutRequest(u, body)
 	if e != nil {
 		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
@@ -129,8 +182,13 @@ func (t *TClient) Put(body io.Reader) *TResponse {
 
 // Send DELETE request
 func (t *TClient) Delete(queryParams map[string][]string) *TResponse {
-	url := concatQueryParam(t.Url, queryParams)
-	req, e := NewDeleteRequest(url)
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return &TResponse{Err: e, Ctx: t.Ctx}
+	}
+
+	u = concatQueryParam(u, queryParams)
+	req, e := NewDeleteRequest(u)
 	if e != nil {
 		return &TResponse{Err: e, Ctx: t.Ctx}
 	}
@@ -165,6 +223,11 @@ func (t *TClient) AddHeaders(headers map[string]string) *TClient {
 // Create new defualt TClient
 func NewDefaultTClient(ctx context.Context, url string) *TClient {
 	return NewTClient(ctx, url, http.DefaultClient)
+}
+
+// Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
+func NewDynTClient(ctx context.Context, relUrl string, serviceName string) *TClient {
+	return NewTClient(ctx, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
 }
 
 // Create new TClient
