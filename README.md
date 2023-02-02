@@ -129,14 +129,12 @@ func main() {
   // load configuration from 'myconf.yml'
   LoadConfigFromFile("myconf.yml")
 
-  // Add route registar
-  server.AddRoutesRegistar(func(engine *gin.Engine) {
-      engine.GET("/some/path", func(ctx *gin.Context) {
-          logrus.Info("Received request")
-      })
+  // add GET request handler 
+  server.RawGet("/some/path", func(ctx *gin.Context) {
+    logrus.Info("Received request")
   })
 
-  // Bootstrap server, may also initialize connections to MySQL, Consul and Redis based on the loaded configuration
+  // bootstrap server
   server.BootstrapServer()
 }
 ```
