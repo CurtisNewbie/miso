@@ -127,4 +127,5 @@ const (
 		------------------------------------
 	*/
 	PROP_TASK_SCHEDULING_ENABLED = "task.scheduling.enabled"
+	PROP_TASK_SCHEDULING_GROUP   = "task.scheduling.group"
 )

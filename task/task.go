@@ -76,6 +76,14 @@ func enableTaskScheduling() bool {
 	}
 	setState(startedState)
 
+	proposedGroup := common.GetPropStr(common.PROP_TASK_SCHEDULING_GROUP)
+	if proposedGroup == "" {
+		proposedGroup = common.GetPropStr(common.PROP_APP_NAME)
+	}
+	if proposedGroup != "" {
+		group = proposedGroup
+	}
+
 	uid, e := uuid.NewUUID()
 	if e != nil {
 		logrus.Fatalf("NewUUID: %v", e)
@@ -191,9 +199,12 @@ func StopTaskScheduler() {
 
 	common.StopScheduler()
 
-	if tryBecomeMaster() {
-		stopMasterLockRefreshingTicker()
-		redis.GetRedis().Expire(getMasterNodeLockKey(), 3*time.Second) // release master node
+	stopMasterLockRefreshingTicker()
+
+	// if we are previously the master node, the lock is refreshed every 5 seconds with the ttl 1m
+	// this should be pretty enough to release the lock before the expiration
+	if IsMasterNode() {
+		redis.GetRedis().Expire(getMasterNodeLockKey(), 1*time.Second) // release master node after 1s
 	}
 }
 
