@@ -46,7 +46,7 @@ var (
 	rawlmu              sync.RWMutex
 
 	serverBootstrapListener []func() = []func(){}
-	serverRoutesRecorder    []string = []string{}
+	httpServerRoutesRecorder    []string = []string{}
 )
 
 func init() {
@@ -75,94 +75,94 @@ func triggerShutdownHook() {
 }
 
 // record server route
-func recordServerRoute(url string) {
-	serverRoutesRecorder = append(serverRoutesRecorder, url)
+func recordHttpServerRoute(url string) {
+	httpServerRoutesRecorder = append(httpServerRoutesRecorder, url)
 }
 
 // Get recorded server routes
-func GetRecordedServerRoutes() []string {
-	return serverRoutesRecorder
+func GetRecordedHttpServerRoutes() []string {
+	return httpServerRoutesRecorder
 }
 
 // Register GET request route, route is whitelisted, no authentication requires
 func PubGet(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	AddUrlBasedRouteAuthWhitelist(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
 // Register POST request route, route is whitelisted, no authentication requires
 func PubPost(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	AddUrlBasedRouteAuthWhitelist(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
 // Register PUT request route, route is whitelisted, no authentication requires
 func PubPut(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	AddUrlBasedRouteAuthWhitelist(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
 // Register DELETE request route, route is whitelisted, no authentication requires
 func PubDelete(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	AddUrlBasedRouteAuthWhitelist(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
 // Register GET request route
 func RawGet(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
 // Register POST request route
 func RawPost(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
 // Register PUT request route
 func RawPut(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
 // Register DELETE request route
 func RawDelete(url string, handlers ...gin.HandlerFunc) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
 // Add RoutesRegistar for Get request
 func Get(url string, handler TRouteHandler) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Post request
 func Post(url string, handler TRouteHandler) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Post request with json payload
 func PostJ[T any](url string, handler JTRouteHandler[T]) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewJTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Put request
 func Put(url string, handler TRouteHandler) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Delete request
 func Delete(url string, handler TRouteHandler) {
-	recordServerRoute(url)
+	recordHttpServerRoute(url)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
 }
 
@@ -319,8 +319,8 @@ func BootstrapServer() {
 			registerRoute(engine)
 		}
 
-		for _, u := range GetRecordedServerRoutes() {
-			logrus.Infof("Registered server route: '%s'", u)
+		for _, u := range GetRecordedHttpServerRoutes() {
+			logrus.Infof("Registered http route: '%s'", u)
 		}
 
 		// start the http server
