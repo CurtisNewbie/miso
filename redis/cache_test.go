@@ -10,7 +10,9 @@ import (
 func TestRCache(t *testing.T) {
 	UnmuteLockLog()
 	common.LoadConfigFromFile("../app-conf-dev.yml")
-	InitRedisFromProp()
+	if _, e := InitRedisFromProp(); e != nil {
+		t.Fatal(e)
+	}
 	c := common.EmptyExecContext()
 
 	keypre := "test:rcache:key:"

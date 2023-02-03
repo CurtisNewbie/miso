@@ -118,4 +118,13 @@ const (
 		------------------------------------
 	*/
 	PROP_LOGGING_ROLLING_FILE = "logging.rolling.file"
+
+	/*
+		------------------------------------
+
+		Prop for distributed task scheduling
+
+		------------------------------------
+	*/
+	PROP_TASK_SCHEDULING_ENABLED = "task.scheduling.enabled"
 )

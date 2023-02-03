@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -53,6 +54,19 @@ func GetRedis() *redis.Client {
 		panic("Redis Connection hasn't been initialized yet")
 	}
 	return redisp.client
+}
+
+// Get String
+func GetStr(key string) (string, error) {
+	scmd := GetRedis().Get(key)
+	e := scmd.Err()
+	if e != nil {
+		if errors.Is(e, redis.Nil) {
+			return "", nil
+		}
+		return "", e
+	}
+	return scmd.Val(), nil
 }
 
 /*

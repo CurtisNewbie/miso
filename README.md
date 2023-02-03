@@ -1,4 +1,4 @@
-# gocommon v1.0.3
+# gocommon v1.0.4
 
 Common stuff for Go. **This is not a general library for everyone, it's developed for my personal projects :D You are very welcome to read the code tho.**
 
@@ -103,6 +103,11 @@ e.g.,
 | --- | --- | --- | 
 | logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr |  | 
 
+### Distributed Task Scheduling Properties
+
+| property | description | default value |
+| --- | --- | --- | 
+| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally | true |
 
 ## Yaml Configuration File Example
 
@@ -211,3 +216,27 @@ type ValidatedDummy struct {
 It's required that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
 
 Rule `validated` is very special. It doesn't actually check the value of the field, instead, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value referred is validated. Else, if the field is just a simple struct, then the struct is scanned.
+
+### task.go
+
+`task.go` internally wraps `schedule.go` to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node 
+is reponsible for running all the tasks.
+
+```go
+func main() {
+  // set the group name 
+	SetScheduleGroup("gocommon")
+
+  // add task
+	ScheduleDistributedTask("0/1 * * * * ?", func() {
+	})
+
+  // start task scheduler
+	StartTaskSchedulerAsync()
+  
+  // stop task scheduler gracefully
+	defer StopTaskScheduler()
+}
+```
+
+If `server.go` is used, this is automatically handled by `DefaultBootstrapServer(...)` func.

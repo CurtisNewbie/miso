@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
 	"github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/gocommon/task"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
@@ -350,11 +351,19 @@ func BootstrapServer() {
 		}
 	}
 
-	// scheduler
-	if common.HasScheduler() {
-		logrus.Info("Starting scheduler asynchronously")
-		common.GetScheduler().StartAsync()
-		AddShutdownHook(func() { common.GetScheduler().Stop() })
+	// distributed task scheduler
+	if task.IsTaskSchedulerPending() {
+		if !task.IsTaskSchedulingDisabled() {
+			task.StartTaskSchedulerAsync()
+			AddShutdownHook(func() { task.StopTaskScheduler() })
+		}
+	} else {
+		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
+		if common.HasScheduler() {
+			logrus.Info("Starting scheduler asynchronously")
+			common.StartSchedulerAsync()
+			AddShutdownHook(func() { common.StopScheduler() })
+		}
 	}
 
 	end := time.Now().UnixMilli()

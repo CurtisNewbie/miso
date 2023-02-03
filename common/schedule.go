@@ -1,13 +1,5 @@
 package common
 
-/*
-	TODO:
-
-		Scheduling now only works when there is only one single instance, or the jobs can be ran repeatedly by different nodes.
-
-		Should find a way to make sure that only one node runs, making it distributed.
-*/
-
 import (
 	"sync"
 	"time"
@@ -15,12 +7,23 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
+type schedState = int
+
 var (
 	// lazy-init, cached scheduler
 	scheduler *gocron.Scheduler = nil
 
 	// lock for scheduler
 	scheLock sync.Mutex
+
+	// state of scheduler
+	state = initState
+)
+
+const (
+	initState    schedState = 0
+	startedState schedState = 1
+	stoppedState schedState = 2
 )
 
 // Whether scheduler is initialized
@@ -31,7 +34,7 @@ func HasScheduler() bool {
 }
 
 // Get the lazy-initialized, cached scheduler
-func GetScheduler() *gocron.Scheduler {
+func getScheduler() *gocron.Scheduler {
 	scheLock.Lock()
 	defer scheLock.Unlock()
 
@@ -43,7 +46,7 @@ func GetScheduler() *gocron.Scheduler {
 	return scheduler
 }
 
-// create new Schedulr at UTC time, with singleton-mode
+// Create new Schedulr at UTC time, with singleton-mode
 func newScheduler() *gocron.Scheduler {
 	return gocron.NewScheduler(time.UTC).SingletonMode()
 }
@@ -55,10 +58,47 @@ func doScheduleCron(s *gocron.Scheduler, cron string, runnable func()) *gocron.S
 	return s
 }
 
+// Stop scheduler
+func StopScheduler() {
+	scheLock.Lock()
+	if scheduler == nil || state != startedState {
+		return
+	}
+	state = stoppedState
+	scheLock.Unlock()
+
+	getScheduler().Stop()
+}
+
+// Start scheduler and block current routine
+func StartSchedulerBlocking() {
+	scheLock.Lock()
+	defer scheLock.Unlock()
+
+	if scheduler == nil || state != initState {
+		return
+	}
+
+	state = startedState
+	getScheduler().StartBlocking()
+}
+
+// Start scheduler asynchronously
+func StartSchedulerAsync() {
+	scheLock.Lock()
+	if scheduler == nil || state != initState {
+		return
+	}
+	state = startedState
+	scheLock.Unlock()
+
+	getScheduler().StartAsync()
+}
+
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
 func ScheduleCron(cron string, runnable func()) *gocron.Scheduler {
-	s := GetScheduler()
+	s := getScheduler()
 	return doScheduleCron(s, cron, runnable)
 }
