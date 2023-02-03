@@ -66,13 +66,13 @@ func getState() int32 {
 	return atomic.LoadInt32(&_state)
 }
 
-// Enable distributed task scheduling
-func enableTaskScheduling() {
+// Enable distributed task scheduling, return whether task scheduling is enabled
+func enableTaskScheduling() bool {
 	commonMut.Lock()
 	defer commonMut.Unlock()
 
 	if getState() != pendingState {
-		return
+		return false
 	}
 	setState(startedState)
 
@@ -81,18 +81,24 @@ func enableTaskScheduling() {
 		logrus.Fatalf("NewUUID: %v", e)
 	}
 	nodeId = uid.String()
-	logrus.Infof("Enabling distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
+	logrus.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
+	return true
 
-	go func() {
-		for {
-			if getState() == stoppedState {
-				return
+	/*
+			Not really needed, because we always check and try to become master when tasks are triggered,
+			and whenever we are the master, we create a ticker thread to refresh the expiration
+
+		go func() {
+			for {
+				if getState() == stoppedState {
+					return
+				}
+
+				tryBecomeMaster()
+				time.Sleep(15 * time.Second)
 			}
-
-			tryBecomeMaster()
-			time.Sleep(15 * time.Second)
-		}
-	}()
+		}()
+	*/
 }
 
 // Set the schedule group for current node, by default it's 'default'
@@ -128,7 +134,9 @@ func getMasterNodeLockKey() string {
 // Schedule a distributed task
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
-// only the master node can run the scheduled tasks
+// only the master node can run the scheduled tasks.
+//
+// Tasks are pending until StartTaskSchedulerAsync() is called
 func ScheduleDistributedTask(cron string, runnable func()) {
 	if getState() == initState {
 		commonMut.Lock()
@@ -155,8 +163,20 @@ func StartTaskSchedulerAsync() {
 		return
 	}
 
-	enableTaskScheduling()
-	common.StartSchedulerAsync()
+	if enableTaskScheduling() {
+		common.StartSchedulerAsync()
+	}
+}
+
+// Start distributed scheduler, current routine is blocked
+func StartTaskSchedulerBlocking() {
+	if getState() != pendingState {
+		return
+	}
+
+	if enableTaskScheduling() {
+		common.StartSchedulerBlocking()
+	}
 }
 
 // Shutdown distributed job scheduling
