@@ -226,18 +226,30 @@ is reponsible for running all the tasks.
 ```go
 func main() {
   // set the group name 
-	SetScheduleGroup("gocommon")
+  task.SetScheduleGroup("gocommon")
 
   // add task
-	ScheduleDistributedTask("0/1 * * * * ?", func() {
-	})
+  task.ScheduleDistributedTask("0/1 * * * * ?", func() {
+  })
 
   // start task scheduler
-	StartTaskSchedulerAsync()
+  task.StartTaskSchedulerAsync()
   
   // stop task scheduler gracefully
-	defer StopTaskScheduler()
+  defer task.StopTaskScheduler()
 }
 ```
 
 If `server.go` is used, this is automatically handled by `DefaultBootstrapServer(...)` func.
+
+```go
+func main() {
+  // add tasks 
+  task.ScheduleDistributedTask("0 0/15 * * * *", func() {
+  })
+
+  // bootstrap server
+  server.DefaultBootstrapServer(os.Args)
+}
+```
+
