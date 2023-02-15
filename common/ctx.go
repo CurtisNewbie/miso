@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 var (
@@ -15,7 +16,8 @@ type ExecContext struct {
 	Ctx  context.Context // request context
 	User User            // optional, use Authenticated() first before reading this value
 	Log  *logrus.Entry   // logger with tracing info
-	auth bool
+	auth bool            // is authenticated
+	Tx   *gorm.DB        // Transaction
 }
 
 // Check whether current execution is authenticated, if so, one may read User from ExecContext
@@ -43,7 +45,7 @@ func EmptyExecContext() ExecContext {
 	ctx := context.Background()
 
 	if ctx.Value(X_SPANID) == nil {
-		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16))  //lint:ignore SA1029 keys must be exposed for user to use
+		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
 	if ctx.Value(X_TRACEID) == nil {
