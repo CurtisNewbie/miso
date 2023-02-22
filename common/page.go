@@ -6,9 +6,18 @@ type Paging struct {
 	Total int `json:"total"`
 }
 
-/* Build Paging for response */
+/* Build Paging for response (deprecated, use RespPage() instead) */
 func BuildResPage(reqPage *Paging, total int) *Paging {
 	return &Paging{
+		Limit: reqPage.Limit,
+		Page:  reqPage.Page,
+		Total: total,
+	}
+}
+
+/* Build Paging for response */
+func RespPage(reqPage Paging, total int) Paging {
+	return Paging{
 		Limit: reqPage.Limit,
 		Page:  reqPage.Page,
 		Total: total,
