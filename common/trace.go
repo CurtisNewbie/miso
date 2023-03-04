@@ -14,6 +14,7 @@ const (
 	X_USERNAME = "username"
 	X_USERNO   = "userno"
 	X_ROLE     = "role"
+	X_ROLE_NO  = "roleno"
 	X_SERVICES = "services"
 )
 
