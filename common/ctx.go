@@ -62,7 +62,7 @@ func NewExecContext(ctx context.Context, user *User) ExecContext {
 	} else {
 		u = nilUser
 	}
-	return ExecContext{Ctx: ctx, User: u, Log: TraceLogger(ctx)}
+	return ExecContext{Ctx: ctx, User: u, Log: TraceLogger(ctx), auth: user != nil}
 }
 
 func GetCtxStr(ctx context.Context, key string) string {
