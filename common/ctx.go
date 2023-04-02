@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 var (
@@ -17,7 +16,6 @@ type ExecContext struct {
 	User User            // optional, use Authenticated() first before reading this value
 	Log  *logrus.Entry   // logger with tracing info
 	auth bool            // is authenticated
-	Tx   *gorm.DB        // Transaction
 }
 
 // Check whether current execution is authenticated, if so, one may read User from ExecContext
