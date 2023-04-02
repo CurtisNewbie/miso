@@ -307,7 +307,7 @@ func RegisterService() error {
 		registerAddress = common.ResolveServerHost(common.GetPropStr(common.PROP_SERVER_HOST))
 	}
 
-	proposedServiceId := fmt.Sprintf("%s:%d:%s", registerName, serverPort, common.RandStr(5))
+	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
 	registration := &api.AgentServiceRegistration{
 		ID:      proposedServiceId,
 		Name:    registerName,
