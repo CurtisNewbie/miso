@@ -314,6 +314,10 @@ func BootstrapServer() {
 		}
 
 		// register custom routes
+		engine.NoRoute(func(ctx *gin.Context) {
+			logrus.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)		
+			ctx.AbortWithStatus(404)
+		})
 		for _, registerRoute := range routesRegiatarList {
 			registerRoute(engine)
 		}
