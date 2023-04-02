@@ -299,7 +299,6 @@ func BootstrapServer() {
 
 		// gin engine
 		engine := gin.New()
-		engine.Use(AuthMiddleware())
 		engine.Use(TraceMiddleware())
 
 		if !common.IsProdMode() {
@@ -512,6 +511,7 @@ func TraceMiddleware() gin.HandlerFunc {
 	}
 }
 
+// deprecated, goauth is used instead
 // Authentication Middleware, only validates request url that starts with "/open/api"
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

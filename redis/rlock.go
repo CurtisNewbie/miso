@@ -11,7 +11,8 @@ import (
 type LRunnable func() (any, error)
 
 var (
-	muteLog bool = true
+	lock_ttl_min int  = 10
+	muteLog      bool = true
 )
 
 func UnmuteLockLog() {
@@ -46,7 +47,9 @@ func RLockRun(ec common.ExecContext, key string, runnable LRunnable) (any, error
 */
 func TimedRLockRun(ec common.ExecContext, key string, ttl time.Duration, runnable LRunnable) (any, error) {
 	locker := ObtainRLocker()
-	lock, err := locker.Obtain(key, ttl, nil)
+	lock, err := locker.Obtain(key, time.Duration(lock_ttl_min)*time.Minute, &redislock.Options{
+		RetryStrategy: redislock.LinearBackoff(ttl),
+	})
 
 	if err != nil {
 		return nil, err

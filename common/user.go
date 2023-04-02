@@ -17,6 +17,7 @@ type User struct {
 	UserNo   string
 	Username string
 	Role     string
+	RoleNo   string
 	Services []string
 }
 
