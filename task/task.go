@@ -165,6 +165,37 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 	})
 }
 
+// Schedule a named distributed task
+//
+// Applications are grouped together as a cluster (each cluster is differentiated by its group name),
+// only the master node can run the scheduled tasks.
+//
+// Tasks are pending until StartTaskSchedulerAsync() is called
+func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext)) {
+	if getState() == initState {
+		commonMut.Lock()
+		if getState() == initState {
+			setState(pendingState)
+		}
+		commonMut.Unlock()
+	}
+
+	common.ScheduleCron(cron, func() {
+		if getState() == stoppedState {
+			return // extra check, but scheduler is supposed to be stopped before the state is updated, this is quite unnecessary
+		}
+
+		if tryBecomeMaster() {
+			ec := common.EmptyExecContext()
+			ec.Log.Infof("Running task '%s'", name)
+			start := time.Now()
+			runnable(ec)
+			ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
+		}
+	})
+}
+
+
 // Start distributed scheduler asynchronously
 func StartTaskSchedulerAsync() {
 	if getState() != pendingState {

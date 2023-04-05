@@ -18,20 +18,13 @@ func TestTaskScheduling(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	var count int32 = 0
-
 	SetScheduleGroup("gocommon")
-	ScheduleDistributedTask("0/1 * * * * ?", func(ec common.ExecContext) {
+
+	var count int32 = 0
+	ScheduleNamedDistributedTask("0/1 * * * * ?", "AddInt32 Task", func(ec common.ExecContext) {
 		atomic.AddInt32(&count, 1)
 		logrus.Infof("%v", count)
 	})
-
-	for i := 0; i < 100; i++ {
-		n := i
-		ScheduleDistributedTask("0/1 * * * * ?", func(ec common.ExecContext) {
-			logrus.Infof("task%d", n)
-		})
-	}
 
 	StartTaskSchedulerAsync()
 
@@ -44,6 +37,4 @@ func TestTaskScheduling(t *testing.T) {
 		t.Fatal(v)
 	}
 	t.Log("end")
-
-	time.Sleep(2 * time.Second)
 }
