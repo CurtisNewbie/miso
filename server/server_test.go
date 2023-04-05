@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/task"
 	"github.com/sirupsen/logrus"
 )
@@ -14,7 +15,7 @@ func TestBootstrapServer(t *testing.T) {
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-dev.yml"
 
-	task.ScheduleDistributedTask("0/1 * * * * ?", func() {
+	task.ScheduleDistributedTask("0/1 * * * * ?", func(ec common.ExecContext) {
 		logrus.Info("feels gucci")
 	})
 

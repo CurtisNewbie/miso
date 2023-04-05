@@ -21,14 +21,14 @@ func TestTaskScheduling(t *testing.T) {
 	var count int32 = 0
 
 	SetScheduleGroup("gocommon")
-	ScheduleDistributedTask("0/1 * * * * ?", func() {
+	ScheduleDistributedTask("0/1 * * * * ?", func(ec common.ExecContext) {
 		atomic.AddInt32(&count, 1)
 		logrus.Infof("%v", count)
 	})
 
 	for i := 0; i < 100; i++ {
 		n := i
-		ScheduleDistributedTask("0/1 * * * * ?", func() {
+		ScheduleDistributedTask("0/1 * * * * ?", func(ec common.ExecContext) {
 			logrus.Infof("task%d", n)
 		})
 	}

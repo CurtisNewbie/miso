@@ -342,8 +342,8 @@ func BootstrapServer() {
 			registerRoute(engine)
 		}
 
-		for _, u := range GetRecordedHttpServerRoutes() {
-			logrus.Infof("Registered http route: '%s'", u)
+		for _, r := range GetHttpRoutes() {
+			logrus.Infof("Registered http route: %s '%s'", r.Method, r.Url)
 		}
 
 		// start the http server
