@@ -145,7 +145,7 @@ func getMasterNodeLockKey() string {
 // only the master node can run the scheduled tasks.
 //
 // Tasks are pending until StartTaskSchedulerAsync() is called
-func ScheduleDistributedTask(cron string, runnable func()) {
+func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 	if getState() == initState {
 		commonMut.Lock()
 		if getState() == initState {
@@ -160,7 +160,7 @@ func ScheduleDistributedTask(cron string, runnable func()) {
 		}
 
 		if tryBecomeMaster() {
-			runnable()
+			runnable(common.EmptyExecContext())
 		}
 	})
 }
