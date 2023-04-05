@@ -25,9 +25,19 @@ import (
 
 // Routes registar
 type RoutesRegistar func(*gin.Engine)
+type HttpRoute struct {
+	Url    string
+	Method string
+}
 
 const (
 	OPEN_API_PREFIX = "/open/api"
+
+	HTTP_GET    = "GET"
+	HTTP_PUT    = "PUT"
+	HTTP_POST   = "POST"
+	HTTP_DELETE = "DELETE"
+	HTTP_HEAD   = "HEAD"
 )
 
 var (
@@ -42,11 +52,8 @@ var (
 	shutdownHook []func()
 	shmu         sync.Mutex
 
-	routesAuthWhitelist []common.Predicate[string] = []common.Predicate[string]{}
-	rawlmu              sync.RWMutex
-
-	serverBootstrapListener []func() = []func(){}
-	httpServerRoutesRecorder    []string = []string{}
+	serverBootstrapListener []func()    = []func(){}
+	serverHttpRoutes        []HttpRoute = []HttpRoute{}
 )
 
 func init() {
@@ -75,94 +82,107 @@ func triggerShutdownHook() {
 }
 
 // record server route
-func recordHttpServerRoute(url string) {
-	httpServerRoutesRecorder = append(httpServerRoutesRecorder, url)
+func recordHttpServerRoute(url string, method string) {
+	serverHttpRoutes = append(serverHttpRoutes, HttpRoute{Url: url, Method: method})
 }
 
-// Get recorded server routes
+// Get recorded server routes (deprecated, use GetHttpRoutes(...) instead)
 func GetRecordedHttpServerRoutes() []string {
-	return httpServerRoutesRecorder
+	urls := []string{}
+	for _, r := range serverHttpRoutes {
+		urls = append(urls, r.Url)
+	}
+	return urls
 }
 
-// Register GET request route, route is whitelisted, no authentication requires
+// Get recorded http server routes
+func GetHttpRoutes() []HttpRoute {
+	return serverHttpRoutes
+}
+
+// Register GET request route
+//
+// deprecated, it's the same as RawGet()
 func PubGet(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
-	AddUrlBasedRouteAuthWhitelist(url)
+	recordHttpServerRoute(url, HTTP_GET)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
-// Register POST request route, route is whitelisted, no authentication requires
+// Register POST request route
+//
+// deprecated, it's the same as RawPost()
 func PubPost(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
-	AddUrlBasedRouteAuthWhitelist(url)
+	recordHttpServerRoute(url, HTTP_POST)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
-// Register PUT request route, route is whitelisted, no authentication requires
+// Register PUT request route
+//
+// deprecated, it's the same as RawPut()
 func PubPut(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
-	AddUrlBasedRouteAuthWhitelist(url)
+	recordHttpServerRoute(url, HTTP_PUT)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
-// Register DELETE request route, route is whitelisted, no authentication requires
+// Register DELETE request route
+//
+// deprecated, it's the same as RawDelete()
 func PubDelete(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
-	AddUrlBasedRouteAuthWhitelist(url)
+	recordHttpServerRoute(url, HTTP_DELETE)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
 // Register GET request route
 func RawGet(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_GET)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
 }
 
 // Register POST request route
 func RawPost(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_POST)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
 }
 
 // Register PUT request route
 func RawPut(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_PUT)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
 }
 
 // Register DELETE request route
 func RawDelete(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_DELETE)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
 }
 
 // Add RoutesRegistar for Get request
 func Get(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_GET)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Post request
 func Post(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_POST)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Post request with json payload
 func PostJ[T any](url string, handler JTRouteHandler[T]) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_POST)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewJTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Put request
 func Put(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_PUT)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Delete request
 func Delete(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url)
+	recordHttpServerRoute(url, HTTP_DELETE)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
 }
 
@@ -315,7 +335,7 @@ func BootstrapServer() {
 
 		// register custom routes
 		engine.NoRoute(func(ctx *gin.Context) {
-			logrus.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)		
+			logrus.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
 			ctx.AbortWithStatus(404)
 		})
 		for _, registerRoute := range routesRegiatarList {
@@ -475,22 +495,17 @@ func AddUrlBasedRouteAuthWhitelist(url string) {
 }
 
 // Add route authentication whitelist predicate
+//
+// deprecated, this does nothing
 func AddRouteAuthWhitelist(pred common.Predicate[string]) {
-	rawlmu.Lock()
-	defer rawlmu.Unlock()
-	routesAuthWhitelist = append(routesAuthWhitelist, pred)
+	// does nothing, for backword compatibility
 }
 
 // Check whether url is in route whitelist
+//
+// deprecated, will always return false
 func IsRouteWhitelist(url string) bool {
-	rawlmu.RLock()
-	defer rawlmu.RUnlock()
-
-	for _, predicate := range routesAuthWhitelist {
-		if isok := predicate(url); isok {
-			return true
-		}
-	}
+	// keep this for backword compatibility
 	return false
 }
 
@@ -509,27 +524,6 @@ func TraceMiddleware() gin.HandlerFunc {
 
 		// replace the context
 		c.Request = c.Request.WithContext(ctx)
-
-		// follow the chain
-		c.Next()
-	}
-}
-
-// deprecated, goauth is used instead
-// Authentication Middleware, only validates request url that starts with "/open/api"
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		url := c.Request.RequestURI
-
-		if strings.HasPrefix(strings.ToLower(url), OPEN_API_PREFIX) {
-
-			if !IsRouteWhitelist(url) && !IsRequestAuthenticated(c) {
-				logrus.Infof("Unauthenticated request rejected: %v '%s'", c.Request.Method, url)
-				DispatchErrMsgJson(c, "Please sign in first")
-				c.Abort()
-				return // request rejected
-			}
-		}
 
 		// follow the chain
 		c.Next()
