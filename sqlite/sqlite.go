@@ -29,7 +29,12 @@ type sqliteHolder struct {
 */
 func GetSqlite() *gorm.DB {
 	if IsSqliteInitialized() {
-		return sqlitep.sq
+		if common.IsProdMode() {
+			return sqlitep.sq
+		}
+
+		// not prod mode, enable debugging for printing SQLs
+		return sqlitep.sq.Debug()
 	}
 
 	sqlitep.mu.Lock()

@@ -58,20 +58,13 @@ func (tr *TResponse) ReadJson(ptr any) error {
 //
 // Provides convenients methods to build requests, use http.Client and propagate tracing information
 type TClient struct {
-	// request url (absolute or relative)
-	Url string
-	// request headers
-	Headers map[string][]string
-	// context provided by caller
-	Ctx context.Context
-	// enable tracing
-	Trace bool
-	// http client used
-	client *http.Client
-	// service name
-	serviceName string
-	// is service discovery enabled
-	discoverService bool
+	Url             string              // request url (absolute or relative)
+	Headers         map[string][]string // request headers
+	Ctx             context.Context     // context provided by caller
+	Trace           bool                // enable tracing
+	client          *http.Client        // http client used
+	serviceName     string              // service name
+	discoverService bool                // is service discovery enabled
 }
 
 // Prepare request url, if service discovery is enabled, serviceName will be resolved (currently supported by Consul)
