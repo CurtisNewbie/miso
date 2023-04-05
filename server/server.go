@@ -405,12 +405,12 @@ func shutdownHttpServer(server *http.Server) {
 	logrus.Infof("Http server exited")
 }
 
-// Resolve handler path for open api
+// Resolve handler path for open api (it doesn't really affect anything, just a path prefix)
 func OpenApiPath(relPath string) string {
 	return ResolvePath(relPath, true)
 }
 
-// Resolve handler path for internal endpoints
+// Resolve handler path for internal endpoints, (it doesn't really affect anything, just a path prefix)
 func InternalApiPath(relPath string) string {
 	return ResolvePath(relPath, false)
 }
