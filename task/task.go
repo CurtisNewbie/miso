@@ -172,29 +172,13 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 //
 // Tasks are pending until StartTaskSchedulerAsync() is called
 func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext)) {
-	if getState() == initState {
-		commonMut.Lock()
-		if getState() == initState {
-			setState(pendingState)
-		}
-		commonMut.Unlock()
-	}
-
-	common.ScheduleCron(cron, func() {
-		if getState() == stoppedState {
-			return // extra check, but scheduler is supposed to be stopped before the state is updated, this is quite unnecessary
-		}
-
-		if tryBecomeMaster() {
-			ec := common.EmptyExecContext()
-			ec.Log.Infof("Running task '%s'", name)
-			start := time.Now()
-			runnable(ec)
-			ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
-		}
+	ScheduleDistributedTask(cron, func(ec common.ExecContext) {
+		ec.Log.Infof("Running task '%s'", name)
+		start := time.Now()
+		runnable(ec)
+		ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
 	})
 }
-
 
 // Start distributed scheduler asynchronously
 func StartTaskSchedulerAsync() {
