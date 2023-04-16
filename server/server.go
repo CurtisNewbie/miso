@@ -280,7 +280,7 @@ func BootstrapServer() {
 
 	appName := common.GetPropStr(common.PROP_APP_NAME)
 	if appName == "" {
-		appName = "Server"
+		logrus.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
 	logrus.Infof("\n\n############# starting %s #############\n", appName)
