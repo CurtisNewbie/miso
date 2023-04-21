@@ -1,6 +1,8 @@
 package common
 
 import (
+	cr "crypto/rand"
+	"encoding/base64"
 	"math/rand"
 	"time"
 )
@@ -40,6 +42,8 @@ func ShuffleRunes(letters []rune, times int) []rune {
 // Generate random string with specified length
 //
 // the generated string will contains [a-zA-Z0-9]
+//
+// ERand() is preferred for higher entrophy
 func RandStr(n int) string {
 	return doRand(n, []rune(digits+upperAlpha+lowerAlpha))
 }
@@ -103,4 +107,20 @@ func GenNo(prefix string) string {
 // generate a random sequence number with specified prefix
 func GenNoL(prefix string, len int) string {
 	return prefix + RandStr(len)
+}
+
+// Generate random string with high entrophy
+func ERand(len int) (string, error) {
+	if len < 1 {
+		return "", nil
+	}
+
+	// each base64 character represent 6 bits of data
+	c := len*3/4 // wihtout padding
+	b := make([]byte, c)
+	_, e := cr.Read(b)
+	if e != nil {
+		return "", e
+	}
+	return base64.RawStdEncoding.EncodeToString(b), nil
 }
