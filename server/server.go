@@ -283,7 +283,7 @@ func BootstrapServer() {
 		logrus.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
-	logrus.Infof("\n\n############# starting %s #############\n", appName)
+	logrus.Infof("\n\n################### starting %s ###################\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
