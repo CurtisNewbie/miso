@@ -529,3 +529,9 @@ func TraceMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// Build ExecContext from the Gin's request context
+func BuildExecContext(c *gin.Context) common.ExecContext {
+	user, _ := ExtractUser(c)
+	return common.NewExecContext(c.Request.Context(), user)
+}
