@@ -322,6 +322,7 @@ func BootstrapServer() {
 		engine.Use(TraceMiddleware())
 
 		if !common.IsProdMode() {
+			engine.Use(PerfMiddleware())
 			engine.Use(gin.Logger()) // default logger for debugging
 		}
 
@@ -507,6 +508,13 @@ func AddRouteAuthWhitelist(pred common.Predicate[string]) {
 func IsRouteWhitelist(url string) bool {
 	// keep this for backword compatibility
 	return false
+}
+
+// Perf Middleware that calculates how much time each request takes
+func PerfMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		defer common.LTimeOp(time.Now(), ctx.Request.RequestURI)
+	}
 }
 
 // Tracing Middleware
