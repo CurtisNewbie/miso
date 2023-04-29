@@ -272,7 +272,7 @@ func tryBecomeMaster() bool {
 
 	isMaster := bcmd.Val()
 	if isMaster {
-		logrus.Infof("Elected to be the master node for group: '%s'", group)
+		logrus.Debugf("Elected to be the master node for group: '%s'", group)
 		startMasterLockRefreshingTicker()
 	} else {
 		stopMasterLockRefreshingTicker()
