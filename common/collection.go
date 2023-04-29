@@ -7,6 +7,27 @@ import (
 // Empty Struct
 type Void struct{}
 
+// Pair data structure
+type Pair struct {
+	Left  any
+	Right any
+}
+
+// String-based Pair data structure
+type StrPair struct {
+	Left  string
+	Right any
+}
+
+// Merge StrPair into a map
+func MergeStrPairs(p ...StrPair) map[string]any {
+	merged := map[string]any{}
+	for _, v := range p {
+		merged[v.Left] = v.Right
+	}
+	return merged
+}
+
 /*
 	Set data structure
 

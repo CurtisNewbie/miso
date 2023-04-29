@@ -28,6 +28,7 @@ type RoutesRegistar func(*gin.Engine)
 type HttpRoute struct {
 	Url    string
 	Method string
+	Extra  map[string]any
 }
 
 const (
@@ -82,11 +83,11 @@ func triggerShutdownHook() {
 }
 
 // record server route
-func recordHttpServerRoute(url string, method string) {
-	serverHttpRoutes = append(serverHttpRoutes, HttpRoute{Url: url, Method: method})
+func recordHttpServerRoute(url string, method string, extra ...common.StrPair) {
+	serverHttpRoutes = append(serverHttpRoutes, HttpRoute{Url: url, Method: method, Extra: common.MergeStrPairs(extra...)})
 }
 
-// Get recorded server routes (deprecated, use GetHttpRoutes(...) instead)
+// Get recorded server routes (deprecated, use GetHttpRoutes() instead)
 func GetRecordedHttpServerRoutes() []string {
 	urls := []string{}
 	for _, r := range serverHttpRoutes {
@@ -101,88 +102,57 @@ func GetHttpRoutes() []HttpRoute {
 }
 
 // Register GET request route
-//
-// deprecated, it's the same as RawGet()
-func PubGet(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_GET)
-	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
+func RawGet(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_GET, extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handler) })
 }
 
 // Register POST request route
-//
-// deprecated, it's the same as RawPost()
-func PubPost(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_POST)
-	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
+func RawPost(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_POST, extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handler) })
 }
 
 // Register PUT request route
-//
-// deprecated, it's the same as RawPut()
-func PubPut(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_PUT)
-	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
+func RawPut(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_PUT, extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handler) })
 }
 
 // Register DELETE request route
-//
-// deprecated, it's the same as RawDelete()
-func PubDelete(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_DELETE)
-	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
+func RawDelete(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_DELETE, extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handler) })
 }
 
-// Register GET request route
-func RawGet(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_GET)
-	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handlers...) })
-}
-
-// Register POST request route
-func RawPost(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_POST)
-	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handlers...) })
-}
-
-// Register PUT request route
-func RawPut(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_PUT)
-	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handlers...) })
-}
-
-// Register DELETE request route
-func RawDelete(url string, handlers ...gin.HandlerFunc) {
-	recordHttpServerRoute(url, HTTP_DELETE)
-	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handlers...) })
-}
-
-// Add RoutesRegistar for Get request
-func Get(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url, HTTP_GET)
+// Add RoutesRegistar for Get request, result and error are wrapped in Resp automatically
+func Get(url string, handler TRouteHandler, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_GET, extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Post request
-func Post(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url, HTTP_POST)
+// Add RoutesRegistar for Post request, result and error are wrapped in Resp automatically
+
+func Post(url string, handler TRouteHandler, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_POST, extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Post request with json payload
-func PostJ[T any](url string, handler JTRouteHandler[T]) {
-	recordHttpServerRoute(url, HTTP_POST)
+// Add RoutesRegistar for Post request with json payload, result and error are wrapped in Resp automatically as json
+func PostJ[T any](url string, handler JTRouteHandler[T], extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_POST, extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewJTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Put request
-func Put(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url, HTTP_PUT)
+func Put(url string, handler TRouteHandler, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_PUT, extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for Delete request
-func Delete(url string, handler TRouteHandler) {
-	recordHttpServerRoute(url, HTTP_DELETE)
+func Delete(url string, handler TRouteHandler, extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_DELETE, extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
 }
 
