@@ -1,4 +1,4 @@
-# gocommon v1.0.4
+# gocommon v1.0.5
 
 Common stuff for Go. **This is not a general library for everyone, it's developed for my personal projects :D You are very welcome to read the code tho.**
 
@@ -220,8 +220,7 @@ Rule `validated` is very special. It doesn't actually check the value of the fie
 
 ### task.go
 
-`task.go` internally wraps `schedule.go` to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node 
-is reponsible for running all the tasks.
+`task.go` internally wraps `schedule.go` to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node is reponsible for running all the tasks.
 
 ```go
 func main() {
