@@ -9,9 +9,16 @@ import (
 )
 
 // Router handler with context, user (optional, may be nil), and logger prepared
+//
+// The returned result and error are automatically wrapped as Resp
 type TRouteHandler func(c *gin.Context, ec common.ExecContext) (any, error)
 
+// Raw version of TRouteHandler with context, user (optional, may be nil), and logger prepared
+type RawTRouteHandler func(c *gin.Context, ec common.ExecContext)
+
 // Router handler with the required json object, context, user (optional, may be nil), and logger prepared
+//
+// The returned result and error are automatically wrapped as Resp
 type JTRouteHandler[T any] func(c *gin.Context, ec common.ExecContext, t T) (any, error)
 
 // Build JTRouteHandler with the required json object, context, user (optional, may be nil), and logger prepared
@@ -35,6 +42,13 @@ func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
 
 		// wrap result and error
 		HandleResult(c, r, e)
+	}
+}
+
+// Build RawTRouteHandler with context, user (optional, may be nil), and logger prepared
+func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		handler(c, BuildExecContext(c))
 	}
 }
 

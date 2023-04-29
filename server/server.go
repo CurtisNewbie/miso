@@ -102,27 +102,27 @@ func GetHttpRoutes() []HttpRoute {
 }
 
 // Register GET request route
-func RawGet(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+func RawGet(url string, h RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_GET, extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, handler) })
+	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewRawTRouteHandler(h)) })
 }
 
 // Register POST request route
-func RawPost(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+func RawPost(url string, h RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_POST, extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, handler) })
+	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewRawTRouteHandler(h)) })
 }
 
 // Register PUT request route
-func RawPut(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+func RawPut(url string, h RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_PUT, extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, handler) })
+	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewRawTRouteHandler(h)) })
 }
 
 // Register DELETE request route
-func RawDelete(url string, handler gin.HandlerFunc, extra ...common.StrPair) {
+func RawDelete(url string, h RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_DELETE, extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, handler) })
+	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewRawTRouteHandler(h)) })
 }
 
 // Add RoutesRegistar for Get request, result and error are wrapped in Resp automatically
