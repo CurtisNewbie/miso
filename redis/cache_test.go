@@ -8,7 +8,6 @@ import (
 )
 
 func TestRCache(t *testing.T) {
-	UnmuteLockLog()
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)
@@ -28,12 +27,12 @@ func TestRCache(t *testing.T) {
 		t.Fatal(val)
 	}
 
-	e = rcache.Put(c, keypre + "1", "2")
+	e = rcache.Put(c, keypre+"1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e = rcache.GetElse(c, keypre + "1", nil)
+	val, e = rcache.GetElse(c, keypre+"1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -43,7 +42,6 @@ func TestRCache(t *testing.T) {
 }
 
 func TestLKazyRCache(t *testing.T) {
-	UnmuteLockLog()
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	InitRedisFromProp()
 	c := common.EmptyExecContext()
@@ -52,12 +50,12 @@ func TestLKazyRCache(t *testing.T) {
 	exp := 60 * time.Second
 
 	rcache := NewLazyRCache(exp)
-	e := rcache.Put(c, keypre + "1", "2")
+	e := rcache.Put(c, keypre+"1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e := rcache.GetElse(c, keypre + "1", nil)
+	val, e := rcache.GetElse(c, keypre+"1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -65,4 +63,3 @@ func TestLKazyRCache(t *testing.T) {
 		t.Fatalf("val '%v' != \"2\"", val)
 	}
 }
-
