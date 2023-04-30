@@ -44,29 +44,29 @@ func init() {
 }
 
 /*
-	Check if mysql is enabled
+Check if mysql is enabled
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"mysql.enabled"
+	"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
 	return common.GetPropBool(common.PROP_MYSQL_ENABLED)
 }
 
 /*
-	Init connection to mysql
+Init connection to mysql
 
-	If mysql client has been initialized, current func call will be ignored.
+If mysql client has been initialized, current func call will be ignored.
 
-	This func looks for following props:
+This func looks for following props:
 
-		"mysql.user"
-		"mysql.password"
-		"mysql.database"
-		"mysql.host"
-		"mysql.port"
-		"mysql.connection.parameters"
+	"mysql.user"
+	"mysql.password"
+	"mysql.database"
+	"mysql.host"
+	"mysql.port"
+	"mysql.connection.parameters"
 */
 func InitMySqlFromProp() error {
 	return InitMySql(common.GetPropStr(common.PROP_MYSQL_USER),
@@ -77,10 +77,46 @@ func InitMySqlFromProp() error {
 		common.GetPropStr(common.PROP_MYSQL_CONN_PARAM))
 }
 
-/*
-	Init Handle to the database
+// Create new MySQL connection
+func NewConn(user string, password string, dbname string, host string, port string, connParam string) (*gorm.DB, error) {
+	connParam = strings.TrimSpace(connParam)
+	if connParam != "" && !strings.HasPrefix(connParam, "?") {
+		connParam = "?" + connParam
+	}
 
-	If mysql client has been initialized, current func call will be ignored.
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s", user, password, host, port, dbname, connParam)
+	logrus.Infof("Connecting to database '%s:%s' with params: '%s'", host, port, connParam)
+
+	conn, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		logrus.Infof("Failed to connect to MySQL, err: %v", err)
+		return nil, err
+	}
+
+	sqlDb, err := conn.DB()
+	if err != nil {
+		logrus.Infof("Failed to obtain MySQL conn from gorm, %v", err)
+		return nil, err
+	}
+
+	sqlDb.SetConnMaxLifetime(CONN_MAX_LIFE_TIME)
+	sqlDb.SetMaxOpenConns(MAX_OPEN_CONNS)
+	sqlDb.SetMaxIdleConns(MAX_IDLE_CONNS)
+
+	err = sqlDb.Ping() // make sure the handle is actually connected
+	if err != nil {
+		logrus.Infof("Ping DB Error, %v, connection may not be established", err)
+		return nil, err
+	}
+
+	logrus.Infof("MySQL connection established")
+	return conn, nil
+}
+
+/*
+Init Handle to the database
+
+If mysql client has been initialized, current func call will be ignored.
 */
 func InitMySql(user string, password string, dbname string, host string, port string, connParam string) error {
 	if IsMySqlInitialized() {
@@ -94,46 +130,18 @@ func InitMySql(user string, password string, dbname string, host string, port st
 		return nil
 	}
 
-	connParam = strings.TrimSpace(connParam)
-	if connParam != "" && !strings.HasPrefix(connParam, "?") {
-		connParam = "?" + connParam
+	conn, enc := NewConn(user, password, dbname, host, port, connParam)
+	if enc != nil {
+		return enc
 	}
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s", user, password, host, port, dbname, connParam)
-	logrus.Infof("Connecting to database '%s:%s' with params: '%s'", host, port, connParam)
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		logrus.Infof("Failed to connect to MySQL, err: %v", err)
-		return err
-	}
-
-	sqlDb, err := db.DB()
-	if err != nil {
-		logrus.Infof("Failed to obtain MySQL conn from gorm, %v", err)
-		return err
-	}
-
-	sqlDb.SetConnMaxLifetime(CONN_MAX_LIFE_TIME)
-	sqlDb.SetMaxOpenConns(MAX_OPEN_CONNS)
-	sqlDb.SetMaxIdleConns(MAX_IDLE_CONNS)
-
-	err = sqlDb.Ping() // make sure the handle is actually connected
-	if err != nil {
-		logrus.Infof("Ping DB Error, %v, connection may not be established", err)
-		return err
-	}
-
-	logrus.Infof("MySQL connection established")
-	mysqlp.mysql = db
-
+	mysqlp.mysql = conn
 	return nil
 }
 
 /*
-	Get mysql client
+Get mysql client
 
-	Must call InitMysql method before this method.
+Must call InitMysql method before this method.
 */
 func GetMySql() *gorm.DB {
 	mysqlp.mu.RLock()
