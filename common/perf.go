@@ -12,7 +12,7 @@ import (
 // e.g.,
 // 	defer LTimeOp(ec, time.Now(), "someOperation")
 func LTimeOp(start time.Time, name string) {
-	logrus.Infof("Op '%s' took '%s'", name, time.Since(start))
+	logrus.Infof("'%s' took '%s'", name, time.Since(start))
 }
 
 // Run timer for named operation and print result in log
@@ -20,7 +20,7 @@ func LTimeOp(start time.Time, name string) {
 // e.g.,
 // 	defer TimeOp(ec, time.Now(), "someOperation")
 func TimeOp(ec ExecContext, start time.Time, name string) {
-	ec.Log.Infof("Op '%s' took '%s'", name, time.Since(start))
+	ec.Log.Infof("'%s' took '%s'", name, time.Since(start))
 }
 
 // Run timer for named operation and print result in log
@@ -28,5 +28,5 @@ func TimeOp(ec ExecContext, start time.Time, name string) {
 // e.g.,
 // 	defer PTimeOp(time.Now(), "someOperation")
 func PTimeOp(start time.Time, name string) {
-	log.Printf("Op '%s' took '%s'", name, time.Since(start))
+	log.Printf("'%s' took '%s'", name, time.Since(start))
 }

@@ -27,11 +27,16 @@ type PropagationKeys struct {
 	rwmu sync.RWMutex
 }
 
+func init() {
+	propagationKeys.keys.Add(X_TRACEID)
+	propagationKeys.keys.Add(X_SPANID)
+}
+
 // Read property and find propagation keys .
 //
 // This func looks for following property.
 //
-// 	"tracing.propagation.keys"
+//	"tracing.propagation.keys"
 func LoadPropagationKeyProp() {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
@@ -41,7 +46,7 @@ func LoadPropagationKeyProp() {
 		propagationKeys.keys.Add(k)
 	}
 
-	logrus.Infof("Loaded propagation keys for tracing: %v", keys)
+	logrus.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys)
 }
 
 // Add propagation key for tracing
@@ -61,8 +66,5 @@ func GetPropagationKeys() []string {
 	for k := range propagationKeys.keys.Keys {
 		keys = append(keys, k)
 	}
-
-	keys = append(keys, X_TRACEID)
-	keys = append(keys, X_SPANID)
 	return keys
 }

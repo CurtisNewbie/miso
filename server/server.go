@@ -255,7 +255,7 @@ func BootstrapServer() {
 
 	appName := common.GetPropStr(common.PROP_APP_NAME)
 	if appName == "" {
-		logrus.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
+		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
 	c.Log.Infof("\n\n################### starting %s ###################\n", appName)
@@ -309,14 +309,8 @@ func BootstrapServer() {
 			registerRouteForConsulHealthcheck(engine)
 		}
 
-		// register custom routes
-		engine.NoRoute(func(ctx *gin.Context) {
-			c.Log.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
-			ctx.AbortWithStatus(404)
-		})
-		for _, registerRoute := range routesRegiatarList {
-			registerRoute(engine)
-		}
+		// register http routes
+		registerServerRoutes(engine)
 
 		for _, r := range GetHttpRoutes() {
 			c.Log.Infof("Registered http route: %s '%s'", r.Method, r.Url)
@@ -375,6 +369,21 @@ func BootstrapServer() {
 	quit := make(chan os.Signal, 2)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
+}
+
+// Register http routes on gin.Engine
+func registerServerRoutes(engine *gin.Engine) {
+	// no route
+	engine.NoRoute(func(ctx *gin.Context) {
+		c := BuildExecContext(ctx)
+		c.Log.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
+		ctx.AbortWithStatus(404)
+	})
+
+	// register custom routes
+	for _, registerRoute := range routesRegiatarList {
+		registerRoute(engine)
+	}
 }
 
 /*
