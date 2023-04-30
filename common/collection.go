@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"math/rand"
 )
 
@@ -29,18 +30,18 @@ func MergeStrPairs(p ...StrPair) map[string]any {
 }
 
 /*
-	Set data structure
+Set data structure
 
-	It's internally backed by a Map.
+It's internally backed by a Map.
 
-	To create a new Set, use NewSet() func.
+To create a new Set, use NewSet() func.
 
-	Methods:
+Methods:
 
-		Has(key)  : bool
-		Add(key)  : bool
-		IsEmpty() : bool
-		Size()    : int
+	Has(key)  : bool
+	Add(key)  : bool
+	IsEmpty() : bool
+	Size()    : int
 */
 type Set[T comparable] struct {
 	// Keys in Set
@@ -76,6 +77,21 @@ func (s *Set[T]) IsEmpty() bool {
 // Get the size of the Set
 func (s *Set[T]) Size() int {
 	return len(s.Keys)
+}
+
+// To string
+func (s *Set[T]) String() string {
+	var ks []T = KeysOfMap(&s.Keys)
+	lks := len(ks)
+	st := "{ "
+	for i, k := range ks {
+		st += fmt.Sprintf("%v", k)
+		if i < lks-1 {
+			st += ", "
+		}
+	}
+	st += " }"
+	return st
 }
 
 // Create new Set

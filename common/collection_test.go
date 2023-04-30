@@ -33,4 +33,8 @@ func TestSet(t *testing.T) {
 		t.Error("set should not be empty")
 		return
 	}
+
+	s.AddThen("apple").AddThen("Juice")
+
+	t.Logf("Set: %s", s.String())
 }

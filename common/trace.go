@@ -46,7 +46,7 @@ func LoadPropagationKeyProp() {
 		propagationKeys.keys.Add(k)
 	}
 
-	logrus.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys)
+	logrus.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys.String())
 }
 
 // Add propagation key for tracing
