@@ -183,11 +183,11 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 /*
-	Default way to Bootstrap server, basically the same as follows:
+Default way to Bootstrap server, basically the same as follows:
 
-		common.DefaultReadConfig(args)
-		// ... plus some configuration for logging and so on
-		BootstrapServer()
+	common.DefaultReadConfig(args)
+	// ... plus some configuration for logging and so on
+	BootstrapServer()
 */
 func DefaultBootstrapServer(args []string) {
 	// default way to load configuration
@@ -222,6 +222,9 @@ func OnServerBootstrapped(callback func()) {
 }
 
 func callServerBootstrappedListeners() {
+	if len(serverBootstrapListener) < 1 {
+		return
+	}
 	logrus.Info("Invoking OnServerBootstrapped callbacks")
 	for _, callback := range serverBootstrapListener {
 		callback()
@@ -229,18 +232,20 @@ func callServerBootstrappedListeners() {
 }
 
 /*
-	Bootstrap server
+Bootstrap server
 
-	This func will attempt to create http server, connect to MySQL, Redis or Consul based on the configuration loaded.
+This func will attempt to create http server, connect to MySQL, Redis or Consul based on the configuration loaded.
 
-	It also handles service registration/de-registration on Consul before Gin bootstraped and after
-	SIGTERM/INTERRUPT signals are received.
+It also handles service registration/de-registration on Consul before Gin bootstraped and after
+SIGTERM/INTERRUPT signals are received.
 
-	Graceful shutdown for the http server is also enabled and can be configured through props.
+Graceful shutdown for the http server is also enabled and can be configured through props.
 
-	To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
+To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 */
 func BootstrapServer() {
+	c := common.EmptyExecContext()
+
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
@@ -253,32 +258,32 @@ func BootstrapServer() {
 		logrus.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
-	logrus.Infof("\n\n################### starting %s ###################\n", appName)
+	c.Log.Infof("\n\n################### starting %s ###################\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
 		if e := mysql.InitMySqlFromProp(); e != nil {
-			logrus.Fatalf("Failed to establish connection to MySQL, %v", e)
+			c.Log.Fatalf("Failed to establish connection to MySQL, %v", e)
 		}
 	}
 
 	// redis
 	if redis.IsRedisEnabled() {
 		if _, e := redis.InitRedisFromProp(); e != nil {
-			logrus.Fatalf("Failed to establish connection to Redis, %v", e)
+			c.Log.Fatalf("Failed to establish connection to Redis, %v", e)
 		}
 	}
 
 	// rabbitmq
 	if rabbitmq.IsEnabled() {
 		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
-			logrus.Fatalf("Failed to establish connection to RabbitMQ, %v", e)
+			c.Log.Fatalf("Failed to establish connection to RabbitMQ, %v", e)
 		}
 	}
 
 	// web server
 	if common.GetPropBool(common.PROP_SERVER_WEB_ENABLED) {
-		logrus.Info("Starting http server")
+		c.Log.Info("Starting http server")
 
 		// Load propagation keys for tracing
 		common.LoadPropagationKeyProp()
@@ -306,7 +311,7 @@ func BootstrapServer() {
 
 		// register custom routes
 		engine.NoRoute(func(ctx *gin.Context) {
-			logrus.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
+			c.Log.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
 			ctx.AbortWithStatus(404)
 		})
 		for _, registerRoute := range routesRegiatarList {
@@ -314,7 +319,7 @@ func BootstrapServer() {
 		}
 
 		for _, r := range GetHttpRoutes() {
-			logrus.Infof("Registered http route: %s '%s'", r.Method, r.Url)
+			c.Log.Infof("Registered http route: %s '%s'", r.Method, r.Url)
 		}
 
 		// start the http server
@@ -326,22 +331,22 @@ func BootstrapServer() {
 
 	// consul
 	if consul.IsConsulEnabled() {
-		logrus.Info("Creating Consul client")
+		c.Log.Info("Creating Consul client")
 
 		// create consul client
 		if _, e := consul.GetConsulClient(); e != nil {
-			logrus.Fatalf("Failed to establish connection to Consul, %v", e)
+			c.Log.Fatalf("Failed to establish connection to Consul, %v", e)
 		}
 
 		// deregister on shutdown
 		AddShutdownHook(func() {
 			if e := consul.DeregisterService(); e != nil {
-				logrus.Errorf("Failed to deregister on Consul, %v", e)
+				c.Log.Errorf("Failed to deregister on Consul, %v", e)
 			}
 		})
 
 		if e := consul.RegisterService(); e != nil {
-			logrus.Fatalf("Failed to register on Consul, %v", e)
+			c.Log.Fatalf("Failed to register on Consul, %v", e)
 		}
 	}
 
@@ -354,14 +359,14 @@ func BootstrapServer() {
 	} else {
 		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 		if common.HasScheduler() {
-			logrus.Info("Starting scheduler asynchronously")
+			c.Log.Info("Starting scheduler asynchronously")
 			common.StartSchedulerAsync()
 			AddShutdownHook(func() { common.StopScheduler() })
 		}
 	}
 
 	end := time.Now().UnixMilli()
-	logrus.Infof("\n\n############# %s started (took: %dms) #############\n", appName, end-start)
+	c.Log.Infof("\n\n############# %s started (took: %dms) #############\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	callServerBootstrappedListeners()
@@ -373,11 +378,11 @@ func BootstrapServer() {
 }
 
 /*
-	shutdown http server, including gracefull shutdown within certain duration of time
+shutdown http server, including gracefull shutdown within certain duration of time
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"server.gracefulShutdownTimeSec"
+	"server.gracefulShutdownTimeSec"
 */
 func shutdownHttpServer(server *http.Server) {
 	logrus.Info("Shutting down http server gracefully")

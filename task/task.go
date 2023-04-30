@@ -172,6 +172,7 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 //
 // Tasks are pending until StartTaskSchedulerAsync() is called
 func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext)) {
+	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
 	ScheduleDistributedTask(cron, func(ec common.ExecContext) {
 		ec.Log.Infof("Running task '%s'", name)
 		start := time.Now()
