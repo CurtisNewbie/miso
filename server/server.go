@@ -205,10 +205,15 @@ func ConfigureLogging() {
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
 
-	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if common.IsProdMode() && common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
-		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
-		loggerErrOut = loggerOut
+	if common.IsProdMode() {
+		logrus.SetLevel(logrus.InfoLevel)
+		// determine the writer that we will use for logging (loggerOut and loggerErrOut)
+		if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
+			loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
+			loggerErrOut = loggerOut
+		}
+	} else {
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 	logrus.SetOutput(loggerOut)
 }
