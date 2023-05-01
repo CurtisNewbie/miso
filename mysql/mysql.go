@@ -85,7 +85,7 @@ func NewConn(user string, password string, dbname string, host string, port stri
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s", user, password, host, port, dbname, connParam)
-	logrus.Infof("Connecting to database '%s:%s' with params: '%s'", host, port, connParam)
+	logrus.Infof("Connecting to database '%s:%s/%s' with params: '%s'", host, port, dbname, connParam)
 
 	conn, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
