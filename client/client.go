@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/consul"
@@ -16,9 +17,10 @@ import (
 
 // Helper type for handling HTTP responses
 type TResponse struct {
-	Ctx  context.Context
-	Resp *http.Response
-	Err  error
+	ExecCtx common.ExecContext
+	Ctx     context.Context
+	Resp    *http.Response
+	Err     error
 }
 
 // Close Response
@@ -60,10 +62,12 @@ func (tr *TResponse) ReadJson(ptr any) error {
 type TClient struct {
 	Url             string              // request url (absolute or relative)
 	Headers         map[string][]string // request headers
+	ExecCtx         common.ExecContext  // execute context
 	Ctx             context.Context     // context provided by caller
-	Trace           bool                // enable tracing
 	client          *http.Client        // http client used
 	serviceName     string              // service name
+	trace           bool                // enable tracing
+	logRequest      bool                // whether requests are logged
 	discoverService bool                // is service discovery enabled
 }
 
@@ -102,7 +106,13 @@ func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
 
 // Enable tracing by putting propagation key/value pairs on http headers
 func (t *TClient) EnableTracing() *TClient {
-	t.Trace = true
+	t.trace = true
+	return t
+}
+
+// Enable request logging
+func (t *TClient) EnableRequestLog() *TClient {
+	t.logRequest = true
 	return t
 }
 
@@ -110,13 +120,13 @@ func (t *TClient) EnableTracing() *TClient {
 func (t *TClient) Get(queryParams map[string][]string) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 
 	u = concatQueryParam(u, queryParams)
 	req, e := NewGetRequest(u)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	return t.send(req)
 }
@@ -125,7 +135,7 @@ func (t *TClient) Get(queryParams map[string][]string) *TResponse {
 func (t *TClient) PostJson(body any) *TResponse {
 	jsonBody, e := json.Marshal(body)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	t.AddHeaders(map[string]string{
 		"content-type": "application/json",
@@ -133,16 +143,20 @@ func (t *TClient) PostJson(body any) *TResponse {
 	return t.Post(bytes.NewReader(jsonBody))
 }
 
+func (t *TClient) errorResponse(e error) *TResponse {
+	return &TResponse{Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx}
+}
+
 // Send POST request
 func (t *TClient) Post(body io.Reader) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 
 	req, e := NewPostRequest(u, body)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	return t.send(req)
 }
@@ -151,7 +165,7 @@ func (t *TClient) Post(body io.Reader) *TResponse {
 func (t *TClient) PutJson(body any) *TResponse {
 	jsonBody, e := json.Marshal(body)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	t.AddHeaders(map[string]string{
 		"content-type": "application/json",
@@ -163,12 +177,12 @@ func (t *TClient) PutJson(body any) *TResponse {
 func (t *TClient) Put(body io.Reader) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 
 	req, e := NewPutRequest(u, body)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	return t.send(req)
 }
@@ -177,28 +191,40 @@ func (t *TClient) Put(body io.Reader) *TResponse {
 func (t *TClient) Delete(queryParams map[string][]string) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 
 	u = concatQueryParam(u, queryParams)
 	req, e := NewDeleteRequest(u)
 	if e != nil {
-		return &TResponse{Err: e, Ctx: t.Ctx}
+		return t.errorResponse(e)
 	}
 	return t.send(req)
 }
 
 // Send request
 func (t *TClient) send(req *http.Request) *TResponse {
-	if t.Trace {
+	if t.trace {
 		req = TraceRequest(t.Ctx, req)
 	}
 
 	AddHeaders(req, t.Headers)
 
-	common.TraceLogger(t.Ctx).Infof("TClient: %s '%s'", req.Method, req.URL)
-	r, e := t.client.Do(req)
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx}
+	var start time.Time
+	if t.logRequest {
+		start = time.Now()
+	}
+
+	r, e := t.client.Do(req) // send HTTP requests
+
+	if t.logRequest {
+		if req.Body != nil {
+			t.ExecCtx.Log.Infof("%s '%s' (%s), Body: %v, Headers: %v", req.Method, req.URL, time.Since(start), req.Body, req.Header)
+		} else {
+			t.ExecCtx.Log.Infof("%s '%s' (%s), Headers: %v", req.Method, req.URL, time.Since(start), req.Header)
+		}
+	}
+	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx}
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
@@ -214,18 +240,18 @@ func (t *TClient) AddHeaders(headers map[string]string) *TClient {
 }
 
 // Create new defualt TClient
-func NewDefaultTClient(ctx context.Context, url string) *TClient {
-	return NewTClient(ctx, url, http.DefaultClient)
+func NewDefaultTClient(ec common.ExecContext, url string) *TClient {
+	return NewTClient(ec, url, http.DefaultClient)
 }
 
 // Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
-func NewDynTClient(ctx context.Context, relUrl string, serviceName string) *TClient {
-	return NewTClient(ctx, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
+func NewDynTClient(ec common.ExecContext, relUrl string, serviceName string) *TClient {
+	return NewTClient(ec, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
 }
 
 // Create new TClient
-func NewTClient(ctx context.Context, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ctx, client: client}
+func NewTClient(ec common.ExecContext, url string, client *http.Client) *TClient {
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec}
 }
 
 // Concatenate url and query parameters

@@ -15,6 +15,8 @@ type TestBody struct {
 func TestGet(t *testing.T) {
 	configFile := "../app-conf-dev.yml"
 	common.LoadConfigFromFile(configFile)
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
 
 	ctx := context.Background()
@@ -22,13 +24,14 @@ func TestGet(t *testing.T) {
 	ctx = context.WithValue(ctx, "userno", "UN123123123123")
 	ctx = context.WithValue(ctx, "username", "yongj.zhuang")
 	ctx = context.WithValue(ctx, "role", "admin")
-	ctx = context.WithValue(ctx, "services", "file-service,fantahsea")
+	ec := common.NewExecContext(ctx, nil)
 
-	tr := NewDefaultTClient(ctx, "http://localhost:8081/open/api/test").
+	tr := NewDefaultTClient(ec, "http://localhost:8081/open/api/test").
 		AddHeaders(map[string]string{
 			"TestCase": "TestGet",
 		}).
 		EnableTracing().
+		EnableRequestLog().
 		Get(map[string][]string{
 			"name": {"yongj.zhuang", "zhuangyongj"},
 			"age":  {"103"},
@@ -46,10 +49,11 @@ func TestGet(t *testing.T) {
 	logrus.Infof("Body: %+v", body)
 }
 
-
 func TestDelete(t *testing.T) {
 	configFile := "../app-conf-dev.yml"
 	common.LoadConfigFromFile(configFile)
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
 
 	ctx := context.Background()
@@ -57,12 +61,13 @@ func TestDelete(t *testing.T) {
 	ctx = context.WithValue(ctx, "userno", "UN123123123123")
 	ctx = context.WithValue(ctx, "username", "yongj.zhuang")
 	ctx = context.WithValue(ctx, "role", "admin")
-	ctx = context.WithValue(ctx, "services", "file-service,fantahsea")
+	ec := common.NewExecContext(ctx, nil)
 
-	tr := NewDefaultTClient(ctx, "http://localhost:8081/open/api/test/delete").
+	tr := NewDefaultTClient(ec, "http://localhost:8081/open/api/test/delete").
 		AddHeaders(map[string]string{
 			"TestCase": "TestGet",
 		}).
+		EnableRequestLog().
 		EnableTracing().
 		Delete(map[string][]string{
 			"name": {"yongj.zhuang", "zhuangyongj"},
@@ -84,6 +89,8 @@ func TestDelete(t *testing.T) {
 func TestPost(t *testing.T) {
 	configFile := "../app-conf-dev.yml"
 	common.LoadConfigFromFile(configFile)
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
 
 	ctx := context.Background()
@@ -91,9 +98,9 @@ func TestPost(t *testing.T) {
 	ctx = context.WithValue(ctx, "userno", "UN123123123123")
 	ctx = context.WithValue(ctx, "username", "yongj.zhuang")
 	ctx = context.WithValue(ctx, "role", "admin")
-	ctx = context.WithValue(ctx, "services", "file-service,fantahsea")
+	ec := common.NewExecContext(ctx, nil)
 
-	tr := NewDefaultTClient(ctx, "http://localhost:8081/open/api/test/post").
+	tr := NewDefaultTClient(ec, "http://localhost:8081/open/api/test/post").
 		AddHeaders(map[string]string{
 			"TestCase": "TestPost",
 		}).
@@ -112,10 +119,11 @@ func TestPost(t *testing.T) {
 	logrus.Infof("Body: %+v", body)
 }
 
-
 func TestPut(t *testing.T) {
 	configFile := "../app-conf-dev.yml"
 	common.LoadConfigFromFile(configFile)
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
 
 	ctx := context.Background()
@@ -123,9 +131,9 @@ func TestPut(t *testing.T) {
 	ctx = context.WithValue(ctx, "userno", "UN123123123123")
 	ctx = context.WithValue(ctx, "username", "yongj.zhuang")
 	ctx = context.WithValue(ctx, "role", "admin")
-	ctx = context.WithValue(ctx, "services", "file-service,fantahsea")
+	ec := common.NewExecContext(ctx, nil)
 
-	tr := NewDefaultTClient(ctx, "http://localhost:8081/open/api/test/put").
+	tr := NewDefaultTClient(ec, "http://localhost:8081/open/api/test/put").
 		AddHeaders(map[string]string{
 			"TestCase": "TestPut",
 		}).
