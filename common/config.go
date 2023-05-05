@@ -113,8 +113,15 @@ func DefaultReadConfig(args []string) {
 */
 func LoadConfigFromFile(configFile string) {
 	doWithViperLock(func() {
+		if configFile == "" {
+			return
+		}
 		f, err := os.Open(configFile)
 		if err != nil {
+			if os.IsNotExist(err) {
+				logrus.Infof("Unable to find config file: '%s', ignored", configFile)
+				return
+			}
 			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
 		}
 		viper.SetConfigType("yml")
