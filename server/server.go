@@ -503,6 +503,7 @@ func IsRouteWhitelist(url string) bool {
 func PerfMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer common.LTimeOp(time.Now(), ctx.Request.RequestURI)
+		ctx.Next()
 	}
 }
 
