@@ -14,14 +14,10 @@ import (
 )
 
 const (
-	// Connection max lifetime, hikari recommends 1800000, so we do the same thing
-	CONN_MAX_LIFE_TIME = time.Minute * 30
-
-	// Max num of open conns
-	MAX_OPEN_CONNS = 10
-
-	// Max num of idle conns
-	MAX_IDLE_CONNS = MAX_OPEN_CONNS // recommended to be the same as the maxOpenConns
+	CONN_MAX_LIFE_TIME  = time.Minute * 30                                                                       // Connection max lifetime, hikari recommends 1800000, so we do the same thing
+	MAX_OPEN_CONNS      = 10                                                                                     // Max num of open conns
+	MAX_IDLE_CONNS      = MAX_OPEN_CONNS                                                                         // max num of idle conns, recommended to be the same as the maxOpenConns
+	DEFAULT_CONN_PARAMS = "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s" // default connection parameters string
 )
 
 var (
@@ -40,7 +36,7 @@ func init() {
 	common.SetDefProp(common.PROP_MYSQL_PASSWORD, "")
 	common.SetDefProp(common.PROP_MYSQL_HOST, "localhost")
 	common.SetDefProp(common.PROP_MYSQL_PORT, 3306)
-	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s")
+	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, DEFAULT_CONN_PARAMS)
 }
 
 /*
