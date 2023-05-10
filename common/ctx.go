@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
@@ -36,6 +37,15 @@ func (in *ExecContext) UserId() string {
 // Get user no if found, else empty string
 func (in *ExecContext) UserNo() string {
 	return in.User.UserNo
+}
+
+// Get user's id as int if found, else 0
+func (in *ExecContext) UserIdI() (int, error) {
+	if in.User.UserId == "" {
+		return 0, nil
+	}
+
+	return strconv.Atoi(in.User.UserId)
 }
 
 // Create empty ExecContext
