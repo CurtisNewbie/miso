@@ -135,16 +135,29 @@ func InitMySql(user string, password string, dbname string, host string, port st
 }
 
 /*
-Get mysql client
+Get MySQL Connection.
 
-Must call InitMysql method before this method.
+If client is not yet created, func InitMySqlFromProp(...) is called to initialize a new one. For any error occurred, it panics.
 */
 func GetMySql() *gorm.DB {
+	return GetConn()
+}
+
+/*
+Get MySQL Connection.
+
+If client is not yet created, func InitMySqlFromProp(...) is called to initialize a new one. For any error occurred, it panics.
+
+It's the same as GetMySql(), but with different name.
+*/
+func GetConn() *gorm.DB {
 	mysqlp.mu.RLock()
 	defer mysqlp.mu.RUnlock()
 
 	if mysqlp.mysql == nil {
-		panic("MySQL Connection hasn't been initialized yet")
+		if e := InitMySqlFromProp(); e != nil {
+			panic(fmt.Sprintf("MySQL Connection hasn't been initialized, even failed to initialize one with func InitMySqlFromProp(), no choice but to panic, %v", e))
+		}
 	}
 
 	if common.IsProdMode() {
