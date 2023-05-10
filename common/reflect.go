@@ -2,6 +2,7 @@ package common
 
 import (
 	"reflect"
+	"runtime"
 	"unicode"
 )
 
@@ -99,4 +100,9 @@ func IsFieldExposed(fieldName string) bool {
 		return unicode.IsUpper(c) // only check first unicode character
 	}
 	return false
+}
+
+// Get name of func
+func FuncName(f any) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
