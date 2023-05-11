@@ -208,11 +208,12 @@ func DefaultBootstrapServer(args []string) {
 
 // Configurae Logging, e.g., formatter, logger's output
 func ConfigureLogging() {
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(common.CustomFormatter())
 
+	// formatter is already set in logger.go `init()` func`
 	if common.IsProdMode() {
-		logrus.SetLevel(logrus.InfoLevel)
+		// Info is the default, we don't need to set it
+		// logrus.SetLevel(logrus.InfoLevel)
+
 		// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 		if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
 			loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))

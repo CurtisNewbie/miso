@@ -13,6 +13,12 @@ import (
 type CTFormatter struct {
 }
 
+func init() {
+	// for connvenience
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(CustomFormatter())
+}
+
 func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var fn string = ""
 
@@ -23,13 +29,11 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	var traceId any
 	var spanId any
-	var username any
 
 	fields := entry.Data
 	if fields != nil {
 		traceId = fields[X_TRACEID]
 		spanId = fields[X_SPANID]
-		username = fields[X_USERNAME]
 	}
 	if traceId == nil {
 		traceId = ""
@@ -37,23 +41,20 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	if spanId == nil {
 		spanId = ""
 	}
-	if username == nil {
-		username = ""
-	}
 
-	s := fmt.Sprintf("%s %-5s [%-16v,%-16v,%v]%s - %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, username, fn, entry.Message)
+	s := fmt.Sprintf("%s %-5s [%-16v,%-16v]%-35s : %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, fn, entry.Message)
 	return []byte(s), nil
 }
 
 // Create rolling file based logger
 func BuildRollingLogFileWriter(logFile string) io.Writer {
 	return &lumberjack.Logger{
-			Filename:  logFile,
-			MaxSize:   100, // megabytes
-			MaxAge:    15,  //days
-			LocalTime: true,
-			Compress:  false,
-		}
+		Filename:  logFile,
+		MaxSize:   100, // megabytes
+		MaxAge:    15,  //days
+		LocalTime: true,
+		Compress:  false,
+	}
 }
 
 func toLevelStr(level logrus.Level) string {
@@ -78,12 +79,11 @@ func toLevelStr(level logrus.Level) string {
 }
 
 func getShortFnName(fn string) string {
-	i := strings.LastIndex(fn, ".")
-	if i < 0 {
+	j := strings.LastIndex(fn, "/")
+	if j < 0 {
 		return fn
 	}
-	rw := GetRuneWrp(fn)
-	return rw.SubstrFrom(i + 1)
+	return GetRuneWrp(fn).SubstrFrom(j + 1)
 }
 
 // Get custom formatter logrus
