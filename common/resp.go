@@ -22,6 +22,7 @@ type GnResp[T any] struct {
 func WrapResp(data interface{}, e error) Resp {
 	if e != nil {
 		if we, ok := e.(*WebError); ok {
+			logrus.Infof("Returned error, code: %v, msg: %v, internalMsg: %v", we.Code, we.Msg, we.InternalMsg)
 			if HasCode(we) {
 				return ErrorRespWCode(we.Code, we.Msg)
 			} else {
