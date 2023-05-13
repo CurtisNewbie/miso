@@ -325,7 +325,7 @@ func BootstrapServer() {
 		registerServerRoutes(engine)
 
 		for _, r := range GetHttpRoutes() {
-			c.Log.Infof("%-6s '%-25s' --> '%s'", r.Method, r.Url, r.HandlerName)
+			c.Log.Infof("%-6s %-25s --> '%s'", r.Method, r.Url, r.HandlerName)
 		}
 
 		// start the http server
