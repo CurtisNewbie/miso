@@ -99,9 +99,10 @@ e.g.,
 
 ### Logger Properties
 
-| property             | description                                                             | default value |
-|----------------------|-------------------------------------------------------------------------|---------------|
-| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr |               |
+| property             | description                                                                                    | default value |
+|----------------------|------------------------------------------------------------------------------------------------|---------------|
+| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr                        |               |
+| logging.level        | logging level (handled by `server.ConfigureLogging`), the configured value is case-insensitive |               |
 
 ### Distributed Task Scheduling Properties
 

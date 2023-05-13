@@ -222,7 +222,36 @@ func ConfigureLogging() {
 	} else {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+
+	if common.HasProp(common.PROP_LOGGING_LEVEL) {
+		if level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
+			logrus.Infof("Setting log level to %v", strings.ToUpper(level.String()))
+			logrus.SetLevel(level)
+		}
+	}
+
 	logrus.SetOutput(loggerOut)
+}
+
+func parseLogLevel(logLevel string) (logrus.Level, bool) {
+	logLevel = strings.ToUpper(logLevel)
+	switch logLevel {
+	case "INFO":
+		return logrus.InfoLevel, true
+	case "DEBUG":
+		return logrus.DebugLevel, true
+	case "WARN":
+		return logrus.WarnLevel, true
+	case "ERROR":
+		return logrus.ErrorLevel, true
+	case "TRACE":
+		return logrus.TraceLevel, true
+	case "FATAL":
+		return logrus.FatalLevel, true
+	case "PANIC":
+		return logrus.PanicLevel, true
+	}
+	return logrus.InfoLevel, false
 }
 
 // Add listener that is invoked when server is finally bootstrapped

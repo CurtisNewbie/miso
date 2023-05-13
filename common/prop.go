@@ -118,6 +118,7 @@ const (
 		------------------------------------
 	*/
 	PROP_LOGGING_ROLLING_FILE = "logging.rolling.file"
+	PROP_LOGGING_LEVEL        = "logging.level"
 
 	/*
 		------------------------------------
