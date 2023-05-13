@@ -113,7 +113,7 @@ func DefaultReadConfig(args []string) {
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
-	logrus.Infof("Guesssing config file path: '%v'", configFile)
+	logrus.Infof("Guessing config file path: '%v'", configFile)
 	LoadConfigFromFile(configFile)
 }
 
