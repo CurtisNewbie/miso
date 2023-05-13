@@ -14,7 +14,7 @@ import (
 
 var (
 	// regex for arg expansion
-	resolveArgRegexp = regexp.MustCompile(`^\${[a-zA-Z0-9\\-\\_]+}$`)
+	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
 
 	// mutex for viper
 	viperMutex sync.Mutex
@@ -39,11 +39,21 @@ func SetDefProp(prop string, defVal any) {
 
 // Check whether the prop exists
 func ContainsProp(prop string) bool {
+	return HasProp(prop)
+}
+
+// Check whether the prop exists
+func HasProp(prop string) bool {
 	return doRetWithViperLock(func() bool { return viper.IsSet(prop) })
 }
 
 // Get prop as int slice
 func GetConfIntSlice(prop string) []int {
+	return GetPropIntSlice(prop)
+}
+
+// Get prop as int slice
+func GetPropIntSlice(prop string) []int {
 	return doRetWithViperLock(func() []int { return viper.GetIntSlice(prop) })
 }
 
@@ -245,19 +255,16 @@ func ResolveServerHost(address string) string {
 
 // Resolve argument, e.g., for arg like '${someArg}', it will in fact look for 'someArg' in os.Env
 func ResolveArg(arg string) string {
-	if !resolveArgRegexp.MatchString(arg) {
-		return arg
-	}
-
-	r := []rune(arg)
-	key := string(r[2 : len(r)-1])
-	val := GetEnv(key)
-	if val == "" {
-		val = arg
-	}
-
-	// logrus.Infof("Tried to resolve key '%s'", arg)
-	return val
+	return resolveArgRegexp.ReplaceAllStringFunc(arg, func(s string) string {
+		r := []rune(s)
+		key := string(r[2 : len(r)-1])
+		val := GetEnv(key)
+		if val == "" {
+			val = s
+		}
+		logrus.Debugf("Tried to resolve key '%s' to val: %s", s, val)
+		return val
+	})
 }
 
 // call with viper lock
