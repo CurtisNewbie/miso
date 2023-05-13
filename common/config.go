@@ -63,13 +63,13 @@ func GetPropBool(prop string) bool {
 }
 
 /*
-	Get prop as string
+Get prop as string
 
-	If the value is an argument that can be expanded, the actual value will be resolved if possible.
+If the value is an argument that can be expanded, the actual value will be resolved if possible.
 
-	e.g, for "name" : "${secretName}".
+e.g, for "name" : "${secretName}".
 
-	This func will attempt to resolve the actual value for '${secretName}'.
+This func will attempt to resolve the actual value for '${secretName}'.
 */
 func GetPropStr(prop string) string {
 	return ResolveArg(_getPropString(prop))
@@ -81,18 +81,18 @@ func _getPropString(prop string) string {
 }
 
 /*
-	Default way to read config file.
+Default way to read config file.
 
-	By reading the provided args, this func identifies the profile to use and the
-	associated name of the config file to look for.
+By reading the provided args, this func identifies the profile to use and the
+associated name of the config file to look for.
 
-	Repetitively calling this method overides previously loaded config.
+Repetitively calling this method overides previously loaded config.
 
-	You can also use ReadConfig to load your custom configFile.
+You can also use ReadConfig to load your custom configFile.
 
-	It's essentially:
+It's essentially:
 
-		LoadConfigFromFile(GuessConfigFilePath(args, GuessProfile(args)))
+	LoadConfigFromFile(GuessConfigFilePath(args, GuessProfile(args)))
 */
 func DefaultReadConfig(args []string) {
 	profile := GuessProfile(args)
@@ -103,23 +103,25 @@ func DefaultReadConfig(args []string) {
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
+	logrus.Infof("Guesssing config file path: '%v'", configFile)
 	LoadConfigFromFile(configFile)
 }
 
 /*
-	Load config from file
+Load config from file
 
-	Repetitively calling this method overides previously loaded config.
+Repetitively calling this method overides previously loaded config.
 */
 func LoadConfigFromFile(configFile string) {
+	if configFile == "" {
+		return
+	}
+
 	doWithViperLock(func() {
-		if configFile == "" {
-			return
-		}
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
-				logrus.Infof("Unable to find config file: '%s', ignored", configFile)
+				logrus.Infof("Unable to find config file: '%s'", configFile)
 				return
 			}
 			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
@@ -128,6 +130,7 @@ func LoadConfigFromFile(configFile string) {
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
 			logrus.Fatalf("Failed to load config file: '%s', %v", configFile, err)
 		}
+		logrus.Infof("Loaded config file: '%v'", configFile)
 	})
 }
 
@@ -143,10 +146,10 @@ func SetProfile(profile string) {
 }
 
 /*
-	Parse Cli Arg to extract a profile
+Parse Cli Arg to extract a profile
 
-	It looks for the arg that matches the pattern "profile=[profileName]"
-	For example, for "profile=prod", the extracted profile is "prod"
+It looks for the arg that matches the pattern "profile=[profileName]"
+For example, for "profile=prod", the extracted profile is "prod"
 */
 func GuessProfile(args []string) string {
 	profile := "dev" // the default one
@@ -159,13 +162,13 @@ func GuessProfile(args []string) string {
 }
 
 /*
-	Parse args to guess a absolute path to the config file
+Parse args to guess a absolute path to the config file
 
-	- It looks for the arg that matches the pattern "configFile=/path/to/configFile".
+- It looks for the arg that matches the pattern "configFile=/path/to/configFile".
 
-	- If none is found, and the profile is empty, it's by default 'app-conf-dev.yml'.
+- If none is found, and the profile is empty, it's by default 'app-conf-dev.yml'.
 
-	- If profile is specified, then it looks for 'app-conf-${profile}.yml'.
+- If profile is specified, then it looks for 'app-conf-${profile}.yml'.
 */
 func GuessConfigFilePath(args []string, profile string) string {
 	if strings.TrimSpace(profile) == "" {
@@ -180,13 +183,13 @@ func GuessConfigFilePath(args []string, profile string) string {
 }
 
 /*
-	Parse Cli Arg to extract a value from arg, [key]=[value]
+Parse Cli Arg to extract a value from arg, [key]=[value]
 
-	e.g.,
+e.g.,
 
-	To look for 'configFile=?'.
+To look for 'configFile=?'.
 
-		path := ExtractArgValue(args, func(key string) bool { return key == "configFile" }).
+	path := ExtractArgValue(args, func(key string) bool { return key == "configFile" }).
 */
 func ExtractArgValue(args []string, predicate Predicate[string]) string {
 	for _, s := range args {

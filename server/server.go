@@ -59,7 +59,7 @@ var (
 )
 
 func init() {
-	common.SetDefProp(common.PROP_SERVER_WEB_ENABLED, true)
+	common.SetDefProp(common.PROP_SERVER_WEB_ENABLED, false)
 	common.SetDefProp(common.PROP_SERVER_HOST, "localhost")
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
@@ -270,7 +270,7 @@ func BootstrapServer() {
 		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
-	c.Log.Infof("\n\n################### starting %s ###################\n", appName)
+	c.Log.Infof("\n\n------------------------------------ starting %s ---------------------------------------------\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
@@ -372,7 +372,7 @@ func BootstrapServer() {
 	}
 
 	end := time.Now().UnixMilli()
-	c.Log.Infof("\n\n############# %s started (took: %dms) #############\n", appName, end-start)
+	c.Log.Infof("\n\n------------------------------------ %s started (took: %dms) ----------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	callServerBootstrappedListeners()

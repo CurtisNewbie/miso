@@ -26,89 +26,89 @@ e.g.,
 
 ### Common Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| app.name | name of the application, if `consul.registerName` is missing, this will be used for the service registration | |
-| profile | name of the profile used | dev |
-| mode.production | whether production mode is turned on | false |
+| property        | description                                                                                                  | default value |
+|-----------------|--------------------------------------------------------------------------------------------------------------|---------------|
+| app.name        | name of the application, if `consul.registerName` is missing, this will be used for the service registration |               |
+| profile         | name of the profile used                                                                                     | dev           |
+| mode.production | whether production mode is turned on                                                                         | false         |
 
 ### Web Server Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| server.web.enabled | enable http server | true |   
-| server.host | http server host | localhost |   
-| server.port | http server port | 8080 |
-| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 5 | 
+| property                       | description                                  | default value |
+|--------------------------------|----------------------------------------------|---------------|
+| server.web.enabled             | enable http server                           | true          |
+| server.host                    | http server host                             | localhost     |
+| server.port                    | http server port                             | 8080          |
+| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 5             |
 
 ### Consul Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| consul.enabled | whether Consul is enabled | false |
-| consul.registerName | registered service name | | 
-| consul.registerAddress | registered service address | `${server.host}:${server.port}` |  
-| consul.consulAddress | address of the Consul server | `localhost:8500` | 
-| consul.healthCheckUrl | health check url | /health |
-| consul.healthCheckInterval | health check interval | 60s |
-| consul.healthCheckTimeout | health check timeout | 3s |
-| consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 130s |
+| property                                | description                                                          | default value                   |
+|-----------------------------------------|----------------------------------------------------------------------|---------------------------------|
+| consul.enabled                          | whether Consul is enabled                                            | false                           |
+| consul.registerName                     | registered service name                                              |                                 |
+| consul.registerAddress                  | registered service address                                           | `${server.host}:${server.port}` |
+| consul.consulAddress                    | address of the Consul server                                         | `localhost:8500`                |
+| consul.healthCheckUrl                   | health check url                                                     | /health                         |
+| consul.healthCheckInterval              | health check interval                                                | 60s                             |
+| consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
+| consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 130s                            |
 
 ### MySQL Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| mysql.enabled | whether MySQL is enabled | false |
-| mysql.user | username  | root |
-| mysql.password | password |  |
-| mysql.database | database | |  
-| mysql.host | host | `localhost` |
-| mysql.port | port | 3306 |
+| property                    | description                                 | default value                                                                          |
+|-----------------------------|---------------------------------------------|----------------------------------------------------------------------------------------|
+| mysql.enabled               | whether MySQL is enabled                    | false                                                                                  |
+| mysql.user                  | username                                    | root                                                                                   |
+| mysql.password              | password                                    |                                                                                        |
+| mysql.database              | database                                    |                                                                                        |
+| mysql.host                  | host                                        | `localhost`                                                                            |
+| mysql.port                  | port                                        | 3306                                                                                   |
 | mysql.connection.parameters | query parameters declared on connection url | `charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s` |
 
 ### Redis Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| redis.enabled | whether Redis is enabled | false |
-| redis.address | address of Redis server | `localhost` |
-| redis.port | port of Redis server | 6379 |
-| redis.username | username | |
-| redis.password | password | | 
-| redis.database | 0 | |  
+| property       | description              | default value |
+|----------------|--------------------------|---------------|
+| redis.enabled  | whether Redis is enabled | false         |
+| redis.address  | address of Redis server  | `localhost`   |
+| redis.port     | port of Redis server     | 6379          |
+| redis.username | username                 |               |
+| redis.password | password                 |               |
+| redis.database | 0                        |               |
 
 ### RabbitMQ Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| rabbitmq.enabled | whether RabbitMQ client is enabled | false | 
-| rabbitmq.host | host of the RabbitMQ server | `localhost` | 
-| rabbitmq.port | port of the RabbitMQ server | 5672 | 
-| rabbitmq.username | username used to connect to server | | 
-| rabbitmq.password | password used to connect to server | | 
-| rabbitmq.vhost | virtual host | | 
-| rabbitmq.consumer.qos | consumer QOS | 68 | 
-| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 2 | 
-| rabbitmq.consumer.retry | maximum number of retry for message received by consumer: `-1` means never retry, and the message will simply be Nack(ed); if retry is set to greater than -1, then whenever all the retry is used, the message is acked to prevent infinite redelivery | -1 | 
+| property                    | description                                                                                                                                                                                                                                             | default value |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| rabbitmq.enabled            | whether RabbitMQ client is enabled                                                                                                                                                                                                                      | false         |
+| rabbitmq.host               | host of the RabbitMQ server                                                                                                                                                                                                                             | `localhost`   |
+| rabbitmq.port               | port of the RabbitMQ server                                                                                                                                                                                                                             | 5672          |
+| rabbitmq.username           | username used to connect to server                                                                                                                                                                                                                      |               |
+| rabbitmq.password           | password used to connect to server                                                                                                                                                                                                                      |               |
+| rabbitmq.vhost              | virtual host                                                                                                                                                                                                                                            |               |
+| rabbitmq.consumer.qos       | consumer QOS                                                                                                                                                                                                                                            | 68            |
+| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue)                                                                                                                                                                                                | 2             |
+| rabbitmq.consumer.retry     | maximum number of retry for message received by consumer: `-1` means never retry, and the message will simply be Nack(ed); if retry is set to greater than -1, then whenever all the retry is used, the message is acked to prevent infinite redelivery | -1            |
 
 ### SQLite Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| sqlite.file | path to SQLite database file |  | 
+| property    | description                  | default value |
+|-------------|------------------------------|---------------|
+| sqlite.file | path to SQLite database file |               |
 
 ### Logger Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr |  | 
+| property             | description                                                             | default value |
+|----------------------|-------------------------------------------------------------------------|---------------|
+| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr |               |
 
 ### Distributed Task Scheduling Properties
 
-| property | description | default value |
-| --- | --- | --- | 
-| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally | true |
-| task.scheduling.group | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default | 
+| property                | description                                                                                                                                                                                                                   | default value |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally                                                                                             | true          |
+| task.scheduling.group   | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default       |
 
 ## Yaml Configuration File Example
 
@@ -132,16 +132,16 @@ mysql:
 
 ```go
 func main() {
-  // load configuration from 'myconf.yml'
-  LoadConfigFromFile("myconf.yml")
+	// load configuration from 'myconf.yml'
+	common.LoadConfigFromFile("myconf.yml")
 
-  // add GET request handler 
-  server.RawGet("/some/path", func(ctx *gin.Context) {
-    logrus.Info("Received request")
-  })
+	// add GET request handler
+	server.RawGet("/some/path", func(c *gin.Context, ec common.ExecContext) {
+		logrus.Info("Received request")
+	})
 
-  // bootstrap server
-  server.BootstrapServer()
+	// bootstrap server
+	server.BootstrapServer()
 }
 ```
 
@@ -149,14 +149,16 @@ Since `gocommon` is mainly written for my personal projects, it indeed provides 
 
 ```go
 func main() {
-  // maybe some scheduling (not distributed)
-  common.ScheduleCron("0 0/15 * * * *", myJob)
+  // ...
 
-  // register routes and handlers
-  server.PostJ(server.OpenApiPath("/path"), myHandler)
+	// maybe some scheduling (not distributed)
+	common.ScheduleCron("0 0/15 * * * *", myJob)
 
-  // default way to determine profile used, find config file, load configuration, and bootstrap server
-  server.DefaultBootstrapServer(os.Args)
+	// register routes and handlers
+	server.PostJ(server.OpenApiPath("/path"), myHandler)
+
+	// bootstrap server
+	server.DefaultBootstrapServer(os.Args)
 }
 ```
 
@@ -224,18 +226,19 @@ Rule `validated` is very special. It doesn't actually check the value of the fie
 
 ```go
 func main() {
-  // set the group name 
-  task.SetScheduleGroup("gocommon")
+	// set the group name
+	task.SetScheduleGroup("gocommon")
 
-  // add task
-  task.ScheduleDistributedTask("0/1 * * * * ?", func() {
-  })
+	// add task
+	task.ScheduleDistributedTask("0/1 * * * * ?", func(c common.ExecContext) {
+		// ...
+	})
 
-  // start task scheduler
-  task.StartTaskSchedulerAsync()
-  
-  // stop task scheduler gracefully
-  defer task.StopTaskScheduler()
+	// start task scheduler
+	task.StartTaskSchedulerAsync()
+
+	// stop task scheduler gracefully
+	defer task.StopTaskScheduler()
 }
 ```
 
@@ -243,11 +246,11 @@ If `server.go` is used, this is automatically handled by `DefaultBootstrapServer
 
 ```go
 func main() {
-  // add tasks 
-  task.ScheduleDistributedTask("0 0/15 * * * *", func() {
-  })
+	// add tasks
+	task.ScheduleDistributedTask("0 0/15 * * * *", func(c common.ExecContext) {
+	})
 
-  // bootstrap server
-  server.DefaultBootstrapServer(os.Args)
+	// bootstrap server
+	server.DefaultBootstrapServer(os.Args)
 }
 ```

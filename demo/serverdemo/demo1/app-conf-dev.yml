@@ -1,0 +1,9 @@
+mode.production: false
+
+app.name: "demo1"
+
+server: 
+  enabled: true
+  host: localhost
+  port: 8080
+  gracefulShutdownTimeSec: 5
