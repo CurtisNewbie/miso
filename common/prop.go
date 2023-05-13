@@ -67,7 +67,7 @@ const (
 
 		------------------------------------
 	*/
-	PROP_SERVER_WEB_ENABLED                = "server.web.enabled"
+	PROP_SERVER_ENABLED                    = "server.enabled"
 	PROP_SERVER_HOST                       = "server.host"
 	PROP_SERVER_PORT                       = "server.port"
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC = "server.gracefulShutdownTimeSec"
