@@ -36,7 +36,7 @@ e.g.,
 
 | property                       | description                                  | default value |
 |--------------------------------|----------------------------------------------|---------------|
-| server.web.enabled             | enable http server                           | true          |
+| server.web.enabled             | enable http server                           | false         |
 | server.host                    | http server host                             | localhost     |
 | server.port                    | http server port                             | 8080          |
 | server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 5             |
