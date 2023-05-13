@@ -309,7 +309,7 @@ func BootstrapServer() {
 		engine.Use(TraceMiddleware())
 
 		if !common.IsProdMode() {
-			engine.Use(PerfMiddleware())
+			// engine.Use(PerfMiddleware())
 			engine.Use(gin.Logger()) // default logger for debugging
 		}
 
