@@ -40,6 +40,14 @@ func (in *ExecContext) UserNo() string {
 }
 
 // Get user's id as int if found, else 0
+//
+// Basically the same as UserIdI except that error is ignored
+func (in *ExecContext) UserIdInt() (int) {
+	i, _ := in.UserIdI()
+	return i
+}
+
+// Get user's id as int if found, else 0
 func (in *ExecContext) UserIdI() (int, error) {
 	if in.User.UserId == "" {
 		return 0, nil

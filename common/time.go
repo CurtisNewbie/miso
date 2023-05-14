@@ -25,9 +25,9 @@ type WTime time.Time
 type TTime time.Time
 
 /*
-	EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds
+EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds
 
-	This type can be safely used in GORM just like time.Time
+This type can be safely used in GORM just like time.Time
 */
 type ETime time.Time
 
@@ -70,6 +70,10 @@ func init() {
 	wTimeFormat = TranslateFormat("dd/MM/yyyy HH:mm")
 	tTimeFormat = TranslateFormat("yyyy-MM-dd HH:mm:ss")
 	sqlTimeFormat = TranslateFormat("yyyy/MM/dd HH:mm:ss")
+}
+
+func Now() ETime {
+	return ETime(time.Now())
 }
 
 // Translate yyyy-MM-dd HH:mm:ss style format of time
@@ -131,8 +135,20 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t ETime) String() string {
-	return time.Time(t).String()
+func (t *ETime) String() string {
+	return time.Time(*t).String()
+}
+
+func (t *ETime) ToTime() time.Time {
+	return time.Time(*t)
+}
+
+func (t *ETime) UnixMilli() int64 {
+	return t.ToTime().UnixMilli()
+}
+
+func (t *ETime) FormatClassic() string {
+	return t.ToTime().Format("2006/01/02 15:04:05")
 }
 
 // database driver -> ETime
