@@ -17,10 +17,12 @@ import (
 
 // Helper type for handling HTTP responses
 type TResponse struct {
-	ExecCtx common.ExecContext
-	Ctx     context.Context
-	Resp    *http.Response
-	Err     error
+	ExecCtx    common.ExecContext
+	Ctx        context.Context
+	Resp       *http.Response
+	RespHeader http.Header
+	StatusCode int
+	Err        error
 }
 
 // Close Response
@@ -80,23 +82,23 @@ func (t *TClient) prepReqUrl() (string, error) {
 }
 
 /*
-	Enable service discovery, the Url specified when creating the TClient must be relative, starting with '/'
+Enable service discovery, the Url specified when creating the TClient must be relative, starting with '/'
 
-	For example:
+For example:
 
-		tr := NewDynTClient(ctx, "/open/api/gallery/brief/owned", "fantahsea").
-			AddHeaders(map[string]string{
-				"TestCase": "TestGet",
-			}).
-			EnableTracing().
-			Get(map[string][]string{
-				"name": {"yongj.zhuang", "zhuangyongj"},
-				"age":  {"103"},
-			})
+	tr := NewDynTClient(ctx, "/open/api/gallery/brief/owned", "fantahsea").
+		AddHeaders(map[string]string{
+			"TestCase": "TestGet",
+		}).
+		EnableTracing().
+		Get(map[string][]string{
+			"name": {"yongj.zhuang", "zhuangyongj"},
+			"age":  {"103"},
+		})
 
-	The resolved request url will be (imagine that the service 'fantahsea' is hosted on 'localhost:8081'):
+The resolved request url will be (imagine that the service 'fantahsea' is hosted on 'localhost:8081'):
 
-		"http://localhost:8081/open/api/gallery/brief/owned?name=yongj.zhuang&name=zhuangyongj&age=103"
+	"http://localhost:8081/open/api/gallery/brief/owned?name=yongj.zhuang&name=zhuangyongj&age=103"
 */
 func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
 	t.serviceName = serviceName
@@ -224,7 +226,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 			t.ExecCtx.Log.Infof("%s '%s' (%s), Headers: %v", req.Method, req.URL, time.Since(start), req.Header)
 		}
 	}
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx}
+	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx, StatusCode: r.StatusCode, RespHeader: r.Header}
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
