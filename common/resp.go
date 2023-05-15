@@ -1,6 +1,10 @@
 package common
 
-import "github.com/sirupsen/logrus"
+import (
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+)
 
 // Web Endpoint's Resp
 type Resp struct {
@@ -16,6 +20,13 @@ type GnResp[T any] struct {
 	Msg       string `json:"msg"`
 	Error     bool   `json:"error"`
 	Data      T      `json:"data"`
+}
+
+func (r GnResp[T]) Err() error {
+	if r.Error {
+		return fmt.Errorf("Resp has error, code: %v, msg: %v", r.ErrorCode, r.Msg)
+	}
+	return nil
 }
 
 /** Wrap with a response object */
