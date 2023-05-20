@@ -35,13 +35,6 @@ Set data structure
 It's internally backed by a Map.
 
 To create a new Set, use NewSet() func.
-
-Methods:
-
-	Has(key)  : bool
-	Add(key)  : bool
-	IsEmpty() : bool
-	Size()    : int
 */
 type Set[T comparable] struct {
 	// Keys in Set
@@ -61,6 +54,16 @@ func (s *Set[T]) Add(key T) bool {
 	}
 	(s.Keys)[key] = Void{}
 	return true
+}
+
+// Add keys to set
+func (s *Set[T]) AddAll(keys []T) {
+	if keys == nil {
+		return
+	}
+	for _, k := range keys {
+		s.Add(k)
+	}
 }
 
 // Add key to set (same as Add, but used for method chaining)

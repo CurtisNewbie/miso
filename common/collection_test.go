@@ -5,36 +5,40 @@ import "testing"
 func TestSet(t *testing.T) {
 	s := NewSet[string]()
 	if s.Has("k") {
-		t.Error("set should not have k")
-		return
+		t.Fatal("set should not have k")
 	}
 
 	if !s.Add("k") {
-		t.Error("k should be added")
-		return
+		t.Fatal("k should be added")
 	}
 
 	if !s.Has("k") {
-		t.Error("set doesn't have k")
-		return
+		t.Fatal("set doesn't have k")
 	}
 
 	if s.Add("k") {
-		t.Error("k shouldn't be added")
-		return
+		t.Fatal("k shouldn't be added")
 	}
 
 	if s.Size() != 1 {
-		t.Error("size should be 1")
-		return
+		t.Fatal("size should be 1")
 	}
 
 	if s.IsEmpty() {
-		t.Error("set should not be empty")
-		return
+		t.Fatal("set should not be empty")
 	}
 
 	s.AddThen("apple").AddThen("Juice")
+
+	s.AddAll([]string{"orange", "juice"})
+
+	if !s.Has("orange") {
+		t.Fatal("set doesn't contain orange")
+	}
+
+	if !s.Has("juice") {
+		t.Fatal("set doesn't contain juice")
+	}
 
 	t.Logf("Set: %s", s.String())
 }
