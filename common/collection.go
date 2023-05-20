@@ -94,6 +94,15 @@ func (s *Set[T]) String() string {
 	return st
 }
 
+// Copy keys in set
+func (s *Set[T]) CopyKeys() []T {
+	var keys []T = []T{}
+	for k := range s.Keys {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // Create new Set
 func NewSet[T comparable]() Set[T] {
 	return Set[T]{Keys: map[T]Void{}}
@@ -108,7 +117,7 @@ func RandomOne[T any](items []*T) *T {
 	return items[rand.Intn(l)]
 }
 
-// Get values from map
+// Copy values of map
 func ValuesOfMap[K comparable, V any](m *map[K]V) []V {
 	var values []V = []V{}
 	for k := range *m {
@@ -117,13 +126,9 @@ func ValuesOfMap[K comparable, V any](m *map[K]V) []V {
 	return values
 }
 
-// Get keys from set
+// Copy keys of set
 func KeysOfSet[T comparable](s Set[T]) []T {
-	var keys []T = []T{}
-	for k := range s.Keys {
-		keys = append(keys, k)
-	}
-	return keys
+	return s.CopyKeys()
 }
 
 // Get keys from map
@@ -141,4 +146,13 @@ func GetFirstInMap[K comparable, V any](m *map[K]*V) *V {
 		return (*m)[k]
 	}
 	return nil
+}
+
+// Filter duplicate values
+func Distinct(l []string) []string {
+	s := NewSet[string]()
+	for _, v := range l {
+		s.Add(v)
+	}
+	return KeysOfSet(s)
 }
