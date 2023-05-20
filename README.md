@@ -5,9 +5,9 @@ Common stuff for Go. **This is not a general library for everyone, it's develope
 ## Command Line Arguments
 
 - To specify profile: `profile=${PROFILE_NAME}`
-- To specify where the config file is: `configFile=${PATH_TO_CONFIG_FILE}` 
+- To specify where the config file is: `configFile=${PATH_TO_CONFIG_FILE}`
 
-By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.yml` and load the configuration properties from it. 
+By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.yml` and load the configuration properties from it.
 
 e.g.,
 
@@ -15,12 +15,14 @@ e.g.,
 # both profile and configFile are specified
 ./main profile='prod' configFile=/myapp/my-conf.yml
 
-# only profile is specified, the configFile will be 'app-conf-prod.yml' 
+# only profile is specified, the configFile will be 'app-conf-prod.yml'
 ./main profile='prod'
 
-# using default profile 'dev', the configFile will be 'app-conf-dev.yml' 
-./main 
+# using default profile 'dev', the configFile will be 'app-conf-dev.yml'
+./main
 ```
+
+Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) in `config.DefaultReadConfig(...)` or `server.DefaultBootstrapServer(...)`.
 
 ## Properties-Based Configuration
 

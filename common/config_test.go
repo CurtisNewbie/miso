@@ -247,3 +247,15 @@ func TestResolveArg(t *testing.T) {
 	}
 	logrus.Infof("resolved: %s", resolved)
 }
+
+func TestArgKeyVal(t *testing.T) {
+	kv := ArgKeyVal([]string{"fruit=apple", "content=juice"})
+	v, ok := kv["fruit"]
+	if !ok {
+		t.Fatal("kv doesn't contain fruit")
+	}
+	if v != "apple" {
+		t.Fatal("value should be apple")
+	}
+	t.Logf("%+v", v)
+}

@@ -103,6 +103,8 @@ You can also use ReadConfig to load your custom configFile.
 It's essentially:
 
 	LoadConfigFromFile(GuessConfigFilePath(args, GuessProfile(args)))
+
+Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
 func DefaultReadConfig(args []string) {
 	profile := GuessProfile(args)
@@ -115,6 +117,12 @@ func DefaultReadConfig(args []string) {
 	configFile := GuessConfigFilePath(args, profile)
 	logrus.Infof("Guessing config file path: '%v'", configFile)
 	LoadConfigFromFile(configFile)
+
+	// it's possible to overide the loaded configuration with cli arguments
+	kv := ArgKeyVal(args)
+	for k, v := range kv {
+		SetProp(k, v)
+	}
 }
 
 /*
@@ -193,7 +201,7 @@ func GuessConfigFilePath(args []string, profile string) string {
 }
 
 /*
-Parse Cli Arg to extract a value from arg, [key]=[value]
+Parse CLI Arg to extract a value from arg, [key]=[value]
 
 e.g.,
 
@@ -211,6 +219,24 @@ func ExtractArgValue(args []string, predicate Predicate[string]) string {
 		}
 	}
 	return ""
+}
+
+/*
+Parse CLI args to key-value map
+*/
+func ArgKeyVal(args []string) map[string]string {
+	m := map[string]string{}
+	for _, s := range args {
+		var eq int = strings.Index(s, "=")
+		if eq == -1 {
+			continue
+		}
+
+		key := strings.TrimSpace(s[:eq])
+		val := strings.TrimSpace(s[eq+1:])
+		m[key] = val
+	}
+	return m
 }
 
 // Get environment variable
