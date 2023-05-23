@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -362,7 +363,7 @@ func JoinQueryParam(queryParams map[string][]string) string {
 	seg := []string{}
 	for k, vs := range queryParams {
 		for _, v := range vs {
-			seg = append(seg, fmt.Sprintf("%s=%s", k, v))
+			seg = append(seg, fmt.Sprintf("%s=%s", k, url.QueryEscape(v)))
 		}
 	}
 	return strings.Join(seg, "&")
