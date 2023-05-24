@@ -402,7 +402,7 @@ func BootstrapServer() {
 		registerServerRoutes(engine)
 
 		for _, r := range GetHttpRoutes() {
-			c.Log.Infof("%-6s %-35s --> '%s'", r.Method, r.Url, r.HandlerName)
+			c.Log.Infof("%-6s %-45s --> %s", r.Method, r.Url, r.HandlerName)
 		}
 
 		// start the http server
@@ -508,7 +508,9 @@ func InternalApiPath(relPath string) string {
 	return ResolvePath(relPath, false)
 }
 
-// Resolve handler path
+// Resolve handler path.
+//
+// deprecated.
 func ResolvePath(relPath string, isOpenApi bool) string {
 	if !strings.HasPrefix(relPath, "/") {
 		relPath = "/" + relPath

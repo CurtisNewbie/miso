@@ -327,7 +327,7 @@ func RegisterService() error {
 	}
 	regSub.serviceId = proposedServiceId
 
-	logrus.Infof("Registered current instance as a service on Consul, serviceId: '%s'", proposedServiceId)
+	logrus.Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
 }
 
