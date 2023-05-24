@@ -221,7 +221,7 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 }
 
 func startHttpServer(ctx context.Context, server *http.Server) {
-	logrus.Infof("Listening and serving HTTP on %s", server.Addr)
+	logrus.Infof("Server serving HTTP on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logrus.Fatalf("HttpServer ListenAndServe: %s", err)
 	}
@@ -347,7 +347,7 @@ func BootstrapServer() {
 		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
-	c.Log.Infof("\n\n------------------------------------ starting %s ---------------------------------------------\n", appName)
+	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
@@ -414,7 +414,6 @@ func BootstrapServer() {
 
 	// consul
 	if consul.IsConsulEnabled() {
-		c.Log.Info("Creating Consul client")
 
 		// create consul client
 		if _, e := consul.GetConsulClient(); e != nil {
@@ -449,7 +448,7 @@ func BootstrapServer() {
 	}
 
 	end := time.Now().UnixMilli()
-	c.Log.Infof("\n\n------------------------------------ %s started (took: %dms) ----------------------------------\n", appName, end-start)
+	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	callServerBootstrappedListeners()
@@ -488,7 +487,7 @@ func shutdownHttpServer(server *http.Server) {
 	// set timeout for graceful shutdown
 	timeout := common.GetPropInt(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC)
 	if timeout <= 0 {
-		timeout = 5
+		timeout = 30
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)

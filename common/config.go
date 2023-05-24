@@ -135,6 +135,7 @@ func LoadConfigFromFile(configFile string) {
 		return
 	}
 
+	loaded := false
 	doWithViperLock(func() {
 		f, err := os.Open(configFile)
 		if err != nil {
@@ -148,8 +149,12 @@ func LoadConfigFromFile(configFile string) {
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
 			logrus.Fatalf("Failed to load config file: '%s', %v", configFile, err)
 		}
-		logrus.Infof("Loaded config file: '%v'", configFile)
+		loaded = true
 	})
+
+	if loaded {
+		logrus.Infof("Loaded config file: '%v'", configFile)
+	}
 }
 
 // Get profile

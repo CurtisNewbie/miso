@@ -63,9 +63,9 @@ func init() {
 	common.SetDefProp(common.PROP_CONSUL_ENABLED, false)
 	common.SetDefProp(common.PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
 	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_URL, "/health")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_INTERVAL, "60s")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_INTERVAL, "15s")
 	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "130s")
+	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "120s")
 }
 
 // Subscribe to server list, refresh server list every 30s
@@ -105,11 +105,11 @@ func UnsubscribeServerList() {
 }
 
 /*
-	Check if consul is enabled
+Check if consul is enabled
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"consul.enabled"
+	"consul.enabled"
 */
 func IsConsulEnabled() bool {
 	return common.GetPropBool(common.PROP_CONSUL_ENABLED)
@@ -140,13 +140,13 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 }
 
 /*
-	Resolve request url for the given service.
+Resolve request url for the given service.
 
-		"http://" + host ":" + port + "/" + relUrl
+	"http://" + host ":" + port + "/" + relUrl
 
-	This func will first read the cache, trying to resolve the services address
-	without actually requesting consul, and only when the cache missed, it then
-	requests the consul.
+This func will first read the cache, trying to resolve the services address
+without actually requesting consul, and only when the cache missed, it then
+requests the consul.
 */
 func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 	if !strings.HasPrefix(relUrl, "/") {
@@ -162,11 +162,11 @@ func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 }
 
 /*
-	Resolve service address (host:port)
+Resolve service address (host:port)
 
-	This func will first read the cache, trying to resolve the services address
-	without actually requesting consul, and only when the cache missed, it then
-	requests the consul
+This func will first read the cache, trying to resolve the services address
+without actually requesting consul, and only when the cache missed, it then
+requests the consul
 */
 func ResolveServiceAddress(name string) (string, error) {
 	serviceListHolder.mu.Lock()
@@ -261,19 +261,19 @@ func DeregisterService() error {
 }
 
 /*
-	Register current instance as a service
+Register current instance as a service
 
-	If we have already registered before, current method call will be ignored.
+If we have already registered before, current method call will be ignored.
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"server.port"
-		"consul.registerName"
-		"consul.healthCheckInterval"
-		"consul.registerAddress"
-		"consul.healthCheckUrl"
-		"consul.healthCheckTimeout"
-		"consul.healthCheckFailedDeregisterAfter"
+	"server.port"
+	"consul.registerName"
+	"consul.healthCheckInterval"
+	"consul.registerAddress"
+	"consul.healthCheckUrl"
+	"consul.healthCheckTimeout"
+	"consul.healthCheckFailedDeregisterAfter"
 */
 func RegisterService() error {
 	var client *api.Client
@@ -321,22 +321,22 @@ func RegisterService() error {
 			Status:                         STATUS_PASSING, // for responsiveness
 		},
 	}
-	logrus.Infof("Registering current instance as a service on Consul, serviceId: '%s'", proposedServiceId)
 
 	if e = client.Agent().ServiceRegister(registration); e != nil {
-		return e
+		return fmt.Errorf("failed to register on consul, registration: %+v, %v", registration, e)
 	}
 	regSub.serviceId = proposedServiceId
 
+	logrus.Infof("Registered current instance as a service on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
 }
 
 /*
-	Get or init new consul client
+Get or init new consul client
 
-	For the first time that the consul client is initialized, this func will look for prop:
+For the first time that the consul client is initialized, this func will look for prop:
 
-		"consul.consulAddress"
+	"consul.consulAddress"
 */
 func GetConsulClient() (*api.Client, error) {
 	if IsConsulClientInitialized() {
@@ -350,13 +350,15 @@ func GetConsulClient() (*api.Client, error) {
 		return consulp.consul, nil
 	}
 
+	addr := common.GetPropStr(common.PROP_CONSUL_CONSUL_ADDRESS)
 	c, err := api.NewClient(&api.Config{
-		Address: common.GetPropStr(common.PROP_CONSUL_CONSUL_ADDRESS),
+		Address: addr,
 	})
 	if err != nil {
 		return nil, err
 	}
 	consulp.consul = c
+	logrus.Infof("Created Consul Client on %s", addr)
 
 	SubscribeServerList()
 

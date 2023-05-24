@@ -24,15 +24,21 @@ e.g.,
 
 Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) in `config.DefaultReadConfig(...)` or `server.DefaultBootstrapServer(...)`.
 
+e.g.,
+
+```sh
+./main mode.production=true
+```
+
 ## Properties-Based Configuration
 
 ### Common Properties
 
-| property        | description                                                                                                  | default value |
-|-----------------|--------------------------------------------------------------------------------------------------------------|---------------|
-| app.name        | name of the application, if `consul.registerName` is missing, this will be used for the service registration |               |
-| profile         | name of the profile used                                                                                     | dev           |
-| mode.production | whether production mode is turned on                                                                         | false         |
+| property        | description                          | default value |
+|-----------------|--------------------------------------|---------------|
+| app.name        | name of the application              |               |
+| profile         | name of the profile used             | dev           |
+| mode.production | whether production mode is turned on | false         |
 
 ### Web Server Properties
 
@@ -41,20 +47,20 @@ Properties loaded from configuration file can also be overriden by cli arguments
 | server.enabled                 | enable http server                           | true          |
 | server.host                    | http server host                             | localhost     |
 | server.port                    | http server port                             | 8080          |
-| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 5             |
+| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 30            |
 
 ### Consul Properties
 
 | property                                | description                                                          | default value                   |
 |-----------------------------------------|----------------------------------------------------------------------|---------------------------------|
 | consul.enabled                          | whether Consul is enabled                                            | false                           |
-| consul.registerName                     | registered service name                                              |                                 |
+| consul.registerName                     | registered service name                                              | `${app.name}`                   |
 | consul.registerAddress                  | registered service address                                           | `${server.host}:${server.port}` |
 | consul.consulAddress                    | address of the Consul server                                         | `localhost:8500`                |
-| consul.healthCheckUrl                   | health check url                                                     | /health                         |
-| consul.healthCheckInterval              | health check interval                                                | 60s                             |
+| consul.healthCheckUrl                   | health check url                                                     | `/health`                       |
+| consul.healthCheckInterval              | health check interval                                                | 15s                             |
 | consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
-| consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 130s                            |
+| consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
 
 ### MySQL Properties
 
