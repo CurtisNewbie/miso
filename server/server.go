@@ -160,7 +160,7 @@ func PostJ[T any](url string, handler JTRouteHandler[T], extra ...common.StrPair
 // The result and error are wrapped in Resp automatically as json
 func GetQ[T any](url string, handler QTRouteHandler[T], extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewQTRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewQTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for PUT request
