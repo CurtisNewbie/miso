@@ -10,14 +10,15 @@ const (
 	DEF_PAGE_LIMIT = 30
 )
 
-func (p Paging) GetOffset() int {
+func (p Paging) GetPage() int {
 	if p.Page < 1 {
-		p.Page = 1
+		return 1
 	}
-	if p.Limit < 1 {
-		p.Limit = DEF_PAGE_LIMIT
-	}
-	return (p.Page - 1) * p.Limit
+	return p.Page
+}
+
+func (p Paging) GetOffset() int {
+	return (p.GetPage() - 1) * p.GetLimit()
 }
 
 func (p Paging) GetLimit() int {
@@ -27,35 +28,15 @@ func (p Paging) GetLimit() int {
 	return p.Limit
 }
 
-// Build Paging for response.
-//
-// deprecated, use RespPage() instead
-func BuildResPage(reqPage *Paging, total int) *Paging {
-	return &Paging{
-		Limit: reqPage.Limit,
-		Page:  reqPage.Page,
-		Total: total,
-	}
+func (p Paging) ToRespPage(total int) Paging {
+	return RespPage(p, total)
 }
 
 /* Build Paging for response */
 func RespPage(reqPage Paging, total int) Paging {
 	return Paging{
-		Limit: reqPage.Limit,
-		Page:  reqPage.Page,
+		Limit: reqPage.GetLimit(),
+		Page:  reqPage.GetPage(),
 		Total: total,
 	}
-}
-
-// Calculate offset.
-//
-// deprecated, use Paging.GetOffset() instead
-func CalcOffset(paging *Paging) int {
-	if paging.Page < 1 {
-		paging.Page = 1
-	}
-	if paging.Limit < 1 {
-		paging.Limit = 30
-	}
-	return (paging.Page - 1) * paging.Limit
 }
