@@ -56,7 +56,6 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, DEFAULT_PARALLISM)
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_RETRY, DEFAULT_RETRY)
 }
 
 /* Is RabbitMQ Enabled */
@@ -65,7 +64,7 @@ func IsEnabled() bool {
 }
 
 /*
-	Message Listener for Queue
+Message Listener for Queue
 */
 type MsgListener struct {
 	/* Name of the queue */
@@ -98,7 +97,7 @@ func PublishText(msg string, exchange string, routingKey string) error {
 }
 
 /*
-	Publish message with confirmation
+Publish message with confirmation
 */
 func PublishMsg(msg []byte, exchange string, routingKey string, contentType string) error {
 	pubChanRwm.RLock()
@@ -128,9 +127,9 @@ func PublishMsg(msg []byte, exchange string, routingKey string, contentType stri
 }
 
 /*
-	Add message Listener
+Add message Listener
 
-	Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
+Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
 */
 func AddListener(listener MsgListener) {
 	mu.Lock()
@@ -139,11 +138,11 @@ func AddListener(listener MsgListener) {
 }
 
 /*
-	Declare durable queues
+Declare durable queues
 
-	It looks for PROP:
+It looks for PROP:
 
-		"rabbitmq.declaration.queue"
+	"rabbitmq.declaration.queue"
 */
 func declareQueues(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
@@ -163,13 +162,13 @@ func declareQueues(ch *amqp.Channel) error {
 }
 
 /*
-	Declare bindings
+Declare bindings
 
-	It looks for PROP:
+It looks for PROP:
 
-		"rabbitmq.declaration.queue"
-		"rabbitmq.declaration.binding." + queueName + ".key"
-		"rabbitmq.declaration.binding." + queueName + ".exchange"
+	"rabbitmq.declaration.queue"
+	"rabbitmq.declaration.binding." + queueName + ".key"
+	"rabbitmq.declaration.binding." + queueName + ".exchange"
 */
 func declareBindings(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
@@ -198,9 +197,9 @@ func declareBindings(ch *amqp.Channel) error {
 }
 
 /*
-	Get prop key for routing key of queue
+Get prop key for routing key of queue
 
-		"rabbitmq.declaration.binding" + "." + queueName + ".key"
+	"rabbitmq.declaration.binding" + "." + queueName + ".key"
 */
 func bindRoutingKeyProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".key"
@@ -208,9 +207,9 @@ func bindRoutingKeyProp(queue string) (propKey string) {
 }
 
 /*
-	Get prop key for exchange name of queue
+Get prop key for exchange name of queue
 
-		"rabbitmq.declaration.binding." + queueName + ".exchange"
+	"rabbitmq.declaration.binding." + queueName + ".exchange"
 */
 func bindExchangeProp(queue string) (propKey string) {
 	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".exchange"
@@ -218,11 +217,11 @@ func bindExchangeProp(queue string) (propKey string) {
 }
 
 /*
-	Declare exchanges
+Declare exchanges
 
-	It looks for PROP:
+It looks for PROP:
 
-		"rabbitmq.declaration.exchange"
+	"rabbitmq.declaration.exchange"
 */
 func declareExchanges(ch *amqp.Channel) error {
 	common.NonNil(ch, "channel is nil")
@@ -244,16 +243,15 @@ func declareExchanges(ch *amqp.Channel) error {
 }
 
 /*
-	Start RabbitMQ Client (synchronous for the first time, then auto-reconnect later in another goroutine)
+Start RabbitMQ Client (synchronous for the first time, then auto-reconnect later in another goroutine)
 
-	This func will attempt to establish connection to broker, declare queues, exchanges and bindings.
+This func will attempt to establish connection to broker, declare queues, exchanges and bindings.
 
-	Listeners are also created once the intial setup is done.
+Listeners are also created once the intial setup is done.
 
-	When connection is lost, it will attmpt to reconnect to recover, unless the given context is done.
+When connection is lost, it will attmpt to reconnect to recover, unless the given context is done.
 
-	To register listener, please use 'AddListener' func.
-
+To register listener, please use 'AddListener' func.
 */
 func StartRabbitMqClient(ctx context.Context) error {
 	notifyCloseChan, err := initClient(ctx)
@@ -344,9 +342,9 @@ func declareComponents(ch *amqp.Channel) error {
 }
 
 /*
-	Init RabbitMQ Client
+Init RabbitMQ Client
 
-	return notifyCloseChannel for connection and error
+return notifyCloseChannel for connection and error
 */
 func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	mu.Lock()
@@ -414,10 +412,9 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 			logrus.Errorf("Failed to listen to '%s', err: %v", listener.QueueName, err)
 		}
 
-		maxRetry := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_RETRY)
 		for i := 0; i < parallism; i++ {
 			ic := i
-			startListening(msgs, listener, ic, maxRetry)
+			startListening(msgs, listener, ic)
 		}
 	}
 
@@ -425,36 +422,20 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int, maxRetry int) {
+func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int) {
 	go func() {
 		logrus.Infof("[R%d] %v started", routineNo, listener)
 		for msg := range msgs {
-			retry := maxRetry
 			payload := string(msg.Body)
 
-			for {
-				e := listener.Handler(payload)
-				if e == nil {
-					msg.Ack(false)
-					break
-				}
-				logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v' (retry: %d)", listener.QueueName, payload, e, retry)
-
-				// last retry
-				if retry == 0 {
-					msg.Ack(false)
-					break
-				}
-
-				// disable retry, simply nack it
-				if retry < 0 {
-					msg.Nack(false, true)
-					break
-				}
-
-				retry -= 1
-				time.Sleep(time.Millisecond * 500) // sleep 500ms for every retry
+			e := listener.Handler(payload)
+			if e == nil {
+				msg.Ack(false)
+				continue
 			}
+
+			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.QueueName, payload, e)
+			msg.Nack(false, true)
 		}
 		logrus.Infof("[R%d] %v stopped", routineNo, listener)
 	}()
