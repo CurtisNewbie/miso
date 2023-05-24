@@ -157,7 +157,7 @@ func main() {
 	common.ScheduleCron("0 0/15 * * * *", myJob)
 
 	// register routes and handlers
-	server.PostJ(server.OpenApiPath("/path"), myHandler)
+	server.IPost(server.OpenApiPath("/path"), myHandler)
 
 	// bootstrap server
 	server.DefaultBootstrapServer(os.Args)
