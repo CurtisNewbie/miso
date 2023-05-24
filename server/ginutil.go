@@ -21,6 +21,11 @@ type RawTRouteHandler func(c *gin.Context, ec common.ExecContext)
 // The returned result and error are automatically wrapped as Resp
 type JTRouteHandler[T any] func(c *gin.Context, ec common.ExecContext, t T) (any, error)
 
+// Router handler with the required query object, context, user (optional, may be nil), and logger prepared
+//
+// The returned result and error are automatically wrapped as Resp
+type QTRouteHandler[T any] func(c *gin.Context, ec common.ExecContext, t T) (any, error)
+
 // Build JTRouteHandler with the required json object, context, user (optional, may be nil), and logger prepared
 func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
@@ -30,6 +35,30 @@ func NewJTRouteHandler[T any](handler JTRouteHandler[T]) func(c *gin.Context) {
 		// json binding
 		var t T
 		MustBindJson(c, &t)
+
+		// json validation
+		if e := common.Validate(t); e != nil {
+			HandleResult(c, nil, e)
+			return
+		}
+
+		// actual handling
+		r, e := handler(c, common.NewExecContext(ctx, user), t)
+
+		// wrap result and error
+		HandleResult(c, r, e)
+	}
+}
+
+// Build QTRouteHandler with the required query object, context, user (optional, may be nil), and logger prepared
+func NewQTRouteHandler[T any](handler QTRouteHandler[T]) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		user, _ := ExtractUser(c) // optional
+		ctx := c.Request.Context()
+
+		// json binding
+		var t T
+		MustBindQuery(c, &t)
 
 		// json validation
 		if e := common.Validate(t); e != nil {
@@ -84,6 +113,14 @@ func MustBindJson(c *gin.Context, ptr any) {
 	}
 }
 
+// Must bind query content to the given pointer, else panic
+func MustBindQuery(c *gin.Context, ptr any) {
+	if err := c.ShouldBindQuery(ptr); err != nil {
+		common.TraceLogger(c.Request.Context()).Errorf("Bind query failed, %v", err)
+		panic("Illegal Arguments")
+	}
+}
+
 // Dispatch a json response
 func DispatchJson(c *gin.Context, body interface{}) {
 	c.JSON(http.StatusOK, body)
@@ -121,7 +158,10 @@ func RequireUser(c *gin.Context) *common.User {
 // Extract role from request header
 //
 // return:
-// 	role, isOk
+//
+//	role, isOk
+//
+// deprecated
 func Role(c *gin.Context) (string, bool) {
 	id := c.GetHeader("role")
 	if id == "" {
@@ -133,7 +173,8 @@ func Role(c *gin.Context) (string, bool) {
 // Extract userNo from request header
 //
 // return:
-// 	userNo, isOk
+//
+//	userNo, isOk
 func UserNo(c *gin.Context) (string, bool) {
 	id := c.GetHeader("userno")
 	if id == "" {
@@ -145,7 +186,8 @@ func UserNo(c *gin.Context) (string, bool) {
 // Extract user id from request header
 //
 // return:
-// 	userId, isOk
+//
+//	userId, isOk
 func UserId(c *gin.Context) (string, bool) {
 	id := c.GetHeader("id")
 	if id == "" {

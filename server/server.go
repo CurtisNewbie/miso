@@ -107,59 +107,84 @@ func GetHttpRoutes() []HttpRoute {
 	return serverHttpRoutes
 }
 
-// Register GET request route
+// Register GET request route (raw version)
 func RawGet(url string, handler RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_GET, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewRawTRouteHandler(handler)) })
 }
 
-// Register POST request route
+// Register POST request route (raw version)
 func RawPost(url string, handler RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewRawTRouteHandler(handler)) })
 }
 
-// Register PUT request route
+// Register PUT request route (raw version)
 func RawPut(url string, handler RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_PUT, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewRawTRouteHandler(handler)) })
 }
 
-// Register DELETE request route
+// Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewRawTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Get request, result and error are wrapped in Resp automatically
+// Add RoutesRegistar for GET request
+//
+// The result or error is wrapped in Resp automatically
 func Get(url string, handler TRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_GET, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Post request, result and error are wrapped in Resp automatically
-
+// Add RoutesRegistar for POST request
+//
+// The result or error is wrapped in Resp automatically
 func Post(url string, handler TRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Post request with json payload, result and error are wrapped in Resp automatically as json
+// Add RoutesRegistar for POST request with JSON payload
+//
+// The result or error is wrapped in Resp automatically
 func PostJ[T any](url string, handler JTRouteHandler[T], extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewJTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Put request
+// Add RoutesRegistar for GET request with query parameters being resolved as a single object
+//
+// The result and error are wrapped in Resp automatically as json
+func GetQ[T any](url string, handler QTRouteHandler[T], extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewQTRouteHandler(handler)) })
+}
+
+// Add RoutesRegistar for PUT request
+//
+// The result and error are wrapped in Resp automatically as json
 func Put(url string, handler TRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_PUT, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar for Delete request
+// Add RoutesRegistar for DELETE request
+//
+// The result and error are wrapped in Resp automatically as json
 func Delete(url string, handler TRouteHandler, extra ...common.StrPair) {
 	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
+}
+
+// Add RoutesRegistar for DELETE request  with query parameters being resolved as a single object
+//
+// The result and error are wrapped in Resp automatically as json
+func DeleteQ[T any](url string, handler QTRouteHandler[T], extra ...common.StrPair) {
+	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
+	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewQTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar
