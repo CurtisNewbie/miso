@@ -42,7 +42,7 @@ func (in *ExecContext) UserNo() string {
 // Get user's id as int if found, else 0
 //
 // Basically the same as UserIdI except that error is ignored
-func (in *ExecContext) UserIdInt() (int) {
+func (in *ExecContext) UserIdInt() int {
 	i, _ := in.UserIdI()
 	return i
 }
@@ -93,4 +93,12 @@ func GetCtxStr(ctx context.Context, key string) string {
 		return sv
 	}
 	return ""
+}
+
+func SelectExecContext(cs ...ExecContext) ExecContext {
+	if len(cs) > 0 {
+		return cs[0]
+	} else {
+		return EmptyExecContext()
+	}
 }

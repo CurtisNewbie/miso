@@ -106,7 +106,9 @@ It's essentially:
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func DefaultReadConfig(args []string) {
+func DefaultReadConfig(args []string, ctx ...ExecContext) {
+	c := SelectExecContext(ctx...)
+
 	profile := GuessProfile(args)
 	SetProfile(profile)
 
@@ -115,7 +117,7 @@ func DefaultReadConfig(args []string) {
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
-	logrus.Infof("Guessing config file path: '%v'", configFile)
+	c.Log.Infof("Guessing config file path: '%v'", configFile)
 	LoadConfigFromFile(configFile)
 
 	// it's possible to overide the loaded configuration with cli arguments

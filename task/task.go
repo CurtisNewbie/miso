@@ -139,12 +139,16 @@ func getMasterNodeLockKey() string {
 	return "task:master:group:" + group
 }
 
-// Schedule a distributed task
+// Schedule a distributed task.
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
 // only the master node can run the scheduled tasks.
 //
-// Tasks are pending until StartTaskSchedulerAsync() is called
+// Tasks are pending until StartTaskSchedulerAsync() is called.
+//
+// E.g.,
+//
+// 	task.ScheduleDistributedTask("0/1 * * * * ?", myTask)
 func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 	if getState() == initState {
 		commonMut.Lock()
@@ -170,7 +174,10 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
 // only the master node can run the scheduled tasks.
 //
-// Tasks are pending until StartTaskSchedulerAsync() is called
+// Tasks are pending until StartTaskSchedulerAsync() is called.
+//
+// E.g.,
+// 	ScheduleNamedDistributedTask("0/1 * * * * ?", "Very important task", myTask)
 func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext)) {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
 	ScheduleDistributedTask(cron, func(ec common.ExecContext) {

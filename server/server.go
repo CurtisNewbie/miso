@@ -243,19 +243,22 @@ Default way to Bootstrap server, basically the same as follows:
 	// ... plus some configuration for logging and so on
 	BootstrapServer()
 */
-func DefaultBootstrapServer(args []string) {
+func DefaultBootstrapServer(args []string, ctx ...common.ExecContext) {
+	c := common.SelectExecContext(ctx...)
+
 	// default way to load configuration
-	common.DefaultReadConfig(args)
+	common.DefaultReadConfig(args, c)
 
 	// configure logging
-	ConfigureLogging()
+	ConfigureLogging(c)
 
 	// bootstraping
-	BootstrapServer()
+	BootstrapServer(c)
 }
 
 // Configurae Logging, e.g., formatter, logger's output
-func ConfigureLogging() {
+func ConfigureLogging(ctx ...common.ExecContext) {
+	c := common.SelectExecContext(ctx...)
 
 	// formatter is already set in logger.go `init()` func`
 	if common.IsProdMode() {
@@ -270,15 +273,14 @@ func ConfigureLogging() {
 	} else {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+	logrus.SetOutput(loggerOut)
 
 	if common.HasProp(common.PROP_LOGGING_LEVEL) {
 		if level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
-			logrus.Infof("Setting log level to %v", strings.ToUpper(level.String()))
+			c.Log.Infof("Setting log level to %v", strings.ToUpper(level.String()))
 			logrus.SetLevel(level)
 		}
 	}
-
-	logrus.SetOutput(loggerOut)
 }
 
 func parseLogLevel(logLevel string) (logrus.Level, bool) {
@@ -310,11 +312,11 @@ func OnServerBootstrapped(callback func()) {
 	serverBootstrapListener = append(serverBootstrapListener, callback)
 }
 
-func callServerBootstrappedListeners() {
+func callServerBootstrappedListeners(c common.ExecContext) {
 	if len(serverBootstrapListener) < 1 {
 		return
 	}
-	logrus.Info("Invoking OnServerBootstrapped callbacks")
+	c.Log.Info("Invoking OnServerBootstrapped callbacks")
 	for _, callback := range serverBootstrapListener {
 		callback()
 	}
@@ -332,8 +334,8 @@ Graceful shutdown for the http server is also enabled and can be configured thro
 
 To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 */
-func BootstrapServer() {
-	c := common.EmptyExecContext()
+func BootstrapServer(ctxs ...common.ExecContext) {
+	c := common.SelectExecContext(ctxs...)
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
@@ -436,13 +438,14 @@ func BootstrapServer() {
 	if task.IsTaskSchedulerPending() {
 		if !task.IsTaskSchedulingDisabled() {
 			task.StartTaskSchedulerAsync()
+			c.Log.Info("TaskScheduler started")
 			AddShutdownHook(func() { task.StopTaskScheduler() })
 		}
 	} else {
 		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 		if common.HasScheduler() {
-			c.Log.Info("Starting scheduler asynchronously")
 			common.StartSchedulerAsync()
+			c.Log.Info("Scheduler started")
 			AddShutdownHook(func() { common.StopScheduler() })
 		}
 	}
@@ -451,7 +454,7 @@ func BootstrapServer() {
 	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
-	callServerBootstrappedListeners()
+	callServerBootstrappedListeners(c)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
