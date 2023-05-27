@@ -143,8 +143,10 @@ mysql:
 
 ```go
 func main() {
+	c := common.EmptyExecContext()
+
 	// load configuration from 'myconf.yml'
-	common.LoadConfigFromFile("myconf.yml")
+	common.LoadConfigFromFile("myconf.yml", c)
 
 	// add GET request handler
 	server.RawGet("/some/path", func(c *gin.Context, ec common.ExecContext) {
@@ -152,7 +154,7 @@ func main() {
 	})
 
 	// bootstrap server
-	server.BootstrapServer()
+	server.BootstrapServer(c)
 }
 ```
 
@@ -160,7 +162,7 @@ Since `gocommon` is mainly written for my personal projects, it indeed provides 
 
 ```go
 func main() {
-  // ...
+	// ...
 
 	// maybe some scheduling (not distributed)
 	common.ScheduleCron("0 0/15 * * * *", myJob)
@@ -169,7 +171,7 @@ func main() {
 	server.IPost(server.OpenApiPath("/path"), myHandler)
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args)
+	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
 }
 ```
 
@@ -262,6 +264,6 @@ func main() {
 	})
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args)
+	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
 }
 ```
