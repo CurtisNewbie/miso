@@ -41,7 +41,7 @@ var (
 	/*
 		Consumer
 	*/
-	msgListeners []MsgListener
+	listeners []Listener
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
@@ -63,14 +63,50 @@ func IsEnabled() bool {
 	return common.GetPropBool(common.PROP_RABBITMQ_ENABLED)
 }
 
-/*
-Message Listener for Queue
-*/
-type MsgListener struct {
-	/* Name of the queue */
+// Listener of Queue
+type Listener interface {
+	Queue() string               // return name of the queue
+	Handle(payload string) error // handle message
+}
+
+// Json Message Listener for Queue
+type JsonMsgListener[T any] struct {
 	QueueName string
-	/* Handler of message */
-	Handler func(payload string) error
+	Handler   func(payload T) error
+}
+
+func (m JsonMsgListener[T]) Queue() string {
+	return m.QueueName
+}
+
+func (m JsonMsgListener[T]) Handle(payload string) error {
+	var t T
+	if e := json.Unmarshal([]byte(payload), &t); e != nil {
+		return e
+	}
+	return m.Handler(t)
+}
+
+func (m JsonMsgListener[T]) String() string {
+	var funcName string = "nil"
+	if m.Handler != nil {
+		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
+	}
+	return fmt.Sprintf("JsonMsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
+}
+
+// Message Listener for Queue
+type MsgListener struct {
+	QueueName string
+	Handler   func(payload string) error
+}
+
+func (m MsgListener) Queue() string {
+	return m.QueueName
+}
+
+func (m MsgListener) Handle(payload string) error {
+	return m.Handler(payload)
 }
 
 func (m MsgListener) String() string {
@@ -78,7 +114,6 @@ func (m MsgListener) String() string {
 	if m.Handler != nil {
 		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
 	}
-
 	return fmt.Sprintf("MsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
 }
 
@@ -131,10 +166,10 @@ Add message Listener
 
 Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
 */
-func AddListener(listener MsgListener) {
+func AddListener(listener Listener) {
 	mu.Lock()
 	defer mu.Unlock()
-	msgListeners = append(msgListeners, listener)
+	listeners = append(listeners, listener)
 }
 
 /*
@@ -394,7 +429,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	}
 	logrus.Infof("RabbitMQ consumer parallism: %d", parallism)
 
-	for _, v := range msgListeners {
+	for _, v := range listeners {
 		listener := v
 
 		ch, e := conn.Channel()
@@ -407,9 +442,10 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 			return e
 		}
 
-		msgs, err := ch.Consume(listener.QueueName, "", false, false, false, false, nil)
+		qname := listener.Queue()
+		msgs, err := ch.Consume(qname, "", false, false, false, false, nil)
 		if err != nil {
-			logrus.Errorf("Failed to listen to '%s', err: %v", listener.QueueName, err)
+			logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
 		}
 
 		for i := 0; i < parallism; i++ {
@@ -422,19 +458,19 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func startListening(msgs <-chan amqp.Delivery, listener MsgListener, routineNo int) {
+func startListening(msgs <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
 		logrus.Infof("[R%d] %v started", routineNo, listener)
 		for msg := range msgs {
 			payload := string(msg.Body)
 
-			e := listener.Handler(payload)
+			e := listener.Handle(payload)
 			if e == nil {
 				msg.Ack(false)
 				continue
 			}
 
-			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.QueueName, payload, e)
+			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.Queue(), payload, e)
 			msg.Nack(false, true)
 		}
 		logrus.Infof("[R%d] %v stopped", routineNo, listener)

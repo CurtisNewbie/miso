@@ -15,25 +15,25 @@ redis:
   enabled: false
   address: localhost
   port: 6379
-  username: 
-  password: 
+  username:
+  password:
   database: 0
 
 # task:
 #   scheduling:
 #     enabled: false
 
-server: 
+server:
   enabled: false
   host: localhost
   port: 8081
   gracefulShutdownTimeSec: 5
 
-file: 
+file:
   base: test-base
   temp: temp
 
-consul: 
+consul:
   enabled: false
   registerName: test-service
   consulAddress: localhost:8500
@@ -46,25 +46,30 @@ client:
   fileServiceUrl: http://localhost:8080
   authServiceUrl: http://localhost:8081
 
-rabbitmq: 
+rabbitmq:
   enabled: false
-  consumer: 
+  consumer:
     parallism: 1
   username: guest
   password: guest
   vhost: "/"
-  declaration: 
-    queue: 
+  declaration:
+    queue:
       - my-first-queue
       - my-second-queue
-    exchange: 
+      - dummy-queue
+    exchange:
       - my-exchange-one
       - my-exchange-two
-    binding: 
-      my-first-queue: 
+      - dummy-exchange
+    binding:
+      dummy-queue:
+        key: "#"
+        exchange: dummy-exchange
+      my-first-queue:
         key: myKey1
         exchange: my-exchange-one
-      my-second-queue: 
+      my-second-queue:
         key: mykey2
         exchange: my-exchange-two
 
