@@ -106,9 +106,7 @@ It's essentially:
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func DefaultReadConfig(args []string, ctx ...ExecContext) {
-	c := SelectExecContext(ctx...)
-
+func DefaultReadConfig(args []string, c ExecContext) {
 	profile := GuessProfile(args)
 	SetProfile(profile)
 
@@ -118,7 +116,7 @@ func DefaultReadConfig(args []string, ctx ...ExecContext) {
 
 	configFile := GuessConfigFilePath(args, profile)
 	c.Log.Infof("Guessing config file path: '%v'", configFile)
-	LoadConfigFromFile(configFile)
+	LoadConfigFromFile(configFile, c)
 
 	// it's possible to overide the loaded configuration with cli arguments
 	kv := ArgKeyVal(args)
@@ -132,7 +130,7 @@ Load config from file
 
 Repetitively calling this method overides previously loaded config.
 */
-func LoadConfigFromFile(configFile string) {
+func LoadConfigFromFile(configFile string, c ExecContext) {
 	if configFile == "" {
 		return
 	}
@@ -142,20 +140,20 @@ func LoadConfigFromFile(configFile string) {
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
-				logrus.Infof("Unable to find config file: '%s'", configFile)
+				c.Log.Infof("Unable to find config file: '%s'", configFile)
 				return
 			}
 			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
 		}
 		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
-			logrus.Fatalf("Failed to load config file: '%s', %v", configFile, err)
+			c.Log.Fatalf("Failed to load config file: '%s', %v", configFile, err)
 		}
 		loaded = true
 	})
 
 	if loaded {
-		logrus.Infof("Loaded config file: '%v'", configFile)
+		c.Log.Infof("Loaded config file: '%v'", configFile)
 	}
 }
 

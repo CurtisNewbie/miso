@@ -8,11 +8,11 @@ import (
 )
 
 func TestRCache(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)
 	}
-	c := common.EmptyExecContext()
 
 	keypre := "test:rcache:key:"
 	exp := 60 * time.Second
@@ -42,9 +42,9 @@ func TestRCache(t *testing.T) {
 }
 
 func TestLKazyRCache(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
-	InitRedisFromProp()
 	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	InitRedisFromProp()
 
 	keypre := "test:rcache:key:"
 	exp := 60 * time.Second

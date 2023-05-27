@@ -11,7 +11,8 @@ import (
 )
 
 func TestTaskScheduling(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp("redis.enabled", "true")
 
 	if _, e := redis.InitRedisFromProp(); e != nil {

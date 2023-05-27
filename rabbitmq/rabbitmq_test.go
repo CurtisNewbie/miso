@@ -27,7 +27,8 @@ func jsonMsgHandler(payload Dummy) error {
 }
 
 func TestInitClient(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 	common.SetProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, 2)
@@ -53,7 +54,8 @@ func TestInitClient(t *testing.T) {
 }
 
 func TestPublishMessage(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 
@@ -75,7 +77,8 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestPublishJsonMessage(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 

@@ -243,23 +243,27 @@ Default way to Bootstrap server, basically the same as follows:
 	// ... plus some configuration for logging and so on
 	BootstrapServer()
 */
-func DefaultBootstrapServer(args []string, ctx ...common.ExecContext) {
-	c := common.SelectExecContext(ctx...)
-
+func DefaultBootstrapServer(args []string, c common.ExecContext, setupServer ...func() error) {
 	// default way to load configuration
 	common.DefaultReadConfig(args, c)
 
 	// configure logging
 	ConfigureLogging(c)
 
+	// setup server before BootstrapServer is called
+	// sometime we need to setup stuff right after the configuration being loaded
+	for _, callback := range setupServer {
+		if e := callback(); e != nil {
+			panic(e)
+		}
+	}
+
 	// bootstraping
 	BootstrapServer(c)
 }
 
 // Configurae Logging, e.g., formatter, logger's output
-func ConfigureLogging(ctx ...common.ExecContext) {
-	c := common.SelectExecContext(ctx...)
-
+func ConfigureLogging(c common.ExecContext) {
 	// formatter is already set in logger.go `init()` func`
 	if common.IsProdMode() {
 		// Info is the default, we don't need to set it
@@ -334,9 +338,7 @@ Graceful shutdown for the http server is also enabled and can be configured thro
 
 To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 */
-func BootstrapServer(ctxs ...common.ExecContext) {
-	c := common.SelectExecContext(ctxs...)
-
+func BootstrapServer(c common.ExecContext) {
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
