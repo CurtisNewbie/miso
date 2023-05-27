@@ -226,7 +226,14 @@ func (t *TClient) send(req *http.Request) *TResponse {
 			t.ExecCtx.Log.Infof("%s '%s' (%s), Headers: %v", req.Method, req.URL, time.Since(start), req.Header)
 		}
 	}
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx, StatusCode: r.StatusCode, RespHeader: r.Header}
+	var statusCode int
+	var respHeaders http.Header
+	if e == nil && r != nil {
+		statusCode = r.StatusCode
+		respHeaders = r.Header
+	}
+
+	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx, StatusCode: statusCode, RespHeader: respHeaders}
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
