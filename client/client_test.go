@@ -13,8 +13,9 @@ type TestBody struct {
 }
 
 func TestGet(t *testing.T) {
+	c := common.EmptyExecContext()
 	configFile := "../app-conf-dev.yml"
-	common.LoadConfigFromFile(configFile)
+	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
@@ -50,8 +51,9 @@ func TestGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	c := common.EmptyExecContext()
 	configFile := "../app-conf-dev.yml"
-	common.LoadConfigFromFile(configFile)
+	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
@@ -87,8 +89,9 @@ func TestDelete(t *testing.T) {
 }
 
 func TestPost(t *testing.T) {
+	c := common.EmptyExecContext()
 	configFile := "../app-conf-dev.yml"
-	common.LoadConfigFromFile(configFile)
+	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
@@ -120,8 +123,9 @@ func TestPost(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
+	c := common.EmptyExecContext()
 	configFile := "../app-conf-dev.yml"
-	common.LoadConfigFromFile(configFile)
+	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
 	common.LoadPropagationKeyProp()
