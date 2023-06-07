@@ -381,9 +381,8 @@ func BootstrapServer(c common.ExecContext) {
 		// Load propagation keys for tracing
 		common.LoadPropagationKeyProp()
 
-		if common.IsProdMode() {
-			gin.SetMode(gin.ReleaseMode)
-		}
+		// always set to releaseMode
+		gin.SetMode(gin.ReleaseMode)
 
 		// gin engine
 		engine := gin.New()
