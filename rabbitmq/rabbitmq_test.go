@@ -36,6 +36,18 @@ func TestInitClient(t *testing.T) {
 	AddListener(JsonMsgListener[Dummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
 	AddListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
 
+	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
+	RegisterQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
+	RegisterQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
+
+	RegisterExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
+	RegisterExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
+	RegisterExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
+
+	RegisterBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
+	RegisterBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
+	RegisterBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	_, e := initClient(ctx)
 	if e != nil {
@@ -58,6 +70,18 @@ func TestPublishMessage(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+
+	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
+	RegisterQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
+	RegisterQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
+
+	RegisterExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
+	RegisterExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
+	RegisterExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
+
+	RegisterBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
+	RegisterBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
+	RegisterBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	_, e := initClient(ctx)

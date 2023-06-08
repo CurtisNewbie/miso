@@ -53,25 +53,6 @@ rabbitmq:
   username: guest
   password: guest
   vhost: "/"
-  declaration:
-    queue:
-      - my-first-queue
-      - my-second-queue
-      - dummy-queue
-    exchange:
-      - my-exchange-one
-      - my-exchange-two
-      - dummy-exchange
-    binding:
-      dummy-queue:
-        key: "#"
-        exchange: dummy-exchange
-      my-first-queue:
-        key: myKey1
-        exchange: my-exchange-one
-      my-second-queue:
-        key: mykey2
-        exchange: my-exchange-two
 
 tracing.propagation.keys:
   - id

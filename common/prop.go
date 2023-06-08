@@ -96,9 +96,6 @@ const (
 	PROP_RABBITMQ_VHOST              = "rabbitmq.vhost"
 	PROP_RABBITMQ_CONSUMER_QOS       = "rabbitmq.consumer.qos"
 	PROP_RABBITMQ_CONSUMER_PARALLISM = "rabbitmq.consumer.parallism"
-	PROP_RABBITMQ_DEC_QUEUE          = "rabbitmq.declaration.queue"
-	PROP_RABBITMQ_DEC_EXCHANGE       = "rabbitmq.declaration.exchange"
-	PROP_RABBITMQ_DEC_BINDING        = "rabbitmq.declaration.binding"
 
 	/*
 		------------------------------------

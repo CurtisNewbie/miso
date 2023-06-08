@@ -87,19 +87,16 @@ e.g.,
 
 ### RabbitMQ Properties
 
-| property                      | description                                              | default value |
-|-------------------------------|----------------------------------------------------------|---------------|
-| rabbitmq.enabled              | whether RabbitMQ client is enabled                       | false         |
-| rabbitmq.host                 | host of the RabbitMQ server                              | `localhost`   |
-| rabbitmq.port                 | port of the RabbitMQ server                              | 5672          |
-| rabbitmq.username             | username used to connect to server                       |               |
-| rabbitmq.password             | password used to connect to server                       |               |
-| rabbitmq.vhost                | virtual host                                             |               |
-| rabbitmq.consumer.qos         | consumer QOS                                             | 68            |
-| rabbitmq.consumer.parallism   | consumer parallism (number of goroutines for each queue) | 2             |
-| rabbitmq.declaration.queue    | list of queue names                                      |               |
-| rabbitmq.declaration.exchange | list of exchange names                                   |               |
-| rabbitmq.declaration.binding | list of binding between queue and exchange using a routing key |
+| property                    | description                                              | default value |
+|-----------------------------|----------------------------------------------------------|---------------|
+| rabbitmq.enabled            | whether RabbitMQ client is enabled                       | false         |
+| rabbitmq.host               | host of the RabbitMQ server                              | `localhost`   |
+| rabbitmq.port               | port of the RabbitMQ server                              | 5672          |
+| rabbitmq.username           | username used to connect to server                       |               |
+| rabbitmq.password           | password used to connect to server                       |               |
+| rabbitmq.vhost              | virtual host                                             |               |
+| rabbitmq.consumer.qos       | consumer QOS                                             | 68            |
+| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 2             |
 
 ### SQLite Properties
 

@@ -45,6 +45,12 @@ var (
 
 	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
+
+	_bindingRegistration  []BindingRegistration
+	_queueRegistration    []QueueRegistration
+	_exchangeRegistration []ExchangeRegistration
+
+	errMissingChannel = errors.New("channel is missing")
 )
 
 func init() {
@@ -56,6 +62,23 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, DEFAULT_PARALLISM)
+}
+
+type BindingRegistration struct {
+	Queue      string
+	RoutingKey string
+	Exchange   string
+}
+
+type QueueRegistration struct {
+	Name    string
+	Durable bool
+}
+
+type ExchangeRegistration struct {
+	Name    string
+	Kind    string
+	Durable bool
 }
 
 /* Is RabbitMQ Enabled */
@@ -174,20 +197,14 @@ func AddListener(listener Listener) {
 
 /*
 Declare durable queues
-
-It looks for PROP:
-
-	"rabbitmq.declaration.queue"
 */
 func declareQueues(ch *amqp.Channel) error {
-	common.NonNil(ch, "channel is nil")
-	if !common.ContainsProp(common.PROP_RABBITMQ_DEC_QUEUE) {
-		return nil
+	if ch == nil {
+		return errMissingChannel
 	}
 
-	directQueues := common.GetPropStringSlice(common.PROP_RABBITMQ_DEC_QUEUE)
-	for _, queue := range directQueues {
-		dqueue, e := ch.QueueDeclare(queue, true, false, false, false, nil)
+	for _, queue := range _queueRegistration {
+		dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 		if e != nil {
 			return e
 		}
@@ -196,83 +213,61 @@ func declareQueues(ch *amqp.Channel) error {
 	return nil
 }
 
+// Declare binding on client initialization
+func RegisterBinding(b BindingRegistration) {
+	_bindingRegistration = append(_bindingRegistration, b)
+}
+
+// Declare queue on client initialization
+func RegisterQueue(q QueueRegistration) {
+	_queueRegistration = append(_queueRegistration, q)
+}
+
+// Declare exchange on client initialization
+func RegisterExchange(e ExchangeRegistration) {
+	_exchangeRegistration = append(_exchangeRegistration, e)
+}
+
+
 /*
 Declare bindings
-
-It looks for PROP:
-
-	"rabbitmq.declaration.queue"
-	"rabbitmq.declaration.binding." + queueName + ".key"
-	"rabbitmq.declaration.binding." + queueName + ".exchange"
 */
 func declareBindings(ch *amqp.Channel) error {
-	common.NonNil(ch, "channel is nil")
-	if !common.ContainsProp(common.PROP_RABBITMQ_DEC_QUEUE) {
-		return nil
+	if ch == nil {
+		return errMissingChannel
 	}
 
-	directQueues := common.GetPropStringSlice(common.PROP_RABBITMQ_DEC_QUEUE)
-	for _, queue := range directQueues {
-		routingKeyPropKey := bindRoutingKeyProp(queue)
-		exchangePropKey := bindExchangeProp(queue)
-
-		if !common.ContainsProp(exchangePropKey) || !common.ContainsProp(routingKeyPropKey) {
-			continue
+	for _, binding := range _bindingRegistration {
+		if binding.RoutingKey == "" {
+			binding.RoutingKey = "#"
 		}
-
-		routingKey := common.GetPropStr(routingKeyPropKey)
-		exchange := common.GetPropStr(exchangePropKey)
-		e := ch.QueueBind(queue, routingKey, exchange, false, nil)
+		e := ch.QueueBind(binding.Queue, binding.RoutingKey, binding.Exchange, false, nil)
 		if e != nil {
-			return e
+			return fmt.Errorf("failed to declare binding, %v", e)
 		}
-		logrus.Infof("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", queue, exchange, routingKey)
+		logrus.Infof("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", binding.Queue, binding.Exchange, binding.RoutingKey)
 	}
 	return nil
 }
 
 /*
-Get prop key for routing key of queue
-
-	"rabbitmq.declaration.binding" + "." + queueName + ".key"
-*/
-func bindRoutingKeyProp(queue string) (propKey string) {
-	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".key"
-	return
-}
-
-/*
-Get prop key for exchange name of queue
-
-	"rabbitmq.declaration.binding." + queueName + ".exchange"
-*/
-func bindExchangeProp(queue string) (propKey string) {
-	propKey = common.PROP_RABBITMQ_DEC_BINDING + "." + queue + ".exchange"
-	return
-}
-
-/*
 Declare exchanges
-
-It looks for PROP:
-
-	"rabbitmq.declaration.exchange"
 */
 func declareExchanges(ch *amqp.Channel) error {
-	common.NonNil(ch, "channel is nil")
-	if !common.ContainsProp(common.PROP_RABBITMQ_DEC_EXCHANGE) {
-		return nil
+	if ch == nil {
+		return errMissingChannel
 	}
 
-	directExchange := common.GetPropStringSlice(common.PROP_RABBITMQ_DEC_EXCHANGE)
-	for _, v := range directExchange {
-		// exchange type, only direct exchange supported for now
-		exg_type := "direct"
-		e := ch.ExchangeDeclare(v, exg_type, true, false, false, false, nil)
+	for _, exchange := range _exchangeRegistration {
+		if exchange.Kind == "" {
+			exchange.Kind = "direct"
+		}
+
+		e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, nil)
 		if e != nil {
 			return e
 		}
-		logrus.Infof("Declared %s exchange '%s'", exg_type, v)
+		logrus.Infof("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	}
 	return nil
 }
