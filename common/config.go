@@ -290,6 +290,11 @@ func ResolveArg(arg string) string {
 		r := []rune(s)
 		key := string(r[2 : len(r)-1])
 		val := GetEnv(key)
+
+		if val == "" {
+			val = GetPropStr(key)
+		}
+
 		if val == "" {
 			val = s
 		}
