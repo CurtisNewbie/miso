@@ -115,7 +115,7 @@ func (m JsonMsgListener[T]) String() string {
 	if m.Handler != nil {
 		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
 	}
-	return fmt.Sprintf("JsonMsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
+	return fmt.Sprintf("Listener: '%s' --> '%s'", funcName, m.QueueName)
 }
 
 // Message Listener for Queue
@@ -144,7 +144,7 @@ func (m MsgListener) String() string {
 func PublishJson(obj any, exchange string, routingKey string) error {
 	j, err := json.Marshal(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal message body, %v", err)
 	}
 	return PublishMsg(j, exchange, routingKey, "application/json")
 }
@@ -180,6 +180,7 @@ func PublishMsg(msg []byte, exchange string, routingKey string, contentType stri
 	if !confirm.Wait() {
 		return errMsgNotPublished
 	}
+	logrus.Infof("Published message to %v, %v", exchange, string(msg))
 
 	return nil
 }
@@ -227,7 +228,6 @@ func RegisterQueue(q QueueRegistration) {
 func RegisterExchange(e ExchangeRegistration) {
 	_exchangeRegistration = append(_exchangeRegistration, e)
 }
-
 
 /*
 Declare bindings
@@ -310,7 +310,6 @@ func StartRabbitMqClient(ctx context.Context) error {
 				continue
 			// context is done, close the connection, and exit
 			case <-ctx.Done():
-				logrus.Info("Server context done, trying to close RabbitMQ connection")
 				if err := ClientDisconnect(); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
@@ -455,7 +454,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgs <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
-		logrus.Infof("[R%d] %v started", routineNo, listener)
+		logrus.Infof("%d-%v started", routineNo, listener)
 		for msg := range msgs {
 			payload := string(msg.Body)
 
@@ -468,7 +467,7 @@ func startListening(msgs <-chan amqp.Delivery, listener Listener, routineNo int)
 			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.Queue(), payload, e)
 			msg.Nack(false, true)
 		}
-		logrus.Infof("[R%d] %v stopped", routineNo, listener)
+		logrus.Infof("%d-%v stopped", routineNo, listener)
 	}()
 }
 

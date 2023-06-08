@@ -84,7 +84,7 @@ func TestPublishMessage(t *testing.T) {
 	RegisterBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, e := initClient(ctx)
+	e := StartRabbitMqClient(ctx)
 	if e != nil {
 		t.Error(e)
 	}
@@ -98,6 +98,7 @@ func TestPublishMessage(t *testing.T) {
 			t.Error(e)
 		}
 	}
+	time.Sleep(time.Second * 3)
 }
 
 func TestPublishJsonMessage(t *testing.T) {
@@ -107,7 +108,7 @@ func TestPublishJsonMessage(t *testing.T) {
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, e := initClient(ctx)
+	e := StartRabbitMqClient(ctx)
 	if e != nil {
 		t.Error(e)
 	}
@@ -122,4 +123,5 @@ func TestPublishJsonMessage(t *testing.T) {
 			t.Error(e)
 		}
 	}
+	time.Sleep(time.Second * 3)
 }
