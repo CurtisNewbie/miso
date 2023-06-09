@@ -69,8 +69,8 @@ var (
 	shutdownHook []func()
 	shmu         sync.Mutex // mutex for shutdownHook
 
-	serverBootstrapListener []func()    = []func(){}
-	serverHttpRoutes        []HttpRoute = []HttpRoute{}
+	serverBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
+	serverHttpRoutes        []HttpRoute                        = []HttpRoute{}
 )
 
 func init() {
@@ -308,17 +308,20 @@ func parseLogLevel(logLevel string) (logrus.Level, bool) {
 }
 
 // Add listener that is invoked when server is finally bootstrapped
-func OnServerBootstrapped(callback func()) {
+func OnServerBootstrapped(callback func(c common.ExecContext) error) {
 	if callback == nil {
 		return
 	}
 	serverBootstrapListener = append(serverBootstrapListener, callback)
 }
 
-func callServerBootstrappedListeners(c common.ExecContext) {
+func callServerBootstrappedListeners(c common.ExecContext) error {
 	for _, callback := range serverBootstrapListener {
-		callback()
+		if e := callback(c); e != nil {
+			return e
+		}
 	}
+	return nil
 }
 
 /*
@@ -451,7 +454,9 @@ func BootstrapServer(c common.ExecContext) {
 	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
-	callServerBootstrappedListeners(c)
+	if e := callServerBootstrappedListeners(c); e != nil {
+		c.Log.Fatalf("Error occurred while invoking OnServerBootstrapped callbacks, %v", e)
+	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)

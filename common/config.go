@@ -298,7 +298,6 @@ func ResolveArg(arg string) string {
 		if val == "" {
 			val = s
 		}
-		logrus.Debugf("Tried to resolve key '%s' to val: %s", s, val)
 		return val
 	})
 }

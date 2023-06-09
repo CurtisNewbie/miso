@@ -3,6 +3,7 @@ package goauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/curtisnewbie/gocommon/client"
@@ -185,8 +186,7 @@ func PathDocExtra(doc PathDoc) common.StrPair {
 //
 //	server.Get(url, handler, gclient.PathDocExtra(pathDoc))
 func ReportPathsOnBootstrapped() {
-	server.OnServerBootstrapped(func() {
-		c := common.EmptyExecContext()
+	server.OnServerBootstrapped(func(c common.ExecContext) error {
 		app := common.GetPropStr(common.PROP_APP_NAME)
 		routes := server.GetHttpRoutes()
 
@@ -223,10 +223,11 @@ func ReportPathsOnBootstrapped() {
 			}
 
 			if e := AddPath(context.Background(), r); e != nil {
-				logrus.Fatalf("failed to report path to goauth, %v", e)
+				return fmt.Errorf("failed to report path to goauth, %v", e)
 			}
 
 			c.Log.Infof("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
 		}
+		return nil
 	})
 }
