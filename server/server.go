@@ -221,7 +221,7 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 }
 
 func startHttpServer(ctx context.Context, server *http.Server) {
-	logrus.Infof("Server serving HTTP on %s", server.Addr)
+	logrus.Infof("Serving HTTP on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logrus.Fatalf("HttpServer ListenAndServe: %s", err)
 	}
@@ -350,7 +350,7 @@ func BootstrapServer(c common.ExecContext) {
 	if appName == "" {
 		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
-
+	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 
 	// mysql
