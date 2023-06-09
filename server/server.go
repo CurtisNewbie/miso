@@ -221,9 +221,8 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 }
 
 func startHttpServer(ctx context.Context, server *http.Server) {
-	logrus.Infof("Serving HTTP on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logrus.Fatalf("HttpServer ListenAndServe: %s", err)
+		logrus.Fatalf("http.Server ListenAndServe: %s", err)
 	}
 }
 
@@ -379,7 +378,7 @@ func BootstrapServer(c common.ExecContext) {
 		c.Log.Info("Starting http server")
 
 		// Load propagation keys for tracing
-		common.LoadPropagationKeyProp()
+		common.LoadPropagationKeyProp(c)
 
 		// always set to releaseMode
 		gin.SetMode(gin.ReleaseMode)
@@ -410,6 +409,7 @@ func BootstrapServer(c common.ExecContext) {
 
 		// start the http server
 		server := createHttpServer(engine)
+		c.Log.Infof("Serving HTTP on %s", server.Addr)
 		go startHttpServer(ctx, server)
 
 		AddShutdownHook(func() { shutdownHttpServer(server) })

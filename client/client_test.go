@@ -18,7 +18,7 @@ func TestGet(t *testing.T) {
 	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
-	common.LoadPropagationKeyProp()
+	common.LoadPropagationKeyProp(c)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "id", "1")
@@ -56,7 +56,7 @@ func TestDelete(t *testing.T) {
 	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
-	common.LoadPropagationKeyProp()
+	common.LoadPropagationKeyProp(c)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "id", "1")
@@ -94,7 +94,7 @@ func TestPost(t *testing.T) {
 	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
-	common.LoadPropagationKeyProp()
+	common.LoadPropagationKeyProp(c)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "id", "1")
@@ -128,7 +128,7 @@ func TestPut(t *testing.T) {
 	common.LoadConfigFromFile(configFile, c)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(common.CustomFormatter())
-	common.LoadPropagationKeyProp()
+	common.LoadPropagationKeyProp(c)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "id", "1")

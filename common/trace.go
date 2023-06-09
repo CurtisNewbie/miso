@@ -2,8 +2,6 @@ package common
 
 import (
 	"sync"
-
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -37,7 +35,7 @@ func init() {
 // This func looks for following property.
 //
 //	"tracing.propagation.keys"
-func LoadPropagationKeyProp() {
+func LoadPropagationKeyProp(c ExecContext) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
 
@@ -46,7 +44,7 @@ func LoadPropagationKeyProp() {
 		propagationKeys.keys.Add(k)
 	}
 
-	logrus.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys.String())
+	c.Log.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys.String())
 }
 
 // Add propagation key for tracing
