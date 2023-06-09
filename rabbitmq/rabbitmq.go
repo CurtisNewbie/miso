@@ -437,14 +437,14 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 		}
 
 		qname := listener.Queue()
-		msgs, err := ch.Consume(qname, "", false, false, false, false, nil)
+		msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 		if err != nil {
 			logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
 		}
 
 		for i := 0; i < parallism; i++ {
 			ic := i
-			startListening(msgs, listener, ic)
+			startListening(msgCh, listener, ic)
 		}
 	}
 
@@ -452,10 +452,10 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func startListening(msgs <-chan amqp.Delivery, listener Listener, routineNo int) {
+func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
 		logrus.Infof("%d-%v started", routineNo, listener)
-		for msg := range msgs {
+		for msg := range msgCh {
 			payload := string(msg.Body)
 
 			e := listener.Handle(payload)
