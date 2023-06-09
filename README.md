@@ -96,7 +96,6 @@ e.g.,
 | rabbitmq.password           | password used to connect to server                       |               |
 | rabbitmq.vhost              | virtual host                                             |               |
 | rabbitmq.consumer.qos       | consumer QOS                                             | 68            |
-| rabbitmq.consumer.parallism | consumer parallism (number of goroutines for each queue) | 2             |
 
 ### SQLite Properties
 

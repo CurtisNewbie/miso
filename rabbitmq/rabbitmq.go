@@ -90,12 +90,14 @@ func IsEnabled() bool {
 type Listener interface {
 	Queue() string               // return name of the queue
 	Handle(payload string) error // handle message
+	Concurrency() int
 }
 
 // Json Message Listener for Queue
 type JsonMsgListener[T any] struct {
-	QueueName string
-	Handler   func(payload T) error
+	QueueName     string
+	Handler       func(payload T) error
+	NumOfRoutines int
 }
 
 func (m JsonMsgListener[T]) Queue() string {
@@ -110,6 +112,10 @@ func (m JsonMsgListener[T]) Handle(payload string) error {
 	return m.Handler(t)
 }
 
+func (m JsonMsgListener[T]) Concurrency() int {
+	return m.NumOfRoutines
+}
+
 func (m JsonMsgListener[T]) String() string {
 	var funcName string = "nil"
 	if m.Handler != nil {
@@ -120,8 +126,9 @@ func (m JsonMsgListener[T]) String() string {
 
 // Message Listener for Queue
 type MsgListener struct {
-	QueueName string
-	Handler   func(payload string) error
+	QueueName     string
+	Handler       func(payload string) error
+	NumOfRoutines int
 }
 
 func (m MsgListener) Queue() string {
@@ -130,6 +137,10 @@ func (m MsgListener) Queue() string {
 
 func (m MsgListener) Handle(payload string) error {
 	return m.Handler(payload)
+}
+
+func (m MsgListener) Concurrency() int {
+	return m.NumOfRoutines
 }
 
 func (m MsgListener) String() string {
@@ -442,7 +453,11 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 			logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
 		}
 
-		for i := 0; i < parallism; i++ {
+		concurrency := v.Concurrency()
+		if concurrency < 1 {
+			concurrency = 1
+		}
+		for i := 0; i < concurrency; i++ {
 			ic := i
 			startListening(msgCh, listener, ic)
 		}
@@ -454,7 +469,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
-		logrus.Infof("%d-%v started", routineNo, listener)
+		logrus.Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {
 			payload := string(msg.Body)
 
@@ -467,7 +482,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.Queue(), payload, e)
 			msg.Nack(false, true)
 		}
-		logrus.Infof("%d-%v stopped", routineNo, listener)
+		logrus.Debugf("%d-%v stopped", routineNo, listener)
 	}()
 }
 
