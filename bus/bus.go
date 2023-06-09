@@ -43,11 +43,14 @@ func DeclareEventBus(bus string) error {
 // Subscribe to event bus
 //
 // Internally, it registers a listener for the queue identified by the bus name
-func SubscribeEventBus[T any](bus string, listener func(t T) error) error {
+func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) error) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}
-	rabbitmq.AddListener(rabbitmq.JsonMsgListener[T]{QueueName: busName(bus), Handler: listener})
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	rabbitmq.AddListener(rabbitmq.JsonMsgListener[T]{QueueName: busName(bus), Handler: listener, NumOfRoutines: concurrency})
 	return nil
 }
 

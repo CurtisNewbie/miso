@@ -61,7 +61,6 @@ func init() {
 	common.SetDefProp(common.PROP_RABBITMQ_PASSWORD, "")
 	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
 	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, DEFAULT_PARALLISM)
 }
 
 type BindingRegistration struct {
@@ -428,11 +427,6 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 
 func bootstrapConsumers(conn *amqp.Connection) error {
 	qos := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_QOS)
-	parallism := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_PARALLISM)
-	if parallism < 1 {
-		parallism = 1
-	}
-	logrus.Infof("RabbitMQ consumer parallism: %d", parallism)
 
 	for _, v := range listeners {
 		listener := v

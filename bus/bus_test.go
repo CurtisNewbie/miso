@@ -13,7 +13,6 @@ import (
 func preTest() {
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
-	common.SetProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, 2)
 }
 
 func TestDeclareEventBus(t *testing.T) {
@@ -53,7 +52,7 @@ func TestSendToEventBus(t *testing.T) {
 func TestSubscribeEventBus(t *testing.T) {
 	preTest()
 
-	SubscribeEventBus("test-bus", func(t Dummy) error {
+	SubscribeEventBus("test-bus", 1, func(t Dummy) error {
 		logrus.Infof("received dummy: %+v", t)
 		return nil
 	})

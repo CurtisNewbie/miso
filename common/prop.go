@@ -95,7 +95,6 @@ const (
 	PROP_RABBITMQ_PASSWORD           = "rabbitmq.password"
 	PROP_RABBITMQ_VHOST              = "rabbitmq.vhost"
 	PROP_RABBITMQ_CONSUMER_QOS       = "rabbitmq.consumer.qos"
-	PROP_RABBITMQ_CONSUMER_PARALLISM = "rabbitmq.consumer.parallism"
 
 	/*
 		------------------------------------

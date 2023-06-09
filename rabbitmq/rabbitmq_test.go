@@ -31,7 +31,6 @@ func TestInitClient(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
-	common.SetProp(common.PROP_RABBITMQ_CONSUMER_PARALLISM, 2)
 
 	AddListener(JsonMsgListener[Dummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
 	AddListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
