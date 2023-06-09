@@ -316,10 +316,6 @@ func OnServerBootstrapped(callback func()) {
 }
 
 func callServerBootstrappedListeners(c common.ExecContext) {
-	if len(serverBootstrapListener) < 1 {
-		return
-	}
-	c.Log.Info("Invoking OnServerBootstrapped callbacks")
 	for _, callback := range serverBootstrapListener {
 		callback()
 	}
