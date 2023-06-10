@@ -71,6 +71,7 @@ const (
 	PROP_SERVER_HOST                       = "server.host"
 	PROP_SERVER_PORT                       = "server.port"
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC = "server.gracefulShutdownTimeSec"
+	PROP_SERVER_PERF_ENABLED               = "server.perf.enabled"
 
 	/*
 		------------------------------------
@@ -88,13 +89,13 @@ const (
 
 		------------------------------------
 	*/
-	PROP_RABBITMQ_ENABLED            = "rabbitmq.enabled"
-	PROP_RABBITMQ_HOST               = "rabbitmq.host"
-	PROP_RABBITMQ_PORT               = "rabbitmq.port"
-	PROP_RABBITMQ_USERNAME           = "rabbitmq.username"
-	PROP_RABBITMQ_PASSWORD           = "rabbitmq.password"
-	PROP_RABBITMQ_VHOST              = "rabbitmq.vhost"
-	PROP_RABBITMQ_CONSUMER_QOS       = "rabbitmq.consumer.qos"
+	PROP_RABBITMQ_ENABLED      = "rabbitmq.enabled"
+	PROP_RABBITMQ_HOST         = "rabbitmq.host"
+	PROP_RABBITMQ_PORT         = "rabbitmq.port"
+	PROP_RABBITMQ_USERNAME     = "rabbitmq.username"
+	PROP_RABBITMQ_PASSWORD     = "rabbitmq.password"
+	PROP_RABBITMQ_VHOST        = "rabbitmq.vhost"
+	PROP_RABBITMQ_CONSUMER_QOS = "rabbitmq.consumer.qos"
 
 	/*
 		------------------------------------

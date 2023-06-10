@@ -42,12 +42,13 @@ e.g.,
 
 ### Web Server Properties
 
-| property                       | description                                  | default value |
-|--------------------------------|----------------------------------------------|---------------|
-| server.enabled                 | enable http server                           | true          |
-| server.host                    | http server host                             | 0.0.0.0       |
-| server.port                    | http server port                             | 8080          |
-| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown | 30            |
+| property                       | description                                           | default value |
+|--------------------------------|-------------------------------------------------------|---------------|
+| server.enabled                 | enable http server                                    | true          |
+| server.host                    | http server host                                      | 0.0.0.0       |
+| server.port                    | http server port                                      | 8080          |
+| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown          | 30            |
+| server.perf.enabled            | enable logging time took for each http server request | false         |
 
 ### Consul Properties
 
@@ -87,15 +88,15 @@ e.g.,
 
 ### RabbitMQ Properties
 
-| property                    | description                                              | default value |
-|-----------------------------|----------------------------------------------------------|---------------|
-| rabbitmq.enabled            | whether RabbitMQ client is enabled                       | false         |
-| rabbitmq.host               | host of the RabbitMQ server                              | `localhost`   |
-| rabbitmq.port               | port of the RabbitMQ server                              | 5672          |
-| rabbitmq.username           | username used to connect to server                       |               |
-| rabbitmq.password           | password used to connect to server                       |               |
-| rabbitmq.vhost              | virtual host                                             |               |
-| rabbitmq.consumer.qos       | consumer QOS                                             | 68            |
+| property              | description                        | default value |
+|-----------------------|------------------------------------|---------------|
+| rabbitmq.enabled      | whether RabbitMQ client is enabled | false         |
+| rabbitmq.host         | host of the RabbitMQ server        | `localhost`   |
+| rabbitmq.port         | port of the RabbitMQ server        | 5672          |
+| rabbitmq.username     | username used to connect to server |               |
+| rabbitmq.password     | password used to connect to server |               |
+| rabbitmq.vhost        | virtual host                       |               |
+| rabbitmq.consumer.qos | consumer QOS                       | 68            |
 
 ### SQLite Properties
 

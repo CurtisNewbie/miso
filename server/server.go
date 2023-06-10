@@ -78,6 +78,7 @@ func init() {
 	common.SetDefProp(common.PROP_SERVER_HOST, "0.0.0.0")
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
+	common.SetDefProp(common.PROP_SERVER_PERF_ENABLED, false)
 }
 
 // Register shutdown hook, hook should never panic
@@ -388,7 +389,9 @@ func BootstrapServer(c common.ExecContext) {
 
 		if !common.IsProdMode() {
 			engine.Use(gin.Logger()) // default logger for debugging
-		} else {
+		}
+
+		if common.GetPropBool(common.PROP_SERVER_PERF_ENABLED) {
 			engine.Use(PerfMiddleware())
 		}
 
