@@ -387,8 +387,9 @@ func BootstrapServer(c common.ExecContext) {
 		engine.Use(TraceMiddleware())
 
 		if !common.IsProdMode() {
-			// engine.Use(PerfMiddleware())
 			engine.Use(gin.Logger()) // default logger for debugging
+		} else {
+			engine.Use(PerfMiddleware())
 		}
 
 		// register customer recovery func
