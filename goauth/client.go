@@ -81,15 +81,14 @@ func TestResourceAccess(ctx context.Context, req TestResAccessReq) (*TestResAcce
 	if tr.Err != nil {
 		return nil, tr.Err
 	}
-	defer tr.Close()
 
-	var r common.GnResp[*TestResAccessResp]
-	if e := tr.ReadJson(&r); e != nil {
+	r, e := client.ReadGnResp[*TestResAccessResp](tr)
+	if e != nil {
 		return nil, e
 	}
 
 	if r.Error {
-		return nil, common.NewWebErr(r.Msg)
+		return nil, r.Err()
 	}
 
 	if r.Data == nil {
@@ -109,15 +108,16 @@ func AddResource(ctx context.Context, req AddResourceReq) error {
 	if tr.Err != nil {
 		return tr.Err
 	}
-	defer tr.Close()
 
-	var r common.Resp
-	if e := tr.ReadJson(&r); e != nil {
+	r, e := client.ReadGnResp[any](tr)
+	if e != nil {
 		return e
 	}
+
 	if r.Error {
-		return common.NewWebErr(r.Msg)
+		return r.Err()
 	}
+
 	logrus.Infof("Reported resource, Name: %s, Code: %s", req.Name, req.Code)
 	return nil
 }
@@ -132,14 +132,14 @@ func AddPath(ctx context.Context, req CreatePathReq) error {
 	if tr.Err != nil {
 		return tr.Err
 	}
-	defer tr.Close()
 
-	var r common.Resp
-	if e := tr.ReadJson(&r); e != nil {
+	r, e := client.ReadGnResp[any](tr)
+	if e != nil {
 		return e
 	}
+
 	if r.Error {
-		return common.NewWebErr(r.Msg)
+		return r.Err()
 	}
 
 	return nil
@@ -155,12 +155,16 @@ func GetRoleInfo(ctx context.Context, req RoleInfoReq) (*RoleInfoResp, error) {
 	if tr.Err != nil {
 		return nil, tr.Err
 	}
-	defer tr.Close()
 
-	var r common.GnResp[*RoleInfoResp]
-	if e := tr.ReadJson(&r); e != nil {
+	r, e := client.ReadGnResp[*RoleInfoResp](tr)
+	if e != nil {
 		return nil, e
 	}
+
+	if r.Error {
+		return nil, r.Err()
+	}
+
 	if r.Data == nil {
 		return nil, errors.New("data is nil, unable to retrieve RoleInfoResp")
 	}

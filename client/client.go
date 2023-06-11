@@ -30,23 +30,26 @@ func (tr *TResponse) Close() error {
 	return tr.Resp.Body.Close()
 }
 
-// Read response as []bytes
+// Read response as []bytes, response is always closed automatically
 func (tr *TResponse) ReadBytes() ([]byte, error) {
+	defer tr.Close()
 	return io.ReadAll(tr.Resp.Body)
 }
 
-// Read response as string
+// Read response as string, response is always closed automatically
 func (tr *TResponse) ReadStr() (string, error) {
-	b, e := tr.ReadBytes()
+	defer tr.Close()
+	b, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
 		return "", e
 	}
 	return string(b), nil
 }
 
-// Read response as JSON object
+// Read response as JSON object, response is always closed automatically
 func (tr *TResponse) ReadJson(ptr any) error {
-	body, e := tr.ReadBytes()
+	defer tr.Close()
+	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
 		return e
 	}
@@ -56,6 +59,13 @@ func (tr *TResponse) ReadJson(ptr any) error {
 		return e
 	}
 	return nil
+}
+
+// Read response as GnResp[T] object, response is always closed automatically
+func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
+	var gr common.GnResp[T]
+	e := tr.ReadJson(&gr)
+	return gr, e
 }
 
 // Helper type for sending HTTP requests
@@ -244,6 +254,16 @@ func (t *TClient) AddHeaders(headers map[string]string) *TClient {
 		} else {
 			t.Headers[k] = append(t.Headers[k], v)
 		}
+	}
+	return t
+}
+
+// Append header, subsequent method calls doesn't override previously appended headers
+func (t *TClient) AddHeader(k string, v string) *TClient {
+	if t.Headers[k] == nil {
+		t.Headers[k] = []string{v}
+	} else {
+		t.Headers[k] = append(t.Headers[k], v)
 	}
 	return t
 }
