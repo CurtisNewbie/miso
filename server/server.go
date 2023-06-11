@@ -69,8 +69,9 @@ var (
 	shutdownHook []func()
 	shmu         sync.Mutex // mutex for shutdownHook
 
-	serverBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
-	serverHttpRoutes        []HttpRoute                        = []HttpRoute{}
+	preServerBootstrapListener  []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
+	postServerBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
+	serverHttpRoutes            []HttpRoute                        = []HttpRoute{}
 )
 
 func init() {
@@ -243,7 +244,7 @@ Default way to Bootstrap server, basically the same as follows:
 	// ... plus some configuration for logging and so on
 	BootstrapServer()
 */
-func DefaultBootstrapServer(args []string, c common.ExecContext, setupServer ...func() error) {
+func DefaultBootstrapServer(args []string, c common.ExecContext) {
 	// default way to load configuration
 	common.DefaultReadConfig(args, c)
 
@@ -305,11 +306,28 @@ func OnServerBootstrapped(callback func(c common.ExecContext) error) {
 	if callback == nil {
 		return
 	}
-	serverBootstrapListener = append(serverBootstrapListener, callback)
+	postServerBootstrapListener = append(postServerBootstrapListener, callback)
 }
 
-func callServerBootstrappedListeners(c common.ExecContext) error {
-	for _, callback := range serverBootstrapListener {
+func callPostServerBootstrapListeners(c common.ExecContext) error {
+	for _, callback := range postServerBootstrapListener {
+		if e := callback(c); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+// Add listener that is invoked before the server is bootstrapped
+func BeforeServerBootstrap(callback func(c common.ExecContext) error) {
+	if callback == nil {
+		return
+	}
+	preServerBootstrapListener = append(preServerBootstrapListener, callback)
+}
+
+func callPreServerBootstrapListeners(c common.ExecContext) error {
+	for _, callback := range preServerBootstrapListener {
 		if e := callback(c); e != nil {
 			return e
 		}
@@ -329,7 +347,7 @@ Graceful shutdown for the http server is also enabled and can be configured thro
 
 To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 */
-func BootstrapServer(c common.ExecContext, setupServer ...func() error) {
+func BootstrapServer(c common.ExecContext) {
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
@@ -344,11 +362,9 @@ func BootstrapServer(c common.ExecContext, setupServer ...func() error) {
 	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 
-	// setup server, sometime we need to setup stuff right after the configuration being loaded
-	for _, callback := range setupServer {
-		if e := callback(); e != nil {
-			c.Log.Fatal("Failed to setup server, %v", e)
-		}
+	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
+	if e := callPreServerBootstrapListeners(c); e != nil {
+		c.Log.Fatalf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
 	}
 
 	// mysql
@@ -453,13 +469,13 @@ func BootstrapServer(c common.ExecContext, setupServer ...func() error) {
 		}
 	}
 
+	// invoke listener for serverBootstraped event
+	if e := callPostServerBootstrapListeners(c); e != nil {
+		c.Log.Fatalf("Error occurred while invoking post server bootstrap callbacks, %v", e)
+	}
+
 	end := time.Now().UnixMilli()
 	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
-
-	// invoke listener for serverBootstraped event
-	if e := callServerBootstrappedListeners(c); e != nil {
-		c.Log.Fatalf("Error occurred while invoking OnServerBootstrapped callbacks, %v", e)
-	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
