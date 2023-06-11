@@ -419,11 +419,7 @@ func BootstrapServer(c common.ExecContext) {
 		}
 
 		// register http routes
-		registerServerRoutes(engine)
-
-		for _, r := range GetHttpRoutes() {
-			c.Log.Infof("%-6s %-45s --> %s", r.Method, r.Url, r.HandlerName)
-		}
+		registerServerRoutes(c, engine)
 
 		// start the http server
 		server := createHttpServer(engine)
@@ -484,7 +480,7 @@ func BootstrapServer(c common.ExecContext) {
 }
 
 // Register http routes on gin.Engine
-func registerServerRoutes(engine *gin.Engine) {
+func registerServerRoutes(c common.ExecContext, engine *gin.Engine) {
 	// no route
 	engine.NoRoute(func(ctx *gin.Context) {
 		c := BuildExecContext(ctx)
@@ -495,6 +491,10 @@ func registerServerRoutes(engine *gin.Engine) {
 	// register custom routes
 	for _, registerRoute := range routesRegiatarList {
 		registerRoute(engine)
+	}
+
+	for _, r := range GetHttpRoutes() {
+		c.Log.Infof("%-6s %-45s --> %s", r.Method, r.Url, r.HandlerName)
 	}
 }
 
