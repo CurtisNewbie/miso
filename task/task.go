@@ -178,13 +178,18 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 //
 // E.g.,
 // 	ScheduleNamedDistributedTask("0/1 * * * * ?", "Very important task", myTask)
-func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext)) {
+func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext) error) {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
 	ScheduleDistributedTask(cron, func(ec common.ExecContext) {
 		ec.Log.Infof("Running task '%s'", name)
 		start := time.Now()
-		runnable(ec)
-		ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
+		e := runnable(ec)
+		if e == nil {
+			ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
+			return
+		}
+
+		ec.Log.Errorf("Task '%s' failed, took: %s, %v", name, time.Since(start), e)
 	})
 }
 
