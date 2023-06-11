@@ -274,7 +274,7 @@ func ConfigureLogging(c common.ExecContext) {
 
 	if common.HasProp(common.PROP_LOGGING_LEVEL) {
 		if level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
-			c.Log.Infof("Setting log level to %v", strings.ToUpper(level.String()))
+			c.Log.Debugf("Setting log level to %v", strings.ToUpper(level.String()))
 			logrus.SetLevel(level)
 		}
 	}
@@ -359,8 +359,9 @@ func BootstrapServer(c common.ExecContext) {
 	if appName == "" {
 		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
-	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
+
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
+	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(c); e != nil {

@@ -115,7 +115,6 @@ func DefaultReadConfig(args []string, c ExecContext) {
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
-	c.Log.Infof("Guessing config file path: '%v'", configFile)
 	LoadConfigFromFile(configFile, c)
 
 	// it's possible to overide the loaded configuration with cli arguments
@@ -140,7 +139,7 @@ func LoadConfigFromFile(configFile string, c ExecContext) {
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
-				c.Log.Infof("Unable to find config file: '%s'", configFile)
+				c.Log.Debugf("Unable to find config file: '%s'", configFile)
 				return
 			}
 			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
@@ -153,7 +152,7 @@ func LoadConfigFromFile(configFile string, c ExecContext) {
 	})
 
 	if loaded {
-		c.Log.Infof("Loaded config file: '%v'", configFile)
+		c.Log.Debugf("Loaded config file: '%v'", configFile)
 	}
 }
 
