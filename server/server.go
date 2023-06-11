@@ -250,14 +250,6 @@ func DefaultBootstrapServer(args []string, c common.ExecContext, setupServer ...
 	// configure logging
 	ConfigureLogging(c)
 
-	// setup server before BootstrapServer is called
-	// sometime we need to setup stuff right after the configuration being loaded
-	for _, callback := range setupServer {
-		if e := callback(); e != nil {
-			panic(e)
-		}
-	}
-
 	// bootstraping
 	BootstrapServer(c)
 }
@@ -337,7 +329,7 @@ Graceful shutdown for the http server is also enabled and can be configured thro
 
 To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 */
-func BootstrapServer(c common.ExecContext) {
+func BootstrapServer(c common.ExecContext, setupServer ...func() error) {
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
@@ -351,6 +343,13 @@ func BootstrapServer(c common.ExecContext) {
 	}
 	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
+
+	// setup server, sometime we need to setup stuff right after the configuration being loaded
+	for _, callback := range setupServer {
+		if e := callback(); e != nil {
+			c.Log.Fatal("Failed to setup server, %v", e)
+		}
+	}
 
 	// mysql
 	if mysql.IsMySqlEnabled() {
