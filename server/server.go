@@ -257,24 +257,21 @@ func DefaultBootstrapServer(args []string, c common.ExecContext) {
 
 // Configurae Logging, e.g., formatter, logger's output
 func ConfigureLogging(c common.ExecContext) {
-	// formatter is already set in logger.go `init()` func`
-	if common.IsProdMode() {
-		// Info is the default, we don't need to set it
-		// logrus.SetLevel(logrus.InfoLevel)
 
-		// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-		if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
-			loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
-			loggerErrOut = loggerOut
-		}
-	} else {
+	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
+	if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
+		loggerOut = common.BuildRollingLogFileWriter(common.GetPropStr(common.PROP_LOGGING_ROLLING_FILE))
+		loggerErrOut = loggerOut
+	}
+
+	if !common.IsProdMode() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+
 	logrus.SetOutput(loggerOut)
 
 	if common.HasProp(common.PROP_LOGGING_LEVEL) {
 		if level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
-			c.Log.Debugf("Setting log level to %v", strings.ToUpper(level.String()))
 			logrus.SetLevel(level)
 		}
 	}
