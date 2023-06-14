@@ -90,6 +90,14 @@ func _getPropString(prop string) string {
 	return doRetWithViperLock(func() string { return viper.GetString(prop) })
 }
 
+// Unmarshal to object from properties
+func UnmarshalFromProp(ptr any) {
+	doRetWithViperLock(func() any {
+		viper.Unmarshal(ptr)
+		return nil
+	})
+}
+
 /*
 Default way to read config file.
 
