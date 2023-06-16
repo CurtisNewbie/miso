@@ -15,27 +15,21 @@ type Future[T any] interface {
 }
 
 type future[T any] struct {
-	ch       chan FutureResult[T]
-	callback func() FutureResult[T]
+	ch       chan func() (T, error)
+	callback func() (T, error)
 }
 
-type FutureResult[T any] struct {
-	Result T
-	Err    error
-}
-
-// Get from Future
+// Get from Future indefinitively
 func (f future[T]) Get() (T, error) {
-	res := <-f.ch
-	return res.Result, res.Err
+	getResult := <-f.ch
+	return getResult()
 }
 
 // Get from Future with timeout (in milliseconds)
 func (f future[T]) TimedGet(timeout int) (T, error) {
-	var res FutureResult[T]
 	select {
-	case res = <-f.ch:
-		return res.Result, res.Err
+	case obtainResult := <-f.ch:
+		return obtainResult()
 	case <-time.After(time.Duration(timeout) * time.Millisecond):
 		var t T
 		return t, ErrGetTimeout
@@ -43,11 +37,13 @@ func (f future[T]) TimedGet(timeout int) (T, error) {
 }
 
 // Create Future, once the future is created, it starts running on a new goroutine
-func RunAsync[T any](callback func() FutureResult[T]) Future[T] {
+func RunAsync[T any](callback func() (T, error)) Future[T] {
 	fut := future[T]{callback: callback}
-	fut.ch = make(chan FutureResult[T])
-	go func(cha chan FutureResult[T]) {
-		cha <- fut.callback()
+	fut.ch = make(chan func() (T, error))
+	go func(cha chan func() (T, error)) {
+		t, err := fut.callback()
+		f := func() (T, error) { return t, err }
+		cha <- f
 	}(fut.ch)
 	return fut
 }
