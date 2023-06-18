@@ -20,40 +20,47 @@ type ExecContext struct {
 }
 
 // Check whether current execution is authenticated, if so, one may read User from ExecContext
-func (in *ExecContext) Authenticated() bool {
-	return in.auth
+func (c *ExecContext) Authenticated() bool {
+	return c.auth
 }
 
 // Get username if found, else empty string
-func (in *ExecContext) Username() string {
-	return in.User.Username
+func (c *ExecContext) Username() string {
+	return c.User.Username
 }
 
 // Get user id if found, else empty string
-func (in *ExecContext) UserId() string {
-	return in.User.UserId
+func (c *ExecContext) UserId() string {
+	return c.User.UserId
 }
 
 // Get user no if found, else empty string
-func (in *ExecContext) UserNo() string {
-	return in.User.UserNo
+func (c *ExecContext) UserNo() string {
+	return c.User.UserNo
 }
 
 // Get user's id as int if found, else 0
 //
 // Basically the same as UserIdI except that error is ignored
-func (in *ExecContext) UserIdInt() int {
-	i, _ := in.UserIdI()
+func (c *ExecContext) UserIdInt() int {
+	i, _ := c.UserIdI()
 	return i
 }
 
 // Get user's id as int if found, else 0
-func (in *ExecContext) UserIdI() (int, error) {
-	if in.User.UserId == "" {
+func (c *ExecContext) UserIdI() (int, error) {
+	if c.User.UserId == "" {
 		return 0, nil
 	}
 
-	return strconv.Atoi(in.User.UserId)
+	return strconv.Atoi(c.User.UserId)
+}
+
+// Create a new ExecContext with a new SpanId
+func (c *ExecContext) NextSpan() ExecContext {
+	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
+	ctx := context.WithValue(c.Ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
+	return NewExecContext(ctx, &c.User)
 }
 
 // Create empty ExecContext
