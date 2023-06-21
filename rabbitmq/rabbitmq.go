@@ -190,7 +190,6 @@ func PublishMsg(msg []byte, exchange string, routingKey string, contentType stri
 	if !confirm.Wait() {
 		return errMsgNotPublished
 	}
-	logrus.Infof("Published message to %v, %v", exchange, string(msg))
 
 	return nil
 }
