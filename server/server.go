@@ -351,6 +351,12 @@ func BootstrapServer(args []string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	AddShutdownHook(func() { cancel() })
 
+	// default way to load configuration
+	common.DefaultReadConfig(args, c)
+
+	// configure logging
+	ConfigureLogging(c)
+
 	appName := common.GetPropStr(common.PROP_APP_NAME)
 	if appName == "" {
 		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
@@ -358,12 +364,6 @@ func BootstrapServer(args []string) {
 
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
-
-	// default way to load configuration
-	common.DefaultReadConfig(args, c)
-
-	// configure logging
-	ConfigureLogging(c)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(c); e != nil {
