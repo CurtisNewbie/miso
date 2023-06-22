@@ -22,7 +22,7 @@ e.g.,
 ./main
 ```
 
-Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) in `config.DefaultReadConfig(...)` or `server.DefaultBootstrapServer(...)`.
+Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) `server.BootstrapServer(...)`.
 
 e.g.,
 
@@ -138,23 +138,6 @@ mysql:
 
 `gocommon` supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
 
-```go
-func main() {
-	c := common.EmptyExecContext()
-
-	// load configuration from 'myconf.yml'
-	common.LoadConfigFromFile("myconf.yml", c)
-
-	// add GET request handler
-	server.RawGet("/some/path", func(c *gin.Context, ec common.ExecContext) {
-		logrus.Info("Received request")
-	})
-
-	// bootstrap server
-	server.BootstrapServer(c)
-}
-```
-
 Since `gocommon` is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
 
 ```go
@@ -165,10 +148,10 @@ func main() {
 	common.ScheduleCron("0 0/15 * * * *", myJob)
 
 	// register routes and handlers
-	server.IPost(server.OpenApiPath("/path"), myHandler)
+	server.IPost("/my/path", myHandler)
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
+	server.BootstrapServer(os.Args)
 }
 ```
 
@@ -252,7 +235,7 @@ func main() {
 }
 ```
 
-If `server.go` is used, this is automatically handled by `DefaultBootstrapServer(...)` func.
+If `server.go` is used, this is automatically handled by `BootstrapServer(...)` func.
 
 ```go
 func main() {
@@ -261,6 +244,6 @@ func main() {
 	})
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
+	server.BootstrapServer(os.Args)
 }
 ```

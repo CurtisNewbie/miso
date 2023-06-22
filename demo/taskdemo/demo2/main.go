@@ -14,5 +14,5 @@ func main() {
 	})
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
+	server.BootstrapServer(os.Args)
 }

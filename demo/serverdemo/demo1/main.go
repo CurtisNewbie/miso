@@ -24,6 +24,5 @@ func main() {
 	server.IPost(server.OpenApiPath("/path"), myHandler)
 
 	// bootstrap server
-	c := common.EmptyExecContext()
-	server.DefaultBootstrapServer(os.Args, c)
+	server.BootstrapServer(os.Args)
 }

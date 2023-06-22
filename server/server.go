@@ -237,32 +237,7 @@ func createHttpServer(router http.Handler) *http.Server {
 	return server
 }
 
-/*
-Default way to Bootstrap server, basically the same as follows:
-
-	common.DefaultReadConfig(args)
-	// ... plus some configuration for logging and so on
-	BootstrapServer(...)
-*/
-func DefaultBootstrapServer(args []string, c ...common.ExecContext) {
-	var ec common.ExecContext
-	if len(c) > 0 {
-		ec = c[0]
-	} else {
-		ec = common.EmptyExecContext()
-	}
-
-	// default way to load configuration
-	common.DefaultReadConfig(args, ec)
-
-	// configure logging
-	ConfigureLogging(ec)
-
-	// bootstraping
-	BootstrapServer(ec)
-}
-
-// Configurae Logging, e.g., formatter, logger's output
+// Configurae Logging, e.g., logger's output, log level, etc
 func ConfigureLogging(c common.ExecContext) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
@@ -305,14 +280,6 @@ func parseLogLevel(logLevel string) (logrus.Level, bool) {
 	return logrus.InfoLevel, false
 }
 
-// Add listener that is invoked when server is finally bootstrapped
-func OnServerBootstrapped(callback func(c common.ExecContext) error) {
-	if callback == nil {
-		return
-	}
-	postServerBootstrapListener = append(postServerBootstrapListener, callback)
-}
-
 func callPostServerBootstrapListeners(c common.ExecContext) error {
 	for _, callback := range postServerBootstrapListener {
 		if e := callback(c); e != nil {
@@ -322,8 +289,16 @@ func callPostServerBootstrapListeners(c common.ExecContext) error {
 	return nil
 }
 
-// Add listener that is invoked before the server is bootstrapped
-func BeforeServerBootstrap(callback func(c common.ExecContext) error) {
+// Add listener that is invoked when server is finally bootstrapped
+func PostServerBootstrapped(callback func(c common.ExecContext) error) {
+	if callback == nil {
+		return
+	}
+	postServerBootstrapListener = append(postServerBootstrapListener, callback)
+}
+
+// Add listener that is invoked before the server is fully bootstrapped
+func PreServerBootstrap(callback func(c common.ExecContext) error) {
 	if callback == nil {
 		return
 	}
@@ -350,8 +325,25 @@ SIGTERM/INTERRUPT signals are received.
 Graceful shutdown for the http server is also enabled and can be configured through props.
 
 To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
+
+It's also possible to register callbacks that are triggered before/after server bootstrap
+
+
+	server.PreServerBootstrapped(func(c common.ExecContext) error {
+		// do something right after configuration being loaded, but server hasn't been bootstraped yet
+	});
+
+	server.PostServerBootstrapped(func(c common.ExecContext) error {
+		// do something after the server bootstrap
+	});
+
+	// start the server
+	server.BootstrapServer(os.Args)
+
 */
-func BootstrapServer(c common.ExecContext) {
+func BootstrapServer(args []string) {
+	var c common.ExecContext = common.EmptyExecContext()
+
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
@@ -366,6 +358,12 @@ func BootstrapServer(c common.ExecContext) {
 
 	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
+
+	// default way to load configuration
+	common.DefaultReadConfig(args, c)
+
+	// configure logging
+	ConfigureLogging(c)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(c); e != nil {
@@ -470,13 +468,13 @@ func BootstrapServer(c common.ExecContext) {
 		}
 	}
 
+	end := time.Now().UnixMilli()
+	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
+
 	// invoke listener for serverBootstraped event
 	if e := callPostServerBootstrapListeners(c); e != nil {
 		c.Log.Fatalf("Error occurred while invoking post server bootstrap callbacks, %v", e)
 	}
-
-	end := time.Now().UnixMilli()
-	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	quit := make(chan os.Signal, 2)
