@@ -29,6 +29,5 @@ func TestBootstrapServer(t *testing.T) {
 		syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 	}()
 
-	c := common.EmptyExecContext()
-	DefaultBootstrapServer(args, c)
+	DefaultBootstrapServer(args)
 }

@@ -242,17 +242,24 @@ Default way to Bootstrap server, basically the same as follows:
 
 	common.DefaultReadConfig(args)
 	// ... plus some configuration for logging and so on
-	BootstrapServer()
+	BootstrapServer(...)
 */
-func DefaultBootstrapServer(args []string, c common.ExecContext) {
+func DefaultBootstrapServer(args []string, c ...common.ExecContext) {
+	var ec common.ExecContext
+	if len(c) > 0 {
+		ec = c[0]
+	} else {
+		ec = common.EmptyExecContext()
+	}
+
 	// default way to load configuration
-	common.DefaultReadConfig(args, c)
+	common.DefaultReadConfig(args, ec)
 
 	// configure logging
-	ConfigureLogging(c)
+	ConfigureLogging(ec)
 
 	// bootstraping
-	BootstrapServer(c)
+	BootstrapServer(ec)
 }
 
 // Configurae Logging, e.g., formatter, logger's output
