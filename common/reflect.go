@@ -51,6 +51,17 @@ func (it *Introspector) Tag(fieldName string, tagName string) (tag string, isFie
 	return
 }
 
+// Get field index
+func (it *Introspector) FieldIdx(fieldName string) (index int, isFieldFound bool) {
+	i, isFieldFound := it.fieldIndexMap[fieldName]
+	return i, isFieldFound
+}
+
+// Get field at index
+func (it *Introspector) FieldAt(idx int) (field reflect.StructField) {
+	return it.Fields[idx]
+}
+
 // Get field by name
 func (it *Introspector) Field(fieldName string) (field reflect.StructField, isFieldFound bool) {
 	i, isFieldFound := it.fieldIndexMap[fieldName]
