@@ -70,13 +70,13 @@ func (e *TraceableError) Error() string {
 	return fmt.Sprintf("%v:%v %v", e.file, e.line, e.msg)
 }
 
-func TraceErr(msg string, err error) error {
+func TraceErr(err error, msg string, param ...any) error {
 	t := new(TraceableError)
 	t.cause = err
 	_, file, line, _ := runtime.Caller(1)
 	t.file = srcPath(file)
 	t.line = line
-	t.msg = msg
+	t.msg = fmt.Sprintf(msg, param...)
 	return t
 }
 
