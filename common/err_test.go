@@ -11,15 +11,15 @@ func doSomething() error {
 }
 
 func doSomethingElse() error {
-	return TraceErr(doSomethingDeeper(), "doSomethingDeeper")
+	return TraceErrf(doSomethingDeeper(), "doSomethingDeeper")
 }
 
 func doSomethingDeeper() error {
 	// return errors.New("I am not feeling good")
-	return NewTraceErr("I am ok but I will still return err anyway")
+	return NewTraceErrf("I am ok but I will still return err anyway")
 }
 
 func TestTraceableError(t *testing.T) {
-	err := TraceErr(doSomething(), "doSomething failed, %v", ":(")
+	err := TraceErrf(doSomething(), "doSomething failed, %v", ":(")
 	logrus.Infof("%v", err)
 }
