@@ -161,7 +161,11 @@ func PublishJson(obj any, exchange string, routingKey string) error {
 
 // Publish plain text message with confirmation
 func PublishText(msg string, exchange string, routingKey string) error {
-	return PublishMsg([]byte(msg), exchange, routingKey, "text/plain")
+	e := PublishMsg([]byte(msg), exchange, routingKey, "text/plain")
+	if e != nil {
+		logrus.Infof("Published MQ to %v, %v", exchange, msg)
+	}
+	return e
 }
 
 /*
