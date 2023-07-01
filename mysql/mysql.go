@@ -128,7 +128,7 @@ func InitMySql(user string, password string, dbname string, host string, port st
 
 	conn, enc := NewConn(user, password, dbname, host, port, connParam)
 	if enc != nil {
-		return enc
+		return common.TraceErrf(enc, "failed to create mysql connection, %v:%v/%v", user, password, dbname)
 	}
 	mysqlp.mysql = conn
 	return nil

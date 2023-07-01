@@ -323,7 +323,7 @@ func RegisterService() error {
 	}
 
 	if e = client.Agent().ServiceRegister(registration); e != nil {
-		return fmt.Errorf("failed to register on consul, registration: %+v, %v", registration, e)
+		return common.TraceErrf(e, "failed to register on consul, registration: %+v", registration)
 	}
 	regSub.serviceId = proposedServiceId
 

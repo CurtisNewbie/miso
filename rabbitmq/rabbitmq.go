@@ -216,7 +216,7 @@ func declareQueues(ch *amqp.Channel) error {
 	for _, queue := range _queueRegistration {
 		dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 		if e != nil {
-			return e
+			return common.TraceErrf(e, "failed to declare queue, %v", queue.Name)
 		}
 		logrus.Infof("Declared queue '%s'", dqueue.Name)
 	}
@@ -246,15 +246,15 @@ func declareBindings(ch *amqp.Channel) error {
 		return errMissingChannel
 	}
 
-	for _, binding := range _bindingRegistration {
-		if binding.RoutingKey == "" {
-			binding.RoutingKey = "#"
+	for _, bind := range _bindingRegistration {
+		if bind.RoutingKey == "" {
+			bind.RoutingKey = "#"
 		}
-		e := ch.QueueBind(binding.Queue, binding.RoutingKey, binding.Exchange, false, nil)
+		e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
 		if e != nil {
-			return fmt.Errorf("failed to declare binding, %v", e)
+			return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 		}
-		logrus.Infof("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", binding.Queue, binding.Exchange, binding.RoutingKey)
+		logrus.Infof("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 	}
 	return nil
 }
@@ -274,7 +274,7 @@ func declareExchanges(ch *amqp.Channel) error {
 
 		e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, nil)
 		if e != nil {
-			return e
+			return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 		}
 		logrus.Infof("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	}
@@ -372,6 +372,7 @@ func declareComponents(ch *amqp.Channel) error {
 	}
 	if e := declareExchanges(ch); e != nil {
 		return e
+
 	}
 	if e := declareBindings(ch); e != nil {
 		return e
@@ -397,10 +398,10 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	notifyCloseChan := make(chan *amqp.Error)
 	conn.NotifyClose(notifyCloseChan)
 
-	logrus.Infof("Creating Channel to RabbitMQ")
+	logrus.Debugf("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
-		return nil, e
+		return nil, common.TraceErrf(e, "failed to create channel")
 	}
 
 	// queues, exchanges, bindings
@@ -413,11 +414,12 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	// consumers
 	if e = bootstrapConsumers(conn); e != nil {
 		logrus.Errorf("Failed to bootstrap consumer: %v", e)
+		return nil, common.TraceErrf(e, "failed to create consumer")
 	}
 
 	// publisher
 	if e = bootstrapPublisher(conn); e != nil {
-		logrus.Errorf("Failed to bootstrap publisher: %v", e)
+		return nil, common.TraceErrf(e, "failed to create publisher")
 	}
 
 	logrus.Info("RabbitMQ client initialization finished")

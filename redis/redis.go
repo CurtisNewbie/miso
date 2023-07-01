@@ -117,7 +117,7 @@ func InitRedis(address string, port string, username string, password string, db
 
 	cmd := rdb.Ping()
 	if cmd.Err() != nil {
-		return nil, cmd.Err()
+		return nil, common.TraceErrf(cmd.Err(), "ping redis failed")
 	}
 
 	logrus.Info("Redis connection initialized")
