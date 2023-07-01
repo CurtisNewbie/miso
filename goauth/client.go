@@ -3,7 +3,6 @@ package goauth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/curtisnewbie/gocommon/client"
@@ -227,7 +226,7 @@ func ReportPathsOnBootstrapped() {
 			}
 
 			if e := AddPath(context.Background(), r); e != nil {
-				return fmt.Errorf("failed to report path to goauth, %v", e)
+				return common.TraceErrf(e, "failed to report path to goauth")
 			}
 
 			c.Log.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)

@@ -154,7 +154,7 @@ func (m MsgListener) String() string {
 func PublishJson(obj any, exchange string, routingKey string) error {
 	j, err := json.Marshal(obj)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message body, %v", err)
+		return common.TraceErrf(err, "failed to marshal message body")
 	}
 	return PublishMsg(j, exchange, routingKey, "application/json")
 }
@@ -495,7 +495,7 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 		return err
 	}
 	if err = pc.Confirm(false); err != nil {
-		return fmt.Errorf("publishing channel could not be put into confirm mode: %s", err)
+		return common.TraceErrf(err, "publishing channel could not be put into confirm mode")
 	}
 	pubChan = pc
 	logrus.Info("RabbitMQ publisher initialization finished")

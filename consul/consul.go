@@ -181,7 +181,7 @@ func ResolveServiceAddress(name string) (string, error) {
 
 	// no instances available
 	if instances == nil || len(instances) < 1 {
-		return "", fmt.Errorf("unable to find any available service instance for '%s'", name)
+		return "", common.NewTraceErrf("unable to find any available service instance for '%s'", name)
 	}
 	return extractServiceAddress(common.RandomOne(instances)), nil
 }
