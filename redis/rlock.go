@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
@@ -12,7 +13,8 @@ type Runnable func() error
 type LRunnable func() (any, error)
 
 var (
-	lock_ttl_min int = 10
+	lock_lease_time = time.Duration(30_000) * time.Millisecond
+	refresh_time    = time.Duration(10_000) * time.Millisecond
 )
 
 // Check whether the error is 'redislock.ErrNotObtained'
@@ -51,22 +53,41 @@ func RLockExec(ec common.ExecContext, key string, runnable Runnable) error {
 /*
 Lock and run the runnable using Redis
 
-The ttl is the maximum time wait for the lock.
+The maxTimeWait is the maximum time wait for the lock.
 May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func TimedRLockRun(ec common.ExecContext, key string, ttl time.Duration, runnable LRunnable) (any, error) {
+func TimedRLockRun(ec common.ExecContext, key string, maxTimeWait time.Duration, runnable LRunnable) (any, error) {
 	locker := ObtainRLocker()
-	lock, err := locker.Obtain(key, time.Duration(lock_ttl_min)*time.Minute, &redislock.Options{
-		RetryStrategy: redislock.LinearBackoff(ttl),
+	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
+		RetryStrategy: redislock.LinearBackoff(maxTimeWait),
 	})
 
 	if err != nil {
 		return nil, err
 	}
-
 	ec.Log.Debugf("Obtained lock for key '%s'", key)
 
+	var isReleased int32 = 0 // 0-locked, 1-released
+
+	// watchdog for the lock
+	go func() {
+		isReleased := func() bool { return atomic.LoadInt32(&isReleased) == 1 }
+		ticker := time.NewTicker(refresh_time)
+		for range ticker.C {
+			if isReleased() {
+				ticker.Stop()
+				return
+			}
+
+			if err := lock.Refresh(lock_lease_time, nil); err != nil {
+				ec.Log.Warnf("Failed to refresh rlock for '%v'", key)
+			}
+			ec.Log.Debugf("Refreshed rlock for '%v'", key)
+		}
+	}()
+
 	defer func() {
+		atomic.StoreInt32(&isReleased, 1)
 		re := lock.Release()
 
 		if re != nil {
