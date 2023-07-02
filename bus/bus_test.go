@@ -41,7 +41,7 @@ func TestSendToEventBus(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	if e := SendToEventBus(&Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
+	if e := SendToEventBus(common.EmptyExecContext(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
 		t.Fatal(e)
 	}
 

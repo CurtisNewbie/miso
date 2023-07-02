@@ -151,27 +151,23 @@ func (m MsgListener) String() string {
 }
 
 // Publish json message with confirmation
-func PublishJson(obj any, exchange string, routingKey string) error {
+func PublishJson(c common.ExecContext, obj any, exchange string, routingKey string) error {
 	j, err := json.Marshal(obj)
 	if err != nil {
 		return common.TraceErrf(err, "failed to marshal message body")
 	}
-	return PublishMsg(j, exchange, routingKey, "application/json")
+	return PublishMsg(c, j, exchange, routingKey, "application/json")
 }
 
 // Publish plain text message with confirmation
-func PublishText(msg string, exchange string, routingKey string) error {
-	e := PublishMsg([]byte(msg), exchange, routingKey, "text/plain")
-	if e != nil {
-		logrus.Infof("Published MQ to %v, %v", exchange, msg)
-	}
-	return e
+func PublishText(c common.ExecContext, msg string, exchange string, routingKey string) error {
+	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain")
 }
 
 /*
 Publish message with confirmation
 */
-func PublishMsg(msg []byte, exchange string, routingKey string, contentType string) error {
+func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey string, contentType string) error {
 	pubChanRwm.RLock()
 	defer pubChanRwm.RUnlock()
 	pubWg.Add(1)
@@ -195,6 +191,7 @@ func PublishMsg(msg []byte, exchange string, routingKey string, contentType stri
 		return errMsgNotPublished
 	}
 
+	c.Log.Infof("Published MQ to %v, %s", exchange, msg)
 	return nil
 }
 

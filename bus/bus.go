@@ -3,6 +3,7 @@ package bus
 import (
 	"errors"
 
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
 )
 
@@ -18,12 +19,12 @@ var (
 // Send msg to event bus
 //
 // Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name
-func SendToEventBus(eventObject any, bus string) error {
+func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}
 	busName := busName(bus)
-	return rabbitmq.PublishJson(eventObject, busName, BUS_ROUTING_KEY)
+	return rabbitmq.PublishJson(c, eventObject, busName, BUS_ROUTING_KEY)
 }
 
 // Declare event bus

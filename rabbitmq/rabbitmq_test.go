@@ -92,7 +92,7 @@ func TestPublishMessage(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	for i := 0; i < 10; i++ {
-		e = PublishText("yo check me out", "my-exchange-one", "myKey1")
+		e = PublishText(c, "yo check me out", "my-exchange-one", "myKey1")
 		if e != nil {
 			t.Error(e)
 		}
@@ -117,7 +117,7 @@ func TestPublishJsonMessage(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		dummy := Dummy{Name: fmt.Sprintf("dummy no.%v", i), Desc: "dummy with all the love"}
-		e = PublishJson(dummy, "dummy-exchange", "#")
+		e = PublishJson(c, dummy, "dummy-exchange", "#")
 		if e != nil {
 			t.Error(e)
 		}
