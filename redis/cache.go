@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -20,6 +21,44 @@ type LazyRCache struct {
 	rcacheSupplier func() RCache
 	_rcache        *RCache
 	rwmu           sync.RWMutex
+}
+
+// Lazy object RCache
+type LazyObjRCache[T any] struct {
+	lazyRCache *LazyRCache
+}
+
+// Remove value from cache
+func (r *LazyObjRCache[T]) Del(ec common.ExecContext, key string) error {
+	return r.lazyRCache.Del(ec, key)
+}
+
+// Get from cache else run supplier
+func (r *LazyObjRCache[T]) GetElse(ec common.ExecContext, key string, supplier func() (T, bool)) (val T, ok bool, e error) {
+	strVal, err := r.lazyRCache.GetElse(ec, key, func() string {
+		supplied, ok := supplier()
+		if !ok {
+			return ""
+		}
+		b, err := json.Marshal(&supplied)
+		if err != nil {
+			ec.Log.Errorf("Failed to marshal, %v", err)
+			return ""
+		}
+		return string(b)
+	})
+
+	var t T
+	if err != nil {
+		return t, false, err
+	}
+	if strVal == "" {
+		return t, false, nil
+	}
+	if err := json.Unmarshal([]byte(strVal), &t); err != nil {
+		return t, false, err
+	}
+	return t, true, nil
 }
 
 func (r *LazyRCache) rcache() *RCache {
@@ -52,6 +91,11 @@ func (r *LazyRCache) GetElse(ec common.ExecContext, key string, supplier func() 
 	return r.rcache().GetElse(ec, key, supplier)
 }
 
+// Remove value from cache
+func (r *LazyRCache) Del(ec common.ExecContext, key string) error {
+	return r.rcache().Del(ec, key)
+}
+
 // Put value to cache
 func (r *RCache) Put(ec common.ExecContext, key string, val string) error {
 	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
@@ -66,6 +110,19 @@ func (r *RCache) Put(ec common.ExecContext, key string, val string) error {
 		return e
 	}
 	return nil
+}
+
+// Remove value from cache
+func (r *RCache) Del(ec common.ExecContext, key string) error {
+	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
+		scmd := r.rclient.Del(key)
+		if scmd.Err() != nil {
+			return nil, scmd.Err()
+		}
+		ec.Log.Infof("Removed '%v' from cache", key)
+		return nil, nil
+	})
+	return e
 }
 
 // Get from cache
@@ -138,4 +195,10 @@ func NewRCache(exp time.Duration) RCache {
 // Create new lazy RCache
 func NewLazyRCache(exp time.Duration) LazyRCache {
 	return LazyRCache{rcacheSupplier: func() RCache { return NewRCache(exp) }}
+}
+
+// Create new lazy, object RCache
+func NewLazyObjectRCache[T any](exp time.Duration) LazyObjRCache[T] {
+	lr := NewLazyRCache(exp)
+	return LazyObjRCache[T]{lazyRCache: &lr}
 }
