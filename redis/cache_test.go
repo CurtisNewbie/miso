@@ -22,12 +22,12 @@ func TestLazyObjRcache(t *testing.T) {
 	exp := 60 * time.Second
 	cache := NewLazyObjectRCache[Dummy](exp)
 
-	supplier := func() (Dummy, bool) {
+	supplier := func() (Dummy, bool, error) {
 		c.Log.Info("Called supplier")
 		return Dummy{
 			Name: "Banana",
 			Age:  12,
-		}, true
+		}, true, nil
 	}
 
 	cache.Del(c, keypre+"1")

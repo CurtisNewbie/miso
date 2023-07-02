@@ -34,18 +34,20 @@ func (r *LazyObjRCache[T]) Del(ec common.ExecContext, key string) error {
 }
 
 // Get from cache else run supplier
-func (r *LazyObjRCache[T]) GetElse(ec common.ExecContext, key string, supplier func() (T, bool)) (val T, ok bool, e error) {
-	strVal, err := r.lazyRCache.GetElse(ec, key, func() string {
-		supplied, ok := supplier()
+func (r *LazyObjRCache[T]) GetElse(ec common.ExecContext, key string, supplier func() (T, bool, error)) (val T, ok bool, e error) {
+	strVal, err := r.lazyRCache.GetElse(ec, key, func() (string, error) {
+		supplied, ok, err := supplier()
+		if err != nil {
+			return "", err
+		}
 		if !ok {
-			return ""
+			return "", nil
 		}
 		b, err := json.Marshal(&supplied)
 		if err != nil {
-			ec.Log.Errorf("Failed to marshal, %v", err)
-			return ""
+			return "", err
 		}
-		return string(b)
+		return string(b), nil
 	})
 
 	var t T
@@ -87,7 +89,7 @@ func (r *LazyRCache) Get(ec common.ExecContext, key string) (val string, e error
 }
 
 // Get from cache else run supplier
-func (r *LazyRCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
+func (r *LazyRCache) GetElse(ec common.ExecContext, key string, supplier func() (string, error)) (val string, e error) {
 	return r.rcache().GetElse(ec, key, supplier)
 }
 
@@ -131,7 +133,7 @@ func (r *RCache) Get(ec common.ExecContext, key string) (val string, e error) {
 }
 
 // Get from cache else run supplier, if supplier provides empty str, then the value is returned directly without call SET in redis
-func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() string) (val string, e error) {
+func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() (string, error)) (val string, e error) {
 
 	// for the query, we try not to lock the operation, we only lock the write part
 	cmd := r.rclient.Get(key)
@@ -163,7 +165,10 @@ func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() stri
 			}
 
 			// the key is still missing, tries to run the value supplier for the key
-			supplied := supplier()
+			supplied, err := supplier()
+			if err != nil {
+				return "", err
+			}
 			if supplied == "" {
 				return "", nil
 			}
