@@ -16,7 +16,6 @@ func TestWTime(t *testing.T) {
 	}
 }
 
-
 func TestTTime(t *testing.T) {
 	now := time.Now()
 	casted := TTime(now)
@@ -92,4 +91,18 @@ func TestTranslateFormatThree(t *testing.T) {
 	before = "yyyy/MM/dd"
 	after = TranslateFormat(before)
 	t.Logf("Format: %s, %v", after, time.Now().Format(after))
+}
+
+func TestETimeScan(t *testing.T) {
+	now := time.Now()
+	var et ETime
+	et.Scan(now.UnixMilli())
+	tt := time.Time(et)
+	t.Logf("MS: %v", tt)
+	TestEqual(t, now.Unix(), tt.Unix())
+
+	et.Scan(now.Unix())
+	tt = time.Time(et)
+	t.Logf("S: %v", tt)
+	TestEqual(t, now.Unix(), tt.Unix())
 }

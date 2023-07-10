@@ -16,6 +16,8 @@ const (
 	F_E_HOUR  = "15"
 	F_E_MIN   = "04"
 	F_E_SEC   = "05"
+
+	unixSecPersudoMax = 9999999999 // 2286-11-21, should be enough :D
 )
 
 /* same as time.Time but will be serialized using format '02/01/2006 15:04' */
@@ -161,7 +163,12 @@ func (et *ETime) Scan(value interface{}) (err error) {
 		t, err = time.Parse(sqlTimeFormat, string(v))
 		*et = ETime(t)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
-		*et = ETime(time.UnixMilli(reflect.Indirect(reflect.ValueOf(v)).Int()))
+		val := reflect.Indirect(reflect.ValueOf(v)).Int()
+		if val > unixSecPersudoMax {
+			*et = ETime(time.UnixMilli(val)) // in milli-sec
+		} else {
+			*et = ETime(time.Unix(val, 0)) // in sec
+		}
 	default:
 		err = fmt.Errorf("invalid field type '%v' for ETime, unable to convert, %#v", reflect.TypeOf(value), v)
 	}
