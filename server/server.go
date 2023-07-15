@@ -69,6 +69,16 @@ var (
 	shutdownHook []func()
 	shmu         sync.Mutex // mutex for shutdownHook
 
+	/*
+		server component bootstrap callbacks
+	*/
+
+	serverBootrapCallbacks []func(ctx context.Context, c common.ExecContext) error = []func(context.Context, common.ExecContext) error{}
+
+	/*
+		lifecycle callbacks
+	*/
+
 	preServerBootstrapListener  []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
 	postServerBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
 	serverHttpRoutes            []HttpRoute                        = []HttpRoute{}
@@ -80,6 +90,124 @@ func init() {
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
 	common.SetDefProp(common.PROP_SERVER_PERF_ENABLED, false)
+
+	// mysql
+	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+		if !mysql.IsMySqlEnabled() {
+			return nil
+		}
+		if e := mysql.InitMySqlFromProp(); e != nil {
+			return common.TraceErrf(e, "Failed to establish connection to MySQL")
+		}
+		return nil
+	})
+
+	// redis
+	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+		if !redis.IsRedisEnabled() {
+			return nil
+		}
+		if _, e := redis.InitRedisFromProp(); e != nil {
+			return common.TraceErrf(e, "Failed to establish connection to Redis")
+		}
+		return nil
+	})
+
+	// rabbitmq
+	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+		if !rabbitmq.IsEnabled() {
+			return nil
+		}
+		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
+			return common.TraceErrf(e, "Failed to establish connection to RabbitMQ")
+		}
+		return nil
+	})
+
+	// web server
+	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+		if !common.GetPropBool(common.PROP_SERVER_ENABLED) {
+			return nil
+		}
+		c.Log.Info("Starting http server")
+
+		// Load propagation keys for tracing
+		common.LoadPropagationKeyProp(c)
+
+		// always set to releaseMode
+		gin.SetMode(gin.ReleaseMode)
+
+		// gin engine
+		engine := gin.New()
+		engine.Use(TraceMiddleware())
+
+		if !common.IsProdMode() {
+			engine.Use(gin.Logger()) // default logger for debugging
+		}
+
+		if common.GetPropBool(common.PROP_SERVER_PERF_ENABLED) {
+			engine.Use(PerfMiddleware())
+		}
+
+		// register customer recovery func
+		engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
+
+		// register consul health check
+		if consul.IsConsulEnabled() {
+			registerRouteForConsulHealthcheck(engine)
+		}
+
+		// register http routes
+		registerServerRoutes(c, engine)
+
+		// start the http server
+		server := createHttpServer(engine)
+		c.Log.Infof("Serving HTTP on %s", server.Addr)
+		go startHttpServer(ctx, server)
+
+		AddShutdownHook(func() { shutdownHttpServer(server) })
+		return nil
+	})
+
+	// consul
+	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+		if !consul.IsConsulEnabled() {
+			return nil
+		}
+
+		// create consul client
+		if _, e := consul.GetConsulClient(); e != nil {
+			return common.TraceErrf(e, "Failed to establish connection to Consul")
+		}
+
+		// deregister on shutdown
+		AddShutdownHook(func() {
+			if e := consul.DeregisterService(); e != nil {
+				c.Log.Errorf("Failed to deregister on Consul, %v", e)
+			}
+		})
+
+		if e := consul.RegisterService(); e != nil {
+			return common.TraceErrf(e, "Failed to register on Consul")
+		}
+		return nil
+	})
+
+	// schedulers
+	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+		// distributed task scheduler has pending tasks and is enabled
+		if task.IsTaskSchedulerPending() && !task.IsTaskSchedulingDisabled() {
+			task.StartTaskSchedulerAsync()
+			c.Log.Info("Distributed Task Scheduler started")
+			AddShutdownHook(func() { task.StopTaskScheduler() })
+		} else if common.HasScheduler() {
+			// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
+			common.StartSchedulerAsync()
+			c.Log.Info("Scheduler started")
+			AddShutdownHook(func() { common.StopScheduler() })
+		}
+		return nil
+	})
 }
 
 // Register shutdown hook, hook should never panic
@@ -314,6 +442,10 @@ func callPreServerBootstrapListeners(c common.ExecContext) error {
 	return nil
 }
 
+func RegisterBootstrapCallback(bootstrapComponent func(context.Context, common.ExecContext) error) {
+	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
+}
+
 /*
 Bootstrap server
 
@@ -328,7 +460,6 @@ To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 
 It's also possible to register callbacks that are triggered before/after server bootstrap
 
-
 	server.PreServerBootstrapped(func(c common.ExecContext) error {
 		// do something right after configuration being loaded, but server hasn't been bootstraped yet
 	});
@@ -339,7 +470,6 @@ It's also possible to register callbacks that are triggered before/after server 
 
 	// start the server
 	server.BootstrapServer(os.Args)
-
 */
 func BootstrapServer(args []string) {
 	var c common.ExecContext = common.EmptyExecContext()
@@ -370,101 +500,10 @@ func BootstrapServer(args []string) {
 		c.Log.Fatalf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
 	}
 
-	// mysql
-	if mysql.IsMySqlEnabled() {
-		if e := mysql.InitMySqlFromProp(); e != nil {
-			c.Log.Fatalf("Failed to establish connection to MySQL, %v", e)
-		}
-	}
-
-	// redis
-	if redis.IsRedisEnabled() {
-		if _, e := redis.InitRedisFromProp(); e != nil {
-			c.Log.Fatalf("Failed to establish connection to Redis, %v", e)
-		}
-	}
-
-	// rabbitmq
-	if rabbitmq.IsEnabled() {
-		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
-			c.Log.Fatalf("Failed to establish connection to RabbitMQ, %v", e)
-		}
-	}
-
-	// web server
-	if common.GetPropBool(common.PROP_SERVER_ENABLED) {
-		c.Log.Info("Starting http server")
-
-		// Load propagation keys for tracing
-		common.LoadPropagationKeyProp(c)
-
-		// always set to releaseMode
-		gin.SetMode(gin.ReleaseMode)
-
-		// gin engine
-		engine := gin.New()
-		engine.Use(TraceMiddleware())
-
-		if !common.IsProdMode() {
-			engine.Use(gin.Logger()) // default logger for debugging
-		}
-
-		if common.GetPropBool(common.PROP_SERVER_PERF_ENABLED) {
-			engine.Use(PerfMiddleware())
-		}
-
-		// register customer recovery func
-		engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
-
-		// register consul health check
-		if consul.IsConsulEnabled() {
-			registerRouteForConsulHealthcheck(engine)
-		}
-
-		// register http routes
-		registerServerRoutes(c, engine)
-
-		// start the http server
-		server := createHttpServer(engine)
-		c.Log.Infof("Serving HTTP on %s", server.Addr)
-		go startHttpServer(ctx, server)
-
-		AddShutdownHook(func() { shutdownHttpServer(server) })
-	}
-
-	// consul
-	if consul.IsConsulEnabled() {
-
-		// create consul client
-		if _, e := consul.GetConsulClient(); e != nil {
-			c.Log.Fatalf("Failed to establish connection to Consul, %v", e)
-		}
-
-		// deregister on shutdown
-		AddShutdownHook(func() {
-			if e := consul.DeregisterService(); e != nil {
-				c.Log.Errorf("Failed to deregister on Consul, %v", e)
-			}
-		})
-
-		if e := consul.RegisterService(); e != nil {
-			c.Log.Fatalf("Failed to register on Consul, %v", e)
-		}
-	}
-
-	// distributed task scheduler
-	if task.IsTaskSchedulerPending() {
-		if !task.IsTaskSchedulingDisabled() {
-			task.StartTaskSchedulerAsync()
-			c.Log.Info("TaskScheduler started")
-			AddShutdownHook(func() { task.StopTaskScheduler() })
-		}
-	} else {
-		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
-		if common.HasScheduler() {
-			common.StartSchedulerAsync()
-			c.Log.Info("Scheduler started")
-			AddShutdownHook(func() { common.StopScheduler() })
+	// bootstrap components
+	for _, bootstrap := range serverBootrapCallbacks {
+		if e := bootstrap(ctx, c); e != nil {
+			c.Log.Fatalf("Failed to bootstrap server component, %v", e)
 		}
 	}
 
