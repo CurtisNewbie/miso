@@ -29,7 +29,7 @@ func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 
 // Declare event bus
 //
-// Inernally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified the same bus name
+// Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified the same bus name
 func DeclareEventBus(bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
@@ -44,15 +44,14 @@ func DeclareEventBus(bus string) error {
 // Subscribe to event bus
 //
 // Internally, it registers a listener for the queue identified by the bus name
-func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) error) error {
+func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) error) {
 	if bus == "" {
-		return errBusNameEmpty
+		panic(errBusNameEmpty)
 	}
 	if concurrency < 1 {
 		concurrency = 1
 	}
 	rabbitmq.AddListener(rabbitmq.JsonMsgListener[T]{QueueName: busName(bus), Handler: listener, NumOfRoutines: concurrency})
-	return nil
 }
 
 func busName(bus string) string {
