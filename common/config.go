@@ -17,7 +17,7 @@ var (
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
 
 	// mutex for viper
-	viperMutex sync.Mutex
+	viperRWMutex sync.RWMutex
 
 	PRODUCTION_PROFILE_NAME = "prod"
 )
@@ -29,12 +29,12 @@ func init() {
 
 // Set default value for the prop
 func SetProp(prop string, val any) {
-	doWithViperLock(func() { viper.Set(prop, val) })
+	doWithViperWriteLock(func() { viper.Set(prop, val) })
 }
 
 // Set default value for the prop
 func SetDefProp(prop string, defVal any) {
-	doWithViperLock(func() { viper.SetDefault(prop, defVal) })
+	doWithViperWriteLock(func() { viper.SetDefault(prop, defVal) })
 }
 
 // Check whether the prop exists
@@ -44,7 +44,7 @@ func ContainsProp(prop string) bool {
 
 // Check whether the prop exists
 func HasProp(prop string) bool {
-	return doRetWithViperLock(func() bool { return viper.IsSet(prop) })
+	return doWithViperReadLock(func() bool { return viper.IsSet(prop) })
 }
 
 // Get prop as int slice
@@ -54,22 +54,22 @@ func GetConfIntSlice(prop string) []int {
 
 // Get prop as int slice
 func GetPropIntSlice(prop string) []int {
-	return doRetWithViperLock(func() []int { return viper.GetIntSlice(prop) })
+	return doWithViperReadLock(func() []int { return viper.GetIntSlice(prop) })
 }
 
 // Get prop as string slice
 func GetPropStringSlice(prop string) []string {
-	return doRetWithViperLock(func() []string { return viper.GetStringSlice(prop) })
+	return doWithViperReadLock(func() []string { return viper.GetStringSlice(prop) })
 }
 
 // Get prop as int
 func GetPropInt(prop string) int {
-	return doRetWithViperLock(func() int { return viper.GetInt(prop) })
+	return doWithViperReadLock(func() int { return viper.GetInt(prop) })
 }
 
 // Get prop as bool
 func GetPropBool(prop string) bool {
-	return doRetWithViperLock(func() bool { return viper.GetBool(prop) })
+	return doWithViperReadLock(func() bool { return viper.GetBool(prop) })
 }
 
 /*
@@ -87,12 +87,12 @@ func GetPropStr(prop string) string {
 
 // Get prop as string (with lock)
 func _getPropString(prop string) string {
-	return doRetWithViperLock(func() string { return viper.GetString(prop) })
+	return doWithViperReadLock(func() string { return viper.GetString(prop) })
 }
 
 // Unmarshal to object from properties
 func UnmarshalFromProp(ptr any) {
-	doRetWithViperLock(func() any {
+	doWithViperReadLock(func() any {
 		viper.Unmarshal(ptr)
 		return nil
 	})
@@ -143,7 +143,7 @@ func LoadConfigFromFile(configFile string, c ExecContext) {
 	}
 
 	loaded := false
-	doWithViperLock(func() {
+	doWithViperWriteLock(func() {
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -310,15 +310,15 @@ func ResolveArg(arg string) string {
 }
 
 // call with viper lock
-func doWithViperLock(f func()) {
-	viperMutex.Lock()
-	defer viperMutex.Unlock()
+func doWithViperWriteLock(f func()) {
+	viperRWMutex.Lock()
+	defer viperRWMutex.Unlock()
 	f()
 }
 
 // call and return with viper lock
-func doRetWithViperLock[T any](f func() T) T {
-	viperMutex.Lock()
-	defer viperMutex.Unlock()
+func doWithViperReadLock[T any](f func() T) T {
+	viperRWMutex.RLock()
+	defer viperRWMutex.RUnlock()
 	return f()
 }
