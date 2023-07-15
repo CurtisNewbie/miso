@@ -30,15 +30,14 @@ func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 // Declare event bus
 //
 // Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified the same bus name
-func DeclareEventBus(bus string) error {
+func DeclareEventBus(bus string) {
 	if bus == "" {
-		return errBusNameEmpty
+		panic(errBusNameEmpty)
 	}
 	busName := busName(bus)
 	rabbitmq.RegisterQueue(rabbitmq.QueueRegistration{Name: busName, Durable: true})
 	rabbitmq.RegisterBinding(rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
 	rabbitmq.RegisterExchange(rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
-	return nil
 }
 
 // Subscribe to event bus
