@@ -535,8 +535,10 @@ func registerServerRoutes(c common.ExecContext, engine *gin.Engine) {
 		registerRoute(engine)
 	}
 
-	for _, r := range GetHttpRoutes() {
-		c.Log.Infof("%-6s %-45s --> %s", r.Method, r.Url, r.HandlerName)
+	if !common.IsProdMode() {
+		for _, r := range GetHttpRoutes() {
+			c.Log.Infof("%-6s %-45s --> %s", r.Method, r.Url, r.HandlerName)
+		}
 	}
 }
 
