@@ -10,7 +10,7 @@ import (
 )
 
 type Runnable func() error
-type LRunnable func() (any, error)
+type LRunnable[T any] func() (T, error)
 
 var (
 	lock_lease_time = time.Duration(30_000) * time.Millisecond
@@ -33,7 +33,7 @@ Lock and run the runnable using Redis
 The maximum time wait for the lock is 1 min.
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun(ec common.ExecContext, key string, runnable LRunnable) (any, error) {
+func RLockRun[T any](ec common.ExecContext, key string, runnable LRunnable[T]) (T, error) {
 	return TimedRLockRun(ec, key, 1*time.Minute, runnable)
 }
 
@@ -56,14 +56,15 @@ Lock and run the runnable using Redis
 The maxTimeWait is the maximum time wait for the lock.
 May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func TimedRLockRun(ec common.ExecContext, key string, maxTimeWait time.Duration, runnable LRunnable) (any, error) {
+func TimedRLockRun[T any](ec common.ExecContext, key string, maxTimeWait time.Duration, runnable LRunnable[T]) (T, error) {
+	var t T
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
 		RetryStrategy: redislock.LinearBackoff(maxTimeWait),
 	})
 
 	if err != nil {
-		return nil, err
+		return t, err
 	}
 	ec.Log.Debugf("Obtained lock for key '%s'", key)
 
