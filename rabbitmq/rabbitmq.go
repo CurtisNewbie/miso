@@ -191,7 +191,7 @@ func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey st
 		return errMsgNotPublished
 	}
 
-	c.Log.Infof("Published MQ to %v, %s", exchange, msg)
+	c.Log.Debugf("Published MQ to %v, %s", exchange, msg)
 	return nil
 }
 
