@@ -219,7 +219,7 @@ func declareQueues(ch *amqp.Channel) error {
 		if e != nil {
 			return common.TraceErrf(e, "failed to declare queue, %v", queue.Name)
 		}
-		logrus.Infof("Declared queue '%s'", dqueue.Name)
+		logrus.Debugf("Declared queue '%s'", dqueue.Name)
 	}
 	return nil
 }
@@ -255,7 +255,7 @@ func declareBindings(ch *amqp.Channel) error {
 		if e != nil {
 			return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 		}
-		logrus.Infof("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
+		logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ func declareExchanges(ch *amqp.Channel) error {
 		if e != nil {
 			return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 		}
-		logrus.Infof("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
+		logrus.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	}
 	return nil
 }
@@ -308,7 +308,7 @@ func StartRabbitMqClient(ctx context.Context) error {
 			} else {
 				notifyCloseChan, err = initClient(ctx)
 				if err != nil {
-					logrus.Infof("Error connecting to RabbitMQ: %v", err)
+					logrus.Errorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
 					continue
 				}
@@ -350,7 +350,6 @@ func tryEstablishConn() (*amqp.Connection, error) {
 		return _conn, nil
 	}
 
-	logrus.Info("Establish connection to RabbitMQ")
 	c := amqp.Config{}
 	username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
 	password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
@@ -358,6 +357,8 @@ func tryEstablishConn() (*amqp.Connection, error) {
 	host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
 	port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
+
+	logrus.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
 	cn, e := amqp.DialConfig(dialUrl, c)
 	if e != nil {
 		return nil, e
@@ -423,7 +424,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 		return nil, common.TraceErrf(e, "failed to create publisher")
 	}
 
-	logrus.Info("RabbitMQ client initialization finished")
+	logrus.Debugf("RabbitMQ client initialization finished")
 	return notifyCloseChan, nil
 }
 
@@ -459,7 +460,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 		}
 	}
 
-	logrus.Info("RabbitMQ consumer initialization finished")
+	logrus.Debug("RabbitMQ consumer initialization finished")
 	return nil
 }
 
@@ -487,7 +488,7 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 	defer pubChanRwm.Unlock()
 
 	if pubChan != nil && !pubChan.IsClosed() {
-		logrus.Info("RabbitMQ publisher is already initialized")
+		logrus.Debug("RabbitMQ publisher is already initialized")
 		return nil
 	}
 
@@ -499,6 +500,6 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 		return common.TraceErrf(err, "publishing channel could not be put into confirm mode")
 	}
 	pubChan = pc
-	logrus.Info("RabbitMQ publisher initialization finished")
+	logrus.Debug("RabbitMQ publisher initialization finished")
 	return nil
 }
