@@ -2,7 +2,6 @@ package bus
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
@@ -17,7 +16,6 @@ var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
 
 	eventBusInitSet = common.NewSet[string]()
-	initMapRwmu     sync.RWMutex
 )
 
 // Send msg to event bus
@@ -27,7 +25,6 @@ func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}
-	DeclareEventBus(bus)
 	busName := busName(bus)
 	return rabbitmq.PublishJson(c, eventObject, busName, BUS_ROUTING_KEY)
 }
@@ -35,26 +32,10 @@ func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 // Declare event bus.
 //
 // Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified by the same bus name.
-//
-// If you are using SendToEventBus() or SubscribeEventBus(), it's unnecessary to call this method.
 func DeclareEventBus(bus string) {
 	if bus == "" {
 		panic(errBusNameEmpty)
 	}
-	initMapRwmu.RLock()
-	if eventBusInitSet.Has(bus) {
-		initMapRwmu.RUnlock()
-		return
-	}
-	initMapRwmu.RUnlock()
-
-	initMapRwmu.Lock()
-	if eventBusInitSet.Has(bus) {
-		initMapRwmu.Unlock()
-		return
-	}
-	defer initMapRwmu.Unlock()
-
 	busName := busName(bus)
 	rabbitmq.RegisterQueue(rabbitmq.QueueRegistration{Name: busName, Durable: true})
 	rabbitmq.RegisterBinding(rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
@@ -69,7 +50,6 @@ func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) er
 	if bus == "" {
 		panic(errBusNameEmpty)
 	}
-	DeclareEventBus(bus)
 	if concurrency < 1 {
 		concurrency = 1
 	}
