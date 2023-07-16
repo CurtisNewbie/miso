@@ -14,8 +14,6 @@ const (
 
 var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
-
-	eventBusInitSet = common.NewSet[string]()
 )
 
 // Send msg to event bus
@@ -40,7 +38,6 @@ func DeclareEventBus(bus string) {
 	rabbitmq.RegisterQueue(rabbitmq.QueueRegistration{Name: busName, Durable: true})
 	rabbitmq.RegisterBinding(rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
 	rabbitmq.RegisterExchange(rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
-	eventBusInitSet.Add(bus)
 }
 
 // Subscribe to event bus.
