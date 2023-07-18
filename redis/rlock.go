@@ -30,14 +30,15 @@ func ObtainRLocker() *redislock.Client {
 /*
 Lock and run the runnable using Redis
 
-The maximum time wait for the lock is 1 min.
+The maximum time wait for the lock is 1s, retry every 10ms.
+
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
 func RLockRun[T any](ec common.ExecContext, key string, runnable LRunnable[T]) (T, error) {
 	var t T
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
-		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(100*time.Millisecond), 10),
+		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(10*time.Millisecond), 100),
 	})
 
 	if err != nil {
@@ -81,7 +82,8 @@ func RLockRun[T any](ec common.ExecContext, key string, runnable LRunnable[T]) (
 /*
 Lock and run the runnable using Redis
 
-The maximum time wait for the lock is 1 min.
+The maximum time wait for the lock is 1s, retry every 10ms.
+
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
 func RLockExec(ec common.ExecContext, key string, runnable Runnable) error {
