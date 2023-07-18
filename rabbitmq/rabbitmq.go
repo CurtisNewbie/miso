@@ -413,15 +413,15 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	}
 	ch.Close()
 
+	// publisher
+	if e = bootstrapPublisher(conn); e != nil {
+		return nil, common.TraceErrf(e, "failed to create publisher")
+	}
+
 	// consumers
 	if e = bootstrapConsumers(conn); e != nil {
 		logrus.Errorf("Failed to bootstrap consumer: %v", e)
 		return nil, common.TraceErrf(e, "failed to create consumer")
-	}
-
-	// publisher
-	if e = bootstrapPublisher(conn); e != nil {
-		return nil, common.TraceErrf(e, "failed to create publisher")
 	}
 
 	logrus.Debugf("RabbitMQ client initialization finished")
@@ -434,28 +434,27 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	for _, v := range listeners {
 		listener := v
 
-		ch, e := conn.Channel()
-		if e != nil {
-			return e
-		}
-
-		e = ch.Qos(qos, 0, false)
-		if e != nil {
-			return e
-		}
-
 		qname := listener.Queue()
-		msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
-		if err != nil {
-			logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
-		}
-
 		concurrency := v.Concurrency()
 		if concurrency < 1 {
 			concurrency = 1
 		}
+
 		for i := 0; i < concurrency; i++ {
 			ic := i
+			ch, e := conn.Channel()
+			if e != nil {
+				return e
+			}
+
+			e = ch.Qos(qos, 0, false)
+			if e != nil {
+				return e
+			}
+			msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
+			if err != nil {
+				logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
+			}
 			startListening(msgCh, listener, ic)
 		}
 	}
@@ -487,14 +486,16 @@ func bootstrapPublisher(conn *amqp.Connection) error {
 	pubChanRwm.Lock()
 	defer pubChanRwm.Unlock()
 
-	if pubChan != nil && !pubChan.IsClosed() {
-		logrus.Debug("RabbitMQ publisher is already initialized")
-		return nil
+	if pubChan != nil { // recreate a new one
+		if !pubChan.IsClosed() {
+			pubChan.Close()
+		}
+		pubChan = nil
 	}
 
 	pc, err := conn.Channel()
 	if err != nil {
-		return err
+		return common.TraceErrf(err, "publishing channel could not be created")
 	}
 	if err = pc.Confirm(false); err != nil {
 		return common.TraceErrf(err, "publishing channel could not be put into confirm mode")
