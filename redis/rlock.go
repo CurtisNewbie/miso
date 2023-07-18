@@ -34,37 +34,14 @@ The maximum time wait for the lock is 1 min.
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
 func RLockRun[T any](ec common.ExecContext, key string, runnable LRunnable[T]) (T, error) {
-	return TimedRLockRun(ec, key, 1*time.Minute, runnable)
-}
-
-/*
-Lock and run the runnable using Redis
-
-The maximum time wait for the lock is 1 min.
-May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
-*/
-func RLockExec(ec common.ExecContext, key string, runnable Runnable) error {
-	_, e := TimedRLockRun(ec, key, 1*time.Minute, func() (any, error) {
-		return nil, runnable()
-	})
-	return e
-}
-
-/*
-Lock and run the runnable using Redis
-
-The maxTimeWait is the maximum time wait for the lock.
-May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
-*/
-func TimedRLockRun[T any](ec common.ExecContext, key string, maxTimeWait time.Duration, runnable LRunnable[T]) (T, error) {
 	var t T
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
-		RetryStrategy: redislock.LinearBackoff(maxTimeWait),
+		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(100*time.Millisecond), 10),
 	})
 
 	if err != nil {
-		return t, common.TraceErrf(err, "failed to obtain lock, key: %v, maxTimeWait: %v", key, maxTimeWait)
+		return t, common.TraceErrf(err, "failed to obtain lock, key: %v", key)
 	}
 	ec.Log.Debugf("Obtained lock for key '%s'", key)
 
@@ -99,4 +76,17 @@ func TimedRLockRun[T any](ec common.ExecContext, key string, maxTimeWait time.Du
 	}()
 
 	return runnable()
+}
+
+/*
+Lock and run the runnable using Redis
+
+The maximum time wait for the lock is 1 min.
+May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
+*/
+func RLockExec(ec common.ExecContext, key string, runnable Runnable) error {
+	_, e := RLockRun(ec, key, func() (any, error) {
+		return nil, runnable()
+	})
+	return e
 }
