@@ -64,7 +64,7 @@ func TimedRLockRun[T any](ec common.ExecContext, key string, maxTimeWait time.Du
 	})
 
 	if err != nil {
-		return t, err
+		return t, common.TraceErrf(err, "failed to obtain lock, key: %v, maxTimeWait: %v", key, maxTimeWait)
 	}
 	ec.Log.Debugf("Obtained lock for key '%s'", key)
 
