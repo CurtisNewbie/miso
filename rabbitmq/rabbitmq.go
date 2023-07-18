@@ -184,7 +184,7 @@ func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey st
 	}
 	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
-		return err
+		return common.TraceErrf(err, "failed to publish message")
 	}
 
 	if !confirm.Wait() {
