@@ -20,15 +20,10 @@ const (
 )
 
 var (
-	// Global Mutex for everything
-	_mutex sync.Mutex
-
-	// Connection pointer, accessing it require obtaining 'mu' lock
-	_conn *amqp.Connection
-
-	// TODO: Impl channel pooling
-	_pubChan *amqp.Channel  // publisher channel
-	_pubWg   sync.WaitGroup // number of messages being published
+	_mutex   sync.Mutex       // Global Mutex for everything
+	_conn    *amqp.Connection // Connection pointer, accessing it require obtaining 'mu' lock
+	_pubChan *amqp.Channel    // publisher channel
+	_pubWg   sync.WaitGroup   // number of messages being published
 
 	_listeners            []Listener
 	_bindingRegistration  []BindingRegistration
