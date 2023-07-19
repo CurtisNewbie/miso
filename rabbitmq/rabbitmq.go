@@ -29,21 +29,22 @@ var (
 	// Connection pointer, accessing it require obtaining 'mu' lock
 	_conn *amqp.Connection
 	// Global Mutex for connection and initialization stuff
-	mu sync.Mutex
+	connMu sync.Mutex
 
 	/*
 		Publisher
+
+		TODO: Impl channel pooling
 	*/
-	pubChan    *amqp.Channel
-	pubChanRwm sync.RWMutex
-	pubWg      sync.WaitGroup
+	_pubChan  *amqp.Channel
+	pubChanMu sync.Mutex
+	pubWg     sync.WaitGroup
 
 	/*
 		Consumer
 	*/
 	listeners []Listener
 
-	errPubChanClosed   = errors.New("publishing Channel is closed, unable to publish message")
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
 
 	_bindingRegistration  []BindingRegistration
@@ -164,17 +165,17 @@ func PublishText(c common.ExecContext, msg string, exchange string, routingKey s
 	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain")
 }
 
-/*
-Publish message with confirmation
-*/
+// Publish message with confirmation
 func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey string, contentType string) error {
-	pubChanRwm.RLock()
-	defer pubChanRwm.RUnlock()
 	pubWg.Add(1)
 	defer pubWg.Done()
 
-	if pubChan == nil || pubChan.IsClosed() {
-		return errPubChanClosed
+	pubChanMu.Lock()
+	defer pubChanMu.Unlock()
+
+	pc, err := _getPubChan()
+	if err != nil {
+		return common.TraceErrf(err, "publishing Channel is closed, unable to publish message")
 	}
 
 	publishing := amqp.Publishing{
@@ -182,7 +183,7 @@ func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey st
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 	}
-	confirm, err := pubChan.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
+	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
 		return common.TraceErrf(err, "failed to publish message")
 	}
@@ -201,8 +202,8 @@ Add message Listener
 Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
 */
 func AddListener(listener Listener) {
-	mu.Lock()
-	defer mu.Unlock()
+	connMu.Lock()
+	defer connMu.Unlock()
 	listeners = append(listeners, listener)
 }
 
@@ -333,19 +334,24 @@ func StartRabbitMqClient(ctx context.Context) error {
 
 // Disconnect from RabbitMQ server
 func ClientDisconnect() error {
-	mu.Lock()
-	defer mu.Unlock()
+	connMu.Lock()
+	defer connMu.Unlock()
 	if _conn == nil {
 		return nil
 	}
 
 	logrus.Info("Disconnecting RabbitMQ Connection")
 	pubWg.Wait()
-	return _conn.Close()
+	err := _conn.Close()
+	_conn = nil
+	return err
 }
 
 // Try to establish Connection
 func tryEstablishConn() (*amqp.Connection, error) {
+	connMu.Lock()
+	defer connMu.Unlock()
+
 	if _conn != nil && !_conn.IsClosed() {
 		return _conn, nil
 	}
@@ -388,9 +394,6 @@ Init RabbitMQ Client
 return notifyCloseChannel for connection and error
 */
 func initClient(ctx context.Context) (chan *amqp.Error, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
 	// Establish connection if necessary
 	conn, err := tryEstablishConn()
 	if err != nil {
@@ -483,24 +486,40 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 }
 
 func bootstrapPublisher(conn *amqp.Connection) error {
-	pubChanRwm.Lock()
-	defer pubChanRwm.Unlock()
+	pubChanMu.Lock()
+	defer pubChanMu.Unlock()
 
-	if pubChan != nil { // recreate a new one
-		if !pubChan.IsClosed() {
-			pubChan.Close()
-		}
-		pubChan = nil
-	}
-
-	pc, err := conn.Channel()
+	_, err := _getPubChan() // attempt to initialize the channel for publisher
 	if err != nil {
-		return common.TraceErrf(err, "publishing channel could not be created")
+		return err
 	}
-	if err = pc.Confirm(false); err != nil {
-		return common.TraceErrf(err, "publishing channel could not be put into confirm mode")
-	}
-	pubChan = pc
+
 	logrus.Debug("RabbitMQ publisher initialization finished")
 	return nil
+}
+
+// open a new publishing channel if one is missing or closed for whatever reason.
+//
+// return error if it failed to open new channel, e.g., connection is also missing or closed.
+func _getPubChan() (*amqp.Channel, error) {
+	if _pubChan == nil || _pubChan.IsClosed() {
+		connMu.Lock()
+		if _conn == nil {
+			return nil, common.NewTraceErrf("rabbitmq connection is missing")
+		}
+		newChan, err := _conn.Channel()
+		if err != nil {
+			return nil, common.TraceErrf(err, "publishing channel could not be re-created")
+		}
+		_pubChan = newChan
+
+		if err = _pubChan.Confirm(false); err != nil {
+			return nil, common.TraceErrf(err, "publishing channel could not be put into confirm mode")
+		}
+
+		logrus.Debugf("Created new RabbitMQ publishing channel")
+		connMu.Unlock()
+	}
+
+	return _pubChan, nil
 }

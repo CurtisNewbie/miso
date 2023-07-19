@@ -69,6 +69,7 @@ func TestPublishMessage(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	logrus.SetLevel(logrus.DebugLevel)
 
 	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
 	RegisterQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
@@ -105,6 +106,7 @@ func TestPublishJsonMessage(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
 	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	logrus.SetLevel(logrus.DebugLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	e := StartRabbitMqClient(ctx)
