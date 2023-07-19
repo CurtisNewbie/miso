@@ -16,9 +16,11 @@ var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
 )
 
-// Send msg to event bus
+// Send msg to event bus.
 //
-// Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name
+// Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
+//
+// Before calling this method, the DeclareEventBus(...) must be called once to create the necessary components.
 func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
@@ -43,10 +45,15 @@ func DeclareEventBus(bus string) {
 // Subscribe to event bus.
 //
 // Internally, it registers a listener for the queue identified by the bus name.
+//
+// It also calls DeclareEventBus(...) automatically before it registers the listeners.
 func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) error) {
 	if bus == "" {
 		panic(errBusNameEmpty)
 	}
+
+	DeclareEventBus(bus)
+
 	if concurrency < 1 {
 		concurrency = 1
 	}
