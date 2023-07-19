@@ -60,14 +60,25 @@ type TraceableError struct {
 	msg   string
 }
 
-func (e *TraceableError) Error() string {
+func (e *TraceableError) FormatedError() string {
 	if e.cause != nil {
 		if tr, ok := e.cause.(*TraceableError); ok {
-			return fmt.Sprintf("%v:%v %v\n\t%v", e.file, e.line, e.msg, tr)
+			return fmt.Sprintf("%v:%v %v\n\t%v", e.file, e.line, e.msg, tr.FormatedError())
 		}
-		return fmt.Sprintf("%v:%v %v, %v", e.file, e.line, e.msg, e.cause)
+		return fmt.Sprintf("%v:%v %v, \n\t%v", e.file, e.line, e.msg, e.cause)
 	}
 	return fmt.Sprintf("%v:%v %v", e.file, e.line, e.msg)
+}
+
+func (e *TraceableError) Error() string {
+	if e.cause == nil {
+		return e.msg
+	}
+
+	if tr, ok := e.cause.(*TraceableError); ok {
+		return fmt.Sprintf("%v\n\t%v", e.msg, tr.FormatedError())
+	}
+	return fmt.Sprintf("%v, %v", e.msg, e.cause)
 }
 
 func TraceErrf(err error, msg string, param ...any) error {
@@ -80,7 +91,7 @@ func TraceErrf(err error, msg string, param ...any) error {
 	return t
 }
 
-func NewTraceErrf(msg string, param...any) error {
+func NewTraceErrf(msg string, param ...any) error {
 	t := new(TraceableError)
 	_, file, line, _ := runtime.Caller(1)
 	t.file = srcPath(file)

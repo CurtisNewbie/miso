@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -15,8 +16,12 @@ func doSomethingElse() error {
 }
 
 func doSomethingDeeper() error {
-	// return errors.New("I am not feeling good")
-	return NewTraceErrf("I am ok but I will still return err anyway")
+	yetAnotherErr := deepestStuff()
+	return TraceErrf(yetAnotherErr, "I am ok but I will still return err anyway")
+}
+
+func deepestStuff() error {
+	return errors.New("the deepest mistake")
 }
 
 func TestTraceableError(t *testing.T) {
