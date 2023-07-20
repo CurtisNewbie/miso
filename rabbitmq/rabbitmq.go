@@ -32,6 +32,15 @@ var (
 				logrus.Errorf("Failed to create new publishing channel, %v", err)
 				return nil
 			}
+
+			// attach a finalizer to it since sync.Pool may GC it at any time
+			runtime.SetFinalizer(c, func(c *amqp.Channel) {
+				if !c.IsClosed() {
+					logrus.Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
+					c.Close()
+				}
+			})
+
 			return c
 		},
 	}
