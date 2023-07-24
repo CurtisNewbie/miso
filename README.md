@@ -118,7 +118,7 @@ e.g.,
 | task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally                                                                                             | true  |
 | task.scheduling.group   | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default  |
 
-### Distributed Task Scheduling Properties
+### Client Package Properties
 
 | property | description | default value |
 |----|---|---|
