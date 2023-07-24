@@ -65,14 +65,14 @@ e.g.,
 
 ### MySQL Properties
 
-| property                    | description                                                                   | default value                                                                                                   |
-|-----------------------------|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| mysql.enabled               | whether MySQL is enabled                                                      | false                                                                                                           |
-| mysql.user                  | username                                                                      | root                                                                                                            |
-| mysql.password              | password                                                                      |                                                                                                                 |
-| mysql.database              | database                                                                      |                                                                                                                 |
-| mysql.host                  | host                                                                          | `localhost`                                                                                                     |
-| mysql.port                  | port                                                                          | 3306                                                                                                            |
+| property  | description   | default value   |
+|---|---|---|
+| mysql.enabled   | whether MySQL is enabled   | false   |
+| mysql.user   | username   | root   |
+| mysql.password   | password   |   |
+| mysql.database   | database   |   |
+| mysql.host   | host   | `localhost`   |
+| mysql.port   | port   | 3306   |
 | mysql.connection.parameters | query parameters declared on connection url (a single string joined with `&`) | `charset=utf8mb4`<br>`parseTime=True`<br>`loc=Local`<br>`readTimeout=30s`<br>`writeTimeout=30s`<br>`timeout=3s` |
 
 ### Redis Properties
@@ -100,23 +100,29 @@ e.g.,
 
 ### SQLite Properties
 
-| property    | description                  | default value |
-|-------------|------------------------------|---------------|
-| sqlite.file | path to SQLite database file |               |
+| property  | description  | default value |
+|----|----|----|
+| sqlite.file | path to SQLite database file |  |
 
 ### Logger Properties
 
-| property             | description                                                                                    | default value |
-|----------------------|------------------------------------------------------------------------------------------------|---------------|
-| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr                        |               |
-| logging.level        | logging level (handled by `server.ConfigureLogging`), the configured value is case-insensitive |               |
+| property  | description   | default value |
+|----|----|----|
+| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr                        |  |
+| logging.level        | logging level (handled by `server.ConfigureLogging`), the configured value is case-insensitive |  |
 
 ### Distributed Task Scheduling Properties
 
-| property                | description                                                                                                                                                                                                                   | default value |
-|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally                                                                                             | true          |
-| task.scheduling.group   | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default       |
+| property  | description  | default value |
+|----|----|----|
+| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally                                                                                             | true  |
+| task.scheduling.group   | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default  |
+
+### Distributed Task Scheduling Properties
+
+| property | description | default value |
+|----|---|---|
+| client.host.* | configure static hostname of the service, it's useful for local development environment. E.g., if the service name is 'goauth', we can configure `client.host.goauth: localhost:8081` | |
 
 ## Yaml Configuration File Example
 
