@@ -83,10 +83,21 @@ type TClient struct {
 	discoverService bool                // is service discovery enabled
 }
 
-// Prepare request url, if service discovery is enabled, serviceName will be resolved (currently supported by Consul)
+// Prepare request url.
+//
+// If service discovery is enabled, serviceName will be resolved using Consul.
+//
+// If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
 func (t *TClient) prepReqUrl() (string, error) {
-	if t.discoverService {
+	if t.discoverService && consul.IsConsulEnabled() {
 		return consul.ResolveRequestUrl(t.serviceName, t.Url)
+	}
+	if t.serviceName != "" {
+		host := resolveHostFromProp(t.serviceName)
+		if host != "" {
+			return "http://" + host + t.Url, nil
+		}
+		return "http://" + t.serviceName + t.Url, nil
 	}
 	return t.Url, nil
 }
@@ -393,4 +404,11 @@ func JoinQueryParam(queryParams map[string][]string) string {
 		}
 	}
 	return strings.Join(seg, "&")
+}
+
+func resolveHostFromProp(name string) string {
+	if name == "" {
+		return ""
+	}
+	return common.GetPropStr("client.host." + name)
 }
