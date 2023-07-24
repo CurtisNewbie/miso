@@ -90,6 +90,7 @@ func init() {
 	common.SetDefProp(common.PROP_SERVER_PORT, 8080)
 	common.SetDefProp(common.PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
 	common.SetDefProp(common.PROP_SERVER_PERF_ENABLED, false)
+	common.SetDefProp(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE, true)
 
 	// mysql
 	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
@@ -679,8 +680,12 @@ func TraceMiddleware() gin.HandlerFunc {
 	}
 }
 
-// Build ExecContext from the Gin's request context
+// Build ExecContext
 func BuildExecContext(c *gin.Context) common.ExecContext {
+	if !common.GetPropBool(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
+		return common.EmptyExecContext()
+	}
+
 	user, _ := ExtractUser(c)
 	return common.NewExecContext(c.Request.Context(), user)
 }
@@ -719,9 +724,7 @@ func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 // Build TRouteHandler with context, user (optional, may be nil), and logger prepared
 func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		user, _ := ExtractUser(c) // optional
-		ctx := c.Request.Context()
-		r, e := handler(c, common.NewExecContext(ctx, user))
+		r, e := handler(c, BuildExecContext(c))
 		HandleResult(c, r, e)
 	}
 }

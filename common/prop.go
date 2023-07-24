@@ -72,6 +72,7 @@ const (
 	PROP_SERVER_PORT                       = "server.port"
 	PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC = "server.gracefulShutdownTimeSec"
 	PROP_SERVER_PERF_ENABLED               = "server.perf.enabled"
+	PROP_SERVER_PROPAGATE_INBOUND_TRACE    = "server.trace.inbound.propagate"
 
 	/*
 		------------------------------------
