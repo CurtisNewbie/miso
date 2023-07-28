@@ -50,6 +50,7 @@ type HttpRoute struct {
 const (
 	OPEN_API_PREFIX = "/open/api"
 
+	HTTP_ANY    = "*"
 	HTTP_GET    = "GET"
 	HTTP_PUT    = "PUT"
 	HTTP_POST   = "POST"
@@ -251,6 +252,15 @@ func GetRecordedHttpServerRoutes() []string {
 // Get recorded http server routes
 func GetHttpRoutes() []HttpRoute {
 	return serverHttpRoutes
+}
+
+// Register ANY request route (raw version
+func RawAny(url string, handler RawTRouteHandler, extra ...common.StrPair) {
+	methods := []string{HTTP_GET, HTTP_PUT, HTTP_POST, HTTP_DELETE, HTTP_HEAD}
+	for i := range methods {
+		recordHttpServerRoute(url, methods[i], common.FuncName(handler), extra...)
+	}
+	addRoutesRegistar(func(e *gin.Engine) { e.Any(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register GET request route (raw version)
