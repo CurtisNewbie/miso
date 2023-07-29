@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -35,6 +36,8 @@ var (
 
 	// server list polling subscription
 	serverListPSub = &serverListPollingSubscription{sub: nil}
+
+	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
 )
 
 type serverListPollingSubscription struct {
@@ -147,6 +150,8 @@ Resolve request url for the given service.
 This func will first read the cache, trying to resolve the services address
 without actually requesting consul, and only when the cache missed, it then
 requests the consul.
+
+Return consul.ErrServiceInstanceNotFound if no instance available
 */
 func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 	if !strings.HasPrefix(relUrl, "/") {
@@ -167,6 +172,8 @@ Resolve service address (host:port)
 This func will first read the cache, trying to resolve the services address
 without actually requesting consul, and only when the cache missed, it then
 requests the consul
+
+Return consul.ErrServiceInstanceNotFound if no instance available
 */
 func ResolveServiceAddress(name string) (string, error) {
 	serviceListHolder.mu.Lock()
@@ -181,7 +188,7 @@ func ResolveServiceAddress(name string) (string, error) {
 
 	// no instances available
 	if instances == nil || len(instances) < 1 {
-		return "", common.NewTraceErrf("unable to find any available service instance for '%s'", name)
+		return "", ErrServiceInstanceNotFound
 	}
 	return extractServiceAddress(common.RandomOne(instances)), nil
 }
