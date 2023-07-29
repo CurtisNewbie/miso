@@ -154,7 +154,7 @@ func init() {
 		engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 		// register consul health check
-		if consul.IsConsulEnabled() {
+		if consul.IsConsulEnabled() && common.GetPropBool(common.PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK) {
 			registerRouteForConsulHealthcheck(engine)
 		}
 

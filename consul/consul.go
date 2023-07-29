@@ -69,6 +69,7 @@ func init() {
 	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_INTERVAL, "15s")
 	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
 	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "120s")
+	common.SetDefProp(common.PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK, true)
 }
 
 // Subscribe to server list, refresh server list every 30s

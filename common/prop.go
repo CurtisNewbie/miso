@@ -30,6 +30,7 @@ const (
 	PROP_CONSUL_HEALTHCHECK_INTERVAL           = "consul.healthCheckInterval"
 	PROP_CONSUL_HEALTHCHECK_TIMEOUT            = "consul.healthCheckTimeout"
 	PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER = "consul.healthCheckFailedDeregisterAfter"
+	PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK   = "consul.registerDefaultHealthCheck"
 
 	/*
 		------------------------------------

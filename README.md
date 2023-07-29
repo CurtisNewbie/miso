@@ -63,6 +63,7 @@ e.g.,
 | consul.healthCheckInterval              | health check interval                                                | 15s                             |
 | consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
 | consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
+| consul.registerDefaultHealthCheck | register default health check endpoint on startup | true                            |
 
 ### MySQL Properties
 
