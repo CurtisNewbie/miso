@@ -125,6 +125,16 @@ e.g.,
 |----|---|---|
 | client.host.* | configure static hostname of the service, it's useful for local development environment. E.g., if the service name is 'goauth', we can configure `client.host.goauth: localhost:8081` | |
 
+
+### JWT Properties
+
+| property | description | default value |
+|----|---|---|
+| jwt.key.public | public key for verifying the JWT token | |
+| jwt.key.private | private key for signing the JWT token | |
+| jwt.key.issuer | issuer of the token | |
+
+
 ## Yaml Configuration File Example
 
 ```yml
@@ -254,3 +264,7 @@ func main() {
 	server.BootstrapServer(os.Args)
 }
 ```
+
+#### More
+
+A lot more stuff is written but not documented here, it may not be useful for you, but feel free to read the code :D.

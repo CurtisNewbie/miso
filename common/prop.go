@@ -126,4 +126,15 @@ const (
 	*/
 	PROP_TASK_SCHEDULING_ENABLED = "task.scheduling.enabled"
 	PROP_TASK_SCHEDULING_GROUP   = "task.scheduling.group"
+
+	/*
+		------------------------------------
+
+		Prop for JWT
+
+		------------------------------------
+	*/
+	PROP_JWT_PUBLIC_KEY  = "jwt.key.public"
+	PROP_JWT_PRIVATE_KEY = "jwt.key.private"
+	PROP_JWT_ISSUER      = "jwt.key.issuer"
 )
