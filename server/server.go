@@ -49,13 +49,6 @@ type HttpRoute struct {
 
 const (
 	OPEN_API_PREFIX = "/open/api"
-
-	HTTP_ANY    = "*"
-	HTTP_GET    = "GET"
-	HTTP_PUT    = "PUT"
-	HTTP_POST   = "POST"
-	HTTP_DELETE = "DELETE"
-	HTTP_HEAD   = "HEAD"
 )
 
 var (
@@ -83,6 +76,12 @@ var (
 	preServerBootstrapListener  []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
 	postServerBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
 	serverHttpRoutes            []HttpRoute                        = []HttpRoute{}
+
+	anyHttpMethods = []string{
+		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch,
+		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
+		http.MethodTrace,
+	}
 )
 
 func init() {
@@ -256,34 +255,33 @@ func GetHttpRoutes() []HttpRoute {
 
 // Register ANY request route (raw version
 func RawAny(url string, handler RawTRouteHandler, extra ...common.StrPair) {
-	methods := []string{HTTP_GET, HTTP_PUT, HTTP_POST, HTTP_DELETE, HTTP_HEAD}
-	for i := range methods {
-		recordHttpServerRoute(url, methods[i], common.FuncName(handler), extra...)
+	for i := range anyHttpMethods {
+		recordHttpServerRoute(url, anyHttpMethods[i], common.FuncName(handler), extra...)
 	}
 	addRoutesRegistar(func(e *gin.Engine) { e.Any(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register GET request route (raw version)
 func RawGet(url string, handler RawTRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_GET, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodGet, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register POST request route (raw version)
 func RawPost(url string, handler RawTRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register PUT request route (raw version)
 func RawPut(url string, handler RawTRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_PUT, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPut, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodDelete, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewRawTRouteHandler(handler)) })
 }
 
@@ -291,7 +289,7 @@ func RawDelete(url string, handler RawTRouteHandler, extra ...common.StrPair) {
 //
 // The result or error is wrapped in Resp automatically.
 func Get(url string, handler TRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_GET, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodGet, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
 }
 
@@ -299,7 +297,7 @@ func Get(url string, handler TRouteHandler, extra ...common.StrPair) {
 //
 // The result or error is wrapped in Resp automatically.
 func Post(url string, handler TRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
 }
 
@@ -307,7 +305,7 @@ func Post(url string, handler TRouteHandler, extra ...common.StrPair) {
 //
 // The result and error are wrapped in Resp automatically as json.
 func Put(url string, handler TRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_PUT, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPut, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
 }
 
@@ -315,7 +313,7 @@ func Put(url string, handler TRouteHandler, extra ...common.StrPair) {
 //
 // The result and error are wrapped in Resp automatically as json.
 func Delete(url string, handler TRouteHandler, extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodDelete, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
 }
 
@@ -323,7 +321,7 @@ func Delete(url string, handler TRouteHandler, extra ...common.StrPair) {
 //
 // The result or error is wrapped in Resp automatically.
 func IPost[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewITRouteHandler(handler)) })
 }
 
@@ -331,7 +329,7 @@ func IPost[T any, V any](url string, handler ITRouteHandler[T, V], extra ...comm
 //
 // The result and error are wrapped in Resp automatically as json.
 func IGet[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_POST, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewITRouteHandler(handler)) })
 }
 
@@ -339,7 +337,7 @@ func IGet[T any, V any](url string, handler ITRouteHandler[T, V], extra ...commo
 //
 // The result and error are wrapped in Resp automatically as json
 func IDelete[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_DELETE, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodDelete, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewITRouteHandler(handler)) })
 }
 
@@ -347,7 +345,7 @@ func IDelete[T any, V any](url string, handler ITRouteHandler[T, V], extra ...co
 //
 // The result and error are wrapped in Resp automatically as json.
 func IPut[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
-	recordHttpServerRoute(url, HTTP_PUT, common.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodPut, common.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewITRouteHandler(handler)) })
 }
 
