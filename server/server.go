@@ -862,7 +862,7 @@ func ExtractUser(c *gin.Context) (*common.User, error) {
 		Username: c.GetHeader("username"),
 		UserNo:   c.GetHeader("userno"),
 		Role:     c.GetHeader("role"),
-		RoleNo:   c.GetHeader("roleNo"),
+		RoleNo:   c.GetHeader("roleno"),
 		Services: services,
 	}, nil
 }
