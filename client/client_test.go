@@ -33,10 +33,9 @@ func TestGet(t *testing.T) {
 		}).
 		EnableTracing().
 		EnableRequestLog().
-		Get(map[string][]string{
-			"name": {"yongj.zhuang", "zhuangyongj"},
-			"age":  {"103"},
-		})
+		AddQueryParams("name", "yongj.zhuang???", "zhuangyongj").
+		AddQueryParams("age", "105").
+		Get()
 
 	if tr.Err != nil {
 		t.Fatal(tr.Err)
@@ -71,10 +70,9 @@ func TestDelete(t *testing.T) {
 		}).
 		EnableRequestLog().
 		EnableTracing().
-		Delete(map[string][]string{
-			"name": {"yongj.zhuang", "zhuangyongj"},
-			"age":  {"105"},
-		})
+		AddQueryParams("name", "yongj.zhuang", "zhuangyongj").
+		AddQueryParams("age", "105").
+		Delete()
 
 	if tr.Err != nil {
 		t.Fatal(tr.Err)

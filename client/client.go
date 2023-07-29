@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -72,15 +73,17 @@ func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
 //
 // Provides convenients methods to build requests, use http.Client and propagate tracing information
 type TClient struct {
-	Url             string              // request url (absolute or relative)
-	Headers         map[string][]string // request headers
-	ExecCtx         common.ExecContext  // execute context
-	Ctx             context.Context     // context provided by caller
-	client          *http.Client        // http client used
-	serviceName     string              // service name
-	trace           bool                // enable tracing
-	logRequest      bool                // whether requests are logged
-	discoverService bool                // is service discovery enabled
+	Url        string              // request url (absolute or relative)
+	Headers    map[string][]string // request headers
+	ExecCtx    common.ExecContext  // execute context
+	Ctx        context.Context     // context provided by caller
+	QueryParam map[string][]string // query parameters
+
+	client          *http.Client
+	serviceName     string
+	trace           bool
+	logRequest      bool
+	discoverService bool
 }
 
 // Prepare request url.
@@ -92,14 +95,19 @@ func (t *TClient) prepReqUrl() (string, error) {
 	if t.discoverService && consul.IsConsulEnabled() {
 		return consul.ResolveRequestUrl(t.serviceName, t.Url)
 	}
+
+	url := t.Url
 	if t.serviceName != "" {
 		host := resolveHostFromProp(t.serviceName)
 		if host != "" {
-			return "http://" + host + t.Url, nil
+			url = "http://" + host + t.Url
+		} else {
+			url = "http://" + t.serviceName + t.Url
 		}
-		return "http://" + t.serviceName + t.Url, nil
 	}
-	return t.Url, nil
+
+	url = concatQueryParam(url, t.QueryParam)
+	return url, nil
 }
 
 /*
@@ -112,10 +120,7 @@ For example:
 			"TestCase": "TestGet",
 		}).
 		EnableTracing().
-		Get(map[string][]string{
-			"name": {"yongj.zhuang", "zhuangyongj"},
-			"age":  {"103"},
-		})
+		Get()
 
 The resolved request url will be (imagine that the service 'fantahsea' is hosted on 'localhost:8081'):
 
@@ -140,13 +145,12 @@ func (t *TClient) EnableRequestLog() *TClient {
 }
 
 // Send GET request
-func (t *TClient) Get(queryParams map[string][]string) *TResponse {
+func (t *TClient) Get() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
 	}
 
-	u = concatQueryParam(u, queryParams)
 	req, e := NewGetRequest(u)
 	if e != nil {
 		return t.errorResponse(e)
@@ -211,14 +215,41 @@ func (t *TClient) Put(body io.Reader) *TResponse {
 }
 
 // Send DELETE request
-func (t *TClient) Delete(queryParams map[string][]string) *TResponse {
+func (t *TClient) Delete() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
 	}
 
-	u = concatQueryParam(u, queryParams)
 	req, e := NewDeleteRequest(u)
+	if e != nil {
+		return t.errorResponse(e)
+	}
+	return t.send(req)
+}
+
+// Send HEAD request
+func (t *TClient) Head() *TResponse {
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return t.errorResponse(e)
+	}
+
+	req, e := NewHeadRequest(u)
+	if e != nil {
+		return t.errorResponse(e)
+	}
+	return t.send(req)
+}
+
+// Send OPTIONS request
+func (t *TClient) Options() *TResponse {
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return t.errorResponse(e)
+	}
+
+	req, e := NewOptionsRequest(u)
 	if e != nil {
 		return t.errorResponse(e)
 	}
@@ -279,6 +310,24 @@ func (t *TClient) AddHeader(k string, v string) *TClient {
 	return t
 }
 
+// Append Query Parameters, subsequent method calls doesn't override previously appended parameters
+func (t *TClient) AddQueryParams(k string, v ...string) *TClient {
+	for i := range v {
+		t.addQueryParam(k, v[i])
+	}
+	return t
+}
+
+// Append Query Parameters, subsequent method calls doesn't override previously appended parameters
+func (t *TClient) addQueryParam(k string, v string) *TClient {
+	if t.QueryParam[k] == nil {
+		t.QueryParam[k] = []string{v}
+	} else {
+		t.QueryParam[k] = append(t.QueryParam[k], v)
+	}
+	return t
+}
+
 // Create new defualt TClient
 func NewDefaultTClient(ec common.ExecContext, url string) *TClient {
 	return NewTClient(ec, url, http.DefaultClient)
@@ -291,7 +340,7 @@ func NewDynTClient(ec common.ExecContext, relUrl string, serviceName string) *TC
 
 // Create new TClient
 func NewTClient(ec common.ExecContext, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec}
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec, QueryParam: map[string][]string{}}
 }
 
 // Concatenate url and query parameters
@@ -336,6 +385,24 @@ func Post(url string, body io.Reader) (*http.Response, error) {
 		return nil, e
 	}
 	return http.DefaultClient.Do(req)
+}
+
+// Create HEAD request
+func NewHeadRequest(url string) (*http.Request, error) {
+	req, e := http.NewRequest(http.MethodHead, url, nil)
+	if e != nil {
+		return nil, e
+	}
+	return req, e
+}
+
+// Create OPTIONS request
+func NewOptionsRequest(url string) (*http.Request, error) {
+	req, e := http.NewRequest(http.MethodOptions, url, nil)
+	if e != nil {
+		return nil, e
+	}
+	return req, e
 }
 
 // Create DELETE request
@@ -399,8 +466,8 @@ func JoinQueryParam(queryParams map[string][]string) string {
 
 	seg := []string{}
 	for k, vs := range queryParams {
-		for _, v := range vs {
-			seg = append(seg, fmt.Sprintf("%s=%s", k, v))
+		for i := range vs {
+			seg = append(seg, fmt.Sprintf("%s=%s", k, url.QueryEscape(vs[i])))
 		}
 	}
 	return strings.Join(seg, "&")
