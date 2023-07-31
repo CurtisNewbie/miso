@@ -662,7 +662,8 @@ func IsRouteWhitelist(url string) bool {
 // Perf Middleware that calculates how much time each request takes
 func PerfMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		defer common.LTimeOp(time.Now(), ctx.Request.RequestURI)
+		start := time.Now()
+		defer common.TraceLogger(ctx).Infof("%-6v %-40v [%s]", ctx.Request.Method, ctx.Request.RequestURI, time.Since(start))
 		ctx.Next()
 	}
 }
