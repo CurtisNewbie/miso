@@ -7,19 +7,34 @@ import (
 )
 
 func TestScheduleCron(t *testing.T) {
-	var c int32 = 0
+	var yoc int32 = 0
+	var noc int32 = 0
 
 	t.Log("Yo")
 	s := ScheduleCron("*/1 * * * * *", func() {
-		atomic.AddInt32(&c, 1)
-
+		time.Sleep(1 * time.Second)
+		atomic.AddInt32(&yoc, 1)
 		t.Log("Yo")
 	})
+
+	s = ScheduleCron("*/1 * * * * *", func() {
+		time.Sleep(1 * time.Second)
+		atomic.AddInt32(&noc, 1)
+		t.Log("No")
+	})
+
 	s.StartAsync()
 
-	time.Sleep(2*time.Second)
+	time.Sleep(10 * time.Second)
 
-	if atomic.LoadInt32(&c) < 1 {
-		t.Error(c)
+	s.Stop()
+
+	if atomic.LoadInt32(&yoc) < 1 {
+		t.Error(yoc)
 	}
+	if atomic.LoadInt32(&noc) < 1 {
+		t.Error(noc)
+	}
+	t.Logf("yoc: %v, noc: %v", atomic.LoadInt32(&yoc), atomic.LoadInt32(&noc))
+
 }

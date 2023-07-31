@@ -49,7 +49,6 @@ func getScheduler() *gocron.Scheduler {
 // Create new Schedulr at UTC time, with singleton-mode
 func newScheduler() *gocron.Scheduler {
 	sche := gocron.NewScheduler(time.UTC)
-	sche.SingletonModeAll()
 	return sche
 }
 
