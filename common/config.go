@@ -125,8 +125,15 @@ func DefaultReadConfig(args []string, c ExecContext) {
 	configFile := GuessConfigFilePath(args, profile)
 	LoadConfigFromFile(configFile, c)
 
-	// it's possible to overide the loaded configuration with cli arguments
-	kv := ArgKeyVal(args)
+	// overwrite loaded configuration with environment variables
+	env := os.Environ()
+	kv := ArgKeyVal(env)
+	for k, v := range kv {
+		SetProp(k, v)
+	}
+
+	// overwrite the loaded configuration with cli arguments
+	kv = ArgKeyVal(args)
 	for k, v := range kv {
 		SetProp(k, v)
 	}
