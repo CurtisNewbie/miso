@@ -163,7 +163,7 @@ func main() {
 	// ...
 
 	// maybe some scheduling (not distributed)
-	common.ScheduleCron("0 0/15 * * * *", myJob)
+	common.ScheduleCron("0 0/15 * * * *", true, myJob)
 
 	// register routes and handlers
 	server.IPost("/my/path", myHandler)
@@ -241,7 +241,7 @@ func main() {
 	task.SetScheduleGroup("gocommon")
 
 	// add task
-	task.ScheduleDistributedTask("0/1 * * * * ?", func(c common.ExecContext) {
+	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c common.ExecContext) {
 		// ...
 	})
 
@@ -258,7 +258,7 @@ If `server.go` is used, this is automatically handled by `BootstrapServer(...)` 
 ```go
 func main() {
 	// add tasks
-	task.ScheduleDistributedTask("0 0/15 * * * *", func(c common.ExecContext) {
+	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c common.ExecContext) {
 	})
 
 	// bootstrap server

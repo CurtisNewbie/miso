@@ -11,13 +11,13 @@ func TestScheduleCron(t *testing.T) {
 	var noc int32 = 0
 
 	t.Log("Yo")
-	s := ScheduleCron("*/1 * * * * *", func() {
+	s := ScheduleCron("*/1 * * * * *", true, func() {
 		time.Sleep(1 * time.Second)
 		atomic.AddInt32(&yoc, 1)
 		t.Log("Yo")
 	})
 
-	s = ScheduleCron("*/1 * * * * *", func() {
+	s = ScheduleCron("*/1 * * * * *", true, func() {
 		time.Sleep(1 * time.Second)
 		atomic.AddInt32(&noc, 1)
 		t.Log("No")

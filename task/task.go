@@ -148,8 +148,8 @@ func getMasterNodeLockKey() string {
 //
 // E.g.,
 //
-// 	task.ScheduleDistributedTask("0/1 * * * * ?", myTask)
-func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
+// 	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
+func ScheduleDistributedTask(cron string, withSeconds bool, runnable func(common.ExecContext)) {
 	if getState() == initState {
 		commonMut.Lock()
 		if getState() == initState {
@@ -158,11 +158,7 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 		commonMut.Unlock()
 	}
 
-	common.ScheduleCron(cron, func() {
-		if getState() == stoppedState {
-			return // extra check, but scheduler is supposed to be stopped before the state is updated, this is quite unnecessary
-		}
-
+	common.ScheduleCron(cron, withSeconds, func() {
 		if tryBecomeMaster() {
 			runnable(common.EmptyExecContext())
 		}
@@ -177,10 +173,10 @@ func ScheduleDistributedTask(cron string, runnable func(common.ExecContext)) {
 // Tasks are pending until StartTaskSchedulerAsync() is called.
 //
 // E.g.,
-// 	ScheduleNamedDistributedTask("0/1 * * * * ?", "Very important task", myTask)
-func ScheduleNamedDistributedTask(cron string, name string, runnable func(common.ExecContext) error) {
+// 	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
+func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, runnable func(common.ExecContext) error) {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
-	ScheduleDistributedTask(cron, func(ec common.ExecContext) {
+	ScheduleDistributedTask(cron, withSeconds, func(ec common.ExecContext) {
 		ec.Log.Infof("Running task '%s'", name)
 		start := time.Now()
 		e := runnable(ec)

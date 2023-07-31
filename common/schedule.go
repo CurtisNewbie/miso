@@ -52,10 +52,16 @@ func newScheduler() *gocron.Scheduler {
 	return sche
 }
 
-func doScheduleCron(s *gocron.Scheduler, cron string, runnable func()) *gocron.Scheduler {
-	s.CronWithSeconds(cron).Do(func() {
-		runnable()
-	})
+func doScheduleCron(s *gocron.Scheduler, cron string, withSeconds bool, runnable func()) *gocron.Scheduler {
+	if withSeconds {
+		s.CronWithSeconds(cron).Do(func() {
+			runnable()
+		})
+	} else {
+		s.Cron(cron).Do(func() {
+			runnable()
+		})
+	}
 	return s
 }
 
@@ -99,7 +105,7 @@ func StartSchedulerAsync() {
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
-func ScheduleCron(cron string, runnable func()) *gocron.Scheduler {
+func ScheduleCron(cron string, withSeconds bool, runnable func()) *gocron.Scheduler {
 	s := getScheduler()
-	return doScheduleCron(s, cron, runnable)
+	return doScheduleCron(s, cron, withSeconds, runnable)
 }

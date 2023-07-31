@@ -10,7 +10,7 @@ func main() {
 	task.SetScheduleGroup("gocommon")
 
 	// add task
-	task.ScheduleDistributedTask("0/1 * * * * ?", func(c common.ExecContext) {
+	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c common.ExecContext) {
 		// ...
 	})
 

@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// maybe some scheduling (not distributed)
-	common.ScheduleCron("0 0/15 * * * *", myJob)
+	common.ScheduleCron("0 0/15 * * * *", true, myJob)
 
 	// register routes and handlers
 	server.IPost(server.OpenApiPath("/path"), myHandler)
