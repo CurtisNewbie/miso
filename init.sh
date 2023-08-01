@@ -44,7 +44,7 @@ echo "" >> "$file"
 
 echo "consul:" >> "$file"
 echo "  enabled: false" >> "$file"
-echo "  registerName: '$\{app.name}'" >> "$file"
+echo "  registerName: '\${app.name}'" >> "$file"
 echo "  consulAddress: localhost:8500" >> "$file"
 echo "  healthCheckUrl: /health" >> "$file"
 echo "  healthCheckInterval: 15s" >> "$file"
@@ -54,7 +54,7 @@ echo "" >> "$file"
 
 echo "logging:" >> "$file"
 echo "  rolling:" >> "$file"
-echo "    file: '/usr/src/logs/$\{app.name}.log'" >> "$file"
+echo "    file: '/usr/src/logs/\${app.name}.log'" >> "$file"
 echo "  level: 'info'" >> "$file"
 echo "" >> "$file"
 
