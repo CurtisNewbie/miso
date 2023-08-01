@@ -22,11 +22,14 @@ func TestTaskScheduling(t *testing.T) {
 	SetScheduleGroup("gocommon")
 
 	var count int32 = 0
-	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(ec common.ExecContext) error {
+	err := ScheduleNamedDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(ec common.ExecContext) error {
 		atomic.AddInt32(&count, 1)
 		logrus.Infof("%v", count)
 		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	StartTaskSchedulerAsync()
 

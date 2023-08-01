@@ -11,23 +11,29 @@ func TestScheduleCron(t *testing.T) {
 	var noc int32 = 0
 
 	t.Log("Yo")
-	s := ScheduleCron("*/1 * * * * *", true, func() {
+	err := ScheduleCron("*/1 * * * * *", true, func() {
 		time.Sleep(1 * time.Second)
 		atomic.AddInt32(&yoc, 1)
 		t.Log("Yo")
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	s = ScheduleCron("*/1 * * * * *", true, func() {
+	err = ScheduleCron("*/1 * * * * *", true, func() {
 		time.Sleep(1 * time.Second)
 		atomic.AddInt32(&noc, 1)
 		t.Log("No")
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	s.StartAsync()
+	StartSchedulerAsync()
 
 	time.Sleep(10 * time.Second)
 
-	s.Stop()
+	StopScheduler()
 
 	if atomic.LoadInt32(&yoc) < 1 {
 		t.Error(yoc)

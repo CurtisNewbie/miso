@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -46,23 +47,24 @@ func getScheduler() *gocron.Scheduler {
 	return scheduler
 }
 
-// Create new Schedulr at UTC time, with singleton-mode
+// Create new Schedulr at UTC time, with default-mode
 func newScheduler() *gocron.Scheduler {
 	sche := gocron.NewScheduler(time.UTC)
 	return sche
 }
 
-func doScheduleCron(s *gocron.Scheduler, cron string, withSeconds bool, runnable func()) *gocron.Scheduler {
+func doScheduleCron(s *gocron.Scheduler, cron string, withSeconds bool, runnable func()) error {
+	var err error
 	if withSeconds {
-		s.CronWithSeconds(cron).Do(func() {
+		_, err = s.CronWithSeconds(cron).Do(func() {
 			runnable()
 		})
 	} else {
-		s.Cron(cron).Do(func() {
+		_, err = s.Cron(cron).Do(func() {
 			runnable()
 		})
 	}
-	return s
+	return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", cron, withSeconds, err)
 }
 
 // Stop scheduler
@@ -105,7 +107,7 @@ func StartSchedulerAsync() {
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
-func ScheduleCron(cron string, withSeconds bool, runnable func()) *gocron.Scheduler {
+func ScheduleCron(cron string, withSeconds bool, runnable func()) error {
 	s := getScheduler()
 	return doScheduleCron(s, cron, withSeconds, runnable)
 }

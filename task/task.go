@@ -19,7 +19,7 @@ var (
 	// identifier for current node
 	nodeId string
 
-	// mutex for common proerties (group, nodeId)
+	// mutex for common proerties (group, nodeId, states, and masterNode election)
 	commonMut sync.Mutex
 
 	// _state (atomic int32) of distributed task scheduler, use getState()/setState() to load/store
@@ -38,6 +38,9 @@ const (
 	// default ttl for master lock key in redis (1 min)
 	defMstLockTtl = 1 * time.Minute
 )
+
+type NamedTask = func(common.ExecContext) error
+type Task = func(common.ExecContext)
 
 func init() {
 	common.SetDefProp(common.PROP_TASK_SCHEDULING_ENABLED, true)
@@ -123,11 +126,13 @@ func SetScheduleGroup(groupName string) {
 
 // Check if current node is master
 func IsMasterNode() bool {
-	val, e := redis.GetStr(getMasterNodeLockKey())
+	key := getMasterNodeLockKey()
+	val, e := redis.GetStr(key)
 	if e != nil {
-		logrus.Errorf("IsMasterNode: %v", e)
+		logrus.Errorf("check is master failed: %v", e)
 		return false
 	}
+	logrus.Debugf("check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, nodeId)
 	return val == nodeId
 }
 
@@ -148,8 +153,8 @@ func getMasterNodeLockKey() string {
 //
 // E.g.,
 //
-// 	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
-func ScheduleDistributedTask(cron string, withSeconds bool, runnable func(common.ExecContext)) {
+//	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
+func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	if getState() == initState {
 		commonMut.Lock()
 		if getState() == initState {
@@ -158,10 +163,14 @@ func ScheduleDistributedTask(cron string, withSeconds bool, runnable func(common
 		commonMut.Unlock()
 	}
 
-	common.ScheduleCron(cron, withSeconds, func() {
-		if tryBecomeMaster() {
-			runnable(common.EmptyExecContext())
+	return common.ScheduleCron(cron, withSeconds, func() {
+		ec := common.EmptyExecContext()
+		if !tryBecomeMaster() {
+			ec.Log.Debug("Not master node, skip scheduled task")
+			return
 		}
+
+		task(ec)
 	})
 }
 
@@ -173,13 +182,14 @@ func ScheduleDistributedTask(cron string, withSeconds bool, runnable func(common
 // Tasks are pending until StartTaskSchedulerAsync() is called.
 //
 // E.g.,
-// 	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
-func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, runnable func(common.ExecContext) error) {
+//
+//	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
+func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
-	ScheduleDistributedTask(cron, withSeconds, func(ec common.ExecContext) {
+	return ScheduleDistributedTask(cron, withSeconds, func(ec common.ExecContext) {
 		ec.Log.Infof("Running task '%s'", name)
 		start := time.Now()
-		e := runnable(ec)
+		e := task(ec)
 		if e == nil {
 			ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
 			return
@@ -224,6 +234,7 @@ func StopTaskScheduler() {
 	common.StopScheduler()
 
 	stopMasterLockRefreshingTicker()
+	releaseMasterNodeLock()
 
 	// if we are previously the master node, the lock is refreshed every 5 seconds with the ttl 1m
 	// this should be pretty enough to release the lock before the expiration
@@ -250,6 +261,24 @@ func startMasterLockRefreshingTicker() {
 	}(masterTicker.C)
 }
 
+func releaseMasterNodeLock() {
+	cmd := redis.GetRedis().Eval(`
+	if (redis.call('EXISTS', KEYS[1]) == 0) then
+		return 0;
+	end;
+
+	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
+		redis.call('DEL', KEYS[1])
+		return 1;
+	end;
+	return 0;`, []string{getMasterNodeLockKey()}, nodeId)
+	if cmd.Err() != nil {
+		logrus.Errorf("Failed to release master node lock, %v", cmd.Err())
+		return
+	}
+	logrus.Debugf("Release master node lock, %v", cmd.Val())
+}
+
 // Stop refreshing master lock ticker
 func stopMasterLockRefreshingTicker() {
 	masterTickerMu.Lock()
@@ -269,6 +298,9 @@ func refreshMasterLockTtl() error {
 
 // Try to become master node
 func tryBecomeMaster() bool {
+	commonMut.Lock()
+	defer commonMut.Unlock()
+
 	if IsMasterNode() {
 		return true
 	}
@@ -281,7 +313,7 @@ func tryBecomeMaster() bool {
 
 	isMaster := bcmd.Val()
 	if isMaster {
-		logrus.Debugf("Elected to be the master node for group: '%s'", group)
+		logrus.Infof("Elected to be the master node for group: '%s'", group)
 		startMasterLockRefreshingTicker()
 	} else {
 		stopMasterLockRefreshingTicker()
