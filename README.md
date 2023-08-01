@@ -32,6 +32,12 @@ e.g.,
 
 ## Properties-Based Configuration
 
+To get a copy of configuration:
+
+```
+curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh | bash
+```
+
 ### Common Properties
 
 | property        | description                          | default value |

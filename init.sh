@@ -8,10 +8,7 @@ else
     echo "" > "$file"
 fi
 
-read -p "App Name: "
-app="$REPLY"
-
-echo "app.name: '$app'" >> "$file"
+echo "app.name: 'demo'" >> "$file"
 echo "mode.production: false # enable production mode" >> "$file"
 echo "" >> "$file"
 
@@ -42,8 +39,8 @@ echo "  enabled: true" >> "$file"
 echo "  host: localhost" >> "$file"
 echo "  port: 3306" >> "$file"
 echo "  gracefulShutdownTimeSec: 5" >> "$file"
+echo "  perf.enabled: false" >> "$file"
 echo "" >> "$file"
-
 
 echo "consul:" >> "$file"
 echo "  enabled: false" >> "$file"
@@ -55,6 +52,11 @@ echo "  healthCheckTimeout: 3s" >> "$file"
 echo "  healthCheckFailedDeregisterAfter: 120s" >> "$file"
 echo "" >> "$file"
 
+echo "logging:" >> "$file"
+echo "  rolling:" >> "$file"
+echo "    file: '/usr/src/logs/$\{app.name}.log'" >> "$file"
+echo "  level: 'info'" >> "$file"
+echo "" >> "$file"
 
 echo "rabbitmq:" >> "$file"
 echo "  enabled: false" >> "$file"
@@ -66,6 +68,13 @@ echo "  password: ''" >> "$file"
 echo "  vhost: ''" >> "$file"
 echo "" >> "$file"
 
-echo "#tracing.propagation.keys:" >> "$file"
+echo "jwt:" >> "$file"
+echo "  key:" >> "$file"
+echo "    public: ''" >> "$file"
+echo "    private: ''" >> "$file"
+echo "    issuer: ''" >> "$file"
+echo "" >> "$file"
+
+echo "# tracing.propagation.keys:" >> "$file"
 echo "#  - " >> "$file"
 echo "#  - " >> "$file"
