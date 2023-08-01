@@ -30,13 +30,15 @@ e.g.,
 ./main mode.production=true
 ```
 
+## Intialize Project
+
+Convenient way to initialize a new project:
+
+```
+mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh | bash
+```
+
 ## Properties-Based Configuration
-
-To get a copy of configuration:
-
-```
-curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh | bash
-```
 
 ### Common Properties
 
