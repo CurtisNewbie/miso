@@ -64,7 +64,10 @@ func doScheduleCron(s *gocron.Scheduler, cron string, withSeconds bool, runnable
 			runnable()
 		})
 	}
-	return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", cron, withSeconds, err)
+	if err != nil {
+		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", cron, withSeconds, err)
+	}
+	return nil
 }
 
 // Stop scheduler
