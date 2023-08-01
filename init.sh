@@ -1,14 +1,11 @@
 #!/bin/bash
 
-
 file="./app-conf-dev.yml"
 if [[ -z "$file" ]]; then
     touch "$file"
-else
-    echo "" > "$file"
 fi
 
-echo "app.name: 'demo'" >> "$file"
+echo "app.name: 'demo'" > "$file"
 echo "mode.production: false # enable production mode" >> "$file"
 echo "" >> "$file"
 
@@ -37,7 +34,7 @@ echo "" >> "$file"
 echo "server:" >> "$file"
 echo "  enabled: true" >> "$file"
 echo "  host: localhost" >> "$file"
-echo "  port: 3306" >> "$file"
+echo "  port: 8080" >> "$file"
 echo "  gracefulShutdownTimeSec: 5" >> "$file"
 echo "  perf.enabled: false" >> "$file"
 echo "" >> "$file"
@@ -53,8 +50,7 @@ echo "  healthCheckFailedDeregisterAfter: 120s" >> "$file"
 echo "" >> "$file"
 
 echo "logging:" >> "$file"
-echo "  rolling:" >> "$file"
-echo "    file: '/usr/src/logs/\${app.name}.log'" >> "$file"
+echo "#  rolling.file: '\${app.name}.log'" >> "$file"
 echo "  level: 'info'" >> "$file"
 echo "" >> "$file"
 
@@ -78,3 +74,29 @@ echo "" >> "$file"
 echo "# tracing.propagation.keys:" >> "$file"
 echo "#  - " >> "$file"
 echo "#  - " >> "$file"
+
+
+file="./main.go"
+if [[ -z "$file" ]]; then
+    touch "$file"
+else
+    echo "" > "$file"
+fi
+ >> "$file"
+echo "package main" >> "$file"
+echo "" >> "$file"
+echo "import (" >> "$file"
+echo "    \"os\"" >> "$file"
+echo "    \"github.com/curtisnewbie/gocommon/server\"" >> "$file"
+echo ")" >> "$file"
+echo "" >> "$file"
+echo "func main() {" >> "$file"
+echo "    server.BootstrapServer(os.Args)" >> "$file"
+echo "}" >> "$file"
+echo "" >> "$file"
+
+go mod init github.com/curtisnewbie/demoapp && \
+    go get github.com/curtisnewbie/gocommon@HEAD && \
+    go mod tidy
+
+echo "Project initialized at $(pwd)"
