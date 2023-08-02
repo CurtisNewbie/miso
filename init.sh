@@ -1,5 +1,10 @@
 #!/bin/bash
 
+go version
+if [[ $? -ne 0 ]]; then
+    return 1
+fi
+
 file="./app-conf-dev.yml"
 if [[ -z "$file" ]]; then
     touch "$file"
@@ -28,6 +33,7 @@ echo "" >> "$file"
 
 echo "task:" >> "$file"
 echo "  scheduling: " >> "$file"
+echo "    group: '\${app.name}'" >> "$file"
 echo "    enabled: true" >> "$file"
 echo "" >> "$file"
 
@@ -95,7 +101,7 @@ echo "    server.BootstrapServer(os.Args)" >> "$file"
 echo "}" >> "$file"
 echo "" >> "$file"
 
-go mod init github.com/curtisnewbie/demoapp && \
+go mod init demo && \
     go get github.com/curtisnewbie/gocommon@HEAD && \
     go mod tidy
 
