@@ -22,7 +22,7 @@ e.g.,
 ./main
 ```
 
-Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) `server.BootstrapServer(...)`.
+Properties loaded from configuration file can also be overriden by cli arguments (e.g., `KEY=VALUE`) and environment variables in `server.BootstrapServer(...)` method.
 
 e.g.,
 
@@ -52,12 +52,12 @@ mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/g
 
 | property                       | description                                           | default value |
 |--------------------------------|-------------------------------------------------------|---------------|
-| server.enabled                 | enable http server                                    | true  |
-| server.host                    | http server host                                      | 0.0.0.0 |
-| server.port                    | http server port                                      | 8080  |
-| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown          | 30    |
-| server.perf.enabled            | enable logging time took for each http server request | false |
-| server.trace.inbound.propagate | propagate trace info from inbound requests     |  true |
+| server.enabled                 | enable http server                                    | true          |
+| server.host                    | http server host                                      | 0.0.0.0       |
+| server.port                    | http server port                                      | 8080          |
+| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown          | 30            |
+| server.perf.enabled            | enable logging time took for each http server request | false         |
+| server.trace.inbound.propagate | propagate trace info from inbound requests            | true          |
 
 ### Consul Properties
 
@@ -71,19 +71,19 @@ mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/g
 | consul.healthCheckInterval              | health check interval                                                | 15s                             |
 | consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
 | consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
-| consul.registerDefaultHealthCheck | register default health check endpoint on startup | true                            |
+| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                    | true                            |
 
 ### MySQL Properties
 
-| property  | description   | default value   |
-|---|---|---|
-| mysql.enabled   | whether MySQL is enabled   | false   |
-| mysql.user   | username   | root   |
-| mysql.password   | password   |   |
-| mysql.database   | database   |   |
-| mysql.host   | host   | `localhost`   |
-| mysql.port   | port   | 3306   |
-| mysql.connection.parameters | query parameters declared on connection url (a single string joined with `&`) | `charset=utf8mb4`<br>`parseTime=True`<br>`loc=Local`<br>`readTimeout=30s`<br>`writeTimeout=30s`<br>`timeout=3s` |
+| property                    | description                                 | default value                                                                          |
+|-----------------------------|---------------------------------------------|----------------------------------------------------------------------------------------|
+| mysql.enabled               | whether MySQL is enabled                    | false                                                                                  |
+| mysql.user                  | username                                    | root                                                                                   |
+| mysql.password              | password                                    |                                                                                        |
+| mysql.database              | database                                    |                                                                                        |
+| mysql.host                  | host                                        | `localhost`                                                                            |
+| mysql.port                  | port                                        | 3306                                                                                   |
+| mysql.connection.parameters | query parameters declared on connection url | `charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s` |
 
 ### Redis Properties
 
@@ -110,38 +110,38 @@ mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/g
 
 ### SQLite Properties
 
-| property  | description  | default value |
-|----|----|----|
-| sqlite.file | path to SQLite database file |  |
+| property    | description                  | default value |
+|-------------|------------------------------|---------------|
+| sqlite.file | path to SQLite database file |               |
 
 ### Logger Properties
 
-| property  | description   | default value |
-|----|----|----|
-| logging.rolling.file | path to rolling log file, if not set, logs are written to stdout/stderr                        |  |
-| logging.level        | logging level (handled by `server.ConfigureLogging`), the configured value is case-insensitive |  |
+| property             | description              | default value |
+|----------------------|--------------------------|---------------|
+| logging.rolling.file | path to rolling log file |               |
+| logging.level        | log level                | info          |
 
 ### Distributed Task Scheduling Properties
 
-| property  | description  | default value |
-|----|----|----|
-| task.scheduling.enabled | whether distributed task scheduling is enabled, this is mainly used for developement purpose, e.g., not running the tasks locally                                                                                             | true  |
-| task.scheduling.group   | group name of current node. By default, it will attempt to read this property as the proposed group name. If absent, it will then read and use `app.name` property intead. If both of them are absent, then `default` is used | default  |
+| property                | description                                                    | default value |
+|-------------------------|----------------------------------------------------------------|---------------|
+| task.scheduling.enabled | enabled distributed task scheduling                            | true          |
+| task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. | default       |
 
 ### Client Package Properties
 
-| property | description | default value |
-|----|---|---|
-| client.host.* | configure static hostname of the service, it's useful for local development environment. E.g., if the service name is 'goauth', we can configure `client.host.goauth: localhost:8081` | |
+| property      | description                             | default value |
+|---------------|-----------------------------------------|---------------|
+| client.host.* | static hostname and port of the service |               |
 
 
 ### JWT Properties
 
-| property | description | default value |
-|----|---|---|
-| jwt.key.public | public key for verifying the JWT token | |
-| jwt.key.private | private key for signing the JWT token | |
-| jwt.key.issuer | issuer of the token | |
+| property        | description                            | default value |
+|-----------------|----------------------------------------|---------------|
+| jwt.key.public  | public key for verifying the JWT token |               |
+| jwt.key.private | private key for signing the JWT token  |               |
+| jwt.key.issuer  | issuer of the token                    |               |
 
 
 ## Yaml Configuration File Example
