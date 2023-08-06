@@ -138,4 +138,14 @@ const (
 	PROP_JWT_PUBLIC_KEY  = "jwt.key.public"
 	PROP_JWT_PRIVATE_KEY = "jwt.key.private"
 	PROP_JWT_ISSUER      = "jwt.key.issuer"
+
+	/*
+		------------------------------------
+
+		Prop for Metrics & Prometheus
+
+		------------------------------------
+	*/
+	PROP_METRICS_ENABLED = "metrics.enabled"
+	PROP_PROM_ROUTE      = "metrics.route"
 )

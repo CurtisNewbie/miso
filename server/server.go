@@ -14,6 +14,7 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/consul"
+	"github.com/curtisnewbie/gocommon/metrics"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
 	"github.com/curtisnewbie/gocommon/redis"
@@ -122,6 +123,19 @@ func init() {
 		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
 			return common.TraceErrf(e, "Failed to establish connection to RabbitMQ")
 		}
+		return nil
+	})
+
+	RegisterBootstrapCallback(func(ctx context.Context, ec common.ExecContext) error {
+		if !common.GetPropBool(common.PROP_METRICS_ENABLED) {
+			return nil
+		}
+
+		ec.Log.Debugf("Registering Prometheus Handler")
+		handler := metrics.PrometheusHandler()
+		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, ec common.ExecContext) {
+			handler.ServeHTTP(c.Writer, c.Request)
+		})
 		return nil
 	})
 

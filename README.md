@@ -144,6 +144,14 @@ mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/g
 | jwt.key.issuer  | issuer of the token                    |               |
 
 
+### Metrics Properties
+
+| property        | description                                | default value |
+|-----------------|--------------------------------------------|---------------|
+| metrics.enabled | enable metrics collection using prometheus | true          |
+| metrics.route   | route used to expose collected metrics     | /metrics      |
+
+
 ## Yaml Configuration File Example
 
 ```yml
