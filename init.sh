@@ -5,12 +5,18 @@ if [[ $? -ne 0 ]]; then
     return 1
 fi
 
+app="demo"
 file="./app-conf-dev.yml"
+
 if [[ -z "$file" ]]; then
     touch "$file"
 fi
 
-echo "app.name: 'demo'" > "$file"
+if [[ ! -z "$1" ]]; then
+    app="$1"
+fi
+
+echo "app.name: '$app'" > "$file"
 echo "mode.production: false # enable production mode" >> "$file"
 echo "" >> "$file"
 
@@ -77,6 +83,10 @@ echo "    private: ''" >> "$file"
 echo "    issuer: ''" >> "$file"
 echo "" >> "$file"
 
+echo "metrics:" >> "$file"
+echo "  enabled: false" >> "$file"
+echo "  route: '/metrics'" >> "$file"
+
 echo "# tracing.propagation.keys:" >> "$file"
 echo "#  - " >> "$file"
 echo "#  - " >> "$file"
@@ -101,8 +111,8 @@ echo "    server.BootstrapServer(os.Args)" >> "$file"
 echo "}" >> "$file"
 echo "" >> "$file"
 
-go mod init demo && \
+go mod init $app && \
     go get github.com/curtisnewbie/gocommon@HEAD && \
     go mod tidy
 
-echo "Project initialized at $(pwd)"
+echo "Project ${app} initialized at $(pwd)"
