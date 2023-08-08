@@ -21,7 +21,7 @@ const (
 
 // Helper type for handling HTTP responses
 type TResponse struct {
-	ExecCtx    common.ExecContext
+	ExecCtx    common.Rail
 	Ctx        context.Context
 	Resp       *http.Response
 	RespHeader http.Header
@@ -83,7 +83,7 @@ func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
 type TClient struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
-	ExecCtx    common.ExecContext  // execute context
+	ExecCtx    common.Rail  // execute context
 	Ctx        context.Context     // context provided by caller
 	QueryParam map[string][]string // query parameters
 
@@ -324,17 +324,17 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 }
 
 // Create new defualt TClient
-func NewDefaultTClient(ec common.ExecContext, url string) *TClient {
+func NewDefaultTClient(ec common.Rail, url string) *TClient {
 	return NewTClient(ec, url, http.DefaultClient)
 }
 
 // Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
-func NewDynTClient(ec common.ExecContext, relUrl string, serviceName string) *TClient {
+func NewDynTClient(ec common.Rail, relUrl string, serviceName string) *TClient {
 	return NewTClient(ec, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
 }
 
 // Create new TClient
-func NewTClient(ec common.ExecContext, url string, client *http.Client) *TClient {
+func NewTClient(ec common.Rail, url string, client *http.Client) *TClient {
 	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec, QueryParam: map[string][]string{}}
 }
 

@@ -25,19 +25,19 @@ import (
 )
 
 // Raw route handler.
-type RawTRouteHandler func(c *gin.Context, ec common.ExecContext)
+type RawTRouteHandler func(c *gin.Context, ec common.Rail)
 
 // Route handler.
 //
 // The returned result and error are automatically wrapped in a Resp object.
-type TRouteHandler func(c *gin.Context, ec common.ExecContext) (any, error)
+type TRouteHandler func(c *gin.Context, ec common.Rail) (any, error)
 
 // Route handler.
 //
 // Request payload is automatically resolved to object t (e.g., from query parameters of JSON payload depending on the content-type).
 //
 // The returned result and error are automatically wrapped in a Resp object.
-type ITRouteHandler[T any, V any] func(c *gin.Context, ec common.ExecContext, t T) (V, error)
+type ITRouteHandler[T any, V any] func(c *gin.Context, ec common.Rail, t T) (V, error)
 
 type RoutesRegistar func(*gin.Engine)
 
@@ -68,15 +68,15 @@ var (
 		server component bootstrap callbacks
 	*/
 
-	serverBootrapCallbacks []func(ctx context.Context, c common.ExecContext) error = []func(context.Context, common.ExecContext) error{}
+	serverBootrapCallbacks []func(ctx context.Context, c common.Rail) error = []func(context.Context, common.Rail) error{}
 
 	/*
 		lifecycle callbacks
 	*/
 
-	preServerBootstrapListener  []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
-	postServerBootstrapListener []func(c common.ExecContext) error = []func(c common.ExecContext) error{}
-	serverHttpRoutes            []HttpRoute                        = []HttpRoute{}
+	preServerBootstrapListener  []func(c common.Rail) error = []func(c common.Rail) error{}
+	postServerBootstrapListener []func(c common.Rail) error = []func(c common.Rail) error{}
+	serverHttpRoutes            []HttpRoute                 = []HttpRoute{}
 
 	anyHttpMethods = []string{
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch,
@@ -94,7 +94,7 @@ func init() {
 	common.SetDefProp(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE, true)
 
 	// mysql
-	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
 		if !mysql.IsMySqlEnabled() {
 			return nil
 		}
@@ -105,7 +105,7 @@ func init() {
 	})
 
 	// redis
-	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
 		if !redis.IsRedisEnabled() {
 			return nil
 		}
@@ -116,7 +116,7 @@ func init() {
 	})
 
 	// rabbitmq
-	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
 		if !rabbitmq.IsEnabled() {
 			return nil
 		}
@@ -126,25 +126,25 @@ func init() {
 		return nil
 	})
 
-	RegisterBootstrapCallback(func(ctx context.Context, ec common.ExecContext) error {
+	RegisterBootstrapCallback(func(ctx context.Context, ec common.Rail) error {
 		if !common.GetPropBool(common.PROP_METRICS_ENABLED) {
 			return nil
 		}
 
-		ec.Log.Debugf("Registering Prometheus Handler")
+		ec.Debugf("Registering Prometheus Handler")
 		handler := metrics.PrometheusHandler()
-		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, ec common.ExecContext) {
+		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, ec common.Rail) {
 			handler.ServeHTTP(c.Writer, c.Request)
 		})
 		return nil
 	})
 
 	// web server
-	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
 		if !common.GetPropBool(common.PROP_SERVER_ENABLED) {
 			return nil
 		}
-		c.Log.Info("Starting http server")
+		c.Info("Starting http server")
 
 		// Load propagation keys for tracing
 		common.LoadPropagationKeyProp(c)
@@ -177,7 +177,7 @@ func init() {
 
 		// start the http server
 		server := createHttpServer(engine)
-		c.Log.Infof("Serving HTTP on %s", server.Addr)
+		c.Infof("Serving HTTP on %s", server.Addr)
 		go startHttpServer(ctx, server)
 
 		AddShutdownHook(func() { shutdownHttpServer(server) })
@@ -185,7 +185,7 @@ func init() {
 	})
 
 	// consul
-	RegisterBootstrapCallback(func(_ context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
 		if !consul.IsConsulEnabled() {
 			return nil
 		}
@@ -198,7 +198,7 @@ func init() {
 		// deregister on shutdown
 		AddShutdownHook(func() {
 			if e := consul.DeregisterService(); e != nil {
-				c.Log.Errorf("Failed to deregister on Consul, %v", e)
+				c.Errorf("Failed to deregister on Consul, %v", e)
 			}
 		})
 
@@ -209,16 +209,16 @@ func init() {
 	})
 
 	// schedulers
-	RegisterBootstrapCallback(func(ctx context.Context, c common.ExecContext) error {
+	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
 		// distributed task scheduler has pending tasks and is enabled
 		if task.IsTaskSchedulerPending() && !task.IsTaskSchedulingDisabled() {
 			task.StartTaskSchedulerAsync()
-			c.Log.Info("Distributed Task Scheduler started")
+			c.Info("Distributed Task Scheduler started")
 			AddShutdownHook(func() { task.StopTaskScheduler() })
 		} else if common.HasScheduler() {
 			// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 			common.StartSchedulerAsync()
-			c.Log.Info("Scheduler started")
+			c.Info("Scheduler started")
 			AddShutdownHook(func() { common.StopScheduler() })
 		}
 		return nil
@@ -389,7 +389,7 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 // Configurae Logging, e.g., logger's output, log level, etc
-func ConfigureLogging(c common.ExecContext) {
+func ConfigureLogging(c common.Rail) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
@@ -431,7 +431,7 @@ func parseLogLevel(logLevel string) (logrus.Level, bool) {
 	return logrus.InfoLevel, false
 }
 
-func callPostServerBootstrapListeners(c common.ExecContext) error {
+func callPostServerBootstrapListeners(c common.Rail) error {
 	for _, callback := range postServerBootstrapListener {
 		if e := callback(c); e != nil {
 			return e
@@ -441,7 +441,7 @@ func callPostServerBootstrapListeners(c common.ExecContext) error {
 }
 
 // Add listener that is invoked when server is finally bootstrapped
-func PostServerBootstrapped(callback func(c common.ExecContext) error) {
+func PostServerBootstrapped(callback func(c common.Rail) error) {
 	if callback == nil {
 		return
 	}
@@ -449,14 +449,14 @@ func PostServerBootstrapped(callback func(c common.ExecContext) error) {
 }
 
 // Add listener that is invoked before the server is fully bootstrapped
-func PreServerBootstrap(callback func(c common.ExecContext) error) {
+func PreServerBootstrap(callback func(c common.Rail) error) {
 	if callback == nil {
 		return
 	}
 	preServerBootstrapListener = append(preServerBootstrapListener, callback)
 }
 
-func callPreServerBootstrapListeners(c common.ExecContext) error {
+func callPreServerBootstrapListeners(c common.Rail) error {
 	for _, callback := range preServerBootstrapListener {
 		if e := callback(c); e != nil {
 			return e
@@ -465,7 +465,7 @@ func callPreServerBootstrapListeners(c common.ExecContext) error {
 	return nil
 }
 
-func RegisterBootstrapCallback(bootstrapComponent func(context.Context, common.ExecContext) error) {
+func RegisterBootstrapCallback(bootstrapComponent func(context.Context, common.Rail) error) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 }
 
@@ -495,7 +495,7 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
-	var c common.ExecContext = common.EmptyExecContext()
+	var c common.Rail = common.EmptyExecContext()
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
@@ -512,30 +512,30 @@ func BootstrapServer(args []string) {
 
 	appName := common.GetPropStr(common.PROP_APP_NAME)
 	if appName == "" {
-		c.Log.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
+		c.Fatalf("Propertity '%s' is required", common.PROP_APP_NAME)
 	}
 
-	c.Log.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
-	c.Log.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
+	c.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
+	c.Infof("Gocommon Version: %s", common.GOCOMMON_VERSION)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(c); e != nil {
-		c.Log.Fatalf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
+		c.Fatalf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
 	}
 
 	// bootstrap components
 	for _, bootstrap := range serverBootrapCallbacks {
 		if e := bootstrap(ctx, c); e != nil {
-			c.Log.Fatalf("Failed to bootstrap server component, %v", e)
+			c.Fatalf("Failed to bootstrap server component, %v", e)
 		}
 	}
 
 	end := time.Now().UnixMilli()
-	c.Log.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
+	c.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	if e := callPostServerBootstrapListeners(c); e != nil {
-		c.Log.Fatalf("Error occurred while invoking post server bootstrap callbacks, %v", e)
+		c.Fatalf("Error occurred while invoking post server bootstrap callbacks, %v", e)
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
@@ -545,11 +545,11 @@ func BootstrapServer(args []string) {
 }
 
 // Register http routes on gin.Engine
-func registerServerRoutes(c common.ExecContext, engine *gin.Engine) {
+func registerServerRoutes(c common.Rail, engine *gin.Engine) {
 	// no route
 	engine.NoRoute(func(ctx *gin.Context) {
 		c := BuildExecContext(ctx)
-		c.Log.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
+		c.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
 		ctx.AbortWithStatus(404)
 	})
 
@@ -559,7 +559,7 @@ func registerServerRoutes(c common.ExecContext, engine *gin.Engine) {
 	}
 
 	for _, r := range GetHttpRoutes() {
-		c.Log.Debugf("%-6s %s", r.Method, r.Url)
+		c.Debugf("%-6s %s", r.Method, r.Url)
 	}
 }
 
@@ -706,19 +706,17 @@ func TraceMiddleware() gin.HandlerFunc {
 }
 
 // Build ExecContext
-func BuildExecContext(c *gin.Context) common.ExecContext {
+func BuildExecContext(c *gin.Context) common.Rail {
 	if !common.GetPropBool(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
 		return common.EmptyExecContext()
 	}
 
-	user, _ := ExtractUser(c)
-	return common.NewExecContext(c.Request.Context(), user)
+	return common.NewExecContext(c.Request.Context())
 }
 
 // Build route handler with the required payload object, context, user (optional, may be nil), and logger prepared
 func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		user, _ := ExtractUser(c) // optional
 		ctx := c.Request.Context()
 
 		// bind to payload boject
@@ -732,7 +730,7 @@ func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.C
 		}
 
 		// actual handling
-		r, e := handler(c, common.NewExecContext(ctx, user), t)
+		r, e := handler(c, common.NewExecContext(ctx), t)
 
 		// wrap result and error
 		HandleResult(c, r, e)
@@ -809,30 +807,6 @@ func DispatchOkWData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, common.OkRespWData(data))
 }
 
-// Extract user from request headers, panic if failed
-func RequireUser(c *gin.Context) *common.User {
-	u, e := ExtractUser(c)
-	if e != nil {
-		panic(e)
-	}
-	return u
-}
-
-// Extract role from request header
-//
-// return:
-//
-//	role, isOk
-//
-// deprecated
-func Role(c *gin.Context) (string, bool) {
-	id := c.GetHeader("role")
-	if id == "" {
-		return "", false
-	}
-	return id, true
-}
-
 // Extract userNo from request header
 //
 // return:
@@ -860,28 +834,18 @@ func UserId(c *gin.Context) (string, bool) {
 }
 
 /* Extract common.User from request headers */
-func ExtractUser(c *gin.Context) (*common.User, error) {
+func ExtractUser(c *gin.Context) (*common.User, bool) {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nil, common.NewWebErr("Please sign up first")
-	}
-
-	var services []string
-	servicesStr := c.GetHeader("services")
-	if servicesStr == "" {
-		services = make([]string, 0)
-	} else {
-		services = strings.Split(servicesStr, ",")
+		return nil, false
 	}
 
 	return &common.User{
 		UserId:   id,
 		Username: c.GetHeader("username"),
 		UserNo:   c.GetHeader("userno"),
-		Role:     c.GetHeader("role"),
 		RoleNo:   c.GetHeader("roleno"),
-		Services: services,
-	}, nil
+	}, true
 }
 
 // Check whether current request is authenticated

@@ -15,7 +15,7 @@ func TestBootstrapServer(t *testing.T) {
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-dev.yml"
 
-	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(ec common.ExecContext) {
+	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(ec common.Rail) {
 		logrus.Info("feels gucci")
 	})
 

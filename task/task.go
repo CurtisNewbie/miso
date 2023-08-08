@@ -39,8 +39,8 @@ const (
 	defMstLockTtl = 1 * time.Minute
 )
 
-type NamedTask = func(common.ExecContext) error
-type Task = func(common.ExecContext)
+type NamedTask = func(common.Rail) error
+type Task = func(common.Rail)
 
 func init() {
 	common.SetDefProp(common.PROP_TASK_SCHEDULING_ENABLED, true)
@@ -150,7 +150,7 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	return common.ScheduleCron(cron, withSeconds, func() {
 		ec := common.EmptyExecContext()
 		if !tryBecomeMaster() {
-			ec.Log.Debug("Not master node, skip scheduled task")
+			ec.Debug("Not master node, skip scheduled task")
 			return
 		}
 
@@ -170,16 +170,16 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 //	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
 func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
-	return ScheduleDistributedTask(cron, withSeconds, func(ec common.ExecContext) {
-		ec.Log.Infof("Running task '%s'", name)
+	return ScheduleDistributedTask(cron, withSeconds, func(ec common.Rail) {
+		ec.Infof("Running task '%s'", name)
 		start := time.Now()
 		e := task(ec)
 		if e == nil {
-			ec.Log.Infof("Task '%s' finished, took: %s", name, time.Since(start))
+			ec.Infof("Task '%s' finished, took: %s", name, time.Since(start))
 			return
 		}
 
-		ec.Log.Errorf("Task '%s' failed, took: %s, %v", name, time.Since(start), e)
+		ec.Errorf("Task '%s' failed, took: %s, %v", name, time.Since(start), e)
 	})
 }
 

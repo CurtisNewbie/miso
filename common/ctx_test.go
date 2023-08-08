@@ -7,7 +7,7 @@ import (
 
 func TestNewSpan(t *testing.T) {
 	ec := EmptyExecContext()
-	ec.Log.Infof("Parent Span")
+	ec.Infof("Parent Span")
 
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
@@ -15,7 +15,7 @@ func TestNewSpan(t *testing.T) {
 		wg.Add(1)
 		go func(j int) {
 			defer wg.Done()
-			cc.Log.Infof("Child Span, j: %v", j)
+			cc.Infof("Child Span, j: %v", j)
 		}(i)
 	}
 

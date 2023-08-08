@@ -19,8 +19,8 @@ func LTimeOp(start time.Time, name string) {
 //
 // e.g.,
 // 	defer TimeOp(ec, time.Now(), "someOperation")
-func TimeOp(ec ExecContext, start time.Time, name string) {
-	ec.Log.Infof("'%s' took '%s'", name, time.Since(start))
+func TimeOp(r Rail, start time.Time, name string) {
+	r.Infof("'%s' took '%s'", name, time.Since(start))
 }
 
 // Run timer for named operation and print result in log

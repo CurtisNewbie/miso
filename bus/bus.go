@@ -21,7 +21,7 @@ var (
 // Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
 //
 // Before calling this method, the DeclareEventBus(...) must be called once to create the necessary components.
-func SendToEventBus(c common.ExecContext, eventObject any, bus string) error {
+func SendToEventBus(c common.Rail, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}

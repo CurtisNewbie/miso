@@ -23,7 +23,7 @@ func TestLazyObjRcache(t *testing.T) {
 	cache := NewLazyObjectRCache[Dummy](exp)
 
 	supplier := func() (Dummy, bool, error) {
-		c.Log.Info("Called supplier")
+		c.Info("Called supplier")
 		return Dummy{
 			Name: "Banana",
 			Age:  12,
@@ -39,7 +39,7 @@ func TestLazyObjRcache(t *testing.T) {
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Log.Infof("1. %+v", dummy)
+	c.Infof("1. %+v", dummy)
 
 	dummy, ok, err = cache.GetElse(c, keypre+"1", supplier)
 	if err != nil {
@@ -48,7 +48,7 @@ func TestLazyObjRcache(t *testing.T) {
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Log.Infof("2. %+v", dummy)
+	c.Infof("2. %+v", dummy)
 
 	cache.Del(c, keypre+"1")
 
@@ -59,7 +59,7 @@ func TestLazyObjRcache(t *testing.T) {
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Log.Infof("3. %+v", dummy)
+	c.Infof("3. %+v", dummy)
 }
 
 func TestRCache(t *testing.T) {

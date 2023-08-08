@@ -114,7 +114,7 @@ It's essentially:
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func DefaultReadConfig(args []string, c ExecContext) {
+func DefaultReadConfig(args []string, c Rail) {
 	profile := GuessProfile(args)
 	SetProfile(profile)
 
@@ -144,7 +144,7 @@ Load config from file
 
 Repetitively calling this method overides previously loaded config.
 */
-func LoadConfigFromFile(configFile string, c ExecContext) {
+func LoadConfigFromFile(configFile string, r Rail) {
 	if configFile == "" {
 		return
 	}
@@ -154,20 +154,20 @@ func LoadConfigFromFile(configFile string, c ExecContext) {
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
-				c.Log.Debugf("Unable to find config file: '%s'", configFile)
+				r.Debugf("Unable to find config file: '%s'", configFile)
 				return
 			}
 			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
 		}
 		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
-			c.Log.Fatalf("Failed to load config file: '%s', %v", configFile, err)
+			r.Fatalf("Failed to load config file: '%s', %v", configFile, err)
 		}
 		loaded = true
 	})
 
 	if loaded {
-		c.Log.Debugf("Loaded config file: '%v'", configFile)
+		r.Debugf("Loaded config file: '%v'", configFile)
 	}
 }
 

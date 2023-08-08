@@ -189,7 +189,7 @@ func PathDocExtra(doc PathDoc) common.StrPair {
 //
 //	server.Get(url, handler, gclient.PathDocExtra(pathDoc))
 func ReportPathsOnBootstrapped() {
-	server.PostServerBootstrapped(func(c common.ExecContext) error {
+	server.PostServerBootstrapped(func(c common.Rail) error {
 		app := common.GetPropStr(common.PROP_APP_NAME)
 		routes := server.GetHttpRoutes()
 
@@ -229,7 +229,7 @@ func ReportPathsOnBootstrapped() {
 				return common.TraceErrf(e, "failed to report path to goauth")
 			}
 
-			c.Log.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
+			c.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
 		}
 		return nil
 	})

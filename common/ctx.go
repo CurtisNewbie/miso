@@ -2,7 +2,7 @@ package common
 
 import (
 	"context"
-	"strconv"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 )
@@ -11,60 +11,83 @@ var (
 	nilUser = User{}
 )
 
-// Prepared execution context
-type ExecContext struct {
-	Ctx  context.Context // request context
-	User User            // optional, use Authenticated() first before reading this value
-	Log  *logrus.Entry   // logger with tracing info
-	auth bool            // is authenticated
+// Prepared execution context, namly the rail
+type Rail struct {
+	Ctx context.Context // request context
+	log *logrus.Entry   // logger with tracing info
 }
 
-// Check whether current execution is authenticated, if so, one may read User from ExecContext
-func (c *ExecContext) Authenticated() bool {
-	return c.auth
+func (r Rail) Debugf(format string, args ...interface{}) {
+	r.log.Caller = getCaller()
+	r.log.Debugf(format, args)
 }
 
-// Get username if found, else empty string
-func (c *ExecContext) Username() string {
-	return c.User.Username
+func (r Rail) Infof(format string, args ...interface{}) {
+	r.log.Caller = getCaller()
+	r.log.Infof(format, args)
 }
 
-// Get user id if found, else empty string
-func (c *ExecContext) UserId() string {
-	return c.User.UserId
+func (r Rail) Warnf(format string, args ...interface{}) {
+	r.log.Caller = getCaller()
+	r.log.Warnf(format, args)
 }
 
-// Get user no if found, else empty string
-func (c *ExecContext) UserNo() string {
-	return c.User.UserNo
+func (r Rail) Errorf(format string, args ...interface{}) {
+	r.log.Caller = getCaller()
+	r.log.Errorf(format, args)
 }
 
-// Get user's id as int if found, else 0
-//
-// Basically the same as UserIdI except that error is ignored
-func (c *ExecContext) UserIdInt() int {
-	i, _ := c.UserIdI()
-	return i
+func (r Rail) Fatalf(format string, args ...interface{}) {
+	r.log.Caller = getCaller()
+	r.log.Fatalf(format, args)
 }
 
-// Get user's id as int if found, else 0
-func (c *ExecContext) UserIdI() (int, error) {
-	if c.User.UserId == "" {
-		return 0, nil
-	}
+func (r Rail) Debug(msg string) {
+	r.log.Caller = getCaller()
+	r.log.Debug(msg)
+}
 
-	return strconv.Atoi(c.User.UserId)
+func (r Rail) Info(msg string) {
+	r.log.Caller = getCaller()
+	r.log.Info(msg)
+}
+
+func (r Rail) Warn(msg string) {
+	r.log.Caller = getCaller()
+	r.log.Warn(msg)
+}
+
+func (r Rail) Error(msg string) {
+	r.log.Caller = getCaller()
+	r.log.Error(msg)
+}
+
+func (r Rail) Fatal(msg string) {
+	r.log.Caller = getCaller()
+	r.log.Fatal(msg)
 }
 
 // Create a new ExecContext with a new SpanId
-func (c *ExecContext) NextSpan() ExecContext {
+func (c *Rail) NextSpan() Rail {
 	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
 	ctx := context.WithValue(c.Ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
-	return NewExecContext(ctx, &c.User)
+	return NewExecContext(ctx)
+}
+
+func getCaller() *runtime.Frame {
+	pcs := make([]uintptr, 2)
+	depth := runtime.Callers(1, pcs)
+	frames := runtime.CallersFrames(pcs[:depth])
+
+	i := 0
+	for f, next := frames.Next(); next && i < 2; {
+		return &f //nolint:scopelint
+	}
+	return nil
 }
 
 // Create empty ExecContext
-func EmptyExecContext() ExecContext {
+func EmptyExecContext() Rail {
 	ctx := context.Background()
 
 	if ctx.Value(X_SPANID) == nil {
@@ -75,19 +98,11 @@ func EmptyExecContext() ExecContext {
 		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
-	return NewExecContext(ctx, nil)
+	return NewExecContext(ctx)
 }
 
 // Create new ExecContext
-func NewExecContext(ctx context.Context, user *User) ExecContext {
-	hasUser := user != nil
-	var u User
-	if hasUser {
-		u = *user
-	} else {
-		u = nilUser
-	}
-
+func NewExecContext(ctx context.Context) Rail {
 	if ctx.Value(X_SPANID) == nil {
 		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
@@ -96,7 +111,7 @@ func NewExecContext(ctx context.Context, user *User) ExecContext {
 		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
-	return ExecContext{Ctx: ctx, User: u, Log: TraceLogger(ctx), auth: user != nil}
+	return Rail{Ctx: ctx, log: TraceLogger(ctx)}
 }
 
 func GetCtxStr(ctx context.Context, key string) string {
@@ -111,7 +126,7 @@ func GetCtxStr(ctx context.Context, key string) string {
 	return ""
 }
 
-func SelectExecContext(cs ...ExecContext) ExecContext {
+func SelectExecContext(cs ...Rail) Rail {
 	if len(cs) > 0 {
 		return cs[0]
 	} else {

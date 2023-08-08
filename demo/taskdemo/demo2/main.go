@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// add tasks
-	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c common.ExecContext) {
+	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c common.Rail) {
 	})
 
 	// bootstrap server

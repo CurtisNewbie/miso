@@ -29,12 +29,12 @@ type LazyObjRCache[T any] struct {
 }
 
 // Remove value from cache
-func (r *LazyObjRCache[T]) Del(ec common.ExecContext, key string) error {
+func (r *LazyObjRCache[T]) Del(ec common.Rail, key string) error {
 	return r.lazyRCache.Del(ec, key)
 }
 
 // Get from cache else run supplier
-func (r *LazyObjRCache[T]) GetElse(ec common.ExecContext, key string, supplier func() (T, bool, error)) (val T, ok bool, e error) {
+func (r *LazyObjRCache[T]) GetElse(ec common.Rail, key string, supplier func() (T, bool, error)) (val T, ok bool, e error) {
 	strVal, err := r.lazyRCache.GetElse(ec, key, func() (string, error) {
 		supplied, ok, err := supplier()
 		if err != nil {
@@ -79,27 +79,27 @@ func (r *LazyRCache) rcache() *RCache {
 }
 
 // Put value to cache
-func (r *LazyRCache) Put(ec common.ExecContext, key string, val string) error {
+func (r *LazyRCache) Put(ec common.Rail, key string, val string) error {
 	return r.rcache().Put(ec, key, val)
 }
 
 // Get from cache
-func (r *LazyRCache) Get(ec common.ExecContext, key string) (val string, e error) {
+func (r *LazyRCache) Get(ec common.Rail, key string) (val string, e error) {
 	return r.rcache().Get(ec, key)
 }
 
 // Get from cache else run supplier
-func (r *LazyRCache) GetElse(ec common.ExecContext, key string, supplier func() (string, error)) (val string, e error) {
+func (r *LazyRCache) GetElse(ec common.Rail, key string, supplier func() (string, error)) (val string, e error) {
 	return r.rcache().GetElse(ec, key, supplier)
 }
 
 // Remove value from cache
-func (r *LazyRCache) Del(ec common.ExecContext, key string) error {
+func (r *LazyRCache) Del(ec common.Rail, key string) error {
 	return r.rcache().Del(ec, key)
 }
 
 // Put value to cache
-func (r *RCache) Put(ec common.ExecContext, key string, val string) error {
+func (r *RCache) Put(ec common.Rail, key string, val string) error {
 	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
 		scmd := r.rclient.Set(key, val, r.exp)
 		if scmd.Err() != nil {
@@ -115,25 +115,25 @@ func (r *RCache) Put(ec common.ExecContext, key string, val string) error {
 }
 
 // Remove value from cache
-func (r *RCache) Del(ec common.ExecContext, key string) error {
+func (r *RCache) Del(ec common.Rail, key string) error {
 	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
 		scmd := r.rclient.Del(key)
 		if scmd.Err() != nil {
 			return nil, scmd.Err()
 		}
-		ec.Log.Infof("Removed '%v' from cache", key)
+		ec.Infof("Removed '%v' from cache", key)
 		return nil, nil
 	})
 	return e
 }
 
 // Get from cache
-func (r *RCache) Get(ec common.ExecContext, key string) (val string, e error) {
+func (r *RCache) Get(ec common.Rail, key string) (val string, e error) {
 	return r.GetElse(ec, key, nil)
 }
 
 // Get from cache else run supplier, if supplier provides empty str, then the value is returned directly without call SET in redis
-func (r *RCache) GetElse(ec common.ExecContext, key string, supplier func() (string, error)) (val string, e error) {
+func (r *RCache) GetElse(ec common.Rail, key string, supplier func() (string, error)) (val string, e error) {
 
 	// for the query, we try not to lock the operation, we only lock the write part
 	cmd := r.rclient.Get(key)

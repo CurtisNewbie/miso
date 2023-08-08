@@ -35,7 +35,7 @@ func init() {
 // This func looks for following property.
 //
 //	"tracing.propagation.keys"
-func LoadPropagationKeyProp(c ExecContext) {
+func LoadPropagationKeyProp(r Rail) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
 
@@ -44,7 +44,7 @@ func LoadPropagationKeyProp(c ExecContext) {
 		propagationKeys.keys.Add(k)
 	}
 
-	c.Log.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys.String())
+	r.Infof("Loaded propagation keys for tracing: %v", propagationKeys.keys.String())
 }
 
 // Add propagation key for tracing

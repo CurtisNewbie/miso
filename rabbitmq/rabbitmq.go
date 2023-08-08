@@ -152,7 +152,7 @@ func (m MsgListener) String() string {
 }
 
 // Publish json message with confirmation
-func PublishJson(c common.ExecContext, obj any, exchange string, routingKey string) error {
+func PublishJson(c common.Rail, obj any, exchange string, routingKey string) error {
 	j, err := json.Marshal(obj)
 	if err != nil {
 		return common.TraceErrf(err, "failed to marshal message body")
@@ -161,12 +161,12 @@ func PublishJson(c common.ExecContext, obj any, exchange string, routingKey stri
 }
 
 // Publish plain text message with confirmation
-func PublishText(c common.ExecContext, msg string, exchange string, routingKey string) error {
+func PublishText(c common.Rail, msg string, exchange string, routingKey string) error {
 	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain")
 }
 
 // Publish message with confirmation
-func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey string, contentType string) error {
+func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string) error {
 	_pubWg.Add(1)
 	defer _pubWg.Done()
 
@@ -190,7 +190,7 @@ func PublishMsg(c common.ExecContext, msg []byte, exchange string, routingKey st
 		return errMsgNotPublished
 	}
 
-	c.Log.Debugf("Published MQ to %v, %s", exchange, msg)
+	c.Debugf("Published MQ to %v, %s", exchange, msg)
 	return nil
 }
 

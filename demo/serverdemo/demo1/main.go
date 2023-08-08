@@ -13,7 +13,7 @@ type SomeReqPayload struct {
 
 func main() {
 	myJob := func() {}
-	myHandler := func(c *gin.Context, ec common.ExecContext, r SomeReqPayload) (any, error) {
+	myHandler := func(c *gin.Context, ec common.Rail, r SomeReqPayload) (any, error) {
 		return nil, nil
 	}
 

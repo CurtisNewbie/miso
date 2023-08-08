@@ -14,8 +14,9 @@ type CTFormatter struct {
 }
 
 func init() {
-	// for connvenience
-	logrus.SetReportCaller(true)
+	logrus.SetReportCaller(false) // it's now set manually using Rail
+
+	// for convenience
 	logrus.SetFormatter(CustomFormatter())
 }
 
