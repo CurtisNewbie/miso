@@ -94,22 +94,6 @@ func enableTaskScheduling() bool {
 	nodeId = uid.String()
 	logrus.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
 	return true
-
-	/*
-			Not really needed, because we always check and try to become master when tasks are triggered,
-			and whenever we are the master, we create a ticker thread to refresh the expiration
-
-		go func() {
-			for {
-				if getState() == stoppedState {
-					return
-				}
-
-				tryBecomeMaster()
-				time.Sleep(15 * time.Second)
-			}
-		}()
-	*/
 }
 
 // Set the schedule group for current node, by default it's 'default'
