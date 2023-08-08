@@ -100,7 +100,12 @@ type TClient struct {
 // If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
 func (t *TClient) prepReqUrl() (string, error) {
 	if t.discoverService && consul.IsConsulEnabled() {
-		return consul.ResolveRequestUrl(t.serviceName, t.Url)
+		url, err := consul.ResolveRequestUrl(t.serviceName, t.Url)
+		if err != nil {
+			return "", err
+		}
+		url = concatQueryParam(url, t.QueryParam)
+		return url, nil
 	}
 
 	url := t.Url
