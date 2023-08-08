@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	X_TRACEID = "X-B3-Traceid"
-	X_SPANID  = "X-B3-Spanid"
+	X_TRACEID = "X-B3-TraceId"
+	X_SPANID  = "X-B3-SpanId"
 
 	X_USER_ID  = "id"
 	X_USERNAME = "username"
