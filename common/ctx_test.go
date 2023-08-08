@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewSpan(t *testing.T) {
-	ec := EmtpyRail()
+	ec := EmptyRail()
 	ec.Infof("Parent Span")
 
 	var wg sync.WaitGroup

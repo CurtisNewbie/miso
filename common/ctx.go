@@ -89,7 +89,7 @@ func getShortFnName(fn string) string {
 }
 
 // Create empty ExecContext
-func EmtpyRail() Rail {
+func EmptyRail() Rail {
 	ctx := context.Background()
 
 	if ctx.Value(X_SPANID) == nil {
@@ -128,10 +128,10 @@ func GetCtxStr(ctx context.Context, key string) string {
 	return ""
 }
 
-func SelectExecContext(cs ...Rail) Rail {
+func AnyRail(cs ...Rail) Rail {
 	if len(cs) > 0 {
 		return cs[0]
 	} else {
-		return EmtpyRail()
+		return EmptyRail()
 	}
 }

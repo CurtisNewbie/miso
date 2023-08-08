@@ -389,6 +389,7 @@ Init RabbitMQ Client
 return notifyCloseChannel for connection and error
 */
 func initClient(ctx context.Context) (chan *amqp.Error, error) {
+	rail := common.NewRail(ctx)
 	_mutex.Lock()
 	defer _mutex.Unlock()
 
@@ -401,7 +402,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	notifyCloseChan := make(chan *amqp.Error)
 	conn.NotifyClose(notifyCloseChan)
 
-	logrus.Debugf("Creating Channel to RabbitMQ")
+	rail.Debugf("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
 		return nil, common.TraceErrf(e, "failed to create channel")
@@ -414,18 +415,13 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	}
 	ch.Close()
 
-	// // publisher
-	// if e = bootstrapPublisher(conn); e != nil {
-	// 	return nil, common.TraceErrf(e, "failed to create publisher")
-	// }
-
 	// consumers
 	if e = bootstrapConsumers(conn); e != nil {
-		logrus.Errorf("Failed to bootstrap consumer: %v", e)
+		rail.Errorf("Failed to bootstrap consumer: %v", e)
 		return nil, common.TraceErrf(e, "failed to create consumer")
 	}
 
-	logrus.Debugf("RabbitMQ client initialization finished")
+	rail.Debugf("RabbitMQ client initialization finished")
 	return notifyCloseChan, nil
 }
 

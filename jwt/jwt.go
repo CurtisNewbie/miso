@@ -8,7 +8,6 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
 )
 
 type ParsedJwt struct {
@@ -81,7 +80,7 @@ func loadPublicKey() (any, error) {
 	k := common.GetPropStr(common.PROP_JWT_PUBLIC_KEY)
 	pk, err := common.LoadPubKey(k)
 	if err != nil {
-		logrus.Errorf("Failed to load public key, %v", err)
+		common.EmptyRail().Errorf("Failed to load public key, %v", err)
 		return nil, err
 	}
 
@@ -111,7 +110,7 @@ func loadPrivateKey() (any, error) {
 	k := common.GetPropStr(common.PROP_JWT_PRIVATE_KEY)
 	pk, err := common.LoadPrivKey(k)
 	if err != nil {
-		logrus.Errorf("Failed to load private key, %v", err)
+		common.EmptyRail().Errorf("Failed to load private key, %v", err)
 		return nil, err
 	}
 

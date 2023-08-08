@@ -24,10 +24,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	nilUser = common.User{IsNil: true}
-)
-
 // Raw route handler.
 type RawTRouteHandler func(c *gin.Context, ec common.Rail)
 
@@ -499,7 +495,7 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
-	var c common.Rail = common.EmtpyRail()
+	var c common.Rail = common.EmptyRail()
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
@@ -712,7 +708,7 @@ func TraceMiddleware() gin.HandlerFunc {
 // Build ExecContext
 func BuildExecContext(c *gin.Context) common.Rail {
 	if !common.GetPropBool(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
-		return common.EmtpyRail()
+		return common.EmptyRail()
 	}
 
 	return common.NewRail(c.Request.Context())
@@ -841,7 +837,7 @@ func UserId(c *gin.Context) (string, bool) {
 func ExtractUser(c *gin.Context) common.User {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nilUser
+		return common.NilUser()
 	}
 
 	return common.User{

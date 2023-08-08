@@ -11,7 +11,6 @@ import (
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -124,11 +123,10 @@ func PollServiceListInstances() {
 	serviceListHolder.mu.Lock()
 	defer serviceListHolder.mu.Unlock()
 
-	// logrus.Info("Polling service list")
 	for k := range serviceListHolder.ServiceList.Keys {
 		_, err := _fetchAndCacheServicesByName(k)
 		if err != nil {
-			logrus.Warnf("Failed to poll service service for '%s', err: %v", k, err)
+			common.EmptyRail().Warnf("Failed to poll service service for '%s', err: %v", k, err)
 		}
 	}
 }
@@ -224,7 +222,6 @@ func FetchServicesByName(name string) (map[string]*api.AgentService, error) {
 		return nil, err
 	}
 
-	// logrus.Infof("Requesting services for '%s' from Consul", name)
 	services, err := client.Agent().ServicesWithFilter(fmt.Sprintf("Service == \"%s\"", name))
 	if err != nil {
 		return nil, err
@@ -256,7 +253,7 @@ func DeregisterService() error {
 		return nil
 	}
 
-	logrus.Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
+	common.EmptyRail().Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
 	client, _ := GetConsulClient()
 	err := client.Agent().ServiceDeregister(regSub.serviceId)
 
@@ -335,7 +332,7 @@ func RegisterService() error {
 	}
 	regSub.serviceId = proposedServiceId
 
-	logrus.Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
+	common.EmptyRail().Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
 }
 
@@ -366,7 +363,7 @@ func GetConsulClient() (*api.Client, error) {
 		return nil, err
 	}
 	consulp.consul = c
-	logrus.Infof("Created Consul Client on %s", addr)
+	common.EmptyRail().Infof("Created Consul Client on %s", addr)
 
 	SubscribeServerList()
 

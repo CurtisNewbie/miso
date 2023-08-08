@@ -41,7 +41,7 @@ func TestSendToEventBus(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	if e := SendToEventBus(common.EmtpyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
+	if e := SendToEventBus(common.EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
 		t.Fatal(e)
 	}
 

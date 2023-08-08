@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -157,7 +156,7 @@ func LoadConfigFromFile(configFile string, r Rail) {
 				r.Debugf("Unable to find config file: '%s'", configFile)
 				return
 			}
-			logrus.Fatalf("Failed to open config file: '%s', %v", configFile, err)
+			r.Fatalf("Failed to open config file: '%s', %v", configFile, err)
 		}
 		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {

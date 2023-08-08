@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/sirupsen/logrus"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -75,23 +74,24 @@ func InitMySqlFromProp() error {
 
 // Create new MySQL connection
 func NewConn(user string, password string, dbname string, host string, port string, connParam string) (*gorm.DB, error) {
+	rail := common.EmptyRail()
 	connParam = strings.TrimSpace(connParam)
 	if connParam != "" && !strings.HasPrefix(connParam, "?") {
 		connParam = "?" + connParam
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s", user, password, host, port, dbname, connParam)
-	logrus.Infof("Connecting to database '%s:%s/%s' with params: '%s'", host, port, dbname, connParam)
+	rail.Infof("Connecting to database '%s:%s/%s' with params: '%s'", host, port, dbname, connParam)
 
 	conn, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		logrus.Infof("Failed to connect to MySQL, err: %v", err)
+		rail.Infof("Failed to connect to MySQL, err: %v", err)
 		return nil, err
 	}
 
 	sqlDb, err := conn.DB()
 	if err != nil {
-		logrus.Infof("Failed to obtain MySQL conn from gorm, %v", err)
+		rail.Infof("Failed to obtain MySQL conn from gorm, %v", err)
 		return nil, err
 	}
 
@@ -101,11 +101,11 @@ func NewConn(user string, password string, dbname string, host string, port stri
 
 	err = sqlDb.Ping() // make sure the handle is actually connected
 	if err != nil {
-		logrus.Infof("Ping DB Error, %v, connection may not be established", err)
+		rail.Infof("Ping DB Error, %v, connection may not be established", err)
 		return nil, err
 	}
 
-	logrus.Infof("MySQL connection established")
+	rail.Infof("MySQL connection established")
 	return conn, nil
 }
 

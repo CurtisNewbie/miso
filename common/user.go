@@ -4,6 +4,10 @@ import (
 	"strconv"
 )
 
+var (
+	nilUser = User{IsNil: true}
+)
+
 type User struct {
 	UserId   string
 	UserNo   string
@@ -19,4 +23,8 @@ func (u User) UserIdInt() int {
 
 	v, _ := strconv.Atoi(u.UserId)
 	return v
+}
+
+func NilUser() User {
+	return nilUser
 }

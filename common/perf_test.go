@@ -9,7 +9,7 @@ func TestLTimeOp(t *testing.T) {
 	defer LTimeOp(time.Now(), "myOp")
 }
 func TestTimeOp(t *testing.T) {
-	defer TimeOp(EmtpyRail(), time.Now(), "myOp")
+	defer TimeOp(EmptyRail(), time.Now(), "myOp")
 }
 
 func TestPTimeOp(t *testing.T) {
