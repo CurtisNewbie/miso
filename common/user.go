@@ -9,6 +9,7 @@ type User struct {
 	UserNo   string
 	Username string
 	RoleNo   string
+	IsNil    bool
 }
 
 func (u User) UserIdInt() int {

@@ -24,6 +24,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var (
+	nilUser = common.User{IsNil: true}
+)
+
 // Raw route handler.
 type RawTRouteHandler func(c *gin.Context, ec common.Rail)
 
@@ -834,17 +838,18 @@ func UserId(c *gin.Context) (string, bool) {
 }
 
 /* Extract common.User from request headers */
-func ExtractUser(c *gin.Context) (*common.User, bool) {
+func ExtractUser(c *gin.Context) (common.User, bool) {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nil, false
+		return nilUser, false
 	}
 
-	return &common.User{
+	return common.User{
 		UserId:   id,
 		Username: c.GetHeader("username"),
 		UserNo:   c.GetHeader("userno"),
 		RoleNo:   c.GetHeader("roleno"),
+		IsNil:    false,
 	}, true
 }
 
