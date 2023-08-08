@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	callerField = "caller"
 )
 
 type CTFormatter struct {
@@ -23,9 +26,9 @@ func init() {
 func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var fn string = ""
 
-	if entry.HasCaller() {
-		clr := entry.Caller
-		fn = " " + getShortFnName(clr.Function)
+	caller, ok := entry.Data[callerField]
+	if ok {
+		fn = " " + caller.(string)
 	}
 
 	var traceId any
@@ -77,14 +80,6 @@ func toLevelStr(level logrus.Level) string {
 	}
 
 	return "UNKNOWN"
-}
-
-func getShortFnName(fn string) string {
-	j := strings.LastIndex(fn, "/")
-	if j < 0 {
-		return fn
-	}
-	return GetRuneWrp(fn).SubstrFrom(j + 1)
 }
 
 // Get custom formatter logrus

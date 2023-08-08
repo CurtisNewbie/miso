@@ -3,12 +3,9 @@ package common
 import (
 	"context"
 	"runtime"
+	"strings"
 
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	nilUser = User{}
 )
 
 // Prepared execution context, namly the rail
@@ -18,53 +15,43 @@ type Rail struct {
 }
 
 func (r Rail) Debugf(format string, args ...interface{}) {
-	r.log.Caller = getCaller()
-	r.log.Debugf(format, args)
+	r.log.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }
 
 func (r Rail) Infof(format string, args ...interface{}) {
-	r.log.Caller = getCaller()
-	r.log.Infof(format, args)
+	r.log.WithField(callerField, getCallerFn()).Infof(format, args...)
 }
 
 func (r Rail) Warnf(format string, args ...interface{}) {
-	r.log.Caller = getCaller()
-	r.log.Warnf(format, args)
+	r.log.WithField(callerField, getCallerFn()).Warnf(format, args...)
 }
 
 func (r Rail) Errorf(format string, args ...interface{}) {
-	r.log.Caller = getCaller()
-	r.log.Errorf(format, args)
+	r.log.WithField(callerField, getCallerFn()).Errorf(format, args...)
 }
 
 func (r Rail) Fatalf(format string, args ...interface{}) {
-	r.log.Caller = getCaller()
-	r.log.Fatalf(format, args)
+	r.log.WithField(callerField, getCallerFn()).Fatalf(format, args...)
 }
 
 func (r Rail) Debug(msg string) {
-	r.log.Caller = getCaller()
-	r.log.Debug(msg)
+	r.log.WithField(callerField, getCallerFn()).Debug(msg)
 }
 
 func (r Rail) Info(msg string) {
-	r.log.Caller = getCaller()
-	r.log.Info(msg)
+	r.log.WithField(callerField, getCallerFn()).Info(msg)
 }
 
 func (r Rail) Warn(msg string) {
-	r.log.Caller = getCaller()
-	r.log.Warn(msg)
+	r.log.WithField(callerField, getCallerFn()).Warn(msg)
 }
 
 func (r Rail) Error(msg string) {
-	r.log.Caller = getCaller()
-	r.log.Error(msg)
+	r.log.WithField(callerField, getCallerFn()).Error(msg)
 }
 
 func (r Rail) Fatal(msg string) {
-	r.log.Caller = getCaller()
-	r.log.Fatal(msg)
+	r.log.WithField(callerField, getCallerFn()).Fatal(msg)
 }
 
 // Create a new ExecContext with a new SpanId
@@ -74,16 +61,31 @@ func (c *Rail) NextSpan() Rail {
 	return NewExecContext(ctx)
 }
 
-func getCaller() *runtime.Frame {
-	pcs := make([]uintptr, 2)
-	depth := runtime.Callers(1, pcs)
+func getCaller(level int) *runtime.Frame {
+	pcs := make([]uintptr, 25) // logrus also use 25 :D
+	depth := runtime.Callers(level, pcs)
 	frames := runtime.CallersFrames(pcs[:depth])
 
-	i := 0
-	for f, next := frames.Next(); next && i < 2; {
+	for f, next := frames.Next(); next; {
 		return &f //nolint:scopelint
 	}
 	return nil
+}
+
+func getCallerFn() string {
+	clr := getCaller(4)
+	if clr == nil {
+		return ""
+	}
+	return getShortFnName(clr.Function)
+}
+
+func getShortFnName(fn string) string {
+	j := strings.LastIndex(fn, "/")
+	if j < 0 {
+		return fn
+	}
+	return GetRuneWrp(fn).SubstrFrom(j + 1)
 }
 
 // Create empty ExecContext
