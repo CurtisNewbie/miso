@@ -32,7 +32,6 @@ func TestGet(t *testing.T) {
 			"TestCase": "TestGet",
 		}).
 		EnableTracing().
-		EnableRequestLog().
 		AddQueryParams("name", "yongj.zhuang???", "zhuangyongj").
 		AddQueryParams("age", "105").
 		Get()
@@ -68,7 +67,6 @@ func TestDelete(t *testing.T) {
 		AddHeaders(map[string]string{
 			"TestCase": "TestGet",
 		}).
-		EnableRequestLog().
 		EnableTracing().
 		AddQueryParams("name", "yongj.zhuang", "zhuangyongj").
 		AddQueryParams("age", "105").

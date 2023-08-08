@@ -10,10 +10,13 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/consul"
+)
+
+const (
+	applicationJson = "application/json"
 )
 
 // Helper type for handling HTTP responses
@@ -62,6 +65,11 @@ func (tr *TResponse) ReadJson(ptr any) error {
 	return nil
 }
 
+// Is status code 2xx
+func (tr *TResponse) Is2xx(ptr any) bool {
+	return tr.StatusCode >= 200 && tr.StatusCode < 300
+}
+
 // Read response as GnResp[T] object, response is always closed automatically
 func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
 	var gr common.GnResp[T]
@@ -82,7 +90,6 @@ type TClient struct {
 	client          *http.Client
 	serviceName     string
 	trace           bool
-	logRequest      bool
 	discoverService bool
 }
 
@@ -138,12 +145,6 @@ func (t *TClient) EnableTracing() *TClient {
 	return t
 }
 
-// Enable request logging
-func (t *TClient) EnableRequestLog() *TClient {
-	t.logRequest = true
-	return t
-}
-
 // Send GET request
 func (t *TClient) Get() *TResponse {
 	u, e := t.prepReqUrl()
@@ -165,7 +166,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 		return t.errorResponse(e)
 	}
 	t.AddHeaders(map[string]string{
-		"content-type": "application/json",
+		"Content-Type": applicationJson,
 	})
 	return t.Post(bytes.NewReader(jsonBody))
 }
@@ -195,7 +196,7 @@ func (t *TClient) PutJson(body any) *TResponse {
 		return t.errorResponse(e)
 	}
 	t.AddHeaders(map[string]string{
-		"content-type": "application/json",
+		"Content-Type": applicationJson,
 	})
 	return t.Put(bytes.NewReader(jsonBody))
 }
@@ -264,20 +265,8 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	AddHeaders(req, t.Headers)
 
-	var start time.Time
-	if t.logRequest {
-		start = time.Now()
-	}
-
 	r, e := t.client.Do(req) // send HTTP requests
 
-	if t.logRequest {
-		if req.Body != nil {
-			t.ExecCtx.Log.Infof("%s '%s' (%s), Body: %v, Headers: %v", req.Method, req.URL, time.Since(start), req.Body, req.Header)
-		} else {
-			t.ExecCtx.Log.Infof("%s '%s' (%s), Headers: %v", req.Method, req.URL, time.Since(start), req.Header)
-		}
-	}
 	var statusCode int
 	var respHeaders http.Header
 	if e == nil && r != nil {
@@ -307,6 +296,12 @@ func (t *TClient) AddHeader(k string, v string) *TClient {
 	} else {
 		t.Headers[k] = append(t.Headers[k], v)
 	}
+	return t
+}
+
+// Overwrite header
+func (t *TClient) SetHeaders(k string, v ...string) *TClient {
+	t.Headers[k] = v
 	return t
 }
 
