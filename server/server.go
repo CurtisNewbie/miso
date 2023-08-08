@@ -499,7 +499,7 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
-	var c common.Rail = common.EmptyExecContext()
+	var c common.Rail = common.EmtpyRail()
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
@@ -712,10 +712,10 @@ func TraceMiddleware() gin.HandlerFunc {
 // Build ExecContext
 func BuildExecContext(c *gin.Context) common.Rail {
 	if !common.GetPropBool(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
-		return common.EmptyExecContext()
+		return common.EmtpyRail()
 	}
 
-	return common.NewExecContext(c.Request.Context())
+	return common.NewRail(c.Request.Context())
 }
 
 // Build route handler with the required payload object, context, user (optional, may be nil), and logger prepared
@@ -734,7 +734,7 @@ func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.C
 		}
 
 		// actual handling
-		r, e := handler(c, common.NewExecContext(ctx), t)
+		r, e := handler(c, common.NewRail(ctx), t)
 
 		// wrap result and error
 		HandleResult(c, r, e)

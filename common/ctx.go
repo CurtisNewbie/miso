@@ -58,7 +58,7 @@ func (r Rail) Fatal(msg string) {
 func (c *Rail) NextSpan() Rail {
 	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
 	ctx := context.WithValue(c.Ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
-	return NewExecContext(ctx)
+	return NewRail(ctx)
 }
 
 func getCaller(level int) *runtime.Frame {
@@ -89,7 +89,7 @@ func getShortFnName(fn string) string {
 }
 
 // Create empty ExecContext
-func EmptyExecContext() Rail {
+func EmtpyRail() Rail {
 	ctx := context.Background()
 
 	if ctx.Value(X_SPANID) == nil {
@@ -100,11 +100,11 @@ func EmptyExecContext() Rail {
 		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
-	return NewExecContext(ctx)
+	return NewRail(ctx)
 }
 
 // Create new ExecContext
-func NewExecContext(ctx context.Context) Rail {
+func NewRail(ctx context.Context) Rail {
 	if ctx.Value(X_SPANID) == nil {
 		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
@@ -132,6 +132,6 @@ func SelectExecContext(cs ...Rail) Rail {
 	if len(cs) > 0 {
 		return cs[0]
 	} else {
-		return EmptyExecContext()
+		return EmtpyRail()
 	}
 }

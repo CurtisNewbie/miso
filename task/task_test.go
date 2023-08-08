@@ -11,7 +11,7 @@ import (
 )
 
 func TestTaskScheduling(t *testing.T) {
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	common.SetProp("redis.enabled", "true")
 

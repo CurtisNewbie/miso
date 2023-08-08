@@ -13,7 +13,7 @@ import (
 func TestRLock(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)

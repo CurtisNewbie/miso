@@ -148,7 +148,7 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	}
 
 	return common.ScheduleCron(cron, withSeconds, func() {
-		ec := common.EmptyExecContext()
+		ec := common.EmtpyRail()
 		if !tryBecomeMaster() {
 			ec.Debug("Not master node, skip scheduled task")
 			return

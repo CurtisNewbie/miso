@@ -72,7 +72,7 @@ type AddResourceReq struct {
 
 // Test whether this role has access to the url
 func TestResourceAccess(ctx context.Context, req TestResAccessReq) (*TestResAccessResp, error) {
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	tr := client.NewDynTClient(c, "/remote/path/resource/access-test", "goauth").
 		EnableTracing().
 		PostJson(req)
@@ -99,7 +99,7 @@ func TestResourceAccess(ctx context.Context, req TestResAccessReq) (*TestResAcce
 
 // Create resource
 func AddResource(ctx context.Context, req AddResourceReq) error {
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	tr := client.NewDynTClient(c, "/remote/resource/add", "goauth").
 		EnableTracing().
 		PostJson(req)
@@ -123,7 +123,7 @@ func AddResource(ctx context.Context, req AddResourceReq) error {
 
 // Report path
 func AddPath(ctx context.Context, req CreatePathReq) error {
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	tr := client.NewDynTClient(c, "/remote/path/add", "goauth").
 		EnableTracing().
 		PostJson(req)
@@ -146,7 +146,7 @@ func AddPath(ctx context.Context, req CreatePathReq) error {
 
 // Retrieve role information
 func GetRoleInfo(ctx context.Context, req RoleInfoReq) (*RoleInfoResp, error) {
-	c := common.EmptyExecContext()
+	c := common.EmtpyRail()
 	tr := client.NewDynTClient(c, "/remote/role/info", "goauth").
 		EnableTracing().
 		PostJson(req)

@@ -11,7 +11,7 @@ func PreTest() {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-dev.yml"
-	common.DefaultReadConfig(args, common.EmptyExecContext())
+	common.DefaultReadConfig(args, common.EmtpyRail())
 }
 
 func TestPollServiceListInstances(t *testing.T) {

@@ -30,7 +30,7 @@ func TestParseArg(t *testing.T) {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-dev.yml"
-	DefaultReadConfig(args, EmptyExecContext())
+	DefaultReadConfig(args, EmtpyRail())
 
 	if m := GetPropBool(PROP_PRODUCTION_MODE); !m {
 		t.Error(m)
@@ -145,7 +145,7 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-test.yml"
-	DefaultReadConfig(args, EmptyExecContext())
+	DefaultReadConfig(args, EmtpyRail())
 
 	t.Logf("PRODUCTION MODE: %t", GetPropBool(PROP_PRODUCTION_MODE))
 	t.Logf("Is PROD MODE: %t", IsProdMode())
