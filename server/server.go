@@ -838,10 +838,10 @@ func UserId(c *gin.Context) (string, bool) {
 }
 
 /* Extract common.User from request headers */
-func ExtractUser(c *gin.Context) (common.User, bool) {
+func ExtractUser(c *gin.Context) common.User {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nilUser, false
+		return nilUser
 	}
 
 	return common.User{
@@ -850,7 +850,7 @@ func ExtractUser(c *gin.Context) (common.User, bool) {
 		UserNo:   c.GetHeader("userno"),
 		RoleNo:   c.GetHeader("roleno"),
 		IsNil:    false,
-	}, true
+	}
 }
 
 // Check whether current request is authenticated
