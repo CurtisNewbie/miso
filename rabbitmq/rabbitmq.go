@@ -16,10 +16,14 @@ import (
 )
 
 const (
-	DEFAULT_QOS = 68 // default QOS
+	DEFAULT_QOS     = 68   // default QOS
+	redeliverDelay  = 5000 // redeliver delay, changing it will also create a new queue for redelivery
+	defaultExchange = ""   // default exchange that routes based on queue name using routing key
 )
 
 var (
+	redeliverQueueMap sync.Map
+
 	_mutex sync.Mutex       // global mutex for everything
 	_conn  *amqp.Connection // connection pointer, accessing it require obtaining 'mu' lock
 	_pubWg sync.WaitGroup   // number of messages being published
@@ -76,9 +80,10 @@ type QueueRegistration struct {
 }
 
 type ExchangeRegistration struct {
-	Name    string
-	Kind    string
-	Durable bool
+	Name       string
+	Kind       string
+	Durable    bool
+	Properties map[string]any
 }
 
 /* Is RabbitMQ Enabled */
@@ -157,16 +162,16 @@ func PublishJson(c common.Rail, obj any, exchange string, routingKey string) err
 	if err != nil {
 		return common.TraceErrf(err, "failed to marshal message body")
 	}
-	return PublishMsg(c, j, exchange, routingKey, "application/json")
+	return PublishMsg(c, j, exchange, routingKey, "application/json", nil)
 }
 
 // Publish plain text message with confirmation
 func PublishText(c common.Rail, msg string, exchange string, routingKey string) error {
-	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain")
+	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain", nil)
 }
 
 // Publish message with confirmation
-func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string) error {
+func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]interface{}) error {
 	_pubWg.Add(1)
 	defer _pubWg.Done()
 
@@ -180,6 +185,8 @@ func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, c
 		ContentType:  contentType,
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
+		Headers:      headers,
+		MessageId:    common.GenIdP("mq_"),
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
@@ -190,15 +197,16 @@ func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, c
 		return errMsgNotPublished
 	}
 
-	c.Debugf("Published MQ to %v, %s", exchange, msg)
+	c.Debugf("Published MQ to exchange '%v', '%s'", exchange, msg)
 	return nil
 }
 
-/*
-Add message Listener
-
-Listeners will be registered in StartRabbitMqClient func when the connection to broker is established.
-*/
+// Register pending message listener.
+//
+// Listeners will be started in StartRabbitMqClient func when the connection to broker is established.
+//
+// For any message that the listener is unable to process (returning error), the message is redelivered indefinitively
+// with a delay of 10 seconds until the message is finally processed without error.
 func AddListener(listener Listener) {
 	_mutex.Lock()
 	defer _mutex.Unlock()
@@ -221,6 +229,10 @@ func declareQueues(ch *amqp.Channel) error {
 		logrus.Debugf("Declared queue '%s'", dqueue.Name)
 	}
 	return nil
+}
+
+func redeliverQueue(exchange string, routingKey string) string {
+	return fmt.Sprintf("redeliver_%v_%v_%v", exchange, routingKey, redeliverDelay)
 }
 
 // Declare binding on client initialization
@@ -255,6 +267,24 @@ func declareBindings(ch *amqp.Channel) error {
 			return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 		}
 		logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
+
+		// declare a redeliver queue, this queue will not have any subscriber, once the messages are expired, they are
+		// routed to the original queue
+		//
+		// for this to work, we have to know what the exchange and routing key is, we have to write this here
+		//
+		// 	src: https://ivanyu.me/blog/2015/02/16/delayed-message-delivery-in-rabbitmq/
+		rqueue := redeliverQueue(bind.Exchange, bind.RoutingKey)
+		rq, e := ch.QueueDeclare(rqueue, true, false, false, false, amqp.Table{
+			"x-message-ttl":             redeliverDelay,
+			"x-dead-letter-exchange":    bind.Exchange,
+			"x-dead-letter-routing-key": bind.RoutingKey,
+		})
+		if e != nil {
+			return common.TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
+		}
+		redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
+		logrus.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
 	}
 	return nil
 }
@@ -272,7 +302,7 @@ func declareExchanges(ch *amqp.Channel) error {
 			exchange.Kind = "direct"
 		}
 
-		e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, nil)
+		e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
 		if e != nil {
 			return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 		}
@@ -462,7 +492,9 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
-		logrus.Debugf("%d-%v started", routineNo, listener)
+		rail := common.EmptyRail()
+
+		rail.Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {
 			payload := string(msg.Body)
 
@@ -472,10 +504,37 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 				continue
 			}
 
-			logrus.Errorf("Failed to handle message for queue: '%s', payload: '%v', err: '%v'", listener.Queue(), payload, e)
+			rail.Errorf("Failed to handle message for queue: '%s', exchange: '%s', routingKey: '%s', payload: '%v', err: '%v', messageId: '%v'",
+				listener.Queue(), msg.Exchange, msg.RoutingKey, payload, e, msg.MessageId)
+
+			// before we nack the message, we check if it's possible to put the message in a persudo 'delayed' queue
+			//
+			// rabbitmq doesn't provide mechanism to configure the maximum time of redelivery for each message
+			// we don't want the server to be flooded with messages that we cannot handle for now for whatever reason
+			// if the message is redelivered, we send the same message to the broker with delay, and we simply ack the current message
+			//
+			// this implementation doesn't use x-delay plugin at all, installing a plugin for this is very incovenient, the plugin
+			// may not be available as well.
+			//
+			// notice that when we create binding for queue and exchange, we also create a redeliver queue to mimic the 'delay' behaviour
+			//
+			// 	src: https://ivanyu.me/blog/2015/02/16/delayed-message-delivery-in-rabbitmq/
+			rq := redeliverQueue(msg.Exchange, msg.RoutingKey)
+			if _, ok := redeliverQueueMap.Load(rq); ok { // have to make sure we indeed have a redeliver queue for this message
+				err := PublishMsg(rail, msg.Body, defaultExchange, rq, msg.ContentType, nil)
+				if err == nil {
+					msg.Ack(false)
+					rail.Debugf("Sent message to delayed redeliver queue: %v", msg.MessageId)
+					continue
+				}
+				rail.Debugf("Failed to send message to delayed redeliver queue: %v, %v", msg.MessageId, err)
+			}
+
+			// nack the message
 			msg.Nack(false, true)
+			rail.Debugf("Nacked message: %v", msg.MessageId)
 		}
-		logrus.Debugf("%d-%v stopped", routineNo, listener)
+		rail.Debugf("%d-%v stopped", routineNo, listener)
 	}()
 }
 

@@ -108,6 +108,8 @@ mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/g
 | rabbitmq.vhost        | virtual host                       |               |
 | rabbitmq.consumer.qos | consumer QOS                       | 68            |
 
+Gocommon's integration with RabbitMQ supports delayed message redelivery (messages that can't be handled without error), the delay is currently 10 seconds. This is to prevent server being flooded with redelivered messages, this is not configurable though.
+
 ### SQLite Properties
 
 | property    | description                  | default value |

@@ -2,6 +2,7 @@ package bus
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
@@ -14,6 +15,7 @@ const (
 
 var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
+	declaredBus     sync.Map
 )
 
 // Send msg to event bus.
@@ -37,9 +39,14 @@ func DeclareEventBus(bus string) {
 		panic(errBusNameEmpty)
 	}
 	busName := busName(bus)
+	if _, ok := declaredBus.Load(busName); ok {
+		return // race condition is harmless, don't worry
+	}
+
 	rabbitmq.RegisterQueue(rabbitmq.QueueRegistration{Name: busName, Durable: true})
 	rabbitmq.RegisterBinding(rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
 	rabbitmq.RegisterExchange(rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
+	declaredBus.Store(busName, true)
 }
 
 // Subscribe to event bus.
