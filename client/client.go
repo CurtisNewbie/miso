@@ -17,6 +17,7 @@ import (
 
 const (
 	applicationJson = "application/json"
+	contentType     = "Content-Type"
 )
 
 // Helper type for handling HTTP responses
@@ -163,6 +164,12 @@ func (t *TClient) EnableTracing() *TClient {
 	return t
 }
 
+// Set Content-Type
+func (t *TClient) SetContentType(ct string) *TClient {
+	t.SetHeaders(contentType, ct)
+	return t
+}
+
 // Send GET request
 func (t *TClient) Get() *TResponse {
 	u, e := t.prepReqUrl()
@@ -183,9 +190,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 	if e != nil {
 		return t.errorResponse(e)
 	}
-	t.AddHeaders(map[string]string{
-		"Content-Type": applicationJson,
-	})
+	t.SetContentType(applicationJson)
 	return t.Post(bytes.NewReader(jsonBody))
 }
 
@@ -213,9 +218,7 @@ func (t *TClient) PutJson(body any) *TResponse {
 	if e != nil {
 		return t.errorResponse(e)
 	}
-	t.AddHeaders(map[string]string{
-		"Content-Type": applicationJson,
-	})
+	t.SetContentType(applicationJson)
 	return t.Put(bytes.NewReader(jsonBody))
 }
 
