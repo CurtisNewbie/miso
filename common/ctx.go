@@ -70,11 +70,15 @@ func (r Rail) Fatal(msg string) {
 	r.log.WithField(callerField, getCallerFn()).Fatal(msg)
 }
 
-// Create a new ExecContext with a new SpanId
-func (c Rail) NextSpan() Rail {
-	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
-	ctx := context.WithValue(c.Ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
+func (r Rail) WithCtxVal(key string, val string) Rail {
+	ctx := context.WithValue(r.Ctx, key, val) //lint:ignore SA1029 keys must be exposed for user to use
 	return NewRail(ctx)
+}
+
+// Create a new Rail with a new SpanId
+func (r Rail) NextSpan() Rail {
+	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
+	return r.WithCtxVal(X_SPANID, RandLowerAlphaNumeric(16))
 }
 
 func getCaller(level int) *runtime.Frame {

@@ -15,14 +15,14 @@ type Dummy struct {
 	Desc string `json:"desc"`
 }
 
-func msgHandler(payload string) error {
-	logrus.Infof("Received message %s", payload)
+func msgHandler(rail common.Rail, payload string) error {
+	rail.Infof("Received message %s", payload)
 	// return errors.New("nack intentionally")
 	return nil
 }
 
-func jsonMsgHandler(payload Dummy) error {
-	logrus.Infof("Received message %s", payload)
+func jsonMsgHandler(rail common.Rail, payload Dummy) error {
+	rail.Infof("Received message %s", payload)
 	return nil
 }
 

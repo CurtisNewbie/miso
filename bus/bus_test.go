@@ -7,7 +7,6 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/rabbitmq"
-	"github.com/sirupsen/logrus"
 )
 
 func preTest() {
@@ -52,8 +51,8 @@ func TestSendToEventBus(t *testing.T) {
 func TestSubscribeEventBus(t *testing.T) {
 	preTest()
 
-	SubscribeEventBus("test-bus", 1, func(t Dummy) error {
-		logrus.Infof("received dummy: %+v", t)
+	SubscribeEventBus("test-bus", 1, func(rail common.Rail, t Dummy) error {
+		rail.Infof("received dummy: %+v", t)
 		return nil
 	})
 

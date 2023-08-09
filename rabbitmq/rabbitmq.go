@@ -93,15 +93,15 @@ func IsEnabled() bool {
 
 // Listener of Queue
 type Listener interface {
-	Queue() string               // return name of the queue
-	Handle(payload string) error // handle message
+	Queue() string                                 // return name of the queue
+	Handle(rail common.Rail, payload string) error // handle message
 	Concurrency() int
 }
 
 // Json Message Listener for Queue
 type JsonMsgListener[T any] struct {
 	QueueName     string
-	Handler       func(payload T) error
+	Handler       func(rail common.Rail, payload T) error
 	NumOfRoutines int
 }
 
@@ -109,12 +109,12 @@ func (m JsonMsgListener[T]) Queue() string {
 	return m.QueueName
 }
 
-func (m JsonMsgListener[T]) Handle(payload string) error {
+func (m JsonMsgListener[T]) Handle(rail common.Rail, payload string) error {
 	var t T
 	if e := json.Unmarshal([]byte(payload), &t); e != nil {
 		return e
 	}
-	return m.Handler(t)
+	return m.Handler(rail, t)
 }
 
 func (m JsonMsgListener[T]) Concurrency() int {
@@ -132,7 +132,7 @@ func (m JsonMsgListener[T]) String() string {
 // Message Listener for Queue
 type MsgListener struct {
 	QueueName     string
-	Handler       func(payload string) error
+	Handler       func(rail common.Rail, payload string) error
 	NumOfRoutines int
 }
 
@@ -140,8 +140,8 @@ func (m MsgListener) Queue() string {
 	return m.QueueName
 }
 
-func (m MsgListener) Handle(payload string) error {
-	return m.Handler(payload)
+func (m MsgListener) Handle(rail common.Rail, payload string) error {
+	return m.Handler(rail, payload)
 }
 
 func (m MsgListener) Concurrency() int {
@@ -171,7 +171,7 @@ func PublishText(c common.Rail, msg string, exchange string, routingKey string) 
 }
 
 // Publish message with confirmation
-func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]interface{}) error {
+func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
 	_pubWg.Add(1)
 	defer _pubWg.Done()
 
@@ -180,6 +180,16 @@ func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, c
 		return common.TraceErrf(err, "failed to obtain channel is closed, unable to publish message")
 	}
 	defer returnPubChan(pc)
+
+	// propogate trace through headers
+	if headers == nil {
+		headers = map[string]any{}
+		propagated := common.GetPropagationKeys()
+		for i := range propagated {
+			k := propagated[i]
+			headers[k] = c.CtxValue(k)
+		}
+	}
 
 	publishing := amqp.Publishing{
 		ContentType:  contentType,
@@ -492,13 +502,26 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 
 func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int) {
 	go func() {
-		rail := common.EmptyRail()
-
-		rail.Debugf("%d-%v started", routineNo, listener)
+		logrus.Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {
+
+			// read trace from headers
+			rail := common.EmptyRail()
+			if msg.Headers != nil {
+				keys := common.GetPropagationKeys()
+				for i := range keys {
+					k := keys[i]
+					if hv, ok := msg.Headers[k]; ok {
+						rail = rail.WithCtxVal(k, fmt.Sprintf("%v", hv))
+					}
+				}
+			}
+
+			// message body, we only support text
 			payload := string(msg.Body)
 
-			e := listener.Handle(payload)
+			// listener handling the message payload
+			e := listener.Handle(rail, payload)
 			if e == nil {
 				msg.Ack(false)
 				continue
@@ -534,7 +557,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 			msg.Nack(false, true)
 			rail.Debugf("Nacked message: %v", msg.MessageId)
 		}
-		rail.Debugf("%d-%v stopped", routineNo, listener)
+		logrus.Debugf("%d-%v stopped", routineNo, listener)
 	}()
 }
 

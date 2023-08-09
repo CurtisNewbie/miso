@@ -54,7 +54,7 @@ func DeclareEventBus(bus string) {
 // Internally, it registers a listener for the queue identified by the bus name.
 //
 // It also calls DeclareEventBus(...) automatically before it registers the listeners.
-func SubscribeEventBus[T any](bus string, concurrency int, listener func(t T) error) {
+func SubscribeEventBus[T any](bus string, concurrency int, listener func(rail common.Rail, t T) error) {
 	if bus == "" {
 		panic(errBusNameEmpty)
 	}
