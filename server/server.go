@@ -639,46 +639,11 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
-// Create a predicate that tries to match the given url against the pattern (excluding query parameters)
-func UrlMatchPredicate(pattern string) common.Predicate[string] {
-	return func(url string) bool {
-		uurl := url
-		j := strings.Index(uurl, "?")
-		if j > -1 {
-			rw := common.GetRuneWrp(uurl)
-			uurl = rw.Substr(0, j)
-		}
-		return strings.EqualFold(uurl, pattern)
-	}
-}
-
-// Add url based route authentication whitelist
-func AddUrlBasedRouteAuthWhitelist(url string) {
-	AddRouteAuthWhitelist(UrlMatchPredicate(url))
-}
-
-// Add route authentication whitelist predicate
-//
-// deprecated, this does nothing
-func AddRouteAuthWhitelist(pred common.Predicate[string]) {
-	// does nothing, for backword compatibility
-}
-
-// Check whether url is in route whitelist
-//
-// deprecated, will always return false
-func IsRouteWhitelist(url string) bool {
-	// keep this for backword compatibility
-	return false
-}
-
 // Perf Middleware that calculates how much time each request takes
 func PerfMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		start := time.Now()
-
-		ctx.Next()
-
+		ctx.Next() // continue the handler chain
 		common.TraceLogger(ctx).Infof("%-6v %-60v [%s]", ctx.Request.Method, ctx.Request.RequestURI, time.Since(start))
 	}
 }
@@ -805,14 +770,6 @@ func HandleResult(c *gin.Context, rail common.Rail, r any, e error) {
 		return
 	}
 	DispatchOk(c)
-}
-
-// Must bind json content to the given pointer, else panic
-func MustBindJson(c *gin.Context, ptr any) {
-	if err := c.ShouldBindJSON(ptr); err != nil {
-		common.TraceLogger(c.Request.Context()).Errorf("Bind Json failed, %v", err)
-		panic("Illegal Arguments")
-	}
 }
 
 // Must bind request payload to the given pointer, else panic

@@ -2,100 +2,49 @@ package common
 
 import "strings"
 
-// Wrapper of Rune
-type RuneWrp struct {
-	c []rune
-}
+type RString []rune
 
-// Get length in terms of characters
-func (rw RuneWrp) Len() int {
-	return len(rw.c)
-}
-
-// Get string at index
-func (rw RuneWrp) StrAt(idx int) string {
-	return string(rw.c[idx])
-}
-
-// Get substring
-func (rw RuneWrp) Substr(start int, end int) string {
-	return string(rw.c[start:end])
-}
-
-// Get substring
-func (rw RuneWrp) SubstrFrom(start int) string {
-	return string(rw.c[start:rw.Len()])
-}
-
-// Check if the string is empty
-func IsEmpty(s *string) bool {
-	if s == nil || strings.TrimSpace(*s) == "" {
-		return true
-	}
-	return false
-}
-
-// Check if the string is empty, if so, return the defaultStr
-func IfStrEmptyThen(s string, defaultStr string) string {
-	if strings.TrimSpace(s) == "" {
-		return defaultStr
-	}
-	return s
-}
-
-// Get RuneWrp from string
-func GetRuneWrp(s string) RuneWrp {
-	return RuneWrp{c: []rune(s)}
-}
-
-// Check if the string is empty
-func IsStrEmpty(s string) bool {
-	return strings.TrimSpace(s) == ""
-}
-
-// Substring (rune)
-func Substr(s string, start int, end int) string {
-	r := []rune(s)
-	l := len(r)
-
-	if start >= l {
-		return ""
-	}
-
-	if end > l {
-		end = l
-	}
-
+// substring
+func (r RString) Substr(start int, end int) string {
 	return string(r[start:end])
 }
 
-// Return len of string (rune)
-func StrLen(s string) int {
-	return len([]rune(s))
+// substring starting from start
+func (r RString) SubstrStart(start int) string {
+	return string(r[start:])
 }
 
-// Get last char
-func LastChar(s string) (length int, lastChar string) {
-	rs := []rune(s)
-	l := len(rs)
-
-	// empty string
-	if l < 1 {
-		return l, ""
-	}
-
-	return l, string(rs[l-1])
+// substring before end
+func (r RString) SubstrEnd(end int) string {
+	return string(r[:end])
 }
 
-// Get first char
-func FirstChar(s string) (length int, firstChar string) {
-	rs := []rune(s)
-	l := len(rs)
+// count number of runes
+func (r RString) RuneLen() int {
+	return len(r)
+}
 
-	// empty string
-	if l < 1 {
-		return l, ""
+// get string at
+func (r RString) StrAt(i int) string {
+	return string(r[i])
+}
+
+// check if r is blank
+//
+// dont't use it just because you need IsBlank
+func (r RString) IsBlank() bool {
+	return len(r) < 1 || IsBlankStr(string(r))
+}
+
+// if r is blank return defStr else return r
+func (r RString) IfBlankThen(defStr string) string {
+	if r.IsBlank() {
+		return defStr
 	}
+	return string(r)
+}
 
-	return l, string(rs[0])
+// Check if the string is blank
+func IsBlankStr(s string) bool {
+	return strings.TrimSpace(s) == ""
 }

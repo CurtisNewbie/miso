@@ -101,7 +101,8 @@ func getShortFnName(fn string) string {
 	if j < 0 {
 		return fn
 	}
-	return GetRuneWrp(fn).SubstrFrom(j + 1)
+
+	return RString(fn).SubstrStart(j + 1)
 }
 
 // Create empty ExecContext

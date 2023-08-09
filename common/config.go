@@ -291,7 +291,7 @@ func IsProdMode() bool {
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
 func ResolveServerHost(address string) string {
-	if IsStrEmpty(address) || address == LOCAL_IP_ANY {
+	if IsBlankStr(address) || address == LOCAL_IP_ANY {
 		address = GetLocalIPV4()
 	}
 	return address
