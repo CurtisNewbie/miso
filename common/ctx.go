@@ -78,7 +78,7 @@ func (c *Rail) NextSpan() Rail {
 }
 
 func getCaller(level int) *runtime.Frame {
-	pcs := make([]uintptr, 25) // logrus also use 25 :D
+	pcs := make([]uintptr, level+1) // we only need the first frame
 	depth := runtime.Callers(level, pcs)
 	frames := runtime.CallersFrames(pcs[:depth])
 
