@@ -109,22 +109,12 @@ func getShortFnName(fn string) string {
 	return RString(fn).SubstrStart(j + 1)
 }
 
-// Create empty ExecContext
+// Create empty Rail
 func EmptyRail() Rail {
-	ctx := context.Background()
-
-	if ctx.Value(X_SPANID) == nil {
-		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
-	}
-
-	if ctx.Value(X_TRACEID) == nil {
-		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
-	}
-
-	return NewRail(ctx)
+	return NewRail(context.Background())
 }
 
-// Create new ExecContext
+// Create new Rail from context
 func NewRail(ctx context.Context) Rail {
 	if ctx.Value(X_SPANID) == nil {
 		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use

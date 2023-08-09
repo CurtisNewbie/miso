@@ -25,19 +25,19 @@ import (
 )
 
 // Raw route handler.
-type RawTRouteHandler func(c *gin.Context, ec common.Rail)
+type RawTRouteHandler func(c *gin.Context, rail common.Rail)
 
 // Route handler.
 //
 // The returned result and error are automatically wrapped in a Resp object.
-type TRouteHandler func(c *gin.Context, ec common.Rail) (any, error)
+type TRouteHandler func(c *gin.Context, rail common.Rail) (any, error)
 
 // Route handler.
 //
 // Request payload is automatically resolved to object t (e.g., from query parameters of JSON payload depending on the content-type).
 //
 // The returned result and error are automatically wrapped in a Resp object.
-type ITRouteHandler[T any, V any] func(c *gin.Context, ec common.Rail, t T) (V, error)
+type ITRouteHandler[T any, V any] func(c *gin.Context, rail common.Rail, t T) (V, error)
 
 type RoutesRegistar func(*gin.Engine)
 
@@ -68,14 +68,14 @@ var (
 		server component bootstrap callbacks
 	*/
 
-	serverBootrapCallbacks []func(ctx context.Context, c common.Rail) error = []func(context.Context, common.Rail) error{}
+	serverBootrapCallbacks []func(ctx context.Context, r common.Rail) error = []func(context.Context, common.Rail) error{}
 
 	/*
 		lifecycle callbacks
 	*/
 
-	preServerBootstrapListener  []func(c common.Rail) error = []func(c common.Rail) error{}
-	postServerBootstrapListener []func(c common.Rail) error = []func(c common.Rail) error{}
+	preServerBootstrapListener  []func(r common.Rail) error = []func(r common.Rail) error{}
+	postServerBootstrapListener []func(r common.Rail) error = []func(r common.Rail) error{}
 	serverHttpRoutes            []HttpRoute                 = []HttpRoute{}
 
 	anyHttpMethods = []string{
@@ -389,7 +389,7 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 // Configurae Logging, e.g., logger's output, log level, etc
-func ConfigureLogging(c common.Rail) {
+func ConfigureLogging(rail common.Rail) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if common.ContainsProp(common.PROP_LOGGING_ROLLING_FILE) {
@@ -441,7 +441,7 @@ func callPostServerBootstrapListeners(c common.Rail) error {
 }
 
 // Add listener that is invoked when server is finally bootstrapped
-func PostServerBootstrapped(callback func(c common.Rail) error) {
+func PostServerBootstrapped(callback func(rail common.Rail) error) {
 	if callback == nil {
 		return
 	}
@@ -449,23 +449,23 @@ func PostServerBootstrapped(callback func(c common.Rail) error) {
 }
 
 // Add listener that is invoked before the server is fully bootstrapped
-func PreServerBootstrap(callback func(c common.Rail) error) {
+func PreServerBootstrap(callback func(rail common.Rail) error) {
 	if callback == nil {
 		return
 	}
 	preServerBootstrapListener = append(preServerBootstrapListener, callback)
 }
 
-func callPreServerBootstrapListeners(c common.Rail) error {
+func callPreServerBootstrapListeners(rail common.Rail) error {
 	for _, callback := range preServerBootstrapListener {
-		if e := callback(c); e != nil {
+		if e := callback(rail); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func RegisterBootstrapCallback(bootstrapComponent func(context.Context, common.Rail) error) {
+func RegisterBootstrapCallback(bootstrapComponent func(ctx context.Context, rail common.Rail) error) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 }
 
@@ -483,11 +483,11 @@ To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 
 It's also possible to register callbacks that are triggered before/after server bootstrap
 
-	server.PreServerBootstrapped(func(c common.ExecContext) error {
+	server.PreServerBootstrap(func(c common.Rail) error {
 		// do something right after configuration being loaded, but server hasn't been bootstraped yet
 	});
 
-	server.PostServerBootstrapped(func(c common.ExecContext) error {
+	server.PostServerBootstrapped(func(c common.Rail) error {
 		// do something after the server bootstrap
 	});
 
