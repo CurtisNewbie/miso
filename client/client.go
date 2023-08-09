@@ -66,8 +66,21 @@ func (tr *TResponse) ReadJson(ptr any) error {
 }
 
 // Is status code 2xx
-func (tr *TResponse) Is2xx(ptr any) bool {
+func (tr *TResponse) Is2xx() bool {
 	return tr.StatusCode >= 200 && tr.StatusCode < 300
+}
+
+// Check if it's 2xx, else return error
+func (tr *TResponse) Require2xx() error {
+	if !tr.Is2xx() {
+		var body string
+		byt, err := tr.ReadBytes()
+		if err == nil {
+			body = string(byt)
+		}
+		return fmt.Errorf("unknown error, status code: %v, body: %v", tr.StatusCode, body)
+	}
+	return nil
 }
 
 // Read response as GnResp[T] object, response is always closed automatically
@@ -83,7 +96,7 @@ func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
 type TClient struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
-	ExecCtx    common.Rail  // execute context
+	ExecCtx    common.Rail         // execute context
 	Ctx        context.Context     // context provided by caller
 	QueryParam map[string][]string // query parameters
 

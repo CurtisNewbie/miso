@@ -81,6 +81,10 @@ func TestResourceAccess(ctx context.Context, req TestResAccessReq) (*TestResAcce
 		return nil, tr.Err
 	}
 
+	if err := tr.Require2xx(); err != nil {
+		return nil, err
+	}
+
 	r, e := client.ReadGnResp[*TestResAccessResp](tr)
 	if e != nil {
 		return nil, e
@@ -108,6 +112,10 @@ func AddResource(ctx context.Context, req AddResourceReq) error {
 		return tr.Err
 	}
 
+	if err := tr.Require2xx(); err != nil {
+		return err
+	}
+
 	r, e := client.ReadGnResp[any](tr)
 	if e != nil {
 		return e
@@ -132,6 +140,10 @@ func AddPath(ctx context.Context, req CreatePathReq) error {
 		return tr.Err
 	}
 
+	if err := tr.Require2xx(); err != nil {
+		return err
+	}
+
 	r, e := client.ReadGnResp[any](tr)
 	if e != nil {
 		return e
@@ -153,6 +165,10 @@ func GetRoleInfo(ctx context.Context, req RoleInfoReq) (*RoleInfoResp, error) {
 
 	if tr.Err != nil {
 		return nil, tr.Err
+	}
+
+	if err := tr.Require2xx(); err != nil {
+		return nil, err
 	}
 
 	r, e := client.ReadGnResp[*RoleInfoResp](tr)
