@@ -548,7 +548,7 @@ func BootstrapServer(args []string) {
 func registerServerRoutes(c common.Rail, engine *gin.Engine) {
 	// no route
 	engine.NoRoute(func(ctx *gin.Context) {
-		c := BuildExecContext(ctx)
+		c := BuildRail(ctx)
 		c.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
 		ctx.AbortWithStatus(404)
 	})
@@ -614,16 +614,15 @@ func ResolvePath(relPath string, isOpenApi bool) string {
 
 // Default Recovery func
 func DefaultRecovery(c *gin.Context, e interface{}) {
+	rail := BuildRail(c)
+	rail.Errorf("Recovered from panic, %v", e)
+
 	if err, ok := e.(error); ok {
-		DispatchErrJson(c, err)
-		return
-	}
-	if msg, ok := e.(string); ok {
-		DispatchErrMsgJson(c, msg)
+		DispatchErrJson(c, rail, err)
 		return
 	}
 
-	DispatchErrJson(c, common.NewWebErr("Unknown error, please try again later"))
+	DispatchErrJson(c, rail, common.NewWebErr("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
@@ -705,57 +704,99 @@ func TraceMiddleware() gin.HandlerFunc {
 	}
 }
 
-// Build ExecContext
-func BuildExecContext(c *gin.Context) common.Rail {
+// Build Rail from gin.Context.
+//
+// This func creates new Rail for the first time by setting up proper traceId and spanId.
+//
+// It can also recognize that a traceId (and spanId) was previously created, and do attempt to reuse these tracing values,
+// such that the Rail acts as if it's the previous one, this is especially useful when we are recovering from a panic.
+// In most cases, we should only call BuildRail for once.
+//
+// However, if the Rail has attempted to overwrite it's spanId (i.e., creating new span), this newly created spanId will not
+// be reflected on the Rail created here. But this should be find, because new span is usually created for async operation.
+func BuildRail(c *gin.Context) common.Rail {
 	if !common.GetPropBool(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
 		return common.EmptyRail()
 	}
 
-	return common.NewRail(c.Request.Context())
+	if c.Keys == nil {
+		c.Keys = map[string]any{}
+	}
+
+	tracked := common.GetPropagationKeys()
+	ctx := c.Request.Context()
+
+	// it's possible that the spanId and traceId have been set to the context
+	// if we calling BuildRail() for the second time, we should read from the context
+	// instead of creating new ones.
+	// for the most of the time, we are using one single Rail throughout the method calls
+	contextModified := false
+	for i := range tracked {
+		t := tracked[i]
+		if v, ok := c.Keys[t]; ok && v != "" {
+			ctx = context.WithValue(ctx, t, v) //lint:ignore SA1029 keys must be exposed for user to use
+			contextModified = true
+		}
+	}
+
+	// create a new Rail
+	rail := common.NewRail(ctx)
+
+	if !contextModified {
+		for i := range tracked { // copy the newly created keys back to the gin.Context
+			t := tracked[i]
+			if v, ok := c.Keys[t]; !ok || v == "" {
+				c.Keys[t] = rail.CtxValue(t)
+			}
+		}
+	}
+
+	return rail
 }
 
 // Build route handler with the required payload object, context, user (optional, may be nil), and logger prepared
 func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
+		rail := common.NewRail(c.Request.Context())
 
 		// bind to payload boject
-		var t T
-		MustBind(c, &t)
+		var req T
+		MustBind(c, &req)
 
 		// validate request
-		if e := common.Validate(t); e != nil {
-			HandleResult(c, nil, e)
+		if e := common.Validate(req); e != nil {
+			HandleResult(c, rail, nil, e)
 			return
 		}
 
-		// actual handling
-		r, e := handler(c, common.NewRail(ctx), t)
+		// handle the requests
+		res, err := handler(c, rail, req)
 
 		// wrap result and error
-		HandleResult(c, r, e)
+		HandleResult(c, rail, res, err)
 	}
 }
 
 // Build RawTRouteHandler with context, user (optional, may be nil), and logger prepared
 func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		handler(c, BuildExecContext(c))
+		handler(c, BuildRail(c))
 	}
 }
 
 // Build TRouteHandler with context, user (optional, may be nil), and logger prepared
 func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		r, e := handler(c, BuildExecContext(c))
-		HandleResult(c, r, e)
+		rail := BuildRail(c)
+		r, e := handler(c, rail)
+		HandleResult(c, rail, r, e)
 	}
 }
 
 // Handle route's result
-func HandleResult(c *gin.Context, r any, e error) {
+func HandleResult(c *gin.Context, rail common.Rail, r any, e error) {
 	if e != nil {
-		DispatchErrJson(c, e)
+		DispatchErrJson(c, rail, e)
 		return
 	}
 
@@ -788,8 +829,8 @@ func DispatchJson(c *gin.Context, body interface{}) {
 }
 
 // Dispatch error response in json format
-func DispatchErrJson(c *gin.Context, err error) {
-	c.JSON(http.StatusOK, common.WrapResp(nil, err))
+func DispatchErrJson(c *gin.Context, rail common.Rail, err error) {
+	c.JSON(http.StatusOK, common.WrapResp(nil, err, rail))
 }
 
 // Dispatch error response in json format

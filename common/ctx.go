@@ -14,6 +14,22 @@ type Rail struct {
 	log *logrus.Entry   // logger with tracing info
 }
 
+func (r Rail) CtxValue(key string) string {
+	v := r.Ctx.Value(key)
+	if vs, ok := v.(string); ok {
+		return vs
+	}
+	return ""
+}
+
+func (r Rail) TraceId() string {
+	return r.CtxValue(X_TRACEID)
+}
+
+func (r Rail) SpanId() string {
+	return r.CtxValue(X_SPANID)
+}
+
 func (r Rail) Debugf(format string, args ...interface{}) {
 	r.log.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }

@@ -2,8 +2,6 @@ package common
 
 import (
 	"fmt"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Web Endpoint's Resp
@@ -30,10 +28,10 @@ func (r GnResp[T]) Err() error {
 }
 
 /** Wrap with a response object */
-func WrapResp(data interface{}, e error) Resp {
+func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
 		if we, ok := e.(*WebError); ok {
-			logrus.Infof("Returned error, code: %v, msg: %v, internalMsg: %v", we.Code, we.Msg, we.InternalMsg)
+			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", we.Code, we.Msg, we.InternalMsg)
 			if HasCode(we) {
 				return ErrorRespWCode(we.Code, we.Msg)
 			} else {
@@ -46,7 +44,7 @@ func WrapResp(data interface{}, e error) Resp {
 		}
 
 		// not a WebError, just return some generic msg
-		logrus.Errorf("Unknown error, %v", e)
+		rail.Errorf("Unknown error, %v", e)
 		return ErrorResp("Unknown system error, please try again later")
 	}
 
