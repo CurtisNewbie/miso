@@ -35,7 +35,10 @@ e.g.,
 Convenient way to initialize a new project:
 
 ```
-mkdir myapp && cd myapp && curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh | bash
+mkdir myapp \
+	&& cd myapp \
+	&& curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh \
+	| bash
 ```
 
 ## Properties-Based Configuration
