@@ -722,7 +722,7 @@ func BuildRail(c *gin.Context) common.Rail {
 // Build route handler with the required payload object, context, user (optional, may be nil), and logger prepared
 func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		rail := common.NewRail(c.Request.Context())
+		rail := common.NewRail(c)
 
 		// bind to payload boject
 		var req T

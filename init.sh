@@ -1,5 +1,7 @@
 #!/bin/bash
 
+branch="dev"
+
 go version
 if [[ $? -ne 0 ]]; then
     return 1
@@ -112,7 +114,7 @@ echo "}" >> "$file"
 echo "" >> "$file"
 
 go mod init $app && \
-    go get github.com/curtisnewbie/gocommon@HEAD && \
+    go get github.com/curtisnewbie/gocommon@$branch && \
     go mod tidy
 
 echo "Project ${app} initialized at $(pwd)"
