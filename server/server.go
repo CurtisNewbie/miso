@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -833,9 +834,13 @@ func UserId(c *gin.Context) (string, bool) {
 
 /* Extract common.User from request headers */
 func ExtractUser(c *gin.Context) common.User {
-	id := c.GetHeader("id")
-	if id == "" {
+	idHeader := c.GetHeader("id")
+	if idHeader == "" {
 		return common.NilUser()
+	}
+	id, err := strconv.Atoi(idHeader)
+	if err != nil {
+		id = 0
 	}
 
 	return common.User{
