@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	TAG_VALIDATION = "validation" // name of validation tag
+	TAG_VALIDATION_V1 = "validation" // name of validation tag
+	TAG_VALIDATION_V2 = "valid"      // name of validation tag (v2)
 
 	MAX_LEN = "maxLen" // max length of a string, array, slice (e.g., 'maxLen:10')
 
@@ -62,40 +63,61 @@ func (ve *ValidationError) Error() string {
 	return ve.Field + " " + ve.ValidationMsg
 }
 
-// Validate target object based on the validation rules specified by tags
+/*
+Validate target object based on the validation rules specified by tags 'valid:"[RULE]"'.
+
+Available Rules:
+
+  - maxLen
+  - notEmpty
+  - notNil
+  - positive
+  - positiveOrZero
+  - negative
+  - negativeOrZero
+  - notZero
+  - validated
+*/
 func Validate(target any) error {
 	introspector := Introspect(target)
 	targetVal := reflect.ValueOf(target)
 	var verr error
 
 	forEach := func(i int, field reflect.StructField) (breakIteration bool) {
-		vtag := field.Tag.Get(TAG_VALIDATION)
-		if vtag != "" {
-			taggedRules := strings.Split(vtag, ",")
-			fval := targetVal.Field(i)
+		vtag := field.Tag.Get(TAG_VALIDATION_V2) // new tag
 
-			// for each rule
-			for _, rul := range taggedRules {
-				rul = strings.TrimSpace(rul)
+		if vtag == "" {
+			vtag = field.Tag.Get(TAG_VALIDATION_V1) // old tag
+		}
 
-				// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
-				splited := strings.Split(rul, ":")
-				for i := range splited {
-					splited[i] = strings.TrimSpace(splited[i])
-				}
+		if vtag == "" { // no tag found
+			return false
+		}
 
-				rul = splited[0] // rule is the one before ':'
-				param := ""      // param is those joined after the first ':'
+		taggedRules := strings.Split(vtag, ",")
+		fval := targetVal.Field(i)
 
-				if len(splited) > 1 { // contains extra parameters
-					param = strings.Join(splited[1:], ":")
-				}
+		// for each rule
+		for _, rul := range taggedRules {
+			rul = strings.TrimSpace(rul)
 
-				if rules.Has(rul) { // is a valid rule
-					if e := ValidateRule(field, fval, rul, param); e != nil {
-						verr = e
-						return true
-					}
+			// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
+			splited := strings.Split(rul, ":")
+			for i := range splited {
+				splited[i] = strings.TrimSpace(splited[i])
+			}
+
+			rul = splited[0] // rule is the one before ':'
+			param := ""      // param is those joined after the first ':'
+
+			if len(splited) > 1 { // contains extra parameters
+				param = strings.Join(splited[1:], ":")
+			}
+
+			if rules.Has(rul) { // is a valid rule
+				if e := ValidateRule(field, fval, rul, param); e != nil {
+					verr = e
+					return true
 				}
 			}
 		}

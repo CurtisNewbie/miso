@@ -202,7 +202,7 @@ For example,
 
 ```go
 type Dummy struct {
-  Favourite string `validation:"notEmpty"`
+  Favourite string `valid:"notEmpty"`
 }
 ```
 
