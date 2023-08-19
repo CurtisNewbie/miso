@@ -25,20 +25,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Raw route handler.
-type RawTRouteHandler func(c *gin.Context, rail common.Rail)
+type MappedServerRequest[T any] struct {
+	Gin  *gin.Context
+	Rail common.Rail
+	Req  T
+}
 
-// Route handler.
-//
-// The returned result and error are automatically wrapped in a Resp object.
-type TRouteHandler func(c *gin.Context, rail common.Rail) (any, error)
+type ServerRequest struct {
+	Gin  *gin.Context
+	Rail common.Rail
+}
 
-// Route handler.
-//
-// Request payload is automatically resolved to object t (e.g., from query parameters of JSON payload depending on the content-type).
-//
-// The returned result and error are automatically wrapped in a Resp object.
-type ITRouteHandler[T any, V any] func(c *gin.Context, rail common.Rail, t T) (V, error)
+type RawTRouteHandler func(sr ServerRequest)
+type TRouteHandler func(sr ServerRequest) (any, error)
+type ITRouteHandler[T any, V any] func(sr MappedServerRequest[T]) (V, error)
 
 type RoutesRegistar func(*gin.Engine)
 
@@ -134,8 +134,8 @@ func init() {
 
 		ec.Debugf("Registering Prometheus Handler")
 		handler := metrics.PrometheusHandler()
-		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, ec common.Rail) {
-			handler.ServeHTTP(c.Writer, c.Request)
+		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(sr ServerRequest) {
+			handler.ServeHTTP(sr.Gin.Writer, sr.Gin.Request)
 		})
 		return nil
 	})
@@ -658,7 +658,7 @@ func TraceMiddleware() gin.HandlerFunc {
 
 		for _, k := range propagatedKeys {
 			if h := c.GetHeader(k); h != "" {
-				ctx = context.WithValue(ctx, k, h) //lint:ignore SA1029 keys must be exposed for the users to retrieve the values
+				ctx = context.WithValue(ctx, k, h) //lint:ignore SA1029 keys must be exposed to retrieve the values
 			}
 		}
 
@@ -700,7 +700,7 @@ func BuildRail(c *gin.Context) common.Rail {
 	for i := range tracked {
 		t := tracked[i]
 		if v, ok := c.Keys[t]; ok && v != "" {
-			ctx = context.WithValue(ctx, t, v) //lint:ignore SA1029 keys must be exposed for user to use
+			ctx = context.WithValue(ctx, t, v) //lint:ignore SA1029 keys must be exposed for client to use
 			contextModified = true
 		}
 	}
@@ -720,7 +720,9 @@ func BuildRail(c *gin.Context) common.Rail {
 	return rail
 }
 
-// Build route handler with the required payload object, context, user (optional, may be nil), and logger prepared
+// Build route handler with the mapped payload object, context, and logger.
+//
+// value and error returned by handler are automically wrapped in a Resp object
 func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := common.NewRail(c)
@@ -736,25 +738,27 @@ func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.C
 		}
 
 		// handle the requests
-		res, err := handler(c, rail, req)
+		res, err := handler(MappedServerRequest[T]{Gin: c, Rail: rail, Req: req})
 
 		// wrap result and error
 		HandleResult(c, rail, res, err)
 	}
 }
 
-// Build RawTRouteHandler with context, user (optional, may be nil), and logger prepared
+// Build route handler with context, and logger
 func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		handler(c, BuildRail(c))
+		handler(ServerRequest{Gin: c, Rail: BuildRail(c)})
 	}
 }
 
-// Build TRouteHandler with context, user (optional, may be nil), and logger prepared
+// Build route handler with context, and logger
+//
+// value and error returned by handler are automically wrapped in a Resp object
 func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
-		r, e := handler(c, rail)
+		r, e := handler(ServerRequest{Gin: c, Rail: rail})
 		HandleResult(c, rail, r, e)
 	}
 }
