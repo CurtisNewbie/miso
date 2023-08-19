@@ -84,6 +84,8 @@ var (
 		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
 		http.MethodTrace,
 	}
+
+	manualSigQuit = make(chan int, 1)
 )
 
 func init() {
@@ -540,9 +542,20 @@ func BootstrapServer(args []string) {
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
-	quit := make(chan os.Signal, 2)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	osSigQuit := make(chan os.Signal, 2)
+	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case sig := <-osSigQuit:
+		c.Infof("Received OS signal: %v, exiting", sig)
+	case <-manualSigQuit: // or wait for maunal shutdown signal
+		c.Infof("Received manual shutdown signal, exiting")
+	}
+}
+
+// Shutdown server
+func Shutdown() {
+	manualSigQuit <- 1
 }
 
 // Register http routes on gin.Engine

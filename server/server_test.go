@@ -1,23 +1,16 @@
 package server
 
 import (
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/task"
-	"github.com/sirupsen/logrus"
 )
 
 func TestBootstrapServer(t *testing.T) {
 	args := make([]string, 2)
-	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-dev.yml"
 
-	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(ec common.Rail) {
-		logrus.Info("feels gucci")
-	})
+	common.SetProp(common.PROP_APP_NAME, "test-app")
 
 	go func() {
 		time.Sleep(5 * time.Second)
@@ -26,7 +19,8 @@ func TestBootstrapServer(t *testing.T) {
 			return
 		}
 
-		syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+		// syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+		Shutdown()
 	}()
 
 	BootstrapServer(args)
