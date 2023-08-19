@@ -36,7 +36,7 @@ type ServerRequest struct {
 	Rail common.Rail
 }
 
-type RawTRouteHandler func(sr ServerRequest)
+type RawTRouteHandler func(c *gin.Context, rail common.Rail)
 type TRouteHandler func(sr ServerRequest) (any, error)
 type ITRouteHandler[T any, V any] func(sr MappedServerRequest[T]) (V, error)
 
@@ -136,8 +136,8 @@ func init() {
 
 		ec.Debugf("Registering Prometheus Handler")
 		handler := metrics.PrometheusHandler()
-		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(sr ServerRequest) {
-			handler.ServeHTTP(sr.Gin.Writer, sr.Gin.Request)
+		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, rail common.Rail) {
+			handler.ServeHTTP(c.Writer, c.Request)
 		})
 		return nil
 	})
@@ -761,7 +761,7 @@ func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.C
 // Build route handler with context, and logger
 func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		handler(ServerRequest{Gin: c, Rail: BuildRail(c)})
+		handler(c, BuildRail(c))
 	}
 }
 
