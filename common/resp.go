@@ -48,6 +48,10 @@ func WrapResp(data interface{}, e error, rail Rail) Resp {
 		return ErrorResp("Unknown system error, please try again later")
 	}
 
+	if v, ok := data.(Resp); ok {
+		return v
+	}
+
 	return OkRespWData(data)
 }
 
