@@ -38,6 +38,16 @@ type ServerRequest struct {
 
 type RawTRouteHandler func(c *gin.Context, rail common.Rail)
 type TRouteHandler func(sr ServerRequest) (any, error)
+
+/*
+T should be a struct, where all fields are automatically mapped from the request using different tags.
+
+  - json
+  - xml
+  - form
+  - header
+  - uri
+*/
 type ITRouteHandler[T any, V any] func(sr MappedServerRequest[T]) (V, error)
 
 type RoutesRegistar func(*gin.Engine)
