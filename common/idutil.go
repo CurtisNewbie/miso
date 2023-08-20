@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -22,15 +23,27 @@ var (
 	mu    sync.Mutex
 )
 
+// Overwrite the randomly generated machine code, machine code must be between 0 and 999999, at most 6 digits.
+func SetMachineCode(code int) error {
+	if code < 0 || code > 999999 {
+		return fmt.Errorf("machindCode must be between 0 and 999999")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	machineCode = PadNum(code, 6)
+	return nil
+}
+
 /*
-   Generate Id with prefix
+Generate Id with prefix
 
-   The id consists of [64 bits long] + [6 digits machine_code]
-   The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.583 years)] + [sequenceNo (14 bits, 0~16383)]
+The id consists of [64 bits long] + [6 digits machine_code]
+The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.583 years)] + [sequenceNo (14 bits, 0~16383)]
 
-   The max value of Long is 9223372036854775807, which is a string with 19 characters, so the generated id will be of at most 25 characters
+# The max value of Long is 9223372036854775807, which is a string with 19 characters, so the generated id will be of at most 25 characters
 
-   This func is thread-safe
+This func is thread-safe
 */
 func GenIdP(prefix string) (id string) {
 	id = prefix + GenId()
@@ -38,14 +51,14 @@ func GenIdP(prefix string) (id string) {
 }
 
 /*
-   Generate Id
+Generate Id
 
-   The id consists of [64 bits long] + [6 digits machine_code]
-   The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.583 years)] + [sequenceNo (14 bits, 0~16383)]
+The id consists of [64 bits long] + [6 digits machine_code]
+The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.583 years)] + [sequenceNo (14 bits, 0~16383)]
 
-   The max value of Long is 9223372036854775807, which is a string with 19 characters, so the generated id will be of at most 25 characters
+# The max value of Long is 9223372036854775807, which is a string with 19 characters, so the generated id will be of at most 25 characters
 
-   This func is thread-safe
+This func is thread-safe
 */
 func GenId() (id string) {
 	mu.Lock()
