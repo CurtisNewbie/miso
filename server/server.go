@@ -25,21 +25,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Server request with mapped request body
 type MappedServerRequest[T any] struct {
 	Gin  *gin.Context
 	Rail common.Rail
 	Req  T
 }
 
+// Server request
 type ServerRequest struct {
 	Gin  *gin.Context
 	Rail common.Rail
 }
 
+// Raw version of traced route handler.
 type RawTRouteHandler func(c *gin.Context, rail common.Rail)
+
+// Traced route handler.
 type TRouteHandler func(sr ServerRequest) (any, error)
 
 /*
+Traced and parameters mapped route handler.
+
 T should be a struct, where all fields are automatically mapped from the request using different tags.
 
   - json
@@ -48,9 +55,9 @@ T should be a struct, where all fields are automatically mapped from the request
   - header
   - uri
 */
-type ITRouteHandler[T any, V any] func(sr MappedServerRequest[T]) (V, error)
+type MappedTRouteHandler[Req any, Res any] func(msr MappedServerRequest[Req]) (Res, error)
 
-type RoutesRegistar func(*gin.Engine)
+type routesRegistar func(*gin.Engine)
 
 type HttpRoute struct {
 	Url         string
@@ -60,14 +67,15 @@ type HttpRoute struct {
 }
 
 const (
-	OPEN_API_PREFIX = "/open/api"
+	OPEN_API_PREFIX = "/open/api" // merely a const value, doesn't have special meaning
 )
 
 var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	routesRegiatarList []RoutesRegistar = []RoutesRegistar{}
+	routesRegiatarList []routesRegistar = []routesRegistar{}
+	serverHttpRoutes   []HttpRoute      = []HttpRoute{}
 
 	shuttingDown   bool         = false
 	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
@@ -75,26 +83,22 @@ var (
 	shutdownHook []func()
 	shmu         sync.Mutex // mutex for shutdownHook
 
-	/*
-		server component bootstrap callbacks
-	*/
-
+	// server component bootstrap callbacks
 	serverBootrapCallbacks []func(ctx context.Context, r common.Rail) error = []func(context.Context, common.Rail) error{}
 
-	/*
-		lifecycle callbacks
-	*/
-
-	preServerBootstrapListener  []func(r common.Rail) error = []func(r common.Rail) error{}
+	// listener for events trigger before server components being bootstrapped
+	preServerBootstrapListener []func(r common.Rail) error = []func(r common.Rail) error{}
+	// listener for events trigger after server components bootstrapped
 	postServerBootstrapListener []func(r common.Rail) error = []func(r common.Rail) error{}
-	serverHttpRoutes            []HttpRoute                 = []HttpRoute{}
 
+	// all http methods
 	anyHttpMethods = []string{
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch,
 		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
 		http.MethodTrace,
 	}
 
+	// channel for signaling server shutdown
 	manualSigQuit = make(chan int, 1)
 )
 
@@ -347,37 +351,37 @@ func Delete(url string, handler TRouteHandler, extra ...common.StrPair) {
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
 // The result or error is wrapped in Resp automatically.
-func IPost[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
+func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...common.StrPair) {
 	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewITRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewMappedTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IGet[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
+func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...common.StrPair) {
 	recordHttpServerRoute(url, http.MethodPost, common.FuncName(handler), extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewITRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewMappedTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
-func IDelete[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
+func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...common.StrPair) {
 	recordHttpServerRoute(url, http.MethodDelete, common.FuncName(handler), extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewITRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewMappedTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IPut[T any, V any](url string, handler ITRouteHandler[T, V], extra ...common.StrPair) {
+func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...common.StrPair) {
 	recordHttpServerRoute(url, http.MethodPut, common.FuncName(handler), extra...)
-	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewITRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewMappedTRouteHandler(handler)) })
 }
 
 // Add RoutesRegistar
-func addRoutesRegistar(reg RoutesRegistar) {
+func addRoutesRegistar(reg routesRegistar) {
 	routesRegiatarList = append(routesRegiatarList, reg)
 }
 
@@ -746,12 +750,12 @@ func BuildRail(c *gin.Context) common.Rail {
 // Build route handler with the mapped payload object, context, and logger.
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.Context) {
+func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := common.NewRail(c)
 
 		// bind to payload boject
-		var req T
+		var req Req
 		MustBind(c, &req)
 
 		// validate request
@@ -761,7 +765,7 @@ func NewITRouteHandler[T any, V any](handler ITRouteHandler[T, V]) func(c *gin.C
 		}
 
 		// handle the requests
-		res, err := handler(MappedServerRequest[T]{Gin: c, Rail: rail, Req: req})
+		res, err := handler(MappedServerRequest[Req]{Gin: c, Rail: rail, Req: req})
 
 		// wrap result and error
 		HandleResult(c, rail, res, err)
