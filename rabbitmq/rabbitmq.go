@@ -223,21 +223,13 @@ func AddListener(listener Listener) {
 	_listeners = append(_listeners, listener)
 }
 
-/*
-Declare durable queues
-*/
-func declareQueues(ch *amqp.Channel) error {
-	if ch == nil {
-		return errMissingChannel
+// Declare queue using the provided channel immediately
+func DeclareQueue(ch *amqp.Channel, queue QueueRegistration) error {
+	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
+	if e != nil {
+		return common.TraceErrf(e, "failed to declare queue, %v", queue.Name)
 	}
-
-	for _, queue := range _queueRegistration {
-		dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
-		if e != nil {
-			return common.TraceErrf(e, "failed to declare queue, %v", queue.Name)
-		}
-		logrus.Debugf("Declared queue '%s'", dqueue.Name)
-	}
+	logrus.Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
 }
 
@@ -260,64 +252,48 @@ func RegisterExchange(e ExchangeRegistration) {
 	_exchangeRegistration = append(_exchangeRegistration, e)
 }
 
-/*
-Declare bindings
-*/
-func declareBindings(ch *amqp.Channel) error {
-	if ch == nil {
-		return errMissingChannel
+// Declare binding using the provided channel immediately
+func DeclareBinding(ch *amqp.Channel, bind BindingRegistration) error {
+	if bind.RoutingKey == "" {
+		bind.RoutingKey = "#"
 	}
-
-	for _, bind := range _bindingRegistration {
-		if bind.RoutingKey == "" {
-			bind.RoutingKey = "#"
-		}
-		e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
-		if e != nil {
-			return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
-		}
-		logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
-
-		// declare a redeliver queue, this queue will not have any subscriber, once the messages are expired, they are
-		// routed to the original queue
-		//
-		// for this to work, we have to know what the exchange and routing key is, we have to write this here
-		//
-		// 	src: https://ivanyu.me/blog/2015/02/16/delayed-message-delivery-in-rabbitmq/
-		rqueue := redeliverQueue(bind.Exchange, bind.RoutingKey)
-		rq, e := ch.QueueDeclare(rqueue, true, false, false, false, amqp.Table{
-			"x-message-ttl":             redeliverDelay,
-			"x-dead-letter-exchange":    bind.Exchange,
-			"x-dead-letter-routing-key": bind.RoutingKey,
-		})
-		if e != nil {
-			return common.TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
-		}
-		redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
-		logrus.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
+	e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
+	if e != nil {
+		return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 	}
+	logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
+
+	// declare a redeliver queue, this queue will not have any subscriber, once the messages are expired, they are
+	// routed to the original queue
+	//
+	// for this to work, we have to know what the exchange and routing key is, we have to write this here
+	//
+	// 	src: https://ivanyu.me/blog/2015/02/16/delayed-message-delivery-in-rabbitmq/
+	rqueue := redeliverQueue(bind.Exchange, bind.RoutingKey)
+	rq, e := ch.QueueDeclare(rqueue, true, false, false, false, amqp.Table{
+		"x-message-ttl":             redeliverDelay,
+		"x-dead-letter-exchange":    bind.Exchange,
+		"x-dead-letter-routing-key": bind.RoutingKey,
+	})
+	if e != nil {
+		return common.TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
+	}
+	redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
+	logrus.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
 	return nil
 }
 
-/*
-Declare exchanges
-*/
-func declareExchanges(ch *amqp.Channel) error {
-	if ch == nil {
-		return errMissingChannel
+// Declare exchange using the provided channel immediately
+func DeclareExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
+	if exchange.Kind == "" {
+		exchange.Kind = "direct"
 	}
 
-	for _, exchange := range _exchangeRegistration {
-		if exchange.Kind == "" {
-			exchange.Kind = "direct"
-		}
-
-		e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
-		if e != nil {
-			return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
-		}
-		logrus.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
+	e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
+	if e != nil {
+		return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 	}
+	logrus.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
 }
 
@@ -410,17 +386,41 @@ func tryEstablishConn() (*amqp.Connection, error) {
 
 // Declare Queus, Exchanges, and Bindings
 func declareComponents(ch *amqp.Channel) error {
-	if e := declareQueues(ch); e != nil {
-		return e
+	if ch == nil {
+		return errMissingChannel
 	}
-	if e := declareExchanges(ch); e != nil {
-		return e
 
+	for _, queue := range _queueRegistration {
+		if err := DeclareQueue(ch, queue); err != nil {
+			return err
+		}
 	}
-	if e := declareBindings(ch); e != nil {
-		return e
+
+	for _, exchange := range _exchangeRegistration {
+		if err := DeclareExchange(ch, exchange); err != nil {
+			return err
+		}
 	}
+
+	for _, bind := range _bindingRegistration {
+		if err := DeclareBinding(ch, bind); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// Create new channel from the established connection
+func NewChan() (*amqp.Channel, error) {
+	return newChan()
+}
+
+// Check if connection exists
+func Connected() bool {
+	_mutex.Lock()
+	defer _mutex.Unlock()
+	return _conn != nil
 }
 
 /*
@@ -594,14 +594,7 @@ func returnPubChan(ch *amqp.Channel) {
 //
 // return error if it failed to open new channel, e.g., connection is also missing or closed.
 func newPubChan() (*amqp.Channel, error) {
-	_mutex.Lock()
-	defer _mutex.Unlock()
-
-	if _conn == nil {
-		return nil, common.NewTraceErrf("rabbitmq connection is missing")
-	}
-
-	newChan, err := _conn.Channel()
+	newChan, err := newChan()
 	if err != nil {
 		return nil, common.TraceErrf(err, "could not create new RabbitMQ channel")
 	}
@@ -613,4 +606,15 @@ func newPubChan() (*amqp.Channel, error) {
 	logrus.Debugf("Created new RabbitMQ publishing channel")
 
 	return newChan, nil
+}
+
+func newChan() (*amqp.Channel, error) {
+	_mutex.Lock()
+	defer _mutex.Unlock()
+
+	if _conn == nil {
+		return nil, common.NewTraceErrf("rabbitmq connection is missing")
+	}
+
+	return _conn.Channel()
 }
