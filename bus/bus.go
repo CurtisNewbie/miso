@@ -22,6 +22,8 @@ var (
 // Send msg to event bus.
 //
 // Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
+//
+// Before calling this method, the DeclareEventBus(...) should be called at least once to create the necessary components.
 func SendToEventBus(c common.Rail, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
@@ -33,7 +35,7 @@ func SendToEventBus(c common.Rail, eventObject any, bus string) error {
 
 // Declare event bus.
 //
-// There is no need to call this method before calling SendToEventBus or SubscribeEventBus, but you can, so that things are initialized upfront.
+// Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified by the same bus name.
 func DeclareEventBus(bus string) error {
 	if bus == "" {
 		panic(errBusNameEmpty)
@@ -74,6 +76,8 @@ func DeclareEventBus(bus string) error {
 // Subscribe to event bus.
 //
 // Internally, it registers a listener for the queue identified by the bus name.
+//
+// It also calls DeclareEventBus(...) automatically before it registers the listeners.
 func SubscribeEventBus[T any](bus string, concurrency int, listener func(rail common.Rail, t T) error) {
 	if bus == "" {
 		panic(errBusNameEmpty)
