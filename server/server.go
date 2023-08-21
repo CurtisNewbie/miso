@@ -25,24 +25,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Server request with mapped request body
-type MappedServerRequest[T any] struct {
-	Gin  *gin.Context
-	Rail common.Rail
-	Req  T
-}
-
-// Server request
-type ServerRequest struct {
-	Gin  *gin.Context
-	Rail common.Rail
-}
-
 // Raw version of traced route handler.
 type RawTRouteHandler func(c *gin.Context, rail common.Rail)
 
 // Traced route handler.
-type TRouteHandler func(sr ServerRequest) (any, error)
+type TRouteHandler func(c *gin.Context, rail common.Rail) (any, error)
 
 /*
 Traced and parameters mapped route handler.
@@ -55,7 +42,7 @@ T should be a struct, where all fields are automatically mapped from the request
   - header
   - uri
 */
-type MappedTRouteHandler[Req any, Res any] func(msr MappedServerRequest[Req]) (Res, error)
+type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail common.Rail, req Req) (Res, error)
 
 type routesRegistar func(*gin.Engine)
 
@@ -765,7 +752,7 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		}
 
 		// handle the requests
-		res, err := handler(MappedServerRequest[Req]{Gin: c, Rail: rail, Req: req})
+		res, err := handler(c, rail, req)
 
 		// wrap result and error
 		HandleResult(c, rail, res, err)
@@ -785,7 +772,7 @@ func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
-		r, e := handler(ServerRequest{Gin: c, Rail: rail})
+		r, e := handler(c, rail)
 		HandleResult(c, rail, r, e)
 	}
 }
