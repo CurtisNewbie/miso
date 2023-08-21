@@ -53,6 +53,8 @@ func DeclareEventBus(bus string) error {
 		rabbitmq.DeclareQueue(ch, rabbitmq.QueueRegistration{Name: busName, Durable: true})
 		rabbitmq.DeclareBinding(ch, rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
 		rabbitmq.DeclareExchange(ch, rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
+		declaredBus.Store(busName, true)
+		return nil
 	}
 
 	// not connected yet, prepare the registration instead
