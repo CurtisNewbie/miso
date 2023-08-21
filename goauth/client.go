@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/curtisnewbie/gocommon/bus"
 	"github.com/curtisnewbie/gocommon/client"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
@@ -19,6 +20,12 @@ const (
 	//
 	// goauth-client-go doesn't use it internally, it's only useful for the Callers
 	PROP_ENABLE_GOAUTH_CLIENT = "goauth.client.enabled"
+
+	// event bus name for adding paths
+	addPathEventBus = "goauth.add-path"
+
+	// event bus name for adding resources
+	addResourceEventBus = "goauth.add-resource"
 )
 
 func init() {
@@ -205,7 +212,10 @@ func PathDocExtra(doc PathDoc) common.StrPair {
 //
 //	server.Get(url, handler, gclient.PathDocExtra(pathDoc))
 func ReportPathsOnBootstrapped() {
-	server.PostServerBootstrapped(func(c common.Rail) error {
+	bus.DeclareEventBus(addPathEventBus)
+	bus.DeclareEventBus(addResourceEventBus)
+
+	server.PostServerBootstrapped(func(rail common.Rail) error {
 		app := common.GetPropStr(common.PROP_APP_NAME)
 		routes := server.GetHttpRoutes()
 
@@ -241,12 +251,25 @@ func ReportPathsOnBootstrapped() {
 				ResCode: doc.Code,
 			}
 
-			if e := AddPath(context.Background(), r); e != nil {
-				return common.TraceErrf(e, "failed to report path to goauth")
+			// if e := AddPath(context.Background(), r); e != nil {
+			// 	return common.TraceErrf(e, "failed to report path to goauth")
+			// }
+
+			// report the path asynchronously
+			if err := AddPathAsync(rail, r); err != nil {
+				return err
 			}
 
-			c.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
+			rail.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
 		}
 		return nil
 	})
+}
+
+func AddPathAsync(rail common.Rail, req CreatePathReq) error {
+	return bus.SendToEventBus(rail, req, addPathEventBus)
+}
+
+func AddResourceAsync(rail common.Rail, req AddResourceReq) error {
+	return bus.SendToEventBus(rail, req, addResourceEventBus)
 }
