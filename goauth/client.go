@@ -212,6 +212,9 @@ func PathDocExtra(doc PathDoc) common.StrPair {
 //
 //	server.Get(url, handler, gclient.PathDocExtra(pathDoc))
 func ReportPathsOnBootstrapped() {
+	bus.DeclareEventBus(addPathEventBus)
+	bus.DeclareEventBus(addResourceEventBus)
+
 	server.PostServerBootstrapped(func(rail common.Rail) error {
 		app := common.GetPropStr(common.PROP_APP_NAME)
 		routes := server.GetHttpRoutes()

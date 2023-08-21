@@ -50,9 +50,15 @@ func DeclareEventBus(bus string) error {
 			return fmt.Errorf("failed to obtain channel for event bus declaration, %w", err)
 		}
 		defer ch.Close()
-		rabbitmq.DeclareQueue(ch, rabbitmq.QueueRegistration{Name: busName, Durable: true})
-		rabbitmq.DeclareBinding(ch, rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
-		rabbitmq.DeclareExchange(ch, rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
+		if err := rabbitmq.DeclareQueue(ch, rabbitmq.QueueRegistration{Name: busName, Durable: true}); err != nil {
+			return err
+		}
+		if err := rabbitmq.DeclareBinding(ch, rabbitmq.BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName}); err != nil {
+			return err
+		}
+		if err := rabbitmq.DeclareExchange(ch, rabbitmq.ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND}); err != nil {
+			return err
+		}
 		declaredBus.Store(busName, true)
 		return nil
 	}
