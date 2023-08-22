@@ -14,7 +14,7 @@ type Rail struct {
 	log *logrus.Entry   // logger with tracing info
 }
 
-func (r Rail) Logger(key string) *logrus.Entry {
+func (r Rail) Logger() *logrus.Entry {
 	return r.log
 }
 
