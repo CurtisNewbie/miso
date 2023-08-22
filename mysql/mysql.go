@@ -13,15 +13,19 @@ import (
 )
 
 const (
-	CONN_MAX_LIFE_TIME  = time.Minute * 30                                                                       // Connection max lifetime, hikari recommends 1800000, so we do the same thing
-	MAX_OPEN_CONNS      = 10                                                                                     // Max num of open conns
-	MAX_IDLE_CONNS      = MAX_OPEN_CONNS                                                                         // max num of idle conns, recommended to be the same as the maxOpenConns
-	DEFAULT_CONN_PARAMS = "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s" // default connection parameters string
+	CONN_MAX_LIFE_TIME = time.Minute * 30 // Connection max lifetime, hikari recommends 1800000, so we do the same thing
+	MAX_OPEN_CONNS     = 10               // Max num of open conns
+	MAX_IDLE_CONNS     = MAX_OPEN_CONNS   // max num of idle conns, recommended to be the same as the maxOpenConns
 )
 
 var (
 	// Global handle to the database
 	mysqlp = &mysqlHolder{mysql: nil}
+
+	// default connection parameters string
+	defaultConnParams = strings.Join([]string{
+		"charset=utf8mb4", "parseTime=True", "loc=Local", "readTimeout=30s", "writeTimeout=30s", "timeout=3s",
+	}, "&")
 )
 
 type mysqlHolder struct {
@@ -35,7 +39,7 @@ func init() {
 	common.SetDefProp(common.PROP_MYSQL_PASSWORD, "")
 	common.SetDefProp(common.PROP_MYSQL_HOST, "localhost")
 	common.SetDefProp(common.PROP_MYSQL_PORT, 3306)
-	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, DEFAULT_CONN_PARAMS)
+	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, defaultConnParams)
 }
 
 /*
@@ -138,17 +142,6 @@ func InitMySql(user string, password string, dbname string, host string, port st
 Get MySQL Connection.
 
 If client is not yet created, func InitMySqlFromProp(...) is called to initialize a new one. For any error occurred, it panics.
-*/
-func GetMySql() *gorm.DB {
-	return GetConn()
-}
-
-/*
-Get MySQL Connection.
-
-If client is not yet created, func InitMySqlFromProp(...) is called to initialize a new one. For any error occurred, it panics.
-
-It's the same as GetMySql(), but with different name.
 */
 func GetConn() *gorm.DB {
 	mysqlp.mu.RLock()
