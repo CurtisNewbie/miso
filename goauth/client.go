@@ -194,6 +194,9 @@ func GetRoleInfo(ctx context.Context, req RoleInfoReq) (*RoleInfoResp, error) {
 	return r.Data, nil
 }
 
+// Check whether goauth client is enabled
+//
+//	"goauth.client.enabled"
 func IsEnabled() bool {
 	return common.GetPropBool(PROP_ENABLE_GOAUTH_CLIENT)
 }
@@ -211,9 +214,15 @@ func PathDocExtra(doc PathDoc) common.StrPair {
 // For example:
 //
 //	server.Get(url, handler, gclient.PathDocExtra(pathDoc))
-func ReportPathsOnBootstrapped() {
+//
+// This method checks if the goauth client is enabled, nothing will happen if the client is disabled.
+func ReportPathsOnBootstrapped(rail common.Rail) {
+	if !IsEnabled() {
+		rail.Debug("GoAuth client disabled, will not report paths")
+		return
+	}
+
 	bus.DeclareEventBus(addPathEventBus)
-	bus.DeclareEventBus(addResourceEventBus)
 
 	server.PostServerBootstrapped(func(rail common.Rail) error {
 		app := common.GetPropStr(common.PROP_APP_NAME)
@@ -266,10 +275,34 @@ func ReportPathsOnBootstrapped() {
 	})
 }
 
+// Report path asynchronously
 func AddPathAsync(rail common.Rail, req CreatePathReq) error {
 	return bus.SendToEventBus(rail, req, addPathEventBus)
 }
 
+// Report resource asynchronously
 func AddResourceAsync(rail common.Rail, req AddResourceReq) error {
 	return bus.SendToEventBus(rail, req, addResourceEventBus)
+}
+
+// Register a hook to report resources to GoAuth on server bootstrapped
+//
+// This method checks if the goauth client is enabled, nothing will happen if the client is disabled.
+func ReportResourcesOnBootstrapped(rail common.Rail, reqs []AddResourceReq) {
+	if !IsEnabled() {
+		rail.Debug("GoAuth client disabled, will not report resources")
+		return
+	}
+
+	bus.DeclareEventBus(addResourceEventBus)
+
+	server.PostServerBootstrapped(func(rail common.Rail) error {
+		for _, req := range reqs {
+			if e := AddResourceAsync(rail, req); e != nil {
+				rail.Errorf("Failed to report resource, %v", e)
+				return e
+			}
+		}
+		return nil
+	})
 }
