@@ -286,6 +286,8 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	AddHeaders(req, t.Headers)
 
+	t.ExecCtx.Debugf("%v %v, Headers: %v", req.Method, req.URL, req.Header)
+
 	r, e := t.client.Do(req) // send HTTP requests
 
 	var statusCode int
@@ -468,6 +470,8 @@ func TraceRequest(ctx context.Context, req *http.Request) *http.Request {
 		if v != nil {
 			if vstr, ok := v.(string); ok {
 				req.Header.Set(key, vstr)
+			} else {
+				req.Header.Set(key, fmt.Sprintf("%v", v))
 			}
 		}
 	}
