@@ -161,7 +161,7 @@ func init() {
 		engine := gin.New()
 		engine.Use(TraceMiddleware())
 
-		if !common.IsProdMode() && isDebugLevel(c) {
+		if !common.IsProdMode() && common.IsDebugLevel() {
 			engine.Use(gin.Logger()) // gin's default logger for debugging
 		}
 
@@ -404,39 +404,10 @@ func ConfigureLogging(rail common.Rail) {
 	logrus.SetOutput(loggerOut)
 
 	if common.HasProp(common.PROP_LOGGING_LEVEL) {
-		if level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
+		if level, ok := common.ParseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL)); ok {
 			logrus.SetLevel(level)
 		}
 	}
-}
-
-func isDebugLevel(rail common.Rail) bool {
-	level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL))
-	if !ok {
-		return false
-	}
-	return level == logrus.DebugLevel
-}
-
-func parseLogLevel(logLevel string) (logrus.Level, bool) {
-	logLevel = strings.ToUpper(logLevel)
-	switch logLevel {
-	case "INFO":
-		return logrus.InfoLevel, true
-	case "DEBUG":
-		return logrus.DebugLevel, true
-	case "WARN":
-		return logrus.WarnLevel, true
-	case "ERROR":
-		return logrus.ErrorLevel, true
-	case "TRACE":
-		return logrus.TraceLevel, true
-	case "FATAL":
-		return logrus.FatalLevel, true
-	case "PANIC":
-		return logrus.PanicLevel, true
-	}
-	return logrus.InfoLevel, false
 }
 
 func callPostServerBootstrapListeners(rail common.Rail) error {

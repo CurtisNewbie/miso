@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -97,4 +98,35 @@ func PreConfiguredFormatter() logrus.Formatter {
 // Return logger with tracing infomation
 func TraceLogger(ctx context.Context) *logrus.Entry {
 	return logrus.WithFields(logrus.Fields{X_SPANID: ctx.Value(X_SPANID), X_TRACEID: ctx.Value(X_TRACEID), X_USERNAME: ctx.Value(X_USERNAME)})
+}
+
+// Check whether current log level is DEBUG
+func IsDebugLevel() bool {
+	level, ok := ParseLogLevel(GetPropStr(PROP_LOGGING_LEVEL))
+	if !ok {
+		return false
+	}
+	return level == logrus.DebugLevel
+}
+
+// Parse log level
+func ParseLogLevel(logLevel string) (logrus.Level, bool) {
+	logLevel = strings.ToUpper(logLevel)
+	switch logLevel {
+	case "INFO":
+		return logrus.InfoLevel, true
+	case "DEBUG":
+		return logrus.DebugLevel, true
+	case "WARN":
+		return logrus.WarnLevel, true
+	case "ERROR":
+		return logrus.ErrorLevel, true
+	case "TRACE":
+		return logrus.TraceLevel, true
+	case "FATAL":
+		return logrus.FatalLevel, true
+	case "PANIC":
+		return logrus.PanicLevel, true
+	}
+	return logrus.InfoLevel, false
 }

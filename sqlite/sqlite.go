@@ -19,13 +19,13 @@ type sqliteHolder struct {
 }
 
 /*
-	Get sqlite client
+Get sqlite client
 
-	Client is initialized if necessary
+# Client is initialized if necessary
 
-	This func looks for prop:
+This func looks for prop:
 
-		PROP_SQLITE_FILE
+	PROP_SQLITE_FILE
 */
 func GetSqlite() *gorm.DB {
 	if IsSqliteInitialized() {
@@ -63,12 +63,11 @@ func GetSqlite() *gorm.DB {
 		sqlitep.sq = db
 	}
 
-	if common.IsProdMode() {
-		return sqlitep.sq
+	if common.IsDebugLevel() {
+		return sqlitep.sq.Debug()
 	}
 
-	// not prod mode, enable debugging for printing SQLs
-	return sqlitep.sq.Debug()
+	return sqlitep.sq
 }
 
 // Check whether sqlite client is initialized

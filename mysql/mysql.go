@@ -160,12 +160,11 @@ func GetConn() *gorm.DB {
 		}
 	}
 
-	if common.IsProdMode() {
-		return mysqlp.mysql
+	if common.IsDebugLevel() {
+		return mysqlp.mysql.Debug()
 	}
 
-	// not prod mode, enable debugging for printing SQLs
-	return mysqlp.mysql.Debug()
+	return mysqlp.mysql
 }
 
 // Check whether mysql client is initialized
