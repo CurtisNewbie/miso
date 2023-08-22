@@ -54,24 +54,24 @@ func (r Rail) Fatalf(format string, args ...interface{}) {
 	r.log.WithField(callerField, getCallerFn()).Fatalf(format, args...)
 }
 
-func (r Rail) Debug(msg string) {
-	r.log.WithField(callerField, getCallerFn()).Debug(msg)
+func (r Rail) Debug(args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Debug(args...)
 }
 
-func (r Rail) Info(msg string) {
-	r.log.WithField(callerField, getCallerFn()).Info(msg)
+func (r Rail) Info(args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Info(args...)
 }
 
-func (r Rail) Warn(msg string) {
-	r.log.WithField(callerField, getCallerFn()).Warn(msg)
+func (r Rail) Warn(args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Warn(args...)
 }
 
-func (r Rail) Error(msg string) {
-	r.log.WithField(callerField, getCallerFn()).Error(msg)
+func (r Rail) Error(args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Error(args...)
 }
 
-func (r Rail) Fatal(msg string) {
-	r.log.WithField(callerField, getCallerFn()).Fatal(msg)
+func (r Rail) Fatal(args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
 func (r Rail) WithCtxVal(key string, val string) Rail {
