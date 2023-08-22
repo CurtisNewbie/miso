@@ -212,7 +212,7 @@ func init() {
 		return nil
 	})
 
-	// schedulers
+	// cron schedulers and distributed task scheduler
 	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
 		// distributed task scheduler has pending tasks and is enabled
 		if task.IsTaskSchedulerPending() && !task.IsTaskSchedulingDisabled() {
@@ -367,7 +367,6 @@ func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], e
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewMappedTRouteHandler(handler)) })
 }
 
-// Add RoutesRegistar
 func addRoutesRegistar(reg routesRegistar) {
 	routesRegiatarList = append(routesRegiatarList, reg)
 }
@@ -392,7 +391,7 @@ func createHttpServer(router http.Handler) *http.Server {
 	return server
 }
 
-// Configurae Logging, e.g., logger's output, log level, etc
+// Configure logging level and output target based on loaded configuration.
 func ConfigureLogging(rail common.Rail) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
@@ -435,16 +434,22 @@ func parseLogLevel(logLevel string) (logrus.Level, bool) {
 	return logrus.InfoLevel, false
 }
 
-func callPostServerBootstrapListeners(c common.Rail) error {
-	for _, callback := range postServerBootstrapListener {
-		if e := callback(c); e != nil {
+func callPostServerBootstrapListeners(rail common.Rail) error {
+	i := 0
+	for i < len(postServerBootstrapListener) {
+		if e := postServerBootstrapListener[i](rail); e != nil {
 			return e
 		}
+		i++
 	}
 	return nil
 }
 
 // Add listener that is invoked when server is finally bootstrapped
+//
+// This usually means all server components are started, such as MySQL connection, Redis Connection and so on.
+//
+// Caller is free to call PostServerBootstrapped inside another PostServerBootstrapped callback.
 func PostServerBootstrapped(callback func(rail common.Rail) error) {
 	if callback == nil {
 		return
@@ -453,6 +458,10 @@ func PostServerBootstrapped(callback func(rail common.Rail) error) {
 }
 
 // Add listener that is invoked before the server is fully bootstrapped
+//
+// This usually means that the configuration is loaded, and the logging is configured, but the server components are not yet initialized.
+//
+// Caller is free to call PostServerBootstrapped or PreServerBootstrap inside another PreServerBootstrap callback.
 func PreServerBootstrap(callback func(rail common.Rail) error) {
 	if callback == nil {
 		return
@@ -461,14 +470,45 @@ func PreServerBootstrap(callback func(rail common.Rail) error) {
 }
 
 func callPreServerBootstrapListeners(rail common.Rail) error {
-	for _, callback := range preServerBootstrapListener {
-		if e := callback(rail); e != nil {
+	i := 0
+	for i < len(preServerBootstrapListener) {
+		if e := preServerBootstrapListener[i](rail); e != nil {
 			return e
 		}
+		i++
 	}
 	return nil
 }
 
+// Register server component bootstrap callback
+//
+// When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
+// and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
+//
+// e.g.,
+//
+//	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
+//		if !consul.IsConsulEnabled() {
+//			return nil
+//		}
+//
+//		// create consul client
+//		if _, e := consul.GetConsulClient(); e != nil {
+//			return common.TraceErrf(e, "Failed to establish connection to Consul")
+//		}
+//
+//		// deregister on shutdown
+//		AddShutdownHook(func() {
+//			if e := consul.DeregisterService(); e != nil {
+//				c.Errorf("Failed to deregister on Consul, %v", e)
+//			}
+//		})
+//
+//		if e := consul.RegisterService(); e != nil {
+//			return common.TraceErrf(e, "Failed to register on Consul")
+//		}
+//		return nil
+//	})
 func RegisterBootstrapCallback(bootstrapComponent func(ctx context.Context, rail common.Rail) error) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 }
