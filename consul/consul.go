@@ -194,7 +194,7 @@ func ResolveServiceAddress(name string) (string, error) {
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "SUCCESS")
+	ctx.String(http.StatusOK, "UP")
 }
 
 // Extract service address (host:port) from Agent.Service
