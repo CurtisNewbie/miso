@@ -130,8 +130,9 @@ func init() {
 		return nil
 	})
 
+	// prometheus
 	RegisterBootstrapCallback(func(ctx context.Context, ec common.Rail) error {
-		if !common.GetPropBool(common.PROP_METRICS_ENABLED) {
+		if !common.GetPropBool(common.PROP_METRICS_ENABLED) || !common.GetPropBool(common.PROP_SERVER_ENABLED) {
 			return nil
 		}
 
@@ -160,8 +161,8 @@ func init() {
 		engine := gin.New()
 		engine.Use(TraceMiddleware())
 
-		if !common.IsProdMode() {
-			engine.Use(gin.Logger()) // default logger for debugging
+		if !common.IsProdMode() && isDebugLevel(c) {
+			engine.Use(gin.Logger()) // gin's default logger for debugging
 		}
 
 		if common.GetPropBool(common.PROP_SERVER_PERF_ENABLED) {
@@ -400,10 +401,6 @@ func ConfigureLogging(rail common.Rail) {
 		loggerErrOut = loggerOut
 	}
 
-	if !common.IsProdMode() {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-
 	logrus.SetOutput(loggerOut)
 
 	if common.HasProp(common.PROP_LOGGING_LEVEL) {
@@ -411,6 +408,14 @@ func ConfigureLogging(rail common.Rail) {
 			logrus.SetLevel(level)
 		}
 	}
+}
+
+func isDebugLevel(rail common.Rail) bool {
+	level, ok := parseLogLevel(common.GetPropStr(common.PROP_LOGGING_LEVEL))
+	if !ok {
+		return false
+	}
+	return level == logrus.DebugLevel
 }
 
 func parseLogLevel(logLevel string) (logrus.Level, bool) {
