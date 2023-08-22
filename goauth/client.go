@@ -260,7 +260,7 @@ func ReportPathsOnBootstrapped() {
 				return err
 			}
 
-			rail.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
+			// rail.Debugf("Reported Path: %-6s %-50s Type: %-10s ResCode: %s Desc: %s", r.Method, r.Url, r.Type, r.ResCode, r.Desc)
 		}
 		return nil
 	})
