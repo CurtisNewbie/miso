@@ -14,6 +14,10 @@ type Rail struct {
 	log *logrus.Entry   // logger with tracing info
 }
 
+func (r Rail) Logger(key string) *logrus.Entry {
+	return r.log
+}
+
 func (r Rail) CtxValue(key string) string {
 	v := r.Ctx.Value(key)
 	if vs, ok := v.(string); ok {
