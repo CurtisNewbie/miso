@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
+	"github.com/sirupsen/logrus"
 )
 
 func TestBootstrapServer(t *testing.T) {
 	args := make([]string, 2)
+	logrus.SetLevel(logrus.DebugLevel)
 
 	common.SetProp(common.PROP_APP_NAME, "test-app")
 

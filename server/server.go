@@ -98,10 +98,12 @@ func init() {
 	common.SetDefProp(common.PROP_SERVER_PROPAGATE_INBOUND_TRACE, true)
 
 	// mysql
-	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(_ context.Context, rail common.Rail) error {
 		if !mysql.IsMySqlEnabled() {
 			return nil
 		}
+
+		defer common.DebugTimeOp(rail, time.Now(), "Connect MySQL")
 		if e := mysql.InitMySqlFromProp(); e != nil {
 			return common.TraceErrf(e, "Failed to establish connection to MySQL")
 		}
@@ -109,10 +111,11 @@ func init() {
 	})
 
 	// redis
-	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(_ context.Context, rail common.Rail) error {
 		if !redis.IsRedisEnabled() {
 			return nil
 		}
+		defer common.DebugTimeOp(rail, time.Now(), "Connect Redis")
 		if _, e := redis.InitRedisFromProp(); e != nil {
 			return common.TraceErrf(e, "Failed to establish connection to Redis")
 		}
@@ -120,10 +123,11 @@ func init() {
 	})
 
 	// rabbitmq
-	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(ctx context.Context, rail common.Rail) error {
 		if !rabbitmq.IsEnabled() {
 			return nil
 		}
+		defer common.DebugTimeOp(rail, time.Now(), "Connect RabbitMQ")
 		if e := rabbitmq.StartRabbitMqClient(ctx); e != nil {
 			return common.TraceErrf(e, "Failed to establish connection to RabbitMQ")
 		}
@@ -131,12 +135,12 @@ func init() {
 	})
 
 	// prometheus
-	RegisterBootstrapCallback(func(ctx context.Context, ec common.Rail) error {
+	RegisterBootstrapCallback(func(ctx context.Context, rail common.Rail) error {
 		if !common.GetPropBool(common.PROP_METRICS_ENABLED) || !common.GetPropBool(common.PROP_SERVER_ENABLED) {
 			return nil
 		}
 
-		ec.Debugf("Registering Prometheus Handler")
+		defer common.DebugTimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
 		handler := metrics.PrometheusHandler()
 		RawGet(common.GetPropStr(common.PROP_PROM_ROUTE), func(c *gin.Context, rail common.Rail) {
 			handler.ServeHTTP(c.Writer, c.Request)
@@ -145,14 +149,15 @@ func init() {
 	})
 
 	// web server
-	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(ctx context.Context, rail common.Rail) error {
 		if !common.GetPropBool(common.PROP_SERVER_ENABLED) {
 			return nil
 		}
-		c.Info("Starting http server")
+		defer common.DebugTimeOp(rail, time.Now(), "Prepare HTTP server")
+		rail.Info("Starting HTTP server")
 
 		// Load propagation keys for tracing
-		common.LoadPropagationKeyProp(c)
+		common.LoadPropagationKeyProp(rail)
 
 		// always set to releaseMode
 		gin.SetMode(gin.ReleaseMode)
@@ -178,11 +183,11 @@ func init() {
 		}
 
 		// register http routes
-		registerServerRoutes(c, engine)
+		registerServerRoutes(rail, engine)
 
 		// start the http server
 		server := createHttpServer(engine)
-		c.Infof("Serving HTTP on %s", server.Addr)
+		rail.Infof("Serving HTTP on %s", server.Addr)
 		go startHttpServer(ctx, server)
 
 		AddShutdownHook(func() { shutdownHttpServer(server) })
@@ -190,10 +195,11 @@ func init() {
 	})
 
 	// consul
-	RegisterBootstrapCallback(func(_ context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(_ context.Context, rail common.Rail) error {
 		if !consul.IsConsulEnabled() {
 			return nil
 		}
+		defer common.DebugTimeOp(rail, time.Now(), "Connect Consul")
 
 		// create consul client
 		if _, e := consul.GetConsulClient(); e != nil {
@@ -203,7 +209,7 @@ func init() {
 		// deregister on shutdown
 		AddShutdownHook(func() {
 			if e := consul.DeregisterService(); e != nil {
-				c.Errorf("Failed to deregister on Consul, %v", e)
+				rail.Errorf("Failed to deregister on Consul, %v", e)
 			}
 		})
 
@@ -214,16 +220,18 @@ func init() {
 	})
 
 	// cron schedulers and distributed task scheduler
-	RegisterBootstrapCallback(func(ctx context.Context, c common.Rail) error {
+	RegisterBootstrapCallback(func(ctx context.Context, rail common.Rail) error {
+		defer common.DebugTimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
+
 		// distributed task scheduler has pending tasks and is enabled
 		if task.IsTaskSchedulerPending() && !task.IsTaskSchedulingDisabled() {
 			task.StartTaskSchedulerAsync()
-			c.Info("Distributed Task Scheduler started")
+			rail.Info("Distributed Task Scheduler started")
 			AddShutdownHook(func() { task.StopTaskScheduler() })
 		} else if common.HasScheduler() {
 			// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 			common.StartSchedulerAsync()
-			c.Info("Scheduler started")
+			rail.Info("Scheduler started")
 			AddShutdownHook(func() { common.StopScheduler() })
 		}
 		return nil
