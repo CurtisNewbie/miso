@@ -1,10 +1,10 @@
 # miso
 
-Miso, yet another simple application framework.
+Miso, yet another simple application framework. (Previously named gocommon).
 
 *This is not really a general library for everyone, it's mainly developed for my personal projects :D. You are very welcome to read the code tho.*
 
-## Intialize Project
+## Initialize Project
 
 Convenient way to initialize a new project:
 
