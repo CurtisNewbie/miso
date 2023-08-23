@@ -1,6 +1,19 @@
-# gocommon
+# miso
 
-Common stuff for Go. **This is not a general library for everyone, it's developed for my personal projects :D You are very welcome to read the code tho.**
+Miso, yet another simple application framework.
+
+*This is not really a general library for everyone, it's mainly developed for my personal projects :D. You are very welcome to read the code tho.*
+
+## Intialize Project
+
+Convenient way to initialize a new project:
+
+```
+mkdir myapp \
+	&& cd myapp \
+	&& curl https://raw.githubusercontent.com/CurtisNewbie/miso/main/init.sh \
+	| bash
+```
 
 ## Command Line Arguments
 
@@ -30,20 +43,9 @@ e.g.,
 ./main mode.production=true
 ```
 
-## Intialize Project
+## Configuration
 
-Convenient way to initialize a new project:
-
-```
-mkdir myapp \
-	&& cd myapp \
-	&& curl https://raw.githubusercontent.com/CurtisNewbie/gocommon/main/init.sh \
-	| bash
-```
-
-## Properties-Based Configuration
-
-### Common Properties
+### Common Configuration
 
 | property        | description                          | default value |
 |-----------------|--------------------------------------|---------------|
@@ -51,7 +53,7 @@ mkdir myapp \
 | profile         | name of the profile used             | dev           |
 | mode.production | whether production mode is turned on | false         |
 
-### Web Server Properties
+### Web Server Configuration
 
 | property                       | description                                           | default value |
 |--------------------------------|-------------------------------------------------------|---------------|
@@ -62,7 +64,7 @@ mkdir myapp \
 | server.perf.enabled            | enable logging time took for each http server request | false         |
 | server.trace.inbound.propagate | propagate trace info from inbound requests            | true          |
 
-### Consul Properties
+### Consul Configuration
 
 | property                                | description                                                          | default value                   |
 |-----------------------------------------|----------------------------------------------------------------------|---------------------------------|
@@ -76,7 +78,7 @@ mkdir myapp \
 | consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
 | consul.registerDefaultHealthCheck       | register default health check endpoint on startup                    | true                            |
 
-### MySQL Properties
+### MySQL Configuration
 
 | property                    | description                                 | default value                                                                          |
 |-----------------------------|---------------------------------------------|----------------------------------------------------------------------------------------|
@@ -88,7 +90,7 @@ mkdir myapp \
 | mysql.port                  | port                                        | 3306                                                                                   |
 | mysql.connection.parameters | query parameters declared on connection url | `charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s` |
 
-### Redis Properties
+### Redis Configuration
 
 | property       | description              | default value |
 |----------------|--------------------------|---------------|
@@ -99,7 +101,7 @@ mkdir myapp \
 | redis.password | password                 |               |
 | redis.database | 0                        |               |
 
-### RabbitMQ Properties
+### RabbitMQ Configuration
 
 | property              | description                        | default value |
 |-----------------------|------------------------------------|---------------|
@@ -113,34 +115,34 @@ mkdir myapp \
 
 Gocommon's integration with RabbitMQ supports delayed message redelivery (messages that can't be handled without error), the delay is currently 10 seconds. This is to prevent server being flooded with redelivered messages, this is not configurable though.
 
-### SQLite Properties
+### SQLite Configuration
 
 | property    | description                  | default value |
 |-------------|------------------------------|---------------|
 | sqlite.file | path to SQLite database file |               |
 
-### Logger Properties
+### Logging Configuration
 
 | property             | description              | default value |
 |----------------------|--------------------------|---------------|
 | logging.rolling.file | path to rolling log file |               |
 | logging.level        | log level                | info          |
 
-### Distributed Task Scheduling Properties
+### Distributed Task Scheduling Configuration
 
 | property                | description                                                    | default value |
 |-------------------------|----------------------------------------------------------------|---------------|
 | task.scheduling.enabled | enabled distributed task scheduling                            | true          |
 | task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. | default       |
 
-### Client Package Properties
+### Client Package Configuration
 
 | property      | description                             | default value |
 |---------------|-----------------------------------------|---------------|
 | client.host.* | static hostname and port of the service |               |
 
 
-### JWT Properties
+### JWT Configuration
 
 | property        | description                            | default value |
 |-----------------|----------------------------------------|---------------|
@@ -149,7 +151,7 @@ Gocommon's integration with RabbitMQ supports delayed message redelivery (messag
 | jwt.key.issuer  | issuer of the token                    |               |
 
 
-### Metrics Properties
+### Metrics Configuration
 
 | property        | description                                | default value |
 |-----------------|--------------------------------------------|---------------|
@@ -175,9 +177,9 @@ mysql:
 
 ### server.go
 
-`gocommon` supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
+`miso` supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
 
-Since `gocommon` is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
+Since `miso` is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
 
 ```go
 func main() {
@@ -259,7 +261,7 @@ Rule `validated` is very special. It doesn't actually check the value of the fie
 ```go
 func main() {
 	// set the group name
-	task.SetScheduleGroup("gocommon")
+	task.SetScheduleGroup("myApp")
 
 	// add task
 	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c common.Rail) {
