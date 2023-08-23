@@ -105,7 +105,7 @@ echo "package main" >> "$file"
 echo "" >> "$file"
 echo "import (" >> "$file"
 echo "    \"os\"" >> "$file"
-echo "    \"github.com/curtisnewbie/gocommon/server\"" >> "$file"
+echo "    \"github.com/curtisnewbie/miso/server\"" >> "$file"
 echo ")" >> "$file"
 echo "" >> "$file"
 echo "func main() {" >> "$file"
@@ -114,7 +114,7 @@ echo "}" >> "$file"
 echo "" >> "$file"
 
 go mod init $app && \
-    go get github.com/curtisnewbie/gocommon@$branch && \
+    go get github.com/curtisnewbie/miso@$branch && \
     go mod tidy
 
 echo "Project ${app} initialized at $(pwd)"

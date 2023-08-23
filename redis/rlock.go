@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 
 	"github.com/bsm/redislock"
 )
@@ -34,7 +34,7 @@ The maximum time wait for the lock is 1s, retry every 10ms.
 
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun[T any](ec common.Rail, key string, runnable LRunnable[T]) (T, error) {
+func RLockRun[T any](ec core.Rail, key string, runnable LRunnable[T]) (T, error) {
 	var t T
 	locker := ObtainRLocker()
 	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
@@ -42,7 +42,7 @@ func RLockRun[T any](ec common.Rail, key string, runnable LRunnable[T]) (T, erro
 	})
 
 	if err != nil {
-		return t, common.TraceErrf(err, "failed to obtain lock, key: %v", key)
+		return t, core.TraceErrf(err, "failed to obtain lock, key: %v", key)
 	}
 	ec.Debugf("Obtained lock for key '%s'", key)
 
@@ -86,7 +86,7 @@ The maximum time wait for the lock is 1s, retry every 10ms.
 
 May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockExec(ec common.Rail, key string, runnable Runnable) error {
+func RLockExec(ec core.Rail, key string, runnable Runnable) error {
 	_, e := RLockRun(ec, key, func() (any, error) {
 		return nil, runnable()
 	})

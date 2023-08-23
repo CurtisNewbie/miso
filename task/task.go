@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/redis"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -19,8 +19,8 @@ var (
 	// identifier for current node
 	nodeId string
 
-	// mutex for common proerties (group, nodeId, states, and masterNode election)
-	commonMut sync.Mutex
+	// mutex for core proerties (group, nodeId, states, and masterNode election)
+	coreMut sync.Mutex
 
 	// _state (atomic int32) of distributed task scheduler, use getState()/setState() to load/store
 	_state int32
@@ -39,11 +39,11 @@ const (
 	defMstLockTtl = 1 * time.Minute
 )
 
-type NamedTask = func(common.Rail) error
-type Task = func(common.Rail)
+type NamedTask = func(core.Rail) error
+type Task = func(core.Rail)
 
 func init() {
-	common.SetDefProp(common.PROP_TASK_SCHEDULING_ENABLED, true)
+	core.SetDefProp(core.PROP_TASK_SCHEDULING_ENABLED, true)
 
 	// set initial state
 	setState(initState)
@@ -51,7 +51,7 @@ func init() {
 
 // Check if it's disabled (based on configuration, doesn't affect method call)
 func IsTaskSchedulingDisabled() bool {
-	return !common.GetPropBool(common.PROP_TASK_SCHEDULING_ENABLED)
+	return !core.GetPropBool(core.PROP_TASK_SCHEDULING_ENABLED)
 }
 
 // Check whether task scheduler has pending tasks, waiting to be started
@@ -71,17 +71,17 @@ func getState() int32 {
 
 // Enable distributed task scheduling, return whether task scheduling is enabled
 func enableTaskScheduling() bool {
-	commonMut.Lock()
-	defer commonMut.Unlock()
+	coreMut.Lock()
+	defer coreMut.Unlock()
 
 	if getState() != pendingState {
 		return false
 	}
 	setState(startedState)
 
-	proposedGroup := common.GetPropStr(common.PROP_TASK_SCHEDULING_GROUP)
+	proposedGroup := core.GetPropStr(core.PROP_TASK_SCHEDULING_GROUP)
 	if proposedGroup == "" {
-		proposedGroup = common.GetPropStr(common.PROP_APP_NAME)
+		proposedGroup = core.GetPropStr(core.PROP_APP_NAME)
 	}
 	if proposedGroup != "" {
 		group = proposedGroup
@@ -98,8 +98,8 @@ func enableTaskScheduling() bool {
 
 // Set the schedule group for current node, by default it's 'default'
 func SetScheduleGroup(groupName string) {
-	commonMut.Lock()
-	defer commonMut.Unlock()
+	coreMut.Lock()
+	defer coreMut.Unlock()
 
 	g := strings.TrimSpace(groupName)
 	if g == "" {
@@ -140,15 +140,15 @@ func getMasterNodeLockKey() string {
 //	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
 func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	if getState() == initState {
-		commonMut.Lock()
+		coreMut.Lock()
 		if getState() == initState {
 			setState(pendingState)
 		}
-		commonMut.Unlock()
+		coreMut.Unlock()
 	}
 
-	return common.ScheduleCron(cron, withSeconds, func() {
-		ec := common.EmptyRail()
+	return core.ScheduleCron(cron, withSeconds, func() {
+		ec := core.EmptyRail()
 		if !tryBecomeMaster() {
 			ec.Debug("Not master node, skip scheduled task")
 			return
@@ -170,7 +170,7 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 //	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
 func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
-	return ScheduleDistributedTask(cron, withSeconds, func(ec common.Rail) {
+	return ScheduleDistributedTask(cron, withSeconds, func(ec core.Rail) {
 		ec.Infof("Running task '%s'", name)
 		start := time.Now()
 		e := task(ec)
@@ -190,7 +190,7 @@ func StartTaskSchedulerAsync() {
 	}
 
 	if enableTaskScheduling() {
-		common.StartSchedulerAsync()
+		core.StartSchedulerAsync()
 	}
 }
 
@@ -201,21 +201,21 @@ func StartTaskSchedulerBlocking() {
 	}
 
 	if enableTaskScheduling() {
-		common.StartSchedulerBlocking()
+		core.StartSchedulerBlocking()
 	}
 }
 
 // Shutdown distributed job scheduling
 func StopTaskScheduler() {
-	commonMut.Lock()
-	defer commonMut.Unlock()
+	coreMut.Lock()
+	defer coreMut.Unlock()
 
 	if getState() != startedState {
 		return
 	}
 	setState(stoppedState)
 
-	common.StopScheduler()
+	core.StopScheduler()
 
 	stopMasterLockRefreshingTicker()
 	releaseMasterNodeLock()
@@ -282,8 +282,8 @@ func refreshMasterLockTtl() error {
 
 // Try to become master node
 func tryBecomeMaster() bool {
-	commonMut.Lock()
-	defer commonMut.Unlock()
+	coreMut.Lock()
+	defer coreMut.Unlock()
 
 	if IsMasterNode() {
 		return true

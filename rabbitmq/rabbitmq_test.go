@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,22 +15,22 @@ type Dummy struct {
 	Desc string `json:"desc"`
 }
 
-func msgHandler(rail common.Rail, payload string) error {
+func msgHandler(rail core.Rail, payload string) error {
 	rail.Infof("Received message %s", payload)
 	// return errors.New("nack intentionally")
 	return nil
 }
 
-func jsonMsgHandler(rail common.Rail, payload Dummy) error {
+func jsonMsgHandler(rail core.Rail, payload Dummy) error {
 	rail.Infof("Received message %s", payload)
 	return nil
 }
 
 func TestInitClient(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
-	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
-	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
+	core.SetProp(core.PROP_RABBITMQ_USERNAME, "guest")
+	core.SetProp(core.PROP_RABBITMQ_PASSWORD, "guest")
 
 	AddListener(JsonMsgListener[Dummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
 	AddListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
@@ -65,10 +65,10 @@ func TestInitClient(t *testing.T) {
 }
 
 func TestPublishMessage(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
-	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
-	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
+	core.SetProp(core.PROP_RABBITMQ_USERNAME, "guest")
+	core.SetProp(core.PROP_RABBITMQ_PASSWORD, "guest")
 	logrus.SetLevel(logrus.DebugLevel)
 
 	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
@@ -102,10 +102,10 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestPublishJsonMessage(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
-	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
-	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
+	core.SetProp(core.PROP_RABBITMQ_USERNAME, "guest")
+	core.SetProp(core.PROP_RABBITMQ_PASSWORD, "guest")
 	logrus.SetLevel(logrus.DebugLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())

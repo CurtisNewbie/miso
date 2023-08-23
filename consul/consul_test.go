@@ -3,7 +3,7 @@ package consul
 import (
 	"testing"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -11,7 +11,7 @@ func PreTest() {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
 	args[1] = "configFile=../app-conf-dev.yml"
-	common.DefaultReadConfig(args, common.EmptyRail())
+	core.DefaultReadConfig(args, core.EmptyRail())
 }
 
 func TestPollServiceListInstances(t *testing.T) {

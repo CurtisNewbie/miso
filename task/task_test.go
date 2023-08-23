@@ -5,24 +5,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/redis"
 	"github.com/sirupsen/logrus"
 )
 
 func TestTaskScheduling(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
-	common.SetProp("redis.enabled", "true")
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
+	core.SetProp("redis.enabled", "true")
 
 	if _, e := redis.InitRedisFromProp(); e != nil {
 		t.Fatal(e)
 	}
 
-	SetScheduleGroup("gocommon")
+	SetScheduleGroup("miso")
 
 	var count int32 = 0
-	err := ScheduleNamedDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(ec common.Rail) error {
+	err := ScheduleNamedDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(ec core.Rail) error {
 		atomic.AddInt32(&count, 1)
 		logrus.Infof("%v", count)
 		return nil

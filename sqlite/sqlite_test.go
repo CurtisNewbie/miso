@@ -4,12 +4,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/sirupsen/logrus"
 )
 
 func TestGetSqlite(t *testing.T) {
-	common.SetProp(common.PROP_SQLITE_FILE, "test.db")
+	core.SetProp(core.PROP_SQLITE_FILE, "test.db")
 	tx := GetSqlite()
 	db, e := tx.DB()
 	if e != nil {

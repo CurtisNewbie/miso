@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 )
@@ -21,12 +21,12 @@ type redisHolder struct {
 }
 
 func init() {
-	common.SetDefProp(common.PROP_REDIS_ENABLED, false)
-	common.SetDefProp(common.PROP_REDIS_ADDRESS, "localhost")
-	common.SetDefProp(common.PROP_REDIS_PORT, 6379)
-	common.SetDefProp(common.PROP_REDIS_USERNAME, "")
-	common.SetDefProp(common.PROP_REDIS_PASSWORD, "")
-	common.SetDefProp(common.PROP_REDIS_DATABASE, 0)
+	core.SetDefProp(core.PROP_REDIS_ENABLED, false)
+	core.SetDefProp(core.PROP_REDIS_ADDRESS, "localhost")
+	core.SetDefProp(core.PROP_REDIS_PORT, 6379)
+	core.SetDefProp(core.PROP_REDIS_USERNAME, "")
+	core.SetDefProp(core.PROP_REDIS_PASSWORD, "")
+	core.SetDefProp(core.PROP_REDIS_DATABASE, 0)
 }
 
 /*
@@ -38,7 +38,7 @@ func init() {
 
 */
 func IsRedisEnabled() bool {
-	return common.GetPropBool(common.PROP_REDIS_ENABLED)
+	return core.GetPropBool(core.PROP_REDIS_ENABLED)
 }
 
 /*
@@ -84,11 +84,11 @@ func GetStr(key string) (string, error) {
 */
 func InitRedisFromProp() (*redis.Client, error) {
 	return InitRedis(
-		common.GetPropStr(common.PROP_REDIS_ADDRESS),
-		common.GetPropStr(common.PROP_REDIS_PORT),
-		common.GetPropStr(common.PROP_REDIS_USERNAME),
-		common.GetPropStr(common.PROP_REDIS_PASSWORD),
-		common.GetPropInt(common.PROP_REDIS_DATABASE))
+		core.GetPropStr(core.PROP_REDIS_ADDRESS),
+		core.GetPropStr(core.PROP_REDIS_PORT),
+		core.GetPropStr(core.PROP_REDIS_USERNAME),
+		core.GetPropStr(core.PROP_REDIS_PASSWORD),
+		core.GetPropInt(core.PROP_REDIS_DATABASE))
 }
 
 /*
@@ -117,7 +117,7 @@ func InitRedis(address string, port string, username string, password string, db
 
 	cmd := rdb.Ping()
 	if cmd.Err() != nil {
-		return nil, common.TraceErrf(cmd.Err(), "ping redis failed")
+		return nil, core.TraceErrf(cmd.Err(), "ping redis failed")
 	}
 
 	logrus.Info("Redis connection initialized")

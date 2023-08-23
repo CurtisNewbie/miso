@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/sirupsen/logrus"
 )
 
 func TestRLock(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)
 	}

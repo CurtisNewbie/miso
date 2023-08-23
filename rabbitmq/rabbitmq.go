@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 )
@@ -59,13 +59,13 @@ var (
 )
 
 func init() {
-	common.SetDefProp(common.PROP_RABBITMQ_ENABLED, false)
-	common.SetDefProp(common.PROP_RABBITMQ_HOST, "localhost")
-	common.SetDefProp(common.PROP_RABBITMQ_PORT, 5672)
-	common.SetDefProp(common.PROP_RABBITMQ_USERNAME, "")
-	common.SetDefProp(common.PROP_RABBITMQ_PASSWORD, "")
-	common.SetDefProp(common.PROP_RABBITMQ_VHOST, "")
-	common.SetDefProp(common.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
+	core.SetDefProp(core.PROP_RABBITMQ_ENABLED, false)
+	core.SetDefProp(core.PROP_RABBITMQ_HOST, "localhost")
+	core.SetDefProp(core.PROP_RABBITMQ_PORT, 5672)
+	core.SetDefProp(core.PROP_RABBITMQ_USERNAME, "")
+	core.SetDefProp(core.PROP_RABBITMQ_PASSWORD, "")
+	core.SetDefProp(core.PROP_RABBITMQ_VHOST, "")
+	core.SetDefProp(core.PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
 }
 
 type BindingRegistration struct {
@@ -88,20 +88,20 @@ type ExchangeRegistration struct {
 
 /* Is RabbitMQ Enabled */
 func IsEnabled() bool {
-	return common.GetPropBool(common.PROP_RABBITMQ_ENABLED)
+	return core.GetPropBool(core.PROP_RABBITMQ_ENABLED)
 }
 
 // Listener of Queue
 type Listener interface {
 	Queue() string                                 // return name of the queue
-	Handle(rail common.Rail, payload string) error // handle message
+	Handle(rail core.Rail, payload string) error // handle message
 	Concurrency() int
 }
 
 // Json Message Listener for Queue
 type JsonMsgListener[T any] struct {
 	QueueName     string
-	Handler       func(rail common.Rail, payload T) error
+	Handler       func(rail core.Rail, payload T) error
 	NumOfRoutines int
 }
 
@@ -109,7 +109,7 @@ func (m JsonMsgListener[T]) Queue() string {
 	return m.QueueName
 }
 
-func (m JsonMsgListener[T]) Handle(rail common.Rail, payload string) error {
+func (m JsonMsgListener[T]) Handle(rail core.Rail, payload string) error {
 	var t T
 	if e := json.Unmarshal([]byte(payload), &t); e != nil {
 		return e
@@ -132,7 +132,7 @@ func (m JsonMsgListener[T]) String() string {
 // Message Listener for Queue
 type MsgListener struct {
 	QueueName     string
-	Handler       func(rail common.Rail, payload string) error
+	Handler       func(rail core.Rail, payload string) error
 	NumOfRoutines int
 }
 
@@ -140,7 +140,7 @@ func (m MsgListener) Queue() string {
 	return m.QueueName
 }
 
-func (m MsgListener) Handle(rail common.Rail, payload string) error {
+func (m MsgListener) Handle(rail core.Rail, payload string) error {
 	return m.Handler(rail, payload)
 }
 
@@ -157,34 +157,34 @@ func (m MsgListener) String() string {
 }
 
 // Publish json message with confirmation
-func PublishJson(c common.Rail, obj any, exchange string, routingKey string) error {
+func PublishJson(c core.Rail, obj any, exchange string, routingKey string) error {
 	j, err := json.Marshal(obj)
 	if err != nil {
-		return common.TraceErrf(err, "failed to marshal message body")
+		return core.TraceErrf(err, "failed to marshal message body")
 	}
 	return PublishMsg(c, j, exchange, routingKey, "application/json", nil)
 }
 
 // Publish plain text message with confirmation
-func PublishText(c common.Rail, msg string, exchange string, routingKey string) error {
+func PublishText(c core.Rail, msg string, exchange string, routingKey string) error {
 	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain", nil)
 }
 
 // Publish message with confirmation
-func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
+func PublishMsg(c core.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
 	_pubWg.Add(1)
 	defer _pubWg.Done()
 
 	pc, err := borrowPubChan()
 	if err != nil {
-		return common.TraceErrf(err, "failed to obtain channel is closed, unable to publish message")
+		return core.TraceErrf(err, "failed to obtain channel is closed, unable to publish message")
 	}
 	defer returnPubChan(pc)
 
 	// propogate trace through headers
 	if headers == nil {
 		headers = map[string]any{}
-		propagated := common.GetPropagationKeys()
+		propagated := core.GetPropagationKeys()
 		for i := range propagated {
 			k := propagated[i]
 			headers[k] = c.CtxValue(k)
@@ -196,11 +196,11 @@ func PublishMsg(c common.Rail, msg []byte, exchange string, routingKey string, c
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 		Headers:      headers,
-		MessageId:    common.GenIdP("mq_"),
+		MessageId:    core.GenIdP("mq_"),
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
-		return common.TraceErrf(err, "failed to publish message")
+		return core.TraceErrf(err, "failed to publish message")
 	}
 
 	if !confirm.Wait() {
@@ -227,7 +227,7 @@ func AddListener(listener Listener) {
 func DeclareQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 	if e != nil {
-		return common.TraceErrf(e, "failed to declare queue, %v", queue.Name)
+		return core.TraceErrf(e, "failed to declare queue, %v", queue.Name)
 	}
 	logrus.Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
@@ -259,7 +259,7 @@ func DeclareBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	}
 	e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
 	if e != nil {
-		return common.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
+		return core.TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 	}
 	logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 
@@ -276,7 +276,7 @@ func DeclareBinding(ch *amqp.Channel, bind BindingRegistration) error {
 		"x-dead-letter-routing-key": bind.RoutingKey,
 	})
 	if e != nil {
-		return common.TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
+		return core.TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
 	}
 	redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
 	logrus.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
@@ -291,7 +291,7 @@ func DeclareExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
 
 	e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
 	if e != nil {
-		return common.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
+		return core.TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 	}
 	logrus.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
@@ -368,11 +368,11 @@ func tryEstablishConn() (*amqp.Connection, error) {
 	}
 
 	c := amqp.Config{}
-	username := common.GetPropStr(common.PROP_RABBITMQ_USERNAME)
-	password := common.GetPropStr(common.PROP_RABBITMQ_PASSWORD)
-	vhost := common.GetPropStr(common.PROP_RABBITMQ_VHOST)
-	host := common.GetPropStr(common.PROP_RABBITMQ_HOST)
-	port := common.GetPropInt(common.PROP_RABBITMQ_PORT)
+	username := core.GetPropStr(core.PROP_RABBITMQ_USERNAME)
+	password := core.GetPropStr(core.PROP_RABBITMQ_PASSWORD)
+	vhost := core.GetPropStr(core.PROP_RABBITMQ_VHOST)
+	host := core.GetPropStr(core.PROP_RABBITMQ_HOST)
+	port := core.GetPropInt(core.PROP_RABBITMQ_PORT)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	logrus.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
@@ -429,7 +429,7 @@ Init RabbitMQ Client
 return notifyCloseChannel for connection and error
 */
 func initClient(ctx context.Context) (chan *amqp.Error, error) {
-	rail := common.NewRail(ctx)
+	rail := core.NewRail(ctx)
 	_mutex.Lock()
 	defer _mutex.Unlock()
 
@@ -445,7 +445,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	rail.Debugf("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
-		return nil, common.TraceErrf(e, "failed to create channel")
+		return nil, core.TraceErrf(e, "failed to create channel")
 	}
 
 	// queues, exchanges, bindings
@@ -458,7 +458,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	// consumers
 	if e = bootstrapConsumers(conn); e != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", e)
-		return nil, common.TraceErrf(e, "failed to create consumer")
+		return nil, core.TraceErrf(e, "failed to create consumer")
 	}
 
 	rail.Debugf("RabbitMQ client initialization finished")
@@ -466,7 +466,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 }
 
 func bootstrapConsumers(conn *amqp.Connection) error {
-	qos := common.GetPropInt(common.PROP_RABBITMQ_CONSUMER_QOS)
+	qos := core.GetPropInt(core.PROP_RABBITMQ_CONSUMER_QOS)
 
 	for _, v := range _listeners {
 		listener := v
@@ -506,9 +506,9 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 		for msg := range msgCh {
 
 			// read trace from headers
-			rail := common.EmptyRail()
+			rail := core.EmptyRail()
 			if msg.Headers != nil {
-				keys := common.GetPropagationKeys()
+				keys := core.GetPropagationKeys()
 				for i := range keys {
 					k := keys[i]
 					if hv, ok := msg.Headers[k]; ok {
@@ -565,7 +565,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int
 func borrowPubChan() (*amqp.Channel, error) {
 	ch := _pubChanPool.Get()
 	if ch == nil {
-		return nil, common.NewTraceErrf("could not create new RabbitMQ channel")
+		return nil, core.NewTraceErrf("could not create new RabbitMQ channel")
 	}
 
 	ach := ch.(*amqp.Channel)
@@ -574,7 +574,7 @@ func borrowPubChan() (*amqp.Channel, error) {
 		ach = ch.(*amqp.Channel)
 
 		if ach == nil { // still unable to create a new channel, the connection may be broken
-			return nil, common.NewTraceErrf("could not create new RabbitMQ channel")
+			return nil, core.NewTraceErrf("could not create new RabbitMQ channel")
 		}
 	}
 	return ach, nil
@@ -596,11 +596,11 @@ func returnPubChan(ch *amqp.Channel) {
 func newPubChan() (*amqp.Channel, error) {
 	newChan, err := newChan()
 	if err != nil {
-		return nil, common.TraceErrf(err, "could not create new RabbitMQ channel")
+		return nil, core.TraceErrf(err, "could not create new RabbitMQ channel")
 	}
 
 	if err = newChan.Confirm(false); err != nil {
-		return nil, common.TraceErrf(err, "channel could not be put into confirm mode")
+		return nil, core.TraceErrf(err, "channel could not be put into confirm mode")
 	}
 
 	logrus.Debugf("Created new RabbitMQ publishing channel")
@@ -613,7 +613,7 @@ func newChan() (*amqp.Channel, error) {
 	defer _mutex.Unlock()
 
 	if _conn == nil {
-		return nil, common.NewTraceErrf("rabbitmq connection is missing")
+		return nil, core.NewTraceErrf("rabbitmq connection is missing")
 	}
 
 	return _conn.Channel()

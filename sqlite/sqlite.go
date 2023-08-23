@@ -3,7 +3,7 @@ package sqlite
 import (
 	"sync"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -29,7 +29,7 @@ This func looks for prop:
 */
 func GetSqlite() *gorm.DB {
 	if IsSqliteInitialized() {
-		if common.IsProdMode() {
+		if core.IsProdMode() {
 			return sqlitep.sq
 		}
 
@@ -41,7 +41,7 @@ func GetSqlite() *gorm.DB {
 	defer sqlitep.mu.Unlock()
 
 	if sqlitep.sq == nil {
-		path := common.GetPropStr(common.PROP_SQLITE_FILE)
+		path := core.GetPropStr(core.PROP_SQLITE_FILE)
 		logrus.Infof("Connecting to SQLite database '%s'", path)
 
 		db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
@@ -63,7 +63,7 @@ func GetSqlite() *gorm.DB {
 		sqlitep.sq = db
 	}
 
-	if common.IsDebugLevel() {
+	if core.IsDebugLevel() {
 		return sqlitep.sq.Debug()
 	}
 

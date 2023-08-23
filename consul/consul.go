@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
 )
@@ -30,7 +30,7 @@ var (
 	// Holder (cache) of service list and their instances
 	serviceListHolder = &ServiceListHolder{
 		Instances:   map[string][]*api.AgentService{},
-		ServiceList: common.NewSet[string](),
+		ServiceList: core.NewSet[string](),
 	}
 
 	// server list polling subscription
@@ -58,17 +58,17 @@ type serviceRegistration struct {
 type ServiceListHolder struct {
 	mu          sync.Mutex
 	Instances   map[string][]*api.AgentService
-	ServiceList common.Set[string]
+	ServiceList core.Set[string]
 }
 
 func init() {
-	common.SetDefProp(common.PROP_CONSUL_ENABLED, false)
-	common.SetDefProp(common.PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_URL, "/health")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_INTERVAL, "15s")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
-	common.SetDefProp(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "120s")
-	common.SetDefProp(common.PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK, true)
+	core.SetDefProp(core.PROP_CONSUL_ENABLED, false)
+	core.SetDefProp(core.PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
+	core.SetDefProp(core.PROP_CONSUL_HEALTHCHECK_URL, "/health")
+	core.SetDefProp(core.PROP_CONSUL_HEALTHCHECK_INTERVAL, "15s")
+	core.SetDefProp(core.PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
+	core.SetDefProp(core.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "120s")
+	core.SetDefProp(core.PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK, true)
 }
 
 // Subscribe to server list, refresh server list every 30s
@@ -115,7 +115,7 @@ This func looks for following prop:
 	"consul.enabled"
 */
 func IsConsulEnabled() bool {
-	return common.GetPropBool(common.PROP_CONSUL_ENABLED)
+	return core.GetPropBool(core.PROP_CONSUL_ENABLED)
 }
 
 // Poll all service list and cache them
@@ -126,7 +126,7 @@ func PollServiceListInstances() {
 	for k := range serviceListHolder.ServiceList.Keys {
 		_, err := _fetchAndCacheServicesByName(k)
 		if err != nil {
-			common.EmptyRail().Warnf("Failed to poll service service for '%s', err: %v", k, err)
+			core.EmptyRail().Warnf("Failed to poll service service for '%s', err: %v", k, err)
 		}
 	}
 }
@@ -137,7 +137,7 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	if err != nil {
 		return nil, err
 	}
-	serviceListHolder.Instances[name] = common.ValuesOfMap(&services)
+	serviceListHolder.Instances[name] = core.ValuesOfMap(&services)
 	return services, err
 }
 
@@ -189,7 +189,7 @@ func ResolveServiceAddress(name string) (string, error) {
 	if instances == nil || len(instances) < 1 {
 		return "", ErrServiceInstanceNotFound
 	}
-	return extractServiceAddress(common.RandomOne(instances)), nil
+	return extractServiceAddress(core.RandomOne(instances)), nil
 }
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
@@ -211,7 +211,7 @@ func FetchServiceAddress(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	agent := common.RandomOne(common.ValuesOfMap(&services))
+	agent := core.RandomOne(core.ValuesOfMap(&services))
 	return extractServiceAddress(agent), nil
 }
 
@@ -253,7 +253,7 @@ func DeregisterService() error {
 		return nil
 	}
 
-	common.EmptyRail().Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
+	core.EmptyRail().Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
 	client, _ := GetConsulClient()
 	err := client.Agent().ServiceDeregister(regSub.serviceId)
 
@@ -296,20 +296,20 @@ func RegisterService() error {
 		return nil
 	}
 
-	serverPort := common.GetPropInt(common.PROP_SERVER_PORT)
-	registerName := common.GetPropStr(common.PROP_CONSUL_REGISTER_NAME)
+	serverPort := core.GetPropInt(core.PROP_SERVER_PORT)
+	registerName := core.GetPropStr(core.PROP_CONSUL_REGISTER_NAME)
 	if registerName == "" { // fallback to app.name
-		registerName = common.GetPropStr(common.PROP_APP_NAME)
+		registerName = core.GetPropStr(core.PROP_APP_NAME)
 	}
-	registerAddress := common.GetPropStr(common.PROP_CONSUL_REGISTER_ADDRESS)
-	healthCheckUrl := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_URL)
-	healthCheckInterval := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_INTERVAL)
-	healthCheckTimeout := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_TIMEOUT)
-	healthCheckDeregAfter := common.GetPropStr(common.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER)
+	registerAddress := core.GetPropStr(core.PROP_CONSUL_REGISTER_ADDRESS)
+	healthCheckUrl := core.GetPropStr(core.PROP_CONSUL_HEALTHCHECK_URL)
+	healthCheckInterval := core.GetPropStr(core.PROP_CONSUL_HEALTHCHECK_INTERVAL)
+	healthCheckTimeout := core.GetPropStr(core.PROP_CONSUL_HEALTHCHECK_TIMEOUT)
+	healthCheckDeregAfter := core.GetPropStr(core.PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER)
 
 	// registerAddress not specified, resolve the ip address used for the server
 	if registerAddress == "" {
-		registerAddress = common.ResolveServerHost(common.GetPropStr(common.PROP_SERVER_HOST))
+		registerAddress = core.ResolveServerHost(core.GetPropStr(core.PROP_SERVER_HOST))
 	}
 
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
@@ -328,11 +328,11 @@ func RegisterService() error {
 	}
 
 	if e = client.Agent().ServiceRegister(registration); e != nil {
-		return common.TraceErrf(e, "failed to register on consul, registration: %+v", registration)
+		return core.TraceErrf(e, "failed to register on consul, registration: %+v", registration)
 	}
 	regSub.serviceId = proposedServiceId
 
-	common.EmptyRail().Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
+	core.EmptyRail().Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
 }
 
@@ -355,7 +355,7 @@ func GetConsulClient() (*api.Client, error) {
 		return consulp.consul, nil
 	}
 
-	addr := common.GetPropStr(common.PROP_CONSUL_CONSUL_ADDRESS)
+	addr := core.GetPropStr(core.PROP_CONSUL_CONSUL_ADDRESS)
 	c, err := api.NewClient(&api.Config{
 		Address: addr,
 	})
@@ -363,7 +363,7 @@ func GetConsulClient() (*api.Client, error) {
 		return nil, err
 	}
 	consulp.consul = c
-	common.EmptyRail().Infof("Created Consul Client on %s", addr)
+	core.EmptyRail().Infof("Created Consul Client on %s", addr)
 
 	SubscribeServerList()
 

@@ -3,13 +3,13 @@ package metrics
 import (
 	"net/http"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func init() {
-	common.SetDefProp(common.PROP_METRICS_ENABLED, true)
-	common.SetDefProp(common.PROP_PROM_ROUTE, "/metrics")
+	core.SetDefProp(core.PROP_METRICS_ENABLED, true)
+	core.SetDefProp(core.PROP_PROM_ROUTE, "/metrics")
 }
 
 func PrometheusHandler() http.Handler {

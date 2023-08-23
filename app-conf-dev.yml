@@ -1,6 +1,6 @@
 mode.production: true
 
-app.name: "gocommon"
+app.name: "myApp"
 
 mysql:
   enabled: false

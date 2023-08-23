@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/rabbitmq"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/rabbitmq"
 )
 
 func preTest() {
-	common.SetProp(common.PROP_RABBITMQ_USERNAME, "guest")
-	common.SetProp(common.PROP_RABBITMQ_PASSWORD, "guest")
+	core.SetProp(core.PROP_RABBITMQ_USERNAME, "guest")
+	core.SetProp(core.PROP_RABBITMQ_PASSWORD, "guest")
 }
 
 func TestDeclareEventBus(t *testing.T) {
@@ -40,7 +40,7 @@ func TestSendToEventBus(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	if e := SendToEventBus(common.EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
+	if e := SendToEventBus(core.EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
 		t.Fatal(e)
 	}
 
@@ -51,7 +51,7 @@ func TestSendToEventBus(t *testing.T) {
 func TestSubscribeEventBus(t *testing.T) {
 	preTest()
 
-	SubscribeEventBus("test-bus", 1, func(rail common.Rail, t Dummy) error {
+	SubscribeEventBus("test-bus", 1, func(rail core.Rail, t Dummy) error {
 		rail.Infof("received dummy: %+v", t)
 		return nil
 	})

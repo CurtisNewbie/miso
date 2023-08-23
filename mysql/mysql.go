@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -34,12 +34,12 @@ type mysqlHolder struct {
 }
 
 func init() {
-	common.SetDefProp(common.PROP_MYSQL_ENABLED, false)
-	common.SetDefProp(common.PROP_MYSQL_USER, "root")
-	common.SetDefProp(common.PROP_MYSQL_PASSWORD, "")
-	common.SetDefProp(common.PROP_MYSQL_HOST, "localhost")
-	common.SetDefProp(common.PROP_MYSQL_PORT, 3306)
-	common.SetDefProp(common.PROP_MYSQL_CONN_PARAM, defaultConnParams)
+	core.SetDefProp(core.PROP_MYSQL_ENABLED, false)
+	core.SetDefProp(core.PROP_MYSQL_USER, "root")
+	core.SetDefProp(core.PROP_MYSQL_PASSWORD, "")
+	core.SetDefProp(core.PROP_MYSQL_HOST, "localhost")
+	core.SetDefProp(core.PROP_MYSQL_PORT, 3306)
+	core.SetDefProp(core.PROP_MYSQL_CONN_PARAM, defaultConnParams)
 }
 
 /*
@@ -50,7 +50,7 @@ This func looks for following prop:
 	"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
-	return common.GetPropBool(common.PROP_MYSQL_ENABLED)
+	return core.GetPropBool(core.PROP_MYSQL_ENABLED)
 }
 
 /*
@@ -68,17 +68,17 @@ This func looks for following props:
 	"mysql.connection.parameters"
 */
 func InitMySqlFromProp() error {
-	return InitMySql(common.GetPropStr(common.PROP_MYSQL_USER),
-		common.GetPropStr(common.PROP_MYSQL_PASSWORD),
-		common.GetPropStr(common.PROP_MYSQL_DATABASE),
-		common.GetPropStr(common.PROP_MYSQL_HOST),
-		common.GetPropStr(common.PROP_MYSQL_PORT),
-		common.GetPropStr(common.PROP_MYSQL_CONN_PARAM))
+	return InitMySql(core.GetPropStr(core.PROP_MYSQL_USER),
+		core.GetPropStr(core.PROP_MYSQL_PASSWORD),
+		core.GetPropStr(core.PROP_MYSQL_DATABASE),
+		core.GetPropStr(core.PROP_MYSQL_HOST),
+		core.GetPropStr(core.PROP_MYSQL_PORT),
+		core.GetPropStr(core.PROP_MYSQL_CONN_PARAM))
 }
 
 // Create new MySQL connection
 func NewConn(user string, password string, dbname string, host string, port string, connParam string) (*gorm.DB, error) {
-	rail := common.EmptyRail()
+	rail := core.EmptyRail()
 	connParam = strings.TrimSpace(connParam)
 	if connParam != "" && !strings.HasPrefix(connParam, "?") {
 		connParam = "?" + connParam
@@ -132,7 +132,7 @@ func InitMySql(user string, password string, dbname string, host string, port st
 
 	conn, enc := NewConn(user, password, dbname, host, port, connParam)
 	if enc != nil {
-		return common.TraceErrf(enc, "failed to create mysql connection, %v:%v/%v", user, password, dbname)
+		return core.TraceErrf(enc, "failed to create mysql connection, %v:%v/%v", user, password, dbname)
 	}
 	mysqlp.mysql = conn
 	return nil
@@ -153,7 +153,7 @@ func GetConn() *gorm.DB {
 		}
 	}
 
-	if common.IsDebugLevel() {
+	if core.IsDebugLevel() {
 		return mysqlp.mysql.Debug()
 	}
 

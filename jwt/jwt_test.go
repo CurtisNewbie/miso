@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -15,9 +15,9 @@ const (
 )
 
 func TestEncodeToken(t *testing.T) {
-	common.SetProp(common.PROP_JWT_PRIVATE_KEY, privateKey)
-	common.SetProp(common.PROP_JWT_PUBLIC_KEY, publicKey)
-	common.SetProp(common.PROP_JWT_ISSUER, issuer)
+	core.SetProp(core.PROP_JWT_PRIVATE_KEY, privateKey)
+	core.SetProp(core.PROP_JWT_PUBLIC_KEY, publicKey)
+	core.SetProp(core.PROP_JWT_ISSUER, issuer)
 	tkn, err := EncodeToken(jwt.MapClaims{
 		"username": "zhuangyongj",
 	}, 15*time.Minute)
@@ -31,9 +31,9 @@ func TestEncodeToken(t *testing.T) {
 }
 
 func TestDecodeToken(t *testing.T) {
-	common.SetProp(common.PROP_JWT_PRIVATE_KEY, privateKey)
-	common.SetProp(common.PROP_JWT_PUBLIC_KEY, publicKey)
-	common.SetProp(common.PROP_JWT_ISSUER, issuer)
+	core.SetProp(core.PROP_JWT_PRIVATE_KEY, privateKey)
+	core.SetProp(core.PROP_JWT_PUBLIC_KEY, publicKey)
+	core.SetProp(core.PROP_JWT_ISSUER, issuer)
 
 	jwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTA2MjM1MTQsImlzcyI6Imp3dF90ZXN0IiwidXNlcm5hbWUiOiJ6aHVhbmd5b25naiJ9.Q_2CR6MyZ9jzmI0HswtfMHZ7-T9BZK62XXEDz_GwmmO_YRYRF5NmSdYng3-jHVjUsNIsfvu5VSUxOSrUgGzsURwYvxG-I8BtXAJf3dtV4n---iz9zvm8TzItiVeplEgW3N_QGx5RibKQM8lwt3-VZL2tU70AmsxNGVlKp63We_A"
 	tkn, err := DecodeToken(jwt)

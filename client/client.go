@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/consul"
+	"github.com/curtisnewbie/miso/consul"
+	"github.com/curtisnewbie/miso/core"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 // Helper type for handling HTTP responses
 type TResponse struct {
-	ExecCtx    common.Rail
+	ExecCtx    core.Rail
 	Ctx        context.Context
 	Resp       *http.Response
 	RespHeader http.Header
@@ -61,7 +61,7 @@ func (tr *TResponse) ReadJson(ptr any) error {
 	}
 
 	if e = json.Unmarshal(body, ptr); e != nil {
-		common.TraceLogger(tr.Ctx).Errorf("Failed to unmarchal '%s' as %v, %v", string(body), reflect.TypeOf(ptr), e)
+		core.TraceLogger(tr.Ctx).Errorf("Failed to unmarchal '%s' as %v, %v", string(body), reflect.TypeOf(ptr), e)
 		return e
 	}
 	return nil
@@ -86,8 +86,8 @@ func (tr *TResponse) Require2xx() error {
 }
 
 // Read response as GnResp[T] object, response is always closed automatically
-func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
-	var gr common.GnResp[T]
+func ReadGnResp[T any](tr *TResponse) (core.GnResp[T], error) {
+	var gr core.GnResp[T]
 	e := tr.ReadJson(&gr)
 	return gr, e
 }
@@ -98,7 +98,7 @@ func ReadGnResp[T any](tr *TResponse) (common.GnResp[T], error) {
 type TClient struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
-	ExecCtx    common.Rail         // execute context
+	ExecCtx    core.Rail         // execute context
 	Ctx        context.Context     // context provided by caller
 	QueryParam map[string][]string // query parameters
 
@@ -354,17 +354,17 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 }
 
 // Create new defualt TClient
-func NewDefaultTClient(ec common.Rail, url string) *TClient {
+func NewDefaultTClient(ec core.Rail, url string) *TClient {
 	return NewTClient(ec, url, http.DefaultClient)
 }
 
 // Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
-func NewDynTClient(ec common.Rail, relUrl string, serviceName string) *TClient {
+func NewDynTClient(ec core.Rail, relUrl string, serviceName string) *TClient {
 	return NewTClient(ec, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
 }
 
 // Create new TClient
-func NewTClient(ec common.Rail, url string, client *http.Client) *TClient {
+func NewTClient(ec core.Rail, url string, client *http.Client) *TClient {
 	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec, QueryParam: map[string][]string{}}
 }
 
@@ -472,7 +472,7 @@ func TraceRequest(ctx context.Context, req *http.Request) *http.Request {
 		return req
 	}
 
-	for _, key := range common.GetPropagationKeys() {
+	for _, key := range core.GetPropagationKeys() {
 		v := ctx.Value(key)
 		if v != nil {
 			if vstr, ok := v.(string); ok {
@@ -504,5 +504,5 @@ func resolveHostFromProp(name string) string {
 	if name == "" {
 		return ""
 	}
-	return common.GetPropStr("client.host." + name)
+	return core.GetPropStr("client.host." + name)
 }

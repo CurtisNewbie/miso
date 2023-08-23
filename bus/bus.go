@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/rabbitmq"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/rabbitmq"
 )
 
 const (
@@ -24,7 +24,7 @@ var (
 // Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
 //
 // Before calling this method, the DeclareEventBus(...) should be called at least once to create the necessary components.
-func SendToEventBus(c common.Rail, eventObject any, bus string) error {
+func SendToEventBus(c core.Rail, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}
@@ -78,7 +78,7 @@ func DeclareEventBus(bus string) error {
 // Internally, it registers a listener for the queue identified by the bus name.
 //
 // It also calls DeclareEventBus(...) automatically before it registers the listeners.
-func SubscribeEventBus[T any](bus string, concurrency int, listener func(rail common.Rail, t T) error) {
+func SubscribeEventBus[T any](bus string, concurrency int, listener func(rail core.Rail, t T) error) {
 	if bus == "" {
 		panic(errBusNameEmpty)
 	}

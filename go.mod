@@ -1,4 +1,4 @@
-module github.com/curtisnewbie/gocommon
+module github.com/curtisnewbie/miso
 
 go 1.18
 

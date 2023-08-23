@@ -113,7 +113,7 @@ e.g.,
 | rabbitmq.vhost        | virtual host                       |               |
 | rabbitmq.consumer.qos | consumer QOS                       | 68            |
 
-Gocommon's integration with RabbitMQ supports delayed message redelivery (messages that can't be handled without error), the delay is currently 10 seconds. This is to prevent server being flooded with redelivered messages, this is not configurable though.
+Miso's integration with RabbitMQ supports delayed message redelivery (messages that can't be handled without error), the delay is currently 10 seconds. This is to prevent server being flooded with redelivered messages, this is not configurable though.
 
 ### SQLite Configuration
 
@@ -177,16 +177,16 @@ mysql:
 
 ### server.go
 
-`miso` supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
+Miso supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
 
-Since `miso` is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
+Since miso is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
 
 ```go
 func main() {
 	// ...
 
 	// maybe some scheduling (not distributed)
-	common.ScheduleCron("0 0/15 * * * *", true, myJob)
+	miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
 	// register routes and handlers
 	server.IPost("/my/path", myHandler)
@@ -208,7 +208,7 @@ type Dummy struct {
 }
 ```
 
-To validate a struct, just call `common.Validate(...)` as follows:
+To validate a struct, just call `core.Validate(...)` as follows:
 
 ```go
 func TestValidate(t *testing.T) {
@@ -264,7 +264,7 @@ func main() {
 	task.SetScheduleGroup("myApp")
 
 	// add task
-	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c common.Rail) {
+	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c core.Rail) {
 		// ...
 	})
 
@@ -281,7 +281,7 @@ If `server.go` is used, this is automatically handled by `BootstrapServer(...)` 
 ```go
 func main() {
 	// add tasks
-	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c common.Rail) {
+	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c core.Rail) {
 	})
 
 	// bootstrap server

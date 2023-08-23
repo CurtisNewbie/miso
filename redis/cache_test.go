@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 )
 
 type Dummy struct {
@@ -13,8 +13,8 @@ type Dummy struct {
 }
 
 func TestLazyObjRcache(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)
 	}
@@ -63,8 +63,8 @@ func TestLazyObjRcache(t *testing.T) {
 }
 
 func TestRCache(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
 	if _, e := InitRedisFromProp(); e != nil {
 		t.Fatal(e)
 	}
@@ -97,8 +97,8 @@ func TestRCache(t *testing.T) {
 }
 
 func TestLKazyRCache(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
 	InitRedisFromProp()
 
 	keypre := "test:rcache:key:"

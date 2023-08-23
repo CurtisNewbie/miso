@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/core"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
@@ -35,7 +35,7 @@ func EncodeToken(claims jwt.MapClaims, exp time.Duration) (string, error) {
 		return "", err
 	}
 
-	claims["iss"] = common.GetPropStr(common.PROP_JWT_ISSUER)
+	claims["iss"] = core.GetPropStr(core.PROP_JWT_ISSUER)
 	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -73,14 +73,14 @@ func loadPublicKey() (any, error) {
 	pubKeyRwmu.Lock()
 	defer pubKeyRwmu.Unlock()
 
-	if !common.HasProp(common.PROP_JWT_PUBLIC_KEY) {
+	if !core.HasProp(core.PROP_JWT_PUBLIC_KEY) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := common.GetPropStr(common.PROP_JWT_PUBLIC_KEY)
-	pk, err := common.LoadPubKey(k)
+	k := core.GetPropStr(core.PROP_JWT_PUBLIC_KEY)
+	pk, err := core.LoadPubKey(k)
 	if err != nil {
-		common.EmptyRail().Errorf("Failed to load public key, %v", err)
+		core.EmptyRail().Errorf("Failed to load public key, %v", err)
 		return nil, err
 	}
 
@@ -103,14 +103,14 @@ func loadPrivateKey() (any, error) {
 		return privKey, nil
 	}
 
-	if !common.HasProp(common.PROP_JWT_PRIVATE_KEY) {
+	if !core.HasProp(core.PROP_JWT_PRIVATE_KEY) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := common.GetPropStr(common.PROP_JWT_PRIVATE_KEY)
-	pk, err := common.LoadPrivKey(k)
+	k := core.GetPropStr(core.PROP_JWT_PRIVATE_KEY)
+	pk, err := core.LoadPrivKey(k)
 	if err != nil {
-		common.EmptyRail().Errorf("Failed to load private key, %v", err)
+		core.EmptyRail().Errorf("Failed to load private key, %v", err)
 		return nil, err
 	}
 
@@ -119,7 +119,7 @@ func loadPrivateKey() (any, error) {
 }
 
 func ValidateIssuer() jwt.ParserOption {
-	iss := common.GetPropStr(common.PROP_JWT_ISSUER)
+	iss := core.GetPropStr(core.PROP_JWT_ISSUER)
 	if iss == "" {
 		return func(p *jwt.Parser) {}
 	}
