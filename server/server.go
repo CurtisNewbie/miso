@@ -39,8 +39,6 @@ T should be a struct, where all fields are automatically mapped from the request
   - json
   - xml
   - form
-  - header
-  - uri
 */
 type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail core.Rail, req Req) (Res, error)
 
@@ -356,7 +354,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], 
 //
 // The result and error are wrapped in Resp automatically as json.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...core.StrPair) {
-	recordHttpServerRoute(url, http.MethodPost, core.FuncName(handler), extra...)
+	recordHttpServerRoute(url, http.MethodGet, core.FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewMappedTRouteHandler(handler)) })
 }
 
