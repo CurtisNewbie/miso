@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	formEncoded     = "application/x-www-form-urlencoded"
 	applicationJson = "application/json"
 	contentType     = "Content-Type"
 )
@@ -182,6 +183,12 @@ func (t *TClient) Get() *TResponse {
 		return t.errorResponse(e)
 	}
 	return t.send(req)
+}
+
+// Send POST request with urlencoded form data
+func (t *TClient) PostForm(data url.Values) *TResponse {
+	t.SetContentType(formEncoded)
+	return t.Post(strings.NewReader(data.Encode()))
 }
 
 // Send POST request with JSON
