@@ -102,11 +102,7 @@ func TraceLogger(ctx context.Context) *logrus.Entry {
 
 // Check whether current log level is DEBUG
 func IsDebugLevel() bool {
-	level, ok := ParseLogLevel(GetPropStr(PROP_LOGGING_LEVEL))
-	if !ok {
-		return false
-	}
-	return level == logrus.DebugLevel
+	return logrus.GetLevel() == logrus.DebugLevel
 }
 
 // Parse log level
