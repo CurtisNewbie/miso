@@ -27,7 +27,7 @@ List of integration and functionalities provided:
 ```go
 func main() {
 
-	server.PreServerBootstrap(func(rail common.Rail) error {
+	server.PreServerBootstrap(func(rail core.Rail) error {
 
 		// prepare some event bus declaration
 		if err := bus.DeclareEventBus(demoEventBusName); err != nil {
@@ -39,7 +39,7 @@ func main() {
 
 		// register some distributed tasks
 		err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-			func(rail common.Rail) error {
+			func(rail core.Rail) error {
 				return doSomething(rail)
 			}
 		)
