@@ -4,6 +4,59 @@ Miso, yet another simple application framework. (Previously named gocommon).
 
 *This is not really a general library for everyone, it's mainly developed for my personal projects :D. You are very welcome to read the code tho.*
 
+Miso provides a universal configuration loading mechanism (wrapping Viper) and integrates with various components and libraries to make life hopefully a bit easier:
+
+List of integration and functionalities provided:
+
+- MySQL
+- Consul
+- Redis
+- SQLite
+- RabbitMQ
+- JWT Encoding / Decoding
+- Gin
+- Http Client
+- Logrus & Lumberjack (for rotating log files)
+- Prometheus
+- Tracing (based on context.Context, it's not integrated with anything like Zipkin, only the logs)
+- Cron job scheduling (non-distributed)
+- Distributed task scheduling (based on cron job scheduler)
+
+**How a miso app may look like:**
+
+```go
+func main() {
+
+	// prepare some event bus declaration for later use
+	if err := bus.DeclareEventBus(demoEventBusName); err != nil {
+		return err
+	}
+
+	// register some cron scheduling job (not distributed)
+	miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+
+	// register some distributed tasks
+	err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+		func(rail common.Rail) error {
+			return doSomething(rail)
+		}
+	)
+	if err != nil {
+		panic(err) // for demo only
+	}
+
+	// register http routes and handlers
+	server.IPost("/open/api/demo", func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
+			rail.Infof("Received request, %+v", req)
+			return doSomething(rail, req)
+		}
+	)
+
+	// bootstrap server
+	server.BootstrapServer(os.Args)
+}
+```
+
 ## Initialize Project
 
 Convenient way to initialize a new project:
