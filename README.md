@@ -1,6 +1,6 @@
 # miso
 
-Miso, yet another simple application framework. (Previously named gocommon).
+Miso, yet another simple application framework (formerly named gocommon).
 
 *This is not really a general library for everyone, it's mainly developed for my personal projects :D. You are very welcome to read the code tho.*
 
