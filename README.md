@@ -27,30 +27,32 @@ List of integration and functionalities provided:
 ```go
 func main() {
 
-	// prepare some event bus declaration for later use
-	if err := bus.DeclareEventBus(demoEventBusName); err != nil {
-		return err
-	}
+	server.PreServerBootstrap(func(rail common.Rail) error {
 
-	// register some cron scheduling job (not distributed)
-	miso.ScheduleCron("0 0/15 * * * *", true, myJob)
-
-	// register some distributed tasks
-	err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-		func(rail common.Rail) error {
-			return doSomething(rail)
+		// prepare some event bus declaration
+		if err := bus.DeclareEventBus(demoEventBusName); err != nil {
+			return err
 		}
-	)
-	if err != nil {
-		panic(err) // for demo only
-	}
 
-	// register http routes and handlers
-	server.IPost("/open/api/demo", func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
-			rail.Infof("Received request, %+v", req)
-			return doSomething(rail, req)
+		// register some cron scheduling job (not distributed)
+		miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+
+		// register some distributed tasks
+		err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+			func(rail common.Rail) error {
+				return doSomething(rail)
+			}
+		)
+		if err != nil {
+			panic(err) // for demo only
 		}
-	)
+
+		// register http routes and handlers
+		server.IPost("/open/api/demo", func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
+				rail.Infof("Received request, %+v", req)
+				return doSomething(rail, req)
+			})
+		})
 
 	// bootstrap server
 	server.BootstrapServer(os.Args)
