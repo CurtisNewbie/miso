@@ -1,6 +1,6 @@
 #!/bin/bash
 
-branch="dev"
+branch="main"
 
 go version
 if [[ $? -ne 0 ]]; then
@@ -88,6 +88,7 @@ echo "" >> "$file"
 echo "metrics:" >> "$file"
 echo "  enabled: false" >> "$file"
 echo "  route: '/metrics'" >> "$file"
+echo "" >> "$file"
 
 echo "# tracing.propagation.keys:" >> "$file"
 echo "#  - " >> "$file"
