@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -24,7 +25,17 @@ func (r Rail) CtxValue(key string) any {
 }
 
 func (r Rail) CtxValStr(key string) string {
-	return GetCtxStr(r.Ctx, key)
+	if s, ok := GetCtxStr(r.Ctx, key); ok {
+		return s
+	}
+	return ""
+}
+
+func (r Rail) CtxValInt(key string) int {
+	if d, ok := GetCtxInt(r.Ctx, key); ok {
+		return d
+	}
+	return 0
 }
 
 func (r Rail) TraceId() string {
@@ -135,17 +146,36 @@ func NewRail(ctx context.Context) Rail {
 // Get value from context as a string
 //
 // int*, unit*, float* types are formatted as string, other types are returned as empty string
-func GetCtxStr(ctx context.Context, key string) string {
+func GetCtxStr(ctx context.Context, key string) (string, bool) {
 	v := ctx.Value(key)
 	if v == nil {
-		return ""
+		return "", false
 	}
 	switch tv := v.(type) {
 	case string:
-		return tv
+		return tv, true
 	case int, uint, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64:
-		return fmt.Sprintf("%v", v)
+		return fmt.Sprintf("%v", v), true
 	default:
-		return ""
+		return "", false
+	}
+}
+
+// Get value from context as an int.
+//
+// string is also formatted as int if possible.
+func GetCtxInt(ctx context.Context, key string) (int, bool) {
+	v := ctx.Value(key)
+	if v == nil {
+		return 0, false
+	}
+	switch tv := v.(type) {
+	case int:
+		return tv, true
+	case string:
+		i, e := strconv.Atoi(tv)
+		return i, e == nil
+	default:
+		return 0, false
 	}
 }
