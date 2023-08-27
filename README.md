@@ -1,10 +1,8 @@
 # miso
 
-Miso, yet another simple application framework (formerly named gocommon).
+Miso, yet another simple application framework.
 
-*This is not really a general library for everyone, it's mainly developed for my personal projects :D. You are very welcome to read the code tho.*
-
-Miso provides a universal configuration loading mechanism (wrapping Viper) and integrates with various components and libraries to make life hopefully a bit easier:
+Miso provides a universal configuration loading mechanism (by wrapping Viper) and integrates with various components and libraries to make life hopefully a bit easier:
 
 List of integration and functionalities provided:
 
@@ -27,35 +25,36 @@ List of integration and functionalities provided:
 ```go
 func main() {
 
-	server.PreServerBootstrap(func(rail core.Rail) error {
+    server.PreServerBootstrap(func(rail core.Rail) error {
 
-		// prepare some event bus declaration
-		if err := bus.DeclareEventBus(demoEventBusName); err != nil {
-			return err
-		}
+        // prepare some event bus declaration
+        if err := bus.DeclareEventBus(demoEventBusName); err != nil {
+            return err
+        }
 
-		// register some cron scheduling job (not distributed)
-		miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+        // register some cron scheduling job (not distributed)
+        miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
-		// register some distributed tasks
-		err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-			func(rail core.Rail) error {
-				return doSomething(rail)
-			}
-		)
-		if err != nil {
-			panic(err) // for demo only
-		}
+        // register some distributed tasks
+        err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+            func(rail core.Rail) error {
+                return doSomething(rail)
+            }
+        )
+        if err != nil {
+            panic(err) // for demo only
+        }
 
-		// register http routes and handlers
-		server.IPost("/open/api/demo", func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
-				rail.Infof("Received request, %+v", req)
-				return doSomething(rail, req)
-			})
-		})
+        // register http routes and handlers
+        server.IPost[DoSomethingReq]("/open/api/demo",
+            func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
+                rail.Infof("Received request, %+v", req)
+                return doSomething(rail, req)
+            })
+        })
 
-	// bootstrap server
-	server.BootstrapServer(os.Args)
+    // bootstrap server
+    server.BootstrapServer(os.Args)
 }
 ```
 
@@ -65,9 +64,9 @@ Convenient way to initialize a new project:
 
 ```
 mkdir myapp \
-	&& cd myapp \
-	&& curl https://raw.githubusercontent.com/CurtisNewbie/miso/main/init.sh \
-	| bash
+    && cd myapp \
+    && curl https://raw.githubusercontent.com/CurtisNewbie/miso/main/init.sh \
+    | bash
 ```
 
 ## Command Line Arguments
@@ -238,16 +237,16 @@ Since miso is mainly written for my personal projects, it indeed provides a very
 
 ```go
 func main() {
-	// ...
+    // ...
 
-	// maybe some scheduling (not distributed)
-	miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+    // maybe some scheduling (not distributed)
+    miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
-	// register routes and handlers
-	server.IPost("/my/path", myHandler)
+    // register routes and handlers
+    server.IPost("/my/path", myHandler)
 
-	// bootstrap server
-	server.BootstrapServer(os.Args)
+    // bootstrap server
+    server.BootstrapServer(os.Args)
 }
 ```
 
@@ -315,19 +314,19 @@ Rule `validated` is very special. It doesn't actually check the value of the fie
 
 ```go
 func main() {
-	// set the group name
-	task.SetScheduleGroup("myApp")
+    // set the group name
+    task.SetScheduleGroup("myApp")
 
-	// add task
-	task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c core.Rail) {
-		// ...
-	})
+    // add task
+    task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c core.Rail) {
+        // ...
+    })
 
-	// start task scheduler
-	task.StartTaskSchedulerAsync()
+    // start task scheduler
+    task.StartTaskSchedulerAsync()
 
-	// stop task scheduler gracefully
-	defer task.StopTaskScheduler()
+    // stop task scheduler gracefully
+    defer task.StopTaskScheduler()
 }
 ```
 
@@ -335,12 +334,12 @@ If `server.go` is used, this is automatically handled by `BootstrapServer(...)` 
 
 ```go
 func main() {
-	// add tasks
-	task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c core.Rail) {
-	})
+    // add tasks
+    task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c core.Rail) {
+    })
 
-	// bootstrap server
-	server.BootstrapServer(os.Args)
+    // bootstrap server
+    server.BootstrapServer(os.Args)
 }
 ```
 
