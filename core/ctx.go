@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strings"
 
@@ -18,20 +19,20 @@ func (r Rail) Logger() *logrus.Entry {
 	return r.log
 }
 
-func (r Rail) CtxValue(key string) string {
-	v := r.Ctx.Value(key)
-	if vs, ok := v.(string); ok {
-		return vs
-	}
-	return ""
+func (r Rail) CtxValue(key string) any {
+	return r.Ctx.Value(key)
+}
+
+func (r Rail) CtxValStr(key string) string {
+	return GetCtxStr(r.Ctx, key)
 }
 
 func (r Rail) TraceId() string {
-	return r.CtxValue(X_TRACEID)
+	return r.CtxValStr(X_TRACEID)
 }
 
 func (r Rail) SpanId() string {
-	return r.CtxValue(X_SPANID)
+	return r.CtxValStr(X_SPANID)
 }
 
 func (r Rail) Debugf(format string, args ...interface{}) {
@@ -131,22 +132,20 @@ func NewRail(ctx context.Context) Rail {
 	return Rail{Ctx: ctx, log: TraceLogger(ctx)}
 }
 
+// Get value from context as a string
+//
+// int*, unit*, float* types are formatted as string, other types are returned as empty string
 func GetCtxStr(ctx context.Context, key string) string {
 	v := ctx.Value(key)
 	if v == nil {
 		return ""
 	}
-	sv, ok := v.(string)
-	if ok {
-		return sv
-	}
-	return ""
-}
-
-func AnyRail(cs ...Rail) Rail {
-	if len(cs) > 0 {
-		return cs[0]
-	} else {
-		return EmptyRail()
+	switch tv := v.(type) {
+	case string:
+		return tv
+	case int, uint, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64:
+		return fmt.Sprintf("%v", v)
+	default:
+		return ""
 	}
 }

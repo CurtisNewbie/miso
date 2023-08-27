@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -844,56 +843,4 @@ func DispatchOk(c *gin.Context) {
 // Dispatch an ok response with data in json format
 func DispatchOkWData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, core.OkRespWData(data))
-}
-
-// Extract userNo from request header
-//
-// return:
-//
-//	userNo, isOk
-func UserNo(c *gin.Context) (string, bool) {
-	id := c.GetHeader("userno")
-	if id == "" {
-		return "", false
-	}
-	return id, true
-}
-
-// Extract user id from request header
-//
-// return:
-//
-//	userId, isOk
-func UserId(c *gin.Context) (string, bool) {
-	id := c.GetHeader("id")
-	if id == "" {
-		return "", false
-	}
-	return id, true
-}
-
-/* Extract core.User from request headers */
-func ExtractUser(c *gin.Context) core.User {
-	idHeader := c.GetHeader("id")
-	if idHeader == "" {
-		return core.NilUser()
-	}
-	id, err := strconv.Atoi(idHeader)
-	if err != nil {
-		id = 0
-	}
-
-	return core.User{
-		UserId:   id,
-		Username: c.GetHeader("username"),
-		UserNo:   c.GetHeader("userno"),
-		RoleNo:   c.GetHeader("roleno"),
-		IsNil:    false,
-	}
-}
-
-// Check whether current request is authenticated
-func IsRequestAuthenticated(c *gin.Context) bool {
-	id := c.GetHeader("id")
-	return id != ""
 }
