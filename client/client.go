@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/curtisnewbie/miso/consul"
 	"github.com/curtisnewbie/miso/core"
@@ -19,6 +20,14 @@ const (
 	formEncoded     = "application/x-www-form-urlencoded"
 	applicationJson = "application/json"
 	contentType     = "Content-Type"
+
+	httpProto  = "http://"
+	httpsProto = "https://"
+)
+
+var (
+	_serviceRegistry         serviceRegistry = nil
+	_initServiceRegistryOnce sync.Once
 )
 
 // Helper type for handling HTTP responses
@@ -98,7 +107,7 @@ func ReadGnResp[T any](tr *TResponse) (core.GnResp[T], error) {
 type TClient struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
-	ExecCtx    core.Rail         // execute context
+	ExecCtx    core.Rail           // execute context
 	Ctx        context.Context     // context provided by caller
 	QueryParam map[string][]string // query parameters
 
@@ -114,22 +123,25 @@ type TClient struct {
 //
 // If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
 func (t *TClient) prepReqUrl() (string, error) {
-	if t.discoverService && consul.IsConsulClientInitialized() {
-		url, err := consul.ResolveRequestUrl(t.serviceName, t.Url)
-		if err != nil {
-			return "", err
+	if t.discoverService {
+		sr := getServiceRegistry()
+		if sr != nil {
+			url, err := sr.resolve(t.serviceName, t.Url)
+			if err != nil {
+				return "", err
+			}
+			url = concatQueryParam(url, t.QueryParam)
+			return url, nil
 		}
-		url = concatQueryParam(url, t.QueryParam)
-		return url, nil
 	}
 
 	url := t.Url
 	if t.serviceName != "" {
 		host := resolveHostFromProp(t.serviceName)
 		if host != "" {
-			url = "http://" + host + t.Url
+			url = httpProto + host + t.Url
 		} else {
-			url = "http://" + t.serviceName + t.Url
+			url = httpsProto + t.serviceName + t.Url
 		}
 	}
 
@@ -505,4 +517,30 @@ func resolveHostFromProp(name string) string {
 		return ""
 	}
 	return core.GetPropStr("client.host." + name)
+}
+
+// Service registry
+type serviceRegistry interface {
+
+	// Resolve request url dynamically based on the services discovered
+	resolve(service string, relativeUrl string) (string, error)
+}
+
+// Service registry based on Consul
+type consulServiceRegistry struct {
+}
+
+func (r consulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
+	return consul.ResolveRequestUrl(service, relativeUrl)
+}
+
+// Get service registry, may return nil if none is available
+func getServiceRegistry() serviceRegistry {
+	_initServiceRegistryOnce.Do(func() {
+		if consul.IsConsulClientInitialized() {
+			_serviceRegistry = consulServiceRegistry{}
+		}
+	})
+
+	return _serviceRegistry
 }
