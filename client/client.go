@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,13 +27,13 @@ const (
 )
 
 var (
-	_serviceRegistry         serviceRegistry = nil
+	_serviceRegistry         ServiceRegistry = nil
 	_initServiceRegistryOnce sync.Once
 )
 
 // Helper type for handling HTTP responses
 type TResponse struct {
-	ExecCtx    core.Rail
+	Rail       core.Rail
 	Ctx        context.Context
 	Resp       *http.Response
 	RespHeader http.Header
@@ -107,9 +108,9 @@ func ReadGnResp[T any](tr *TResponse) (core.GnResp[T], error) {
 type TClient struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
-	ExecCtx    core.Rail           // execute context
 	Ctx        context.Context     // context provided by caller
 	QueryParam map[string][]string // query parameters
+	Rail       core.Rail           // rail
 
 	client          *http.Client
 	serviceName     string
@@ -123,30 +124,22 @@ type TClient struct {
 //
 // If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
 func (t *TClient) prepReqUrl() (string, error) {
-	if t.discoverService {
-		sr := getServiceRegistry()
-		if sr != nil {
-			url, err := sr.resolve(t.serviceName, t.Url)
-			if err != nil {
-				return "", err
-			}
-			url = concatQueryParam(url, t.QueryParam)
-			return url, nil
-		}
-	}
-
 	url := t.Url
-	if t.serviceName != "" {
-		host := resolveHostFromProp(t.serviceName)
-		if host != "" {
-			url = httpProto + host + t.Url
-		} else {
-			url = httpsProto + t.serviceName + t.Url
+
+	if t.discoverService {
+		sr := GetServiceRegistry()
+		if sr == nil {
+			return "", errors.New("service discovery enabled, but no service registry available")
 		}
+
+		resolved, err := sr.resolve(t.serviceName, t.Url)
+		if err != nil {
+			return "", err
+		}
+		url = resolved
 	}
 
-	url = concatQueryParam(url, t.QueryParam)
-	return url, nil
+	return concatQueryParam(url, t.QueryParam), nil
 }
 
 /*
@@ -214,7 +207,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 }
 
 func (t *TClient) errorResponse(e error) *TResponse {
-	return &TResponse{Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx}
+	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail}
 }
 
 // Send POST request
@@ -305,7 +298,9 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	AddHeaders(req, t.Headers)
 
-	t.ExecCtx.Debugf("%v %v, Headers: %v", req.Method, req.URL, req.Header)
+	if t.Rail.IsDebugLogEnabled() {
+		t.Rail.Debugf("%v %v, Headers: %v", req.Method, req.URL, req.Header)
+	}
 
 	r, e := t.client.Do(req) // send HTTP requests
 
@@ -316,7 +311,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		respHeaders = r.Header
 	}
 
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, ExecCtx: t.ExecCtx, StatusCode: statusCode, RespHeader: respHeaders}
+	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
@@ -376,8 +371,8 @@ func NewDynTClient(ec core.Rail, relUrl string, serviceName string) *TClient {
 }
 
 // Create new TClient
-func NewTClient(ec core.Rail, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: ec.Ctx, client: client, ExecCtx: ec, QueryParam: map[string][]string{}}
+func NewTClient(rail core.Rail, url string, client *http.Client) *TClient {
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: client, Rail: rail, QueryParam: map[string][]string{}}
 }
 
 // Concatenate url and query parameters
@@ -520,7 +515,7 @@ func resolveHostFromProp(name string) string {
 }
 
 // Service registry
-type serviceRegistry interface {
+type ServiceRegistry interface {
 
 	// Resolve request url dynamically based on the services discovered
 	resolve(service string, relativeUrl string) (string, error)
@@ -534,12 +529,38 @@ func (r consulServiceRegistry) resolve(service string, relativeUrl string) (stri
 	return consul.ResolveRequestUrl(service, relativeUrl)
 }
 
-// Get service registry, may return nil if none is available
-func getServiceRegistry() serviceRegistry {
+// Service registry backed by loaded configuration
+type hardcodedServiceRegistry struct {
+}
+
+func (r hardcodedServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
+	if core.IsBlankStr(service) {
+		return "", fmt.Errorf("service name is required")
+	}
+
+	host := resolveHostFromProp(service)
+	if host != "" {
+		return httpProto + host + relativeUrl, nil
+	}
+
+	return httpProto + service + relativeUrl, nil // use the
+}
+
+// Get service registry
+//
+// Service registry initialization is lazy, don't call this for global var
+func GetServiceRegistry() ServiceRegistry {
 	_initServiceRegistryOnce.Do(func() {
+		rail := core.EmptyRail()
 		if consul.IsConsulClientInitialized() {
 			_serviceRegistry = consulServiceRegistry{}
+			rail.Debug("Detected Consul client, using consulServiceRegistry")
+			return
 		}
+
+		// fallback to configuration based
+		_serviceRegistry = hardcodedServiceRegistry{}
+		rail.Debug("No dynamic service registry detected, fallback to hardcodedServiceRegistry")
 	})
 
 	return _serviceRegistry

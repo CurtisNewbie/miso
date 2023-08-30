@@ -86,6 +86,18 @@ func (r Rail) Fatal(args ...interface{}) {
 	r.log.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
+func (r Rail) IsDebugLogEnabled() bool {
+	return r.log.Logger.IsLevelEnabled(logrus.DebugLevel)
+}
+
+func (r Rail) IsLogLevelEnabled(level string) bool {
+	ll, ok := ParseLogLevel(level)
+	if !ok {
+		return false
+	}
+	return r.log.Logger.IsLevelEnabled(ll)
+}
+
 func (r Rail) WithCtxVal(key string, val string) Rail {
 	ctx := context.WithValue(r.Ctx, key, val) //lint:ignore SA1029 keys must be exposed for user to use
 	return NewRail(ctx)
