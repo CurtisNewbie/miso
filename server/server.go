@@ -760,7 +760,7 @@ func BuildRail(c *gin.Context) core.Rail {
 // value and error returned by handler are automically wrapped in a Resp object
 func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		rail := core.NewRail(c)
+		rail := BuildRail(c)
 
 		// bind to payload boject
 		var req Req
