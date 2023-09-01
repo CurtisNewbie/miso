@@ -134,6 +134,7 @@ func (t *TClient) prepReqUrl() (string, error) {
 
 		resolved, err := sr.resolve(t.serviceName, t.Url)
 		if err != nil {
+			t.Rail.Errorf("Resolve service address failed, service: %v, %v", t.serviceName, err)
 			return "", err
 		}
 		url = resolved
