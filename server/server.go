@@ -675,15 +675,6 @@ func MarkServerShuttingDown() {
 	shuttingDown = true
 }
 
-// Perf Middleware that calculates how much time each request takes
-func PerfMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		start := time.Now()
-		ctx.Next() // continue the handler chain
-		core.TraceLogger(ctx).Infof("%-6v %-60v [%s]", ctx.Request.Method, ctx.Request.RequestURI, time.Since(start))
-	}
-}
-
 // Tracing Middleware
 func TraceMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
