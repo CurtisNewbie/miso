@@ -24,3 +24,11 @@ func TestPadNum(t *testing.T) {
 		t.Fatalf("actual: %v, expected: %v", res, expected)
 	}
 }
+
+func TestMaxLenStr(t *testing.T) {
+	s := "123456"
+	TestEqual(t, MaxLenStr(s, 3), "123")
+
+	s = "12"
+	TestEqual(t, MaxLenStr(s, 3), "12")
+}
