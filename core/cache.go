@@ -6,5 +6,9 @@ func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, er
 	if v, ok := lc[key]; ok {
 		return v, nil
 	}
-	return supplier(key)
+	v, err := supplier(key)
+	if err == nil {
+		lc[key] = v
+	}
+	return v, err
 }
