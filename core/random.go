@@ -99,6 +99,11 @@ func doRand(n int, set []rune) string {
 	return string(b)
 }
 
+// pick random rune from the slice
+func Pick(set []rune) rune {
+	return set[rand.Intn(len(set))]
+}
+
 // generate a random sequence number with specified prefix
 func GenNo(prefix string) string {
 	return GenNoL(prefix, DEFAULT_LEN)
