@@ -35,6 +35,11 @@ func NewWebErr(msg string, internalMsg ...string) *WebError {
 	return &WebError{Msg: msg, hasCode: false, InternalMsg: im}
 }
 
+// Create new WebError with internal msg
+func NewInterErr(msg string, interMsgFmt string, args ...any) *WebError {
+	return &WebError{Msg: msg, hasCode: false, InternalMsg: fmt.Sprintf(interMsgFmt, args...)}
+}
+
 // Create new WebError with code
 func NewWebErrCode(code string, msg string, internalMsg ...string) *WebError {
 	var im string
