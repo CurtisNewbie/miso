@@ -20,6 +20,7 @@ import (
 const (
 	formEncoded     = "application/x-www-form-urlencoded"
 	applicationJson = "application/json"
+	textPlain       = "text/plain"
 	contentType     = "Content-Type"
 
 	httpProto  = "http://"
@@ -300,7 +301,17 @@ func (t *TClient) send(req *http.Request) *TResponse {
 	AddHeaders(req, t.Headers)
 
 	if t.Rail.IsDebugLogEnabled() {
-		t.Rail.Debugf("%v %v, Headers: %v", req.Method, req.URL, req.Header)
+		loggedBody := "***"
+		if req.Body != nil {
+			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
+				if copy, err := req.GetBody(); err == nil {
+					if buf, e := io.ReadAll(copy); e == nil {
+						loggedBody = string(buf)
+					}
+				}
+			}
+		}
+		t.Rail.Debugf("%v %v, Headers: %v, Body: %v", req.Method, req.URL, req.Header, loggedBody)
 	}
 
 	r, e := t.client.Do(req) // send HTTP requests
@@ -313,6 +324,11 @@ func (t *TClient) send(req *http.Request) *TResponse {
 	}
 
 	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+}
+
+func contentTypeLoggable(contentType string) bool {
+	lct := strings.ToLower(contentType)
+	return lct == applicationJson || lct == textPlain
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
