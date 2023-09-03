@@ -4,7 +4,10 @@ package core
 type Predicate[T any] func(t T) bool
 
 // Convert t to v
-type Converter[T any, V any] func (t T) (V, error)
+type Converter[T any, V any] func(t T) (V, error)
 
 // Consume t
-type Consumer[T any] func(t T) (error)
+type Consumer[T any] func(t T) error
+
+// Peek t
+type Peek[T any] func(t T) T
