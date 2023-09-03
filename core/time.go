@@ -137,8 +137,8 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t *ETime) String() string {
-	return time.Time(*t).String()
+func (t ETime) String() string {
+	return time.Time(t).String()
 }
 
 func (t *ETime) ToTime() time.Time {
