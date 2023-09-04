@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -27,4 +28,14 @@ func deepestStuff() error {
 func TestTraceableError(t *testing.T) {
 	err := TraceErrf(doSomething(), "doSomething failed, %v", ":(")
 	logrus.Infof("%v", err)
+}
+
+func TestNewWebErr(t *testing.T) {
+	err := NewWebErr("unknown error", "nope, that is not unknown error, that is %v", "fake error")
+	TestEqual(t, fmt.Sprintf("nope, that is not unknown error, that is %v", "fake error"), err.InternalMsg)
+	TestEqual(t, "unknown error", err.Error())
+
+	err = NewWebErr("unknown error", "nope, that is not unknown error, that is %v")
+	TestEqual(t, "nope, that is not unknown error, that is %v", err.InternalMsg)
+	TestEqual(t, "unknown error", err.Error())
 }

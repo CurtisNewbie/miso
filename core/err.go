@@ -27,17 +27,15 @@ func (e *WebError) Error() string {
 }
 
 // Create new WebError
-func NewWebErr(msg string, internalMsg ...string) *WebError {
+func NewWebErr(msg string, args ...any) *WebError {
 	var im string
-	if len(internalMsg) > 0 {
-		im = internalMsg[0]
+	l := len(args)
+	if l > 1 {
+		im = fmt.Sprintf(fmt.Sprintf("%v", args[0]), args[1:]...)
+	} else if l > 0 {
+		im = fmt.Sprintf("%v", args[0])
 	}
 	return &WebError{Msg: msg, hasCode: false, InternalMsg: im}
-}
-
-// Create new WebError with internal msg
-func NewInterErr(msg string, interMsgFmt string, args ...any) *WebError {
-	return &WebError{Msg: msg, hasCode: false, InternalMsg: fmt.Sprintf(interMsgFmt, args...)}
 }
 
 // Create new WebError with code
