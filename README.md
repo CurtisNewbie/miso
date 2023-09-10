@@ -293,7 +293,7 @@ type ValidatedDummy struct {
 
 This is basically asking that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
 
-Rule `validated` is very special. It doesn't actually check the value of the field, instead, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value referred is validated. Else, if the field is just a simple struct, then the struct is scanned.
+Rule `validated` is very special. It doesn't actually check the value of the field, instead, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value dereferenced to is validated. If the field is just a simple struct, then the struct is scanned.
 
 ### Distributed Task Scheduling
 
