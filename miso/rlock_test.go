@@ -14,7 +14,7 @@ func TestRLock(t *testing.T) {
 
 	c := EmptyRail()
 	LoadConfigFromFile("../app-conf-dev.yml", c)
-	if _, e := InitRedisFromProp(); e != nil {
+	if _, e := InitRedisFromProp(c); e != nil {
 		t.Fatal(e)
 	}
 

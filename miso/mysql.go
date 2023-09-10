@@ -65,8 +65,8 @@ This func looks for following props:
 	"mysql.port"
 	"mysql.connection.parameters"
 */
-func InitMySqlFromProp() error {
-	return InitMySql(GetPropStr(PROP_MYSQL_USER),
+func InitMySQLFromProp() error {
+	return InitMySQL(GetPropStr(PROP_MYSQL_USER),
 		GetPropStr(PROP_MYSQL_PASSWORD),
 		GetPropStr(PROP_MYSQL_DATABASE),
 		GetPropStr(PROP_MYSQL_HOST),
@@ -75,7 +75,7 @@ func InitMySqlFromProp() error {
 }
 
 // Create new MySQL connection
-func NewConn(user string, password string, dbname string, host string, port string, connParam string) (*gorm.DB, error) {
+func NewMySQLConn(user string, password string, dbname string, host string, port string, connParam string) (*gorm.DB, error) {
 	rail := EmptyRail()
 	connParam = strings.TrimSpace(connParam)
 	if connParam != "" && !strings.HasPrefix(connParam, "?") {
@@ -116,8 +116,8 @@ Init Handle to the database
 
 If mysql client has been initialized, current func call will be ignored.
 */
-func InitMySql(user string, password string, dbname string, host string, port string, connParam string) error {
-	if IsMySqlInitialized() {
+func InitMySQL(user string, password string, dbname string, host string, port string, connParam string) error {
+	if IsMySQLInitialized() {
 		return nil
 	}
 
@@ -128,7 +128,7 @@ func InitMySql(user string, password string, dbname string, host string, port st
 		return nil
 	}
 
-	conn, enc := NewConn(user, password, dbname, host, port, connParam)
+	conn, enc := NewMySQLConn(user, password, dbname, host, port, connParam)
 	if enc != nil {
 		return TraceErrf(enc, "failed to create mysql connection, %v:%v/%v", user, password, dbname)
 	}
@@ -141,12 +141,12 @@ Get MySQL Connection.
 
 If client is not yet created, func InitMySqlFromProp(...) is called to initialize a new one. For any error occurred, it panics.
 */
-func GetConn() *gorm.DB {
+func GetMySQL() *gorm.DB {
 	mysqlp.mu.RLock()
 	defer mysqlp.mu.RUnlock()
 
 	if mysqlp.mysql == nil {
-		if e := InitMySqlFromProp(); e != nil {
+		if e := InitMySQLFromProp(); e != nil {
 			panic(fmt.Sprintf("MySQL Connection hasn't been initialized, even failed to initialize one with func InitMySqlFromProp(), no choice but to panic, %v", e))
 		}
 	}
@@ -159,61 +159,8 @@ func GetConn() *gorm.DB {
 }
 
 // Check whether mysql client is initialized
-func IsMySqlInitialized() bool {
+func IsMySQLInitialized() bool {
 	mysqlp.mu.RLock()
 	defer mysqlp.mu.RUnlock()
 	return mysqlp.mysql != nil
-}
-
-type PageRes[T any] struct {
-	Page    Paging `json:"pagingVo"`
-	Payload []T         `json:"payload"`
-}
-
-type QueryCondition[Req any] func(tx *gorm.DB, req Req) *gorm.DB
-type BaseQuery func(tx *gorm.DB) *gorm.DB
-type SelectQuery func(tx *gorm.DB) *gorm.DB
-type QueryPageParam[T any, V any] struct {
-	ReqPage         Paging       // Reques Paging Param
-	Req             T                 // Request Object
-	AddSelectQuery  SelectQuery       // Add SELECT query
-	GetBaseQuery    BaseQuery         // Base query
-	ApplyConditions QueryCondition[T] // Where Conditions
-	ForEach         Peek[V]
-}
-
-func QueryPage[Req any, Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Req, Res]) (PageRes[Res], error) {
-	var res PageRes[Res]
-	var total int
-
-	// count
-	t := p.ApplyConditions(p.GetBaseQuery(tx), p.Req).Select("COUNT(*)").Scan(&total)
-	if t.Error != nil {
-		return res, t.Error
-	}
-
-	var payload []Res
-
-	// the actual page
-	if total > 0 {
-		t = p.AddSelectQuery(
-			p.ApplyConditions(
-				p.GetBaseQuery(tx),
-				p.Req,
-			),
-		).Offset(p.ReqPage.GetOffset()).
-			Limit(p.ReqPage.GetLimit()).
-			Scan(&payload)
-		if t.Error != nil {
-			return res, t.Error
-		}
-
-		if p.ForEach != nil {
-			for i := range payload {
-				payload[i] = p.ForEach(payload[i])
-			}
-		}
-	}
-
-	return PageRes[Res]{Payload: payload, Page: RespPage(p.ReqPage, total)}, nil
 }

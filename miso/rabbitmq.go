@@ -48,7 +48,7 @@ var (
 		},
 	}
 
-	_listeners            []Listener
+	_listeners            []RabbitListener
 	_bindingRegistration  []BindingRegistration
 	_queueRegistration    []QueueRegistration
 	_exchangeRegistration []ExchangeRegistration
@@ -86,13 +86,13 @@ type ExchangeRegistration struct {
 }
 
 /* Is RabbitMQ Enabled */
-func IsEnabled() bool {
+func RabbitMQEnabled() bool {
 	return GetPropBool(PROP_RABBITMQ_ENABLED)
 }
 
-// Listener of Queue
-type Listener interface {
-	Queue() string                                 // return name of the queue
+// RabbitListener of Queue
+type RabbitListener interface {
+	Queue() string                          // return name of the queue
 	Handle(rail Rail, payload string) error // handle message
 	Concurrency() int
 }
@@ -216,14 +216,14 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 //
 // For any message that the listener is unable to process (returning error), the message is redelivered indefinitively
 // with a delay of 10 seconds until the message is finally processed without error.
-func AddListener(listener Listener) {
+func AddRabbitListener(listener RabbitListener) {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 	_listeners = append(_listeners, listener)
 }
 
 // Declare queue using the provided channel immediately
-func DeclareQueue(ch *amqp.Channel, queue QueueRegistration) error {
+func DeclareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 	if e != nil {
 		return TraceErrf(e, "failed to declare queue, %v", queue.Name)
@@ -237,22 +237,22 @@ func redeliverQueue(exchange string, routingKey string) string {
 }
 
 // Declare binding on client initialization
-func RegisterBinding(b BindingRegistration) {
+func RegisterRabbitBinding(b BindingRegistration) {
 	_bindingRegistration = append(_bindingRegistration, b)
 }
 
 // Declare queue on client initialization
-func RegisterQueue(q QueueRegistration) {
+func RegisterRabbitQueue(q QueueRegistration) {
 	_queueRegistration = append(_queueRegistration, q)
 }
 
 // Declare exchange on client initialization
-func RegisterExchange(e ExchangeRegistration) {
+func RegisterRabbitExchange(e ExchangeRegistration) {
 	_exchangeRegistration = append(_exchangeRegistration, e)
 }
 
 // Declare binding using the provided channel immediately
-func DeclareBinding(ch *amqp.Channel, bind BindingRegistration) error {
+func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	if bind.RoutingKey == "" {
 		bind.RoutingKey = "#"
 	}
@@ -283,7 +283,7 @@ func DeclareBinding(ch *amqp.Channel, bind BindingRegistration) error {
 }
 
 // Declare exchange using the provided channel immediately
-func DeclareExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
+func DeclareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
 	if exchange.Kind == "" {
 		exchange.Kind = "direct"
 	}
@@ -307,8 +307,8 @@ When connection is lost, it will attmpt to reconnect to recover, unless the give
 
 To register listener, please use 'AddListener' func.
 */
-func StartRabbitMqClient(ctx context.Context) error {
-	notifyCloseChan, err := initClient(ctx)
+func StartRabbitMqClient(rail Rail, ctx context.Context) error {
+	notifyCloseChan, err := initRabbitClient(rail, ctx)
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func StartRabbitMqClient(ctx context.Context) error {
 			if isInitial {
 				isInitial = false
 			} else {
-				notifyCloseChan, err = initClient(ctx)
+				notifyCloseChan, err = initRabbitClient(rail, ctx)
 				if err != nil {
 					logrus.Errorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
@@ -334,7 +334,7 @@ func StartRabbitMqClient(ctx context.Context) error {
 				continue
 			// context is done, close the connection, and exit
 			case <-ctx.Done():
-				if err := ClientDisconnect(); err != nil {
+				if err := RabbitDisconnect(rail); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
 				return
@@ -346,14 +346,14 @@ func StartRabbitMqClient(ctx context.Context) error {
 }
 
 // Disconnect from RabbitMQ server
-func ClientDisconnect() error {
+func RabbitDisconnect(rail Rail) error {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 	if _conn == nil {
 		return nil
 	}
 
-	logrus.Info("Disconnecting RabbitMQ Connection")
+	rail.Info("Disconnecting RabbitMQ Connection")
 	_pubWg.Wait()
 	err := _conn.Close()
 	_conn = nil
@@ -361,7 +361,7 @@ func ClientDisconnect() error {
 }
 
 // Try to establish Connection
-func tryEstablishConn() (*amqp.Connection, error) {
+func tryConnRabbit(rail Rail) (*amqp.Connection, error) {
 	if _conn != nil && !_conn.IsClosed() {
 		return _conn, nil
 	}
@@ -374,7 +374,7 @@ func tryEstablishConn() (*amqp.Connection, error) {
 	port := GetPropInt(PROP_RABBITMQ_PORT)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
-	logrus.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
+	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
 	cn, e := amqp.DialConfig(dialUrl, c)
 	if e != nil {
 		return nil, e
@@ -384,25 +384,25 @@ func tryEstablishConn() (*amqp.Connection, error) {
 }
 
 // Declare Queus, Exchanges, and Bindings
-func declareComponents(ch *amqp.Channel) error {
+func decRabbitComp(ch *amqp.Channel) error {
 	if ch == nil {
 		return errMissingChannel
 	}
 
 	for _, queue := range _queueRegistration {
-		if err := DeclareQueue(ch, queue); err != nil {
+		if err := DeclareRabbitQueue(ch, queue); err != nil {
 			return err
 		}
 	}
 
 	for _, exchange := range _exchangeRegistration {
-		if err := DeclareExchange(ch, exchange); err != nil {
+		if err := DeclareRabbitExchange(ch, exchange); err != nil {
 			return err
 		}
 	}
 
 	for _, bind := range _bindingRegistration {
-		if err := DeclareBinding(ch, bind); err != nil {
+		if err := DeclareRabbitBinding(ch, bind); err != nil {
 			return err
 		}
 	}
@@ -411,12 +411,12 @@ func declareComponents(ch *amqp.Channel) error {
 }
 
 // Create new channel from the established connection
-func NewChan() (*amqp.Channel, error) {
+func NewRabbitChan() (*amqp.Channel, error) {
 	return newChan()
 }
 
 // Check if connection exists
-func Connected() bool {
+func RabbitConnected() bool {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 	return _conn != nil
@@ -427,13 +427,12 @@ Init RabbitMQ Client
 
 return notifyCloseChannel for connection and error
 */
-func initClient(ctx context.Context) (chan *amqp.Error, error) {
-	rail := NewRail(ctx)
+func initRabbitClient(rail Rail, ctx context.Context) (chan *amqp.Error, error) {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 
 	// Establish connection if necessary
-	conn, err := tryEstablishConn()
+	conn, err := tryConnRabbit(rail)
 	if err != nil {
 		return nil, err
 	}
@@ -448,14 +447,14 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	}
 
 	// queues, exchanges, bindings
-	e = declareComponents(ch)
+	e = decRabbitComp(ch)
 	if e != nil {
 		return nil, e
 	}
 	ch.Close()
 
 	// consumers
-	if e = bootstrapConsumers(conn); e != nil {
+	if e = startRabbitConsumers(conn); e != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", e)
 		return nil, TraceErrf(e, "failed to create consumer")
 	}
@@ -464,7 +463,7 @@ func initClient(ctx context.Context) (chan *amqp.Error, error) {
 	return notifyCloseChan, nil
 }
 
-func bootstrapConsumers(conn *amqp.Connection) error {
+func startRabbitConsumers(conn *amqp.Connection) error {
 	qos := GetPropInt(PROP_RABBITMQ_CONSUMER_QOS)
 
 	for _, v := range _listeners {
@@ -499,7 +498,7 @@ func bootstrapConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func startListening(msgCh <-chan amqp.Delivery, listener Listener, routineNo int) {
+func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
 		logrus.Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {

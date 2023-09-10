@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/go-redis/redis"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -29,21 +28,20 @@ func init() {
 }
 
 /*
-	Check if redis is enabled
+Check if redis is enabled
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"redis.enabled"
-
+	"redis.enabled"
 */
 func IsRedisEnabled() bool {
 	return GetPropBool(PROP_REDIS_ENABLED)
 }
 
 /*
-	Get Redis client
+Get Redis client
 
-	Must call InitRedis(...) method before this method.
+Must call InitRedis(...) method before this method.
 */
 func GetRedis() *redis.Client {
 	redisp.mu.RLock()
@@ -69,33 +67,44 @@ func GetStr(key string) (string, error) {
 }
 
 /*
-	Initialize redis client from configuration
+Initialize redis client from configuration
 
-	If redis client has been initialized, current func call will be ignored.
+If redis client has been initialized, current func call will be ignored.
 
-	This func looks for following prop:
+This func looks for following prop:
 
-		"redis.address"
-		"redis.port"
-		"redis.username"
-		"redis.password"
-		"redis.database"
+	"redis.address"
+	"redis.port"
+	"redis.username"
+	"redis.password"
+	"redis.database"
 */
-func InitRedisFromProp() (*redis.Client, error) {
+func InitRedisFromProp(rail Rail) (*redis.Client, error) {
 	return InitRedis(
-		GetPropStr(PROP_REDIS_ADDRESS),
-		GetPropStr(PROP_REDIS_PORT),
-		GetPropStr(PROP_REDIS_USERNAME),
-		GetPropStr(PROP_REDIS_PASSWORD),
-		GetPropInt(PROP_REDIS_DATABASE))
+		rail,
+		RedisConnParam{
+			Address:  GetPropStr(PROP_REDIS_ADDRESS),
+			Port:     GetPropStr(PROP_REDIS_PORT),
+			Username: GetPropStr(PROP_REDIS_USERNAME),
+			Password: GetPropStr(PROP_REDIS_PASSWORD),
+			Db:       GetPropInt(PROP_REDIS_DATABASE),
+		})
+}
+
+type RedisConnParam struct {
+	Address  string
+	Port     string
+	Username string
+	Password string
+	Db       int
 }
 
 /*
-	Initialize redis client
+Initialize redis client
 
-	If redis client has been initialized, current func call will be ignored
+If redis client has been initialized, current func call will be ignored
 */
-func InitRedis(address string, port string, username string, password string, db int) (*redis.Client, error) {
+func InitRedis(rail Rail, p RedisConnParam) (*redis.Client, error) {
 	if IsRedisClientInitialized() {
 		return GetRedis(), nil
 	}
@@ -107,11 +116,11 @@ func InitRedis(address string, port string, username string, password string, db
 		return redisp.client, nil
 	}
 
-	logrus.Infof("Connecting to redis '%v:%v', database: %v", address, port, db)
+	rail.Infof("Connecting to redis '%v:%v', database: %v", p.Address, p.Port, p.Db)
 	var rdb *redis.Client = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", address, port),
-		Password: password,
-		DB:       db,
+		Addr:     fmt.Sprintf("%s:%s", p.Address, p.Port),
+		Password: p.Password,
+		DB:       p.Db,
 	})
 
 	cmd := rdb.Ping()
@@ -119,7 +128,7 @@ func InitRedis(address string, port string, username string, password string, db
 		return nil, TraceErrf(cmd.Err(), "ping redis failed")
 	}
 
-	logrus.Info("Redis connection initialized")
+	rail.Info("Redis connection initialized")
 	redisp.client = rdb
 	return rdb, nil
 }

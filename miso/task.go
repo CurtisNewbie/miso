@@ -44,7 +44,7 @@ func init() {
 	SetDefProp(PROP_TASK_SCHEDULING_ENABLED, true)
 
 	// set initial state
-	setState(taskInitState)
+	setTaskState(taskInitState)
 }
 
 // Check if it's disabled (based on configuration, doesn't affect method call)
@@ -54,16 +54,16 @@ func IsTaskSchedulingDisabled() bool {
 
 // Check whether task taskduler has pending tasks, waiting to be started
 func IsTaskSchedulerPending() bool {
-	return getState() == taskPendingState
+	return getTaskState() == taskPendingState
 }
 
 // Atomically set state (should lock first before invoke this func)
-func setState(newState int32) {
+func setTaskState(newState int32) {
 	atomic.StoreInt32(&_state, int32(newState))
 }
 
 // Atomically load state (it's save to read without locking)
-func getState() int32 {
+func getTaskState() int32 {
 	return atomic.LoadInt32(&_state)
 }
 
@@ -72,10 +72,10 @@ func enableTaskScheduling() bool {
 	coreMut.Lock()
 	defer coreMut.Unlock()
 
-	if getState() != taskPendingState {
+	if getTaskState() != taskPendingState {
 		return false
 	}
-	setState(taskStartedState)
+	setTaskState(taskStartedState)
 
 	proposedGroup := GetPropStr(PROP_TASK_SCHEDULING_GROUP)
 	if proposedGroup == "" {
@@ -107,8 +107,8 @@ func SetScheduleGroup(groupName string) {
 }
 
 // Check if current node is master
-func IsMasterNode() bool {
-	key := getMasterNodeLockKey()
+func IsTaskMaster() bool {
+	key := getTaskMasterKey()
 	val, e := GetStr(key)
 	if e != nil {
 		logrus.Errorf("check is master failed: %v", e)
@@ -122,7 +122,7 @@ func IsMasterNode() bool {
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its appGroup name
 // we only try to become the master node in our cluster
-func getMasterNodeLockKey() string {
+func getTaskMasterKey() string {
 	return "task:master:group:" + group
 }
 
@@ -137,17 +137,17 @@ func getMasterNodeLockKey() string {
 //
 //	task.taskduleDistributedTask("0/1 * * * * ?", true, myTask)
 func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
-	if getState() == taskInitState {
+	if getTaskState() == taskInitState {
 		coreMut.Lock()
-		if getState() == taskInitState {
-			setState(taskPendingState)
+		if getTaskState() == taskInitState {
+			setTaskState(taskPendingState)
 		}
 		coreMut.Unlock()
 	}
 
 	return ScheduleCron(cron, withSeconds, func() {
 		ec := EmptyRail()
-		if !tryBecomeMaster() {
+		if !tryTaskMaster() {
 			ec.Debug("Not master node, skip taskduled task")
 			return
 		}
@@ -183,7 +183,7 @@ func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, ta
 
 // Start distributed taskduler asynchronously
 func StartTaskSchedulerAsync() {
-	if getState() != taskPendingState {
+	if getTaskState() != taskPendingState {
 		return
 	}
 
@@ -194,7 +194,7 @@ func StartTaskSchedulerAsync() {
 
 // Start distributed taskduler, current routine is blocked
 func StartTaskSchedulerBlocking() {
-	if getState() != taskPendingState {
+	if getTaskState() != taskPendingState {
 		return
 	}
 
@@ -208,25 +208,25 @@ func StopTaskScheduler() {
 	coreMut.Lock()
 	defer coreMut.Unlock()
 
-	if getState() != taskStartedState {
+	if getTaskState() != taskStartedState {
 		return
 	}
-	setState(taskStoppedState)
+	setTaskState(taskStoppedState)
 
 	StopScheduler()
 
-	stopMasterLockRefreshingTicker()
+	stopTaskMasterLockTicker()
 	releaseMasterNodeLock()
 
 	// if we are previously the master node, the lock is refreshed every 5 seconds with the ttl 1m
 	// this should be pretty enough to release the lock before the expiration
-	if IsMasterNode() {
-		GetRedis().Expire(getMasterNodeLockKey(), 1*time.Second) // release master node after 1s
+	if IsTaskMaster() {
+		GetRedis().Expire(getTaskMasterKey(), 1*time.Second) // release master node after 1s
 	}
 }
 
 // Start refreshing master lock ticker
-func startMasterLockRefreshingTicker() {
+func startTaskMasterLockTicker() {
 	masterTickerMu.Lock()
 	defer masterTickerMu.Unlock()
 
@@ -237,7 +237,7 @@ func startMasterLockRefreshingTicker() {
 	masterTicker = time.NewTicker(5 * time.Second)
 	go func(c <-chan time.Time) {
 		for {
-			refreshMasterLockTtl()
+			refreshTaskMasterLock()
 			<-c
 		}
 	}(masterTicker.C)
@@ -253,7 +253,7 @@ func releaseMasterNodeLock() {
 		call('DEL', KEYS[1])
 		return 1;
 	end;
-	return 0;`, []string{getMasterNodeLockKey()}, nodeId)
+	return 0;`, []string{getTaskMasterKey()}, nodeId)
 	if cmd.Err() != nil {
 		logrus.Errorf("Failed to release master node lock, %v", cmd.Err())
 		return
@@ -262,7 +262,7 @@ func releaseMasterNodeLock() {
 }
 
 // Stop refreshing master lock ticker
-func stopMasterLockRefreshingTicker() {
+func stopTaskMasterLockTicker() {
 	masterTickerMu.Lock()
 	defer masterTickerMu.Unlock()
 	if masterTicker == nil {
@@ -274,20 +274,20 @@ func stopMasterLockRefreshingTicker() {
 }
 
 // Refresh master lock key ttl
-func refreshMasterLockTtl() error {
-	return GetRedis().Expire(getMasterNodeLockKey(), defMstLockTtl).Err()
+func refreshTaskMasterLock() error {
+	return GetRedis().Expire(getTaskMasterKey(), defMstLockTtl).Err()
 }
 
 // Try to become master node
-func tryBecomeMaster() bool {
+func tryTaskMaster() bool {
 	coreMut.Lock()
 	defer coreMut.Unlock()
 
-	if IsMasterNode() {
+	if IsTaskMaster() {
 		return true
 	}
 
-	bcmd := GetRedis().SetNX(getMasterNodeLockKey(), nodeId, defMstLockTtl)
+	bcmd := GetRedis().SetNX(getTaskMasterKey(), nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
 		logrus.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false
@@ -296,9 +296,9 @@ func tryBecomeMaster() bool {
 	isMaster := bcmd.Val()
 	if isMaster {
 		logrus.Infof("Elected to be the master node for group: '%s'", group)
-		startMasterLockRefreshingTicker()
+		startTaskMasterLockTicker()
 	} else {
-		stopMasterLockRefreshingTicker()
+		stopTaskMasterLockTicker()
 	}
 	return isMaster
 }

@@ -87,145 +87,14 @@ func init() {
 	SetDefProp(PROP_SERVER_PERF_ENABLED, false)
 	SetDefProp(PROP_SERVER_PROPAGATE_INBOUND_TRACE, true)
 
-	// mysql
-	RegisterBootstrapCallback(func(_ context.Context, rail Rail) error {
-		if !IsMySqlEnabled() {
-			return nil
-		}
-
-		defer DebugTimeOp(rail, time.Now(), "Connect MySQL")
-		if e := InitMySqlFromProp(); e != nil {
-			return TraceErrf(e, "Failed to establish connection to MySQL")
-		}
-		return nil
-	})
-
-	// redis
-	RegisterBootstrapCallback(func(_ context.Context, rail Rail) error {
-		if !IsRedisEnabled() {
-			return nil
-		}
-		defer DebugTimeOp(rail, time.Now(), "Connect Redis")
-		if _, e := InitRedisFromProp(); e != nil {
-			return TraceErrf(e, "Failed to establish connection to Redis")
-		}
-		return nil
-	})
-
-	// rabbitmq
-	RegisterBootstrapCallback(func(ctx context.Context, rail Rail) error {
-		if !IsEnabled() {
-			return nil
-		}
-		defer DebugTimeOp(rail, time.Now(), "Connect RabbitMQ")
-		if e := StartRabbitMqClient(ctx); e != nil {
-			return TraceErrf(e, "Failed to establish connection to RabbitMQ")
-		}
-		return nil
-	})
-
-	// prometheus
-	RegisterBootstrapCallback(func(ctx context.Context, rail Rail) error {
-		if !GetPropBool(PROP_METRICS_ENABLED) || !GetPropBool(PROP_SERVER_ENABLED) {
-			return nil
-		}
-
-		defer DebugTimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
-		handler := PrometheusHandler()
-		RawGet(GetPropStr(PROP_PROM_ROUTE), func(c *gin.Context, rail Rail) {
-			handler.ServeHTTP(c.Writer, c.Request)
-		})
-		return nil
-	})
-
-	// web server
-	RegisterBootstrapCallback(func(ctx context.Context, rail Rail) error {
-		if !GetPropBool(PROP_SERVER_ENABLED) {
-			return nil
-		}
-		defer DebugTimeOp(rail, time.Now(), "Prepare HTTP server")
-		rail.Info("Starting HTTP server")
-
-		// Load propagation keys for tracing
-		LoadPropagationKeyProp(rail)
-
-		// always set to releaseMode
-		gin.SetMode(gin.ReleaseMode)
-
-		// gin engine
-		engine := gin.New()
-		engine.Use(TraceMiddleware())
-
-		if !IsProdMode() && IsDebugLevel() {
-			engine.Use(gin.Logger()) // gin's default logger for debugging
-		}
-
-		if GetPropBool(PROP_SERVER_PERF_ENABLED) {
-			engine.Use(PerfMiddleware())
-		}
-
-		// register customer recovery func
-		engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
-
-		// register consul health check
-		if IsConsulEnabled() && GetPropBool(PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK) {
-			registerRouteForConsulHealthcheck(engine)
-		}
-
-		// register http routes
-		registerServerRoutes(rail, engine)
-
-		// start the http server
-		server := createHttpServer(engine)
-		rail.Infof("Serving HTTP on %s", server.Addr)
-		go startHttpServer(ctx, server)
-
-		AddShutdownHook(func() { shutdownHttpServer(server) })
-		return nil
-	})
-
-	// consul
-	RegisterBootstrapCallback(func(_ context.Context, rail Rail) error {
-		if !IsConsulEnabled() {
-			return nil
-		}
-		defer DebugTimeOp(rail, time.Now(), "Connect Consul")
-
-		// create consul client
-		if _, e := GetConsulClient(); e != nil {
-			return TraceErrf(e, "Failed to establish connection to Consul")
-		}
-
-		// deregister on shutdown
-		AddShutdownHook(func() {
-			if e := DeregisterService(); e != nil {
-				rail.Errorf("Failed to deregister on Consul, %v", e)
-			}
-		})
-
-		if e := RegisterService(); e != nil {
-			return TraceErrf(e, "Failed to register on Consul")
-		}
-		return nil
-	})
-
-	// cron schedulers and distributed task scheduler
-	RegisterBootstrapCallback(func(ctx context.Context, rail Rail) error {
-		defer DebugTimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
-
-		// distributed task scheduler has pending tasks and is enabled
-		if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
-			StartTaskSchedulerAsync()
-			rail.Info("Distributed Task Scheduler started")
-			AddShutdownHook(func() { StopTaskScheduler() })
-		} else if HasScheduler() {
-			// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
-			StartSchedulerAsync()
-			rail.Info("Scheduler started")
-			AddShutdownHook(func() { StopScheduler() })
-		}
-		return nil
-	})
+	// bootstrap callbacks
+	RegisterBootstrapCallback(MySQLBootstrap)
+	RegisterBootstrapCallback(RedisBootstrap)
+	RegisterBootstrapCallback(RabbitBootstrap)
+	RegisterBootstrapCallback(PrometheusBootstrap)
+	RegisterBootstrapCallback(WebServerBootstrap)
+	RegisterBootstrapCallback(ConsulBootstrap)
+	RegisterBootstrapCallback(SchedulerBootstrap)
 }
 
 // Register shutdown hook, hook should never panic
@@ -827,4 +696,137 @@ func DispatchOk(c *gin.Context) {
 // Dispatch an ok response with data in json format
 func DispatchOkWData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, OkRespWData(data))
+}
+
+func MySQLBootstrap(_ context.Context, rail Rail) error {
+	if !IsMySqlEnabled() {
+		return nil
+	}
+
+	defer DebugTimeOp(rail, time.Now(), "Connect MySQL")
+	if e := InitMySQLFromProp(); e != nil {
+		return TraceErrf(e, "Failed to establish connection to MySQL")
+	}
+	return nil
+}
+
+func WebServerBootstrap(ctx context.Context, rail Rail) error {
+	if !GetPropBool(PROP_SERVER_ENABLED) {
+		return nil
+	}
+	defer DebugTimeOp(rail, time.Now(), "Prepare HTTP server")
+	rail.Info("Starting HTTP server")
+
+	// Load propagation keys for tracing
+	LoadPropagationKeyProp(rail)
+
+	// always set to releaseMode
+	gin.SetMode(gin.ReleaseMode)
+
+	// gin engine
+	engine := gin.New()
+	engine.Use(TraceMiddleware())
+
+	if !IsProdMode() && IsDebugLevel() {
+		engine.Use(gin.Logger()) // gin's default logger for debugging
+	}
+
+	if GetPropBool(PROP_SERVER_PERF_ENABLED) {
+		engine.Use(PerfMiddleware())
+	}
+
+	// register customer recovery func
+	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
+
+	// register consul health check
+	if IsConsulEnabled() && GetPropBool(PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK) {
+		registerRouteForConsulHealthcheck(engine)
+	}
+
+	// register http routes
+	registerServerRoutes(rail, engine)
+
+	// start the http server
+	server := createHttpServer(engine)
+	rail.Infof("Serving HTTP on %s", server.Addr)
+	go startHttpServer(ctx, server)
+
+	AddShutdownHook(func() { shutdownHttpServer(server) })
+	return nil
+}
+
+func PrometheusBootstrap(ctx context.Context, rail Rail) error {
+	if !GetPropBool(PROP_METRICS_ENABLED) || !GetPropBool(PROP_SERVER_ENABLED) {
+		return nil
+	}
+
+	defer DebugTimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
+	handler := PrometheusHandler()
+	RawGet(GetPropStr(PROP_PROM_ROUTE), func(c *gin.Context, rail Rail) {
+		handler.ServeHTTP(c.Writer, c.Request)
+	})
+	return nil
+}
+
+func RabbitBootstrap(ctx context.Context, rail Rail) error {
+	if !RabbitMQEnabled() {
+		return nil
+	}
+	defer DebugTimeOp(rail, time.Now(), "Connect RabbitMQ")
+	if e := StartRabbitMqClient(rail, ctx); e != nil {
+		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
+	}
+	return nil
+}
+
+func ConsulBootstrap(_ context.Context, rail Rail) error {
+	if !IsConsulEnabled() {
+		return nil
+	}
+	defer DebugTimeOp(rail, time.Now(), "Connect Consul")
+
+	// create consul client
+	if _, e := GetConsulClient(); e != nil {
+		return TraceErrf(e, "Failed to establish connection to Consul")
+	}
+
+	// deregister on shutdown
+	AddShutdownHook(func() {
+		if e := DeregisterService(); e != nil {
+			rail.Errorf("Failed to deregister on Consul, %v", e)
+		}
+	})
+
+	if e := RegisterService(); e != nil {
+		return TraceErrf(e, "Failed to register on Consul")
+	}
+	return nil
+}
+
+func RedisBootstrap(_ context.Context, rail Rail) error {
+	if !IsRedisEnabled() {
+		return nil
+	}
+	defer DebugTimeOp(rail, time.Now(), "Connect Redis")
+	if _, e := InitRedisFromProp(rail); e != nil {
+		return TraceErrf(e, "Failed to establish connection to Redis")
+	}
+	return nil
+}
+
+func SchedulerBootstrap(ctx context.Context, rail Rail) error {
+	defer DebugTimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
+
+	// distributed task scheduler has pending tasks and is enabled
+	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
+		StartTaskSchedulerAsync()
+		rail.Info("Distributed Task Scheduler started")
+		AddShutdownHook(func() { StopTaskScheduler() })
+	} else if HasScheduler() {
+		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
+		StartSchedulerAsync()
+		rail.Info("Scheduler started")
+		AddShutdownHook(func() { StopScheduler() })
+	}
+	return nil
 }

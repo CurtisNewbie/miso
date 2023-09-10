@@ -1,14 +1,21 @@
 package miso
 
+import "gorm.io/gorm"
+
+const (
+	DEF_PAGE_LIMIT = 30
+)
+
 type Paging struct {
 	Limit int `json:"limit"`
 	Page  int `json:"page"`
 	Total int `json:"total"`
 }
 
-const (
-	DEF_PAGE_LIMIT = 30
-)
+type PageRes[T any] struct {
+	Page    Paging `json:"pagingVo"`
+	Payload []T    `json:"payload"`
+}
 
 func (p Paging) GetPage() int {
 	if p.Page < 1 {
@@ -39,4 +46,52 @@ func RespPage(reqPage Paging, total int) Paging {
 		Page:  reqPage.GetPage(),
 		Total: total,
 	}
+}
+
+type QueryCondition[Req any] func(tx *gorm.DB, req Req) *gorm.DB
+type BaseQuery func(tx *gorm.DB) *gorm.DB
+type SelectQuery func(tx *gorm.DB) *gorm.DB
+type QueryPageParam[T any, V any] struct {
+	ReqPage         Paging            // Reques Paging Param
+	Req             T                 // Request Object
+	AddSelectQuery  SelectQuery       // Add SELECT query
+	GetBaseQuery    BaseQuery         // Base query
+	ApplyConditions QueryCondition[T] // Where Conditions
+	ForEach         Peek[V]
+}
+
+func QueryPage[Req any, Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Req, Res]) (PageRes[Res], error) {
+	var res PageRes[Res]
+	var total int
+
+	// count
+	t := p.ApplyConditions(p.GetBaseQuery(tx), p.Req).Select("COUNT(*)").Scan(&total)
+	if t.Error != nil {
+		return res, t.Error
+	}
+
+	var payload []Res
+
+	// the actual page
+	if total > 0 {
+		t = p.AddSelectQuery(
+			p.ApplyConditions(
+				p.GetBaseQuery(tx),
+				p.Req,
+			),
+		).Offset(p.ReqPage.GetOffset()).
+			Limit(p.ReqPage.GetLimit()).
+			Scan(&payload)
+		if t.Error != nil {
+			return res, t.Error
+		}
+
+		if p.ForEach != nil {
+			for i := range payload {
+				payload[i] = p.ForEach(payload[i])
+			}
+		}
+	}
+
+	return PageRes[Res]{Payload: payload, Page: RespPage(p.ReqPage, total)}, nil
 }

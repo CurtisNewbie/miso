@@ -35,7 +35,7 @@ var (
 	// server list polling subscription
 	serverListPSub = &serverListPollingSubscription{sub: nil}
 
-	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
+	ErrConsulServiceInstanceNotFound = errors.New("unable to find any available service instance")
 )
 
 type serverListPollingSubscription struct {
@@ -136,7 +136,7 @@ func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, er
 	if err != nil {
 		return nil, err
 	}
-	serviceListHolder.Instances[name] = ValuesOfMap(&services)
+	serviceListHolder.Instances[name] = MapValues(&services)
 	return services, err
 }
 
@@ -149,14 +149,14 @@ This func will first read the cache, trying to resolve the services address
 without actually requesting consul, and only when the cache missed, it then
 requests the consul.
 
-Return consul.ErrServiceInstanceNotFound if no instance available
+Return ErrServiceInstanceNotFound if no instance available
 */
-func ResolveRequestUrl(serviceName string, relUrl string) (string, error) {
+func ConsulResolveRequestUrl(serviceName string, relUrl string) (string, error) {
 	if !strings.HasPrefix(relUrl, "/") {
 		relUrl = "/" + relUrl
 	}
 
-	address, err := ResolveServiceAddress(serviceName)
+	address, err := ConsulResolveServiceAddr(serviceName)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +173,7 @@ requests the consul
 
 Return consul.ErrServiceInstanceNotFound if no instance available
 */
-func ResolveServiceAddress(name string) (string, error) {
+func ConsulResolveServiceAddr(name string) (string, error) {
 	serviceListHolder.mu.Lock()
 	defer serviceListHolder.mu.Unlock()
 
@@ -186,9 +186,9 @@ func ResolveServiceAddress(name string) (string, error) {
 
 	// no instances available
 	if instances == nil || len(instances) < 1 {
-		return "", ErrServiceInstanceNotFound
+		return "", ErrConsulServiceInstanceNotFound
 	}
-	return extractServiceAddress(RandomOne(instances)), nil
+	return extractServiceAddress(SliceGetOne(instances)), nil
 }
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
@@ -210,7 +210,7 @@ func FetchServiceAddress(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	agent := RandomOne(ValuesOfMap(&services))
+	agent := SliceGetOne(MapValues(&services))
 	return extractServiceAddress(agent), nil
 }
 

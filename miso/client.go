@@ -540,7 +540,7 @@ type consulServiceRegistry struct {
 }
 
 func (r consulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
-	return ResolveRequestUrl(service, relativeUrl)
+	return ConsulResolveRequestUrl(service, relativeUrl)
 }
 
 // Service registry backed by loaded configuration

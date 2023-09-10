@@ -13,7 +13,7 @@ func TestTaskScheduling(t *testing.T) {
 	LoadConfigFromFile("../app-conf-dev.yml", c)
 	SetProp(".enabled", "true")
 
-	if _, e := InitRedisFromProp(); e != nil {
+	if _, e := InitRedisFromProp(c); e != nil {
 		t.Fatal(e)
 	}
 

@@ -22,7 +22,7 @@ func TestPollServiceListInstances(t *testing.T) {
 		return
 	}
 
-	address, err := ResolveServiceAddress("file-service")
+	address, err := ConsulResolveServiceAddr("file-service")
 	if err != nil {
 		t.Error(err)
 		return
@@ -41,14 +41,14 @@ func TestResolveServiceAddress(t *testing.T) {
 		return
 	}
 
-	address, err := ResolveServiceAddress("file-service")
+	address, err := ConsulResolveServiceAddr("file-service")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	logrus.Infof("(first try) Address resolved: %s", address)
 
-	address, err = ResolveServiceAddress("file-service")
+	address, err = ConsulResolveServiceAddr("file-service")
 	if err != nil {
 		t.Error(err)
 		return

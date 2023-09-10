@@ -28,7 +28,7 @@ var (
 
 // --------------------------------------------------
 
-func EncodeToken(claims jwt.MapClaims, exp time.Duration) (string, error) {
+func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
 	pk, err := loadPrivateKey()
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func EncodeToken(claims jwt.MapClaims, exp time.Duration) (string, error) {
 	return token.SignedString(pk)
 }
 
-func DecodeToken(token string) (ParsedJwt, error) {
+func JwtDecode(token string) (ParsedJwt, error) {
 	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return loadPublicKey()
 	}, ValidateIssuer())

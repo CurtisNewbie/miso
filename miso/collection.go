@@ -84,7 +84,7 @@ func (s *Set[T]) Size() int {
 
 // To string
 func (s *Set[T]) String() string {
-	var ks []T = KeysOfMap(&s.Keys)
+	var ks []T = MapKeys(&s.Keys)
 	lks := len(ks)
 	st := "{ "
 	for i, k := range ks {
@@ -112,7 +112,7 @@ func NewSet[T comparable]() Set[T] {
 }
 
 // Select random one from the slice
-func RandomOne[T any](items []*T) *T {
+func SliceGetOne[T any](items []*T) *T {
 	l := len(items)
 	if l < 1 {
 		return nil
@@ -121,7 +121,7 @@ func RandomOne[T any](items []*T) *T {
 }
 
 // Copy values of map
-func ValuesOfMap[K comparable, V any](m *map[K]V) []V {
+func MapValues[K comparable, V any](m *map[K]V) []V {
 	var values []V = []V{}
 	for k := range *m {
 		values = append(values, (*m)[k])
@@ -130,12 +130,12 @@ func ValuesOfMap[K comparable, V any](m *map[K]V) []V {
 }
 
 // Copy keys of set
-func KeysOfSet[T comparable](s Set[T]) []T {
+func SetToSlice[T comparable](s Set[T]) []T {
 	return s.CopyKeys()
 }
 
 // Get keys from map
-func KeysOfMap[T comparable, V any](m *map[T]V) []T {
+func MapKeys[T comparable, V any](m *map[T]V) []T {
 	var keys []T = []T{}
 	for k := range *m {
 		keys = append(keys, k)
@@ -144,7 +144,7 @@ func KeysOfMap[T comparable, V any](m *map[T]V) []T {
 }
 
 // Get first from map
-func GetFirstInMap[K comparable, V any](m *map[K]*V) *V {
+func MapFirst[K comparable, V any](m *map[K]*V) *V {
 	for k := range *m {
 		return (*m)[k]
 	}
@@ -157,5 +157,5 @@ func Distinct(l []string) []string {
 	for _, v := range l {
 		s.Add(v)
 	}
-	return KeysOfSet(s)
+	return SetToSlice(s)
 }

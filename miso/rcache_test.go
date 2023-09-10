@@ -11,9 +11,9 @@ type RCacheDummy struct {
 }
 
 func TestLazyObjRcache(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
-	if _, e := InitRedisFromProp(); e != nil {
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
 	keypre := "test:lazy:obj:rcache:key:"
@@ -21,49 +21,49 @@ func TestLazyObjRcache(t *testing.T) {
 	cache := NewLazyObjectRCache[RCacheDummy](exp)
 
 	supplier := func() (RCacheDummy, bool, error) {
-		c.Info("Called supplier")
+		rail.Info("Called supplier")
 		return RCacheDummy{
 			Name: "Banana",
 			Age:  12,
 		}, true, nil
 	}
 
-	cache.Del(c, keypre+"1")
+	cache.Del(rail, keypre+"1")
 
-	dummy, ok, err := cache.GetElse(c, keypre+"1", supplier)
+	dummy, ok, err := cache.GetElse(rail, keypre+"1", supplier)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Infof("1. %+v", dummy)
+	rail.Infof("1. %+v", dummy)
 
-	dummy, ok, err = cache.GetElse(c, keypre+"1", supplier)
+	dummy, ok, err = cache.GetElse(rail, keypre+"1", supplier)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Infof("2. %+v", dummy)
+	rail.Infof("2. %+v", dummy)
 
-	cache.Del(c, keypre+"1")
+	cache.Del(rail, keypre+"1")
 
-	dummy, ok, err = cache.GetElse(c, keypre+"1", supplier)
+	dummy, ok, err = cache.GetElse(rail, keypre+"1", supplier)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ok {
 		t.Fatal("!ok")
 	}
-	c.Infof("3. %+v", dummy)
+	rail.Infof("3. %+v", dummy)
 }
 
 func TestRCache(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
-	if _, e := InitRedisFromProp(); e != nil {
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
 
@@ -72,7 +72,7 @@ func TestRCache(t *testing.T) {
 
 	rcache := NewRCache(exp)
 
-	val, e := rcache.Get(c, "absent key")
+	val, e := rcache.Get(rail, "absent key")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -80,12 +80,12 @@ func TestRCache(t *testing.T) {
 		t.Fatal(val)
 	}
 
-	e = rcache.Put(c, keypre+"1", "2")
+	e = rcache.Put(rail, keypre+"1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e = rcache.GetElse(c, keypre+"1", nil)
+	val, e = rcache.GetElse(rail, keypre+"1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -95,20 +95,20 @@ func TestRCache(t *testing.T) {
 }
 
 func TestLKazyRCache(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
-	InitRedisFromProp()
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	InitRedisFromProp(rail)
 
 	keypre := "test:rcache:key:"
 	exp := 60 * time.Second
 
 	rcache := NewLazyRCache(exp)
-	e := rcache.Put(c, keypre+"1", "2")
+	e := rcache.Put(rail, keypre+"1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e := rcache.GetElse(c, keypre+"1", nil)
+	val, e := rcache.GetElse(rail, keypre+"1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}

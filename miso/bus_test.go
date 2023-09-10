@@ -13,7 +13,7 @@ func preTest() {
 
 func TestDeclareEventBus(t *testing.T) {
 	preTest()
-	DeclareEventBus("test-bus")
+	NewEventBus("test-bus")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	if e := StartRabbitMqClient(ctx); e != nil {
@@ -37,7 +37,7 @@ func TestSendToEventBus(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	if e := SendToEventBus(EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
+	if e := PubEventBus(EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
 		t.Fatal(e)
 	}
 
@@ -48,7 +48,7 @@ func TestSendToEventBus(t *testing.T) {
 func TestSubscribeEventBus(t *testing.T) {
 	preTest()
 
-	SubscribeEventBus("test-bus", 1, func(rail Rail, t Dummy) error {
+	SubEventBus("test-bus", 1, func(rail Rail, t Dummy) error {
 		rail.Infof("received dummy: %+v", t)
 		return nil
 	})

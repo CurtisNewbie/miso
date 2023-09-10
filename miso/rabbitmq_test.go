@@ -26,28 +26,28 @@ func jsonMsgHandler(rail Rail, payload RabbitDummy) error {
 }
 
 func TestInitClient(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
 
-	AddListener(JsonMsgListener[RabbitDummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
-	AddListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
+	AddRabbitListener(JsonMsgListener[RabbitDummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
+	AddRabbitListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
 
-	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
-	RegisterQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
-	RegisterQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
 
-	RegisterExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
-	RegisterExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
-	RegisterExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
 
-	RegisterBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
-	RegisterBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
-	RegisterBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, e := initClient(ctx)
+	_, e := initRabbitClient(rail, ctx)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -55,7 +55,7 @@ func TestInitClient(t *testing.T) {
 	// make sure that the consumer is created before we cancel the context
 	time.Sleep(time.Second * 1)
 	cancel()
-	if e := ClientDisconnect(); e != nil {
+	if e := RabbitDisconnect(rail); e != nil {
 		t.Fatal(e)
 	}
 
@@ -64,26 +64,26 @@ func TestInitClient(t *testing.T) {
 }
 
 func TestPublishMessage(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
 	logrus.SetLevel(logrus.DebugLevel)
 
-	RegisterQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
-	RegisterQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
-	RegisterQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
+	RegisterRabbitQueue(QueueRegistration{Name: "dummy-queue", Durable: true})
 
-	RegisterExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
-	RegisterExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
-	RegisterExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "my-exchange-one", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "my-exchange-two", Kind: "direct", Durable: true})
+	RegisterRabbitExchange(ExchangeRegistration{Name: "dummy-exchange", Kind: "direct", Durable: true})
 
-	RegisterBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
-	RegisterBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
-	RegisterBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "dummy-queue", RoutingKey: "#", Exchange: "dummy-exchange"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
+	RegisterRabbitBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	e := StartRabbitMqClient(ctx)
+	e := StartRabbitMqClient(rail, ctx)
 	if e != nil {
 		t.Error(e)
 	}
@@ -92,7 +92,7 @@ func TestPublishMessage(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	for i := 0; i < 10; i++ {
-		e = PublishText(c, "yo check me out", "my-exchange-one", "myKey1")
+		e = PublishText(rail, "yo check me out", "my-exchange-one", "myKey1")
 		if e != nil {
 			t.Error(e)
 		}
@@ -101,14 +101,14 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestPublishJsonMessage(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
 	logrus.SetLevel(logrus.DebugLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	e := StartRabbitMqClient(ctx)
+	e := StartRabbitMqClient(rail, ctx)
 	if e != nil {
 		t.Error(e)
 	}
@@ -119,7 +119,7 @@ func TestPublishJsonMessage(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		j := i
 		dummy := RabbitDummy{Name: fmt.Sprintf("dummy no.%v", j), Desc: "dummy with all the love"}
-		e = PublishJson(c, dummy, "dummy-exchange", "#")
+		e = PublishJson(rail, dummy, "dummy-exchange", "#")
 		if e != nil {
 			t.Error(e)
 		}
