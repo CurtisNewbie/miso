@@ -1,7 +1,6 @@
 package miso
 
 import (
-	"context"
 	"testing"
 	"time"
 )
@@ -15,8 +14,8 @@ func TestDeclareEventBus(t *testing.T) {
 	preTest()
 	NewEventBus("test-bus")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	if e := StartRabbitMqClient(ctx); e != nil {
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
 		t.Fatal(e)
 	}
 
@@ -32,8 +31,8 @@ type Dummy struct {
 func TestSendToEventBus(t *testing.T) {
 	preTest()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	if e := StartRabbitMqClient(ctx); e != nil {
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
 		t.Fatal(e)
 	}
 
@@ -53,8 +52,8 @@ func TestSubscribeEventBus(t *testing.T) {
 		return nil
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	if e := StartRabbitMqClient(ctx); e != nil {
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
 		t.Fatal(e)
 	}
 

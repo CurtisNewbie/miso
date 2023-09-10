@@ -1,12 +1,9 @@
 package miso
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type RabbitDummy struct {
@@ -26,7 +23,7 @@ func jsonMsgHandler(rail Rail, payload RabbitDummy) error {
 }
 
 func TestInitClient(t *testing.T) {
-	rail := EmptyRail()
+	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
@@ -46,8 +43,7 @@ func TestInitClient(t *testing.T) {
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	_, e := initRabbitClient(rail, ctx)
+	_, e := initRabbitClient(rail)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -59,16 +55,16 @@ func TestInitClient(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	logrus.Info("Cancelling background context")
+	rail.Info("Cancelling background context")
 	time.Sleep(time.Second * 3)
 }
 
 func TestPublishMessage(t *testing.T) {
-	rail := EmptyRail()
+	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
-	logrus.SetLevel(logrus.DebugLevel)
+	rail.SetLogLevel("debug")
 
 	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
 	RegisterRabbitQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
@@ -82,8 +78,7 @@ func TestPublishMessage(t *testing.T) {
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	e := StartRabbitMqClient(rail, ctx)
+	e := StartRabbitMqClient(rail)
 	if e != nil {
 		t.Error(e)
 	}
@@ -101,14 +96,13 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestPublishJsonMessage(t *testing.T) {
-	rail := EmptyRail()
+	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(PROP_RABBITMQ_USERNAME, "guest")
 	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
-	logrus.SetLevel(logrus.DebugLevel)
+	rail.SetLogLevel("debug")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	e := StartRabbitMqClient(rail, ctx)
+	e := StartRabbitMqClient(rail)
 	if e != nil {
 		t.Error(e)
 	}

@@ -43,6 +43,8 @@ type HttpRoute struct {
 	HandlerName string
 }
 
+type ComponentBootstrap func(rail Rail) error
+
 const (
 	OPEN_API_PREFIX = "/open/api" // merely a const value, doesn't have special meaning
 )
@@ -61,7 +63,7 @@ var (
 	shmu         sync.Mutex // mutex for shutdownHook
 
 	// server component bootstrap callbacks
-	serverBootrapCallbacks []func(ctx context.Context, r Rail) error = []func(context.Context, Rail) error{}
+	serverBootrapCallbacks []ComponentBootstrap = []ComponentBootstrap{}
 
 	// listener for events trigger before server components being bootstrapped
 	preServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
@@ -244,9 +246,9 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 	router.GET(GetPropStr(PROP_CONSUL_HEALTHCHECK_URL), DefaultHealthCheck)
 }
 
-func startHttpServer(ctx context.Context, server *http.Server) {
+func startHttpServer(rail Rail, server *http.Server) {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logrus.Fatalf("http.Server ListenAndServe: %s", err)
+		rail.Fatalf("http.Server ListenAndServe: %s", err)
 	}
 }
 
@@ -352,7 +354,7 @@ func callPreServerBootstrapListeners(rail Rail) error {
 //		}
 //		return nil
 //	})
-func RegisterBootstrapCallback(bootstrapComponent func(ctx context.Context, rail Rail) error) {
+func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 }
 
@@ -382,47 +384,50 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
-	var c Rail = EmptyRail()
+	var rail Rail = EmptyRail()
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 	AddShutdownHook(func() { MarkServerShuttingDown() })
 
-	ctx, cancel := context.WithCancel(context.Background())
+	rail, cancel := rail.WithCancel()
 	AddShutdownHook(func() { cancel() })
 
 	// default way to load configuration
-	DefaultReadConfig(args, c)
+	DefaultReadConfig(args, rail)
 
 	// configure logging
-	ConfigureLogging(c)
+	ConfigureLogging(rail)
 
 	appName := GetPropStr(PROP_APP_NAME)
 	if appName == "" {
-		c.Fatalf("Propertity '%s' is required", PROP_APP_NAME)
+		rail.Fatalf("Propertity '%s' is required", PROP_APP_NAME)
 	}
 
-	c.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
-	c.Infof("Miso Version: %s", MisoVersion)
+	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
+	rail.Infof("Miso Version: %s", MisoVersion)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	if e := callPreServerBootstrapListeners(c); e != nil {
-		c.Fatalf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
+	if e := callPreServerBootstrapListeners(rail); e != nil {
+		rail.Errorf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
+		return
 	}
 
 	// bootstrap components
 	for _, bootstrap := range serverBootrapCallbacks {
-		if e := bootstrap(ctx, c); e != nil {
-			c.Fatalf("Failed to bootstrap server component, %v", e)
+		if e := bootstrap(rail); e != nil {
+			rail.Errorf("Failed to bootstrap server component, %v", e)
+			return
 		}
 	}
 
 	end := time.Now().UnixMilli()
-	c.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
+	rail.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
-	if e := callPostServerBootstrapListeners(c); e != nil {
-		c.Fatalf("Error occurred while invoking post server bootstrap callbacks, %v", e)
+	if e := callPostServerBootstrapListeners(rail); e != nil {
+		rail.Errorf("Error occurred while invoking post server bootstrap callbacks, %v", e)
+		return
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
@@ -431,9 +436,9 @@ func BootstrapServer(args []string) {
 
 	select {
 	case sig := <-osSigQuit:
-		c.Infof("Received OS signal: %v, exiting", sig)
+		rail.Infof("Received OS signal: %v, exiting", sig)
 	case <-manualSigQuit: // or wait for maunal shutdown signal
-		c.Infof("Received manual shutdown signal, exiting")
+		rail.Infof("Received manual shutdown signal, exiting")
 	}
 }
 
@@ -698,7 +703,7 @@ func DispatchOkWData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, OkRespWData(data))
 }
 
-func MySQLBootstrap(_ context.Context, rail Rail) error {
+func MySQLBootstrap(rail Rail) error {
 	if !IsMySqlEnabled() {
 		return nil
 	}
@@ -710,7 +715,7 @@ func MySQLBootstrap(_ context.Context, rail Rail) error {
 	return nil
 }
 
-func WebServerBootstrap(ctx context.Context, rail Rail) error {
+func WebServerBootstrap(rail Rail) error {
 	if !GetPropBool(PROP_SERVER_ENABLED) {
 		return nil
 	}
@@ -749,13 +754,13 @@ func WebServerBootstrap(ctx context.Context, rail Rail) error {
 	// start the http server
 	server := createHttpServer(engine)
 	rail.Infof("Serving HTTP on %s", server.Addr)
-	go startHttpServer(ctx, server)
+	go startHttpServer(rail, server)
 
 	AddShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
 }
 
-func PrometheusBootstrap(ctx context.Context, rail Rail) error {
+func PrometheusBootstrap(rail Rail) error {
 	if !GetPropBool(PROP_METRICS_ENABLED) || !GetPropBool(PROP_SERVER_ENABLED) {
 		return nil
 	}
@@ -768,18 +773,18 @@ func PrometheusBootstrap(ctx context.Context, rail Rail) error {
 	return nil
 }
 
-func RabbitBootstrap(ctx context.Context, rail Rail) error {
+func RabbitBootstrap(rail Rail) error {
 	if !RabbitMQEnabled() {
 		return nil
 	}
 	defer DebugTimeOp(rail, time.Now(), "Connect RabbitMQ")
-	if e := StartRabbitMqClient(rail, ctx); e != nil {
+	if e := StartRabbitMqClient(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
 	}
 	return nil
 }
 
-func ConsulBootstrap(_ context.Context, rail Rail) error {
+func ConsulBootstrap(rail Rail) error {
 	if !IsConsulEnabled() {
 		return nil
 	}
@@ -803,7 +808,7 @@ func ConsulBootstrap(_ context.Context, rail Rail) error {
 	return nil
 }
 
-func RedisBootstrap(_ context.Context, rail Rail) error {
+func RedisBootstrap(rail Rail) error {
 	if !IsRedisEnabled() {
 		return nil
 	}
@@ -814,7 +819,7 @@ func RedisBootstrap(_ context.Context, rail Rail) error {
 	return nil
 }
 
-func SchedulerBootstrap(ctx context.Context, rail Rail) error {
+func SchedulerBootstrap(rail Rail) error {
 	defer DebugTimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
 
 	// distributed task scheduler has pending tasks and is enabled

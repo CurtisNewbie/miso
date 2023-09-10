@@ -307,20 +307,21 @@ When connection is lost, it will attmpt to reconnect to recover, unless the give
 
 To register listener, please use 'AddListener' func.
 */
-func StartRabbitMqClient(rail Rail, ctx context.Context) error {
-	notifyCloseChan, err := initRabbitClient(rail, ctx)
+func StartRabbitMqClient(rail Rail) error {
+	notifyCloseChan, err := initRabbitClient(rail)
 	if err != nil {
 		return err
 	}
 
 	go func(notifyCloseChan chan *amqp.Error) {
 		isInitial := true
+		doneCh := rail.Ctx.Done()
 
 		for {
 			if isInitial {
 				isInitial = false
 			} else {
-				notifyCloseChan, err = initRabbitClient(rail, ctx)
+				notifyCloseChan, err = initRabbitClient(rail)
 				if err != nil {
 					logrus.Errorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
@@ -333,7 +334,7 @@ func StartRabbitMqClient(rail Rail, ctx context.Context) error {
 			case <-notifyCloseChan:
 				continue
 			// context is done, close the connection, and exit
-			case <-ctx.Done():
+			case <-doneCh:
 				if err := RabbitDisconnect(rail); err != nil {
 					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
@@ -427,7 +428,7 @@ Init RabbitMQ Client
 
 return notifyCloseChannel for connection and error
 */
-func initRabbitClient(rail Rail, ctx context.Context) (chan *amqp.Error, error) {
+func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 

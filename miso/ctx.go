@@ -117,6 +117,12 @@ func (r Rail) NextSpan() Rail {
 	return r.WithCtxVal(X_SPANID, RandLowerAlphaNumeric(16))
 }
 
+// Create new Rail with context's CancelFunc
+func (r Rail) WithCancel() (Rail, context.CancelFunc) {
+	cc, cancel := context.WithCancel(r.Ctx)
+	return NewRail(cc), cancel
+}
+
 func getCaller(level int) *runtime.Frame {
 	pcs := make([]uintptr, level+1) // we only need the first frame
 	depth := runtime.Callers(level, pcs)
