@@ -25,10 +25,10 @@ List of integration and functionalities provided:
 ```go
 func main() {
 
-    server.PreServerBootstrap(func(rail core.Rail) error {
+    miso.PreServerBootstrap(func(rail miso.Rail) error {
 
         // prepare some event bus declaration
-        if err := bus.DeclareEventBus(demoEventBusName); err != nil {
+        if err := miso.DeclareEventBus(demoEventBusName); err != nil {
             return err
         }
 
@@ -36,8 +36,8 @@ func main() {
         miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
         // register some distributed tasks
-        err := task.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-            func(rail core.Rail) error {
+        err := miso.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+            func(miso miso.Rail) error {
                 return doSomething(rail)
             }
         )
@@ -46,15 +46,15 @@ func main() {
         }
 
         // register http routes and handlers
-        server.IPost[DoSomethingReq]("/open/api/demo",
-            func(c *gin.Context, rail core.Rail, req DoSomethingReq) (any, error) {
+        miso.IPost[DoSomethingReq]("/open/api/demo",
+            func(c *gin.Context, rail miso.Rail, req DoSomethingReq) (any, error) {
                 rail.Infof("Received request, %+v", req)
                 return doSomething(rail, req)
             })
         })
 
     // bootstrap server
-    server.BootstrapServer(os.Args)
+    miso.BootstrapServer(os.Args)
 }
 ```
 
@@ -237,32 +237,9 @@ After all `PreServerBoostrap` callbacks are invoked. Miso then starts boostrapin
 
 After all `RegisterBootstrapCallback` callbacks are invoked, Miso assumes that the server is fully bootstrapped, it then starts invoking callbacks regsitered using `server.PostServerBootstrapped(...)`.
 
-## More about the code
+### Validation
 
-### server.go
-
-Miso supports integrating with Redis, MySQL, Consul, RabbitMQ and so on. It's basically written for web application. `server.go` handles the server bootstraping, in which it helps by managing the lifecycle of the clients based on the loaded configuration.
-
-Since miso is mainly written for my personal projects, it indeed provides a very opinionated way to configure and startup the application. This follows the convention mentioned in the above sections.
-
-```go
-func main() {
-    // ...
-
-    // maybe some scheduling (not distributed)
-    miso.ScheduleCron("0 0/15 * * * *", true, myJob)
-
-    // register routes and handlers
-    server.IPost("/my/path", myHandler)
-
-    // bootstrap server
-    server.BootstrapServer(os.Args)
-}
-```
-
-### validation.go
-
-`validation.go` is used for validating parameters against some pre-defined rules. This is enabled by adding tag "validation" on the fields.
+Miso supports validating parameters against some pre-defined rules. This is enabled by adding tag `valid` on the fields. The mapped inbound request objects are always validated first before reaching to the handler function.
 
 For example,
 
@@ -272,7 +249,7 @@ type Dummy struct {
 }
 ```
 
-To validate a struct, just call `core.Validate(...)` as follows:
+To validate a struct, we can also use `miso.Validate(...)` as follows:
 
 ```go
 func TestValidate(t *testing.T) {
@@ -314,42 +291,42 @@ type ValidatedDummy struct {
 }
 ```
 
-It's required that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
+This is basically asking that the `Name` field can at most have 10 characters, and it cannot be empty (blank).
 
 Rule `validated` is very special. It doesn't actually check the value of the field, instead, it annotates that the field should be further analyzed recursively. If the field is a pointer and it's not nil, the actual value referred is validated. Else, if the field is just a simple struct, then the struct is scanned.
 
-### task.go
+### Distributed Task Scheduling
 
-`task.go` internally wraps `schedule.go` to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node is reponsible for running all the tasks.
+Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node is responsible for running all the tasks.
 
 ```go
 func main() {
     // set the group name
-    task.SetScheduleGroup("myApp")
+    miso.SetScheduleGroup("myApp")
 
     // add task
-    task.ScheduleDistributedTask("0/1 * * * * ?", true, func(c core.Rail) {
+    miso.ScheduleDistributedTask("0/1 * * * * ?", true, func(rail miso.Rail) {
         // ...
     })
 
     // start task scheduler
-    task.StartTaskSchedulerAsync()
+    miso.StartTaskSchedulerAsync()
 
     // stop task scheduler gracefully
-    defer task.StopTaskScheduler()
+    defer miso.StopTaskScheduler()
 }
 ```
 
-If `server.go` is used, this is automatically handled by `BootstrapServer(...)` func.
+The code above is automatically handled by `miso.BootstrapServer(...)` func.
 
 ```go
 func main() {
     // add tasks
-    task.ScheduleDistributedTask("0 0/15 * * * *", true, func(c core.Rail) {
+    miso.ScheduleDistributedTask("0 0/15 * * * *", true, func(rail miso.Rail) {
     })
 
     // bootstrap server
-    server.BootstrapServer(os.Args)
+    miso.BootstrapServer(os.Args)
 }
 ```
 
