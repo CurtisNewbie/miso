@@ -245,12 +245,12 @@ func startTaskMasterLockTicker() {
 
 func releaseMasterNodeLock() {
 	cmd := GetRedis().Eval(`
-	if (call('EXISTS', KEYS[1]) == 0) then
+	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
 
-	if (call('GET', KEYS[1]) == tostring(ARGV[1])) then
-		call('DEL', KEYS[1])
+	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
+		redis.call('DEL', KEYS[1])
 		return 1;
 	end;
 	return 0;`, []string{getTaskMasterKey()}, nodeId)
