@@ -32,51 +32,51 @@ func TestParseArg(t *testing.T) {
 	args[1] = "configFile=../app-conf-dev.yml"
 	DefaultReadConfig(args, EmptyRail())
 
-	if m := GetPropBool(PROP_PRODUCTION_MODE); !m {
+	if m := GetPropBool(PropProductinMode); !m {
 		t.Error(m)
 	}
 	if !IsProdMode() {
 		t.Error()
 	}
-	if s := GetPropStr(PROP_MYSQL_USER); s != "root" {
+	if s := GetPropStr(PropMySqlUser); s != "root" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_PASSWORD); s != "123456" {
+	if s := GetPropStr(PropMySqlPassword); s != "123456" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_DATABASE); s != "fileServer" {
+	if s := GetPropStr(PropMySqldatabase); s != "fileServer" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_HOST); s != "localhost" {
+	if s := GetPropStr(PropMySqlHost); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_PORT); s != "3306" {
-		t.Error(s)
-	}
-
-	if s := GetPropBool(PROP_REDIS_ENABLED); s {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_ADDRESS); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_PORT); s != "6379" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_USERNAME); s != "" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_PASSWORD); s != "" {
+	if s := GetPropStr(PropMySqlPort); s != "3306" {
 		t.Error(s)
 	}
 
-	if s := GetPropStr(PROP_SERVER_HOST); s != "localhost" {
+	if s := GetPropBool(PropRedisEnabled); s {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_SERVER_PORT); s != "8081" {
+	if s := GetPropStr(PropRedisAddress); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC); s != "5" {
+	if s := GetPropStr(PropRedisPort); s != "6379" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropRedisUsername); s != "" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropRedisPassword); s != "" {
+		t.Error(s)
+	}
+
+	if s := GetPropStr(PropServerHost); s != "localhost" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropServerPort); s != "8081" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropServerGracefulShutdownTimeSec); s != "5" {
 		t.Error(s)
 	}
 
@@ -87,22 +87,22 @@ func TestParseArg(t *testing.T) {
 		t.Error(s)
 	}
 
-	if s := GetPropStr(PROP_CONSUL_REGISTER_NAME); s != "test-service" {
+	if s := GetPropStr(PropConsuleRegisterName); s != "test-service" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_CONSUL_ADDRESS); s != "localhost:8500" {
+	if s := GetPropStr(PropConsulAddress); s != "localhost:8500" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_URL); s != "/some/health" {
+	if s := GetPropStr(PropConsulHealthcheckUrl); s != "/some/health" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_INTERVAL); s != "5s" {
+	if s := GetPropStr(PropConsulHealthCheckInterval); s != "5s" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_TIMEOUT); s != "5s" {
+	if s := GetPropStr(PropConsulHealthcheckTimeout); s != "5s" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER); s != "30s" {
+	if s := GetPropStr(PropConsulHealthCheckFailedDeregAfter); s != "30s" {
 		t.Error(s)
 	}
 
@@ -147,48 +147,48 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	args[1] = "configFile=../app-conf-test.yml"
 	DefaultReadConfig(args, EmptyRail())
 
-	t.Logf("PRODUCTION MODE: %t", GetPropBool(PROP_PRODUCTION_MODE))
+	t.Logf("PRODUCTION MODE: %t", GetPropBool(PropProductinMode))
 	t.Logf("Is PROD MODE: %t", IsProdMode())
 
-	if m := GetPropBool(PROP_PRODUCTION_MODE); m {
+	if m := GetPropBool(PropProductinMode); m {
 		t.Error(m)
 	}
 	if IsProdMode() {
 		t.Error()
 	}
-	if s := GetPropStr(PROP_MYSQL_USER); s != "root" {
+	if s := GetPropStr(PropMySqlUser); s != "root" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_PASSWORD); s != "123456" {
+	if s := GetPropStr(PropMySqlPassword); s != "123456" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_DATABASE); s != "fileServer" {
+	if s := GetPropStr(PropMySqldatabase); s != "fileServer" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_HOST); s != "localhost" {
+	if s := GetPropStr(PropMySqlHost); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_MYSQL_PORT); s != "3306" {
-		t.Error(s)
-	}
-
-	if s := GetPropStr(PROP_REDIS_ADDRESS); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_PORT); s != "6379" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_USERNAME); s != "admin" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PROP_REDIS_PASSWORD); s != "654321" {
+	if s := GetPropStr(PropMySqlPort); s != "3306" {
 		t.Error(s)
 	}
 
-	if s := GetPropStr(PROP_SERVER_HOST); s != "localhost" {
+	if s := GetPropStr(PropRedisAddress); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_SERVER_PORT); s != "8081" {
+	if s := GetPropStr(PropRedisPort); s != "6379" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropRedisUsername); s != "admin" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropRedisPassword); s != "654321" {
+		t.Error(s)
+	}
+
+	if s := GetPropStr(PropServerHost); s != "localhost" {
+		t.Error(s)
+	}
+	if s := GetPropStr(PropServerPort); s != "8081" {
 		t.Error(s)
 	}
 
@@ -199,19 +199,19 @@ func TestResolveArgForParsedConf(t *testing.T) {
 		t.Error(s)
 	}
 
-	if s := GetPropStr(PROP_CONSUL_REGISTER_NAME); s != "test-service" {
+	if s := GetPropStr(PropConsuleRegisterName); s != "test-service" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_CONSUL_ADDRESS); s != "localhost:8500" {
+	if s := GetPropStr(PropConsulAddress); s != "localhost:8500" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_URL); s != "/some/health" {
+	if s := GetPropStr(PropConsulHealthcheckUrl); s != "/some/health" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_INTERVAL); s != "5s" {
+	if s := GetPropStr(PropConsulHealthCheckInterval); s != "5s" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER); s != "30s" {
+	if s := GetPropStr(PropConsulHealthCheckFailedDeregAfter); s != "30s" {
 		t.Error(s)
 	}
 

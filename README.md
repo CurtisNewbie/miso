@@ -177,10 +177,13 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 ### Logging Configuration
 
-| property             | description              | default value |
-|----------------------|--------------------------|---------------|
-| logging.rolling.file | path to rolling log file |               |
-| logging.level        | log level                | info          |
+| property                 | description                    | default value                  |
+|--------------------------|--------------------------------|--------------------------------|
+| logging.level            | log level                      | info                           |
+| logging.rolling.file     | path to rolling log file       |                                |
+| logging.file.max-age     | max age of log files in days   | 0 (files are retained forever) |
+| logging.file.max-size    | max size of each log file      | 100                            |
+| logging.file.max-backups | max number of backup log files | 0 (all files are retained)     |
 
 ### Distributed Task Scheduling Configuration
 

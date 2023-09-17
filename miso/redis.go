@@ -19,12 +19,12 @@ type redisHolder struct {
 }
 
 func init() {
-	SetDefProp(PROP_REDIS_ENABLED, false)
-	SetDefProp(PROP_REDIS_ADDRESS, "localhost")
-	SetDefProp(PROP_REDIS_PORT, 6379)
-	SetDefProp(PROP_REDIS_USERNAME, "")
-	SetDefProp(PROP_REDIS_PASSWORD, "")
-	SetDefProp(PROP_REDIS_DATABASE, 0)
+	SetDefProp(PropRedisEnabled, false)
+	SetDefProp(PropRedisAddress, "localhost")
+	SetDefProp(PropRedisPort, 6379)
+	SetDefProp(PropRedisUsername, "")
+	SetDefProp(PropRedisPassword, "")
+	SetDefProp(PropRedisDatabas, 0)
 }
 
 /*
@@ -35,7 +35,7 @@ This func looks for following prop:
 	"redis.enabled"
 */
 func IsRedisEnabled() bool {
-	return GetPropBool(PROP_REDIS_ENABLED)
+	return GetPropBool(PropRedisEnabled)
 }
 
 /*
@@ -83,11 +83,11 @@ func InitRedisFromProp(rail Rail) (*redis.Client, error) {
 	return InitRedis(
 		rail,
 		RedisConnParam{
-			Address:  GetPropStr(PROP_REDIS_ADDRESS),
-			Port:     GetPropStr(PROP_REDIS_PORT),
-			Username: GetPropStr(PROP_REDIS_USERNAME),
-			Password: GetPropStr(PROP_REDIS_PASSWORD),
-			Db:       GetPropInt(PROP_REDIS_DATABASE),
+			Address:  GetPropStr(PropRedisAddress),
+			Port:     GetPropStr(PropRedisPort),
+			Username: GetPropStr(PropRedisUsername),
+			Password: GetPropStr(PropRedisPassword),
+			Db:       GetPropInt(PropRedisDatabas),
 		})
 }
 

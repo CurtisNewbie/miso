@@ -51,14 +51,22 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return []byte(s), nil
 }
 
+type NewRollingLogFileParam struct {
+	Filename   string // filename
+	MaxSize    int    // max file size in mb
+	MaxAge     int    // max age in day
+	MaxBackups int    // max number of files
+}
+
 // Create rolling file based logger
-func BuildRollingLogFileWriter(logFile string) io.Writer {
+func BuildRollingLogFileWriter(p NewRollingLogFileParam) io.Writer {
 	return &lumberjack.Logger{
-		Filename:  logFile,
-		MaxSize:   100, // megabytes
-		MaxAge:    15,  //days
-		LocalTime: true,
-		Compress:  false,
+		Filename:   p.Filename,
+		MaxSize:    p.MaxSize,    // megabytes
+		MaxAge:     p.MaxAge,     // days
+		MaxBackups: p.MaxBackups, // num of files
+		LocalTime:  true,
+		Compress:   false,
 	}
 }
 

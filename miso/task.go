@@ -41,7 +41,7 @@ type NamedTask = func(Rail) error
 type Task = func(Rail)
 
 func init() {
-	SetDefProp(PROP_TASK_SCHEDULING_ENABLED, true)
+	SetDefProp(PropTaskSchedulingEnabled, true)
 
 	// set initial state
 	setTaskState(taskInitState)
@@ -49,7 +49,7 @@ func init() {
 
 // Check if it's disabled (based on configuration, doesn't affect method call)
 func IsTaskSchedulingDisabled() bool {
-	return !GetPropBool(PROP_TASK_SCHEDULING_ENABLED)
+	return !GetPropBool(PropTaskSchedulingEnabled)
 }
 
 // Check whether task taskduler has pending tasks, waiting to be started
@@ -77,9 +77,9 @@ func enableTaskScheduling() bool {
 	}
 	setTaskState(taskStartedState)
 
-	proposedGroup := GetPropStr(PROP_TASK_SCHEDULING_GROUP)
+	proposedGroup := GetPropStr(ProptaskSchedulingGroup)
 	if proposedGroup == "" {
-		proposedGroup = GetPropStr(PROP_APP_NAME)
+		proposedGroup = GetPropStr(PropAppName)
 	}
 	if proposedGroup != "" {
 		group = proposedGroup

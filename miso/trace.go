@@ -39,7 +39,7 @@ func LoadPropagationKeyProp(r Rail) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
 
-	keys := GetPropStringSlice(PROP_TRACING_PROPAGATION_KEYS)
+	keys := GetPropStringSlice(PropTracingPropagationKeys)
 	for _, k := range keys {
 		propagationKeys.keys.Add(k)
 	}

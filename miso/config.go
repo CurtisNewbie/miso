@@ -22,8 +22,8 @@ var (
 )
 
 func init() {
-	SetDefProp(PROP_PROFILE, "dev")
-	SetDefProp(PROP_PRODUCTION_MODE, "false")
+	SetDefProp(PropProfile, "dev")
+	SetDefProp(PropProductinMode, "false")
 }
 
 // Set default value for the prop
@@ -118,7 +118,7 @@ func DefaultReadConfig(args []string, c Rail) {
 	SetProfile(profile)
 
 	if strings.ToLower(profile) == PRODUCTION_PROFILE_NAME {
-		SetProp(PROP_PRODUCTION_MODE, true)
+		SetProp(PropProductinMode, true)
 	}
 
 	configFile := GuessConfigFilePath(args, profile)
@@ -172,13 +172,13 @@ func LoadConfigFromFile(configFile string, r Rail) {
 
 // Get profile
 func GetProfile() (profile string) {
-	profile = GetPropStr(PROP_PROFILE)
+	profile = GetPropStr(PropProfile)
 	return
 }
 
 // Set profile
 func SetProfile(profile string) {
-	SetProp(PROP_PROFILE, profile)
+	SetProp(PropProfile, profile)
 }
 
 /*
@@ -190,7 +190,7 @@ For example, for "profile=prod", the extracted profile is "prod"
 func GuessProfile(args []string) string {
 	profile := "dev" // the default one
 
-	profile = ExtractArgValue(args, func(key string) bool { return key == PROP_PROFILE })
+	profile = ExtractArgValue(args, func(key string) bool { return key == PropProfile })
 	if strings.TrimSpace(profile) == "" {
 		profile = "dev" // the default is dev
 	}
@@ -282,10 +282,10 @@ func GetEnvElse(key string, defVal string) string {
 // if the prop value equals to true (case insensitive), then
 // true is returned else false
 func IsProdMode() bool {
-	if !ContainsProp(PROP_PRODUCTION_MODE) {
+	if !ContainsProp(PropProductinMode) {
 		return false
 	}
-	mode := GetPropBool(PROP_PRODUCTION_MODE)
+	mode := GetPropBool(PropProductinMode)
 	return mode
 }
 

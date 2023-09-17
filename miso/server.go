@@ -82,12 +82,16 @@ var (
 )
 
 func init() {
-	SetDefProp(PROP_SERVER_ENABLED, true)
-	SetDefProp(PROP_SERVER_HOST, "0.0.0.0")
-	SetDefProp(PROP_SERVER_PORT, 8080)
-	SetDefProp(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC, 5)
-	SetDefProp(PROP_SERVER_PERF_ENABLED, false)
-	SetDefProp(PROP_SERVER_PROPAGATE_INBOUND_TRACE, true)
+	SetDefProp(PropServerEnabled, true)
+	SetDefProp(PropServerHost, "0.0.0.0")
+	SetDefProp(PropServerPort, 8080)
+	SetDefProp(PropServerGracefulShutdownTimeSec, 5)
+	SetDefProp(PropServerPerfEnabled, false)
+	SetDefProp(PropServerPropagateInboundTrace, true)
+
+	SetDefProp(PropLoggingRollingFileMaxAge, 0)
+	SetDefProp(PropLoggingRollingFileMaxSize, 50)
+	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
 
 	// bootstrap callbacks
 	RegisterBootstrapCallback(MySQLBootstrap)
@@ -243,7 +247,7 @@ func addRoutesRegistar(reg routesRegistar) {
 
 // Register GIN route for consul healthcheck
 func registerRouteForConsulHealthcheck(router *gin.Engine) {
-	router.GET(GetPropStr(PROP_CONSUL_HEALTHCHECK_URL), DefaultHealthCheck)
+	router.GET(GetPropStr(PropConsulHealthcheckUrl), DefaultHealthCheck)
 }
 
 func startHttpServer(rail Rail, server *http.Server) {
@@ -253,7 +257,7 @@ func startHttpServer(rail Rail, server *http.Server) {
 }
 
 func createHttpServer(router http.Handler) *http.Server {
-	addr := fmt.Sprintf("%s:%s", GetPropStr(PROP_SERVER_HOST), GetPropStr(PROP_SERVER_PORT))
+	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
 	server := &http.Server{
 		Addr:    addr,
 		Handler: router,
@@ -265,15 +269,20 @@ func createHttpServer(router http.Handler) *http.Server {
 func ConfigureLogging(rail Rail) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if ContainsProp(PROP_LOGGING_ROLLING_FILE) {
-		loggerOut = BuildRollingLogFileWriter(GetPropStr(PROP_LOGGING_ROLLING_FILE))
+	if ContainsProp(PropLoggingRollingFile) {
+		loggerOut = BuildRollingLogFileWriter(NewRollingLogFileParam{
+			Filename:   GetPropStr(PropLoggingRollingFile),
+			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
+			MaxAge:     GetPropInt(PropLoggingRollingFileMaxAge),  //days
+			MaxBackups: GetPropInt(PropLoggingRollingFileMaxBackups),
+		})
 		loggerErrOut = loggerOut
 	}
 
 	logrus.SetOutput(loggerOut)
 
-	if HasProp(PROP_LOGGING_LEVEL) {
-		if level, ok := ParseLogLevel(GetPropStr(PROP_LOGGING_LEVEL)); ok {
+	if HasProp(PropLoggingFile) {
+		if level, ok := ParseLogLevel(GetPropStr(PropLoggingFile)); ok {
 			logrus.SetLevel(level)
 		}
 	}
@@ -399,9 +408,9 @@ func BootstrapServer(args []string) {
 	// configure logging
 	ConfigureLogging(rail)
 
-	appName := GetPropStr(PROP_APP_NAME)
+	appName := GetPropStr(PropAppName)
 	if appName == "" {
-		rail.Fatalf("Propertity '%s' is required", PROP_APP_NAME)
+		rail.Fatalf("Propertity '%s' is required", PropAppName)
 	}
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
@@ -477,7 +486,7 @@ func shutdownHttpServer(server *http.Server) {
 	logrus.Info("Shutting down http server gracefully")
 
 	// set timeout for graceful shutdown
-	timeout := GetPropInt(PROP_SERVER_GRACEFUL_SHUTDOWN_TIME_SEC)
+	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
 	if timeout <= 0 {
 		timeout = 30
 	}
@@ -574,7 +583,7 @@ func TraceMiddleware() gin.HandlerFunc {
 // However, if the Rail has attempted to overwrite it's spanId (i.e., creating new span), this newly created spanId will not
 // be reflected on the Rail created here. But this should be find, because new span is usually created for async operation.
 func BuildRail(c *gin.Context) Rail {
-	if !GetPropBool(PROP_SERVER_PROPAGATE_INBOUND_TRACE) {
+	if !GetPropBool(PropServerPropagateInboundTrace) {
 		return EmptyRail()
 	}
 
@@ -716,7 +725,7 @@ func MySQLBootstrap(rail Rail) error {
 }
 
 func WebServerBootstrap(rail Rail) error {
-	if !GetPropBool(PROP_SERVER_ENABLED) {
+	if !GetPropBool(PropServerEnabled) {
 		return nil
 	}
 	defer DebugTimeOp(rail, time.Now(), "Prepare HTTP server")
@@ -736,7 +745,7 @@ func WebServerBootstrap(rail Rail) error {
 		engine.Use(gin.Logger()) // gin's default logger for debugging
 	}
 
-	if GetPropBool(PROP_SERVER_PERF_ENABLED) {
+	if GetPropBool(PropServerPerfEnabled) {
 		engine.Use(PerfMiddleware())
 	}
 
@@ -744,7 +753,7 @@ func WebServerBootstrap(rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if IsConsulEnabled() && GetPropBool(PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK) {
+	if IsConsulEnabled() && GetPropBool(PropConsulRegisterDefaultHealthcheck) {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
@@ -761,13 +770,13 @@ func WebServerBootstrap(rail Rail) error {
 }
 
 func PrometheusBootstrap(rail Rail) error {
-	if !GetPropBool(PROP_METRICS_ENABLED) || !GetPropBool(PROP_SERVER_ENABLED) {
+	if !GetPropBool(PropMetricsEnabled) || !GetPropBool(PropServerEnabled) {
 		return nil
 	}
 
 	defer DebugTimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
 	handler := PrometheusHandler()
-	RawGet(GetPropStr(PROP_PROM_ROUTE), func(c *gin.Context, rail Rail) {
+	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
 		handler.ServeHTTP(c.Writer, c.Request)
 	})
 	return nil

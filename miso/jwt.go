@@ -34,7 +34,7 @@ func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
 		return "", err
 	}
 
-	claims["iss"] = GetPropStr(PROP_JWT_ISSUER)
+	claims["iss"] = GetPropStr(PropJwtIssue)
 	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -72,11 +72,11 @@ func loadPublicKey() (any, error) {
 	pubKeyRwmu.Lock()
 	defer pubKeyRwmu.Unlock()
 
-	if !HasProp(PROP_JWT_PUBLIC_KEY) {
+	if !HasProp(PropJwtPublicKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := GetPropStr(PROP_JWT_PUBLIC_KEY)
+	k := GetPropStr(PropJwtPublicKey)
 	pk, err := LoadPubKey(k)
 	if err != nil {
 		EmptyRail().Errorf("Failed to load public key, %v", err)
@@ -102,11 +102,11 @@ func loadPrivateKey() (any, error) {
 		return privKey, nil
 	}
 
-	if !HasProp(PROP_JWT_PRIVATE_KEY) {
+	if !HasProp(PropJwtPrivateKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := GetPropStr(PROP_JWT_PRIVATE_KEY)
+	k := GetPropStr(PropJwtPrivateKey)
 	pk, err := LoadPrivKey(k)
 	if err != nil {
 		EmptyRail().Errorf("Failed to load private key, %v", err)
@@ -118,7 +118,7 @@ func loadPrivateKey() (any, error) {
 }
 
 func ValidateIssuer() jwt.ParserOption {
-	iss := GetPropStr(PROP_JWT_ISSUER)
+	iss := GetPropStr(PropJwtIssue)
 	if iss == "" {
 		return func(p *jwt.Parser) {}
 	}

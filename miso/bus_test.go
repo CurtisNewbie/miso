@@ -6,8 +6,8 @@ import (
 )
 
 func preTest() {
-	SetProp(PROP_RABBITMQ_USERNAME, "guest")
-	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
+	SetProp(PropRabbitMqUsername, "guest")
+	SetProp(PropRabbitMqPassword, "guest")
 }
 
 func TestDeclareEventBus(t *testing.T) {

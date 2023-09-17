@@ -11,7 +11,7 @@ func TestBootstrapServer(t *testing.T) {
 	args := make([]string, 2)
 	logrus.SetLevel(logrus.DebugLevel)
 
-	SetProp(PROP_APP_NAME, "test-app")
+	SetProp(PropAppName, "test-app")
 
 	go func() {
 		time.Sleep(5 * time.Second)

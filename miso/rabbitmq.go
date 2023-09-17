@@ -58,13 +58,13 @@ var (
 )
 
 func init() {
-	SetDefProp(PROP_RABBITMQ_ENABLED, false)
-	SetDefProp(PROP_RABBITMQ_HOST, "localhost")
-	SetDefProp(PROP_RABBITMQ_PORT, 5672)
-	SetDefProp(PROP_RABBITMQ_USERNAME, "")
-	SetDefProp(PROP_RABBITMQ_PASSWORD, "")
-	SetDefProp(PROP_RABBITMQ_VHOST, "")
-	SetDefProp(PROP_RABBITMQ_CONSUMER_QOS, DEFAULT_QOS)
+	SetDefProp(PropRabbitMqEnabled, false)
+	SetDefProp(PropRabbitMqHost, "localhost")
+	SetDefProp(PropRabbitMqPort, 5672)
+	SetDefProp(PropRabbitMqUsername, "")
+	SetDefProp(PropRabbitMqPassword, "")
+	SetDefProp(PropRabbitMqVhost, "")
+	SetDefProp(PropRabbitMqConsumerQos, DEFAULT_QOS)
 }
 
 type BindingRegistration struct {
@@ -87,7 +87,7 @@ type ExchangeRegistration struct {
 
 /* Is RabbitMQ Enabled */
 func RabbitMQEnabled() bool {
-	return GetPropBool(PROP_RABBITMQ_ENABLED)
+	return GetPropBool(PropRabbitMqEnabled)
 }
 
 // RabbitListener of Queue
@@ -368,11 +368,11 @@ func tryConnRabbit(rail Rail) (*amqp.Connection, error) {
 	}
 
 	c := amqp.Config{}
-	username := GetPropStr(PROP_RABBITMQ_USERNAME)
-	password := GetPropStr(PROP_RABBITMQ_PASSWORD)
-	vhost := GetPropStr(PROP_RABBITMQ_VHOST)
-	host := GetPropStr(PROP_RABBITMQ_HOST)
-	port := GetPropInt(PROP_RABBITMQ_PORT)
+	username := GetPropStr(PropRabbitMqUsername)
+	password := GetPropStr(PropRabbitMqPassword)
+	vhost := GetPropStr(PropRabbitMqVhost)
+	host := GetPropStr(PropRabbitMqHost)
+	port := GetPropInt(PropRabbitMqPort)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
@@ -465,7 +465,7 @@ func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
 }
 
 func startRabbitConsumers(conn *amqp.Connection) error {
-	qos := GetPropInt(PROP_RABBITMQ_CONSUMER_QOS)
+	qos := GetPropInt(PropRabbitMqConsumerQos)
 
 	for _, v := range _listeners {
 		listener := v

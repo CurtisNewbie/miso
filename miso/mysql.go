@@ -32,12 +32,12 @@ type mysqlHolder struct {
 }
 
 func init() {
-	SetDefProp(PROP_MYSQL_ENABLED, false)
-	SetDefProp(PROP_MYSQL_USER, "root")
-	SetDefProp(PROP_MYSQL_PASSWORD, "")
-	SetDefProp(PROP_MYSQL_HOST, "localhost")
-	SetDefProp(PROP_MYSQL_PORT, 3306)
-	SetDefProp(PROP_MYSQL_CONN_PARAM, defaultConnParams)
+	SetDefProp(PropMySqlEnabled, false)
+	SetDefProp(PropMySqlUser, "root")
+	SetDefProp(PropMySqlPassword, "")
+	SetDefProp(PropMySqlHost, "localhost")
+	SetDefProp(PropMySqlPort, 3306)
+	SetDefProp(PropMySqlConnParam, defaultConnParams)
 }
 
 /*
@@ -48,7 +48,7 @@ This func looks for following prop:
 	"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
-	return GetPropBool(PROP_MYSQL_ENABLED)
+	return GetPropBool(PropMySqlEnabled)
 }
 
 /*
@@ -66,12 +66,12 @@ This func looks for following props:
 	"mysql.connection.parameters"
 */
 func InitMySQLFromProp() error {
-	return InitMySQL(GetPropStr(PROP_MYSQL_USER),
-		GetPropStr(PROP_MYSQL_PASSWORD),
-		GetPropStr(PROP_MYSQL_DATABASE),
-		GetPropStr(PROP_MYSQL_HOST),
-		GetPropStr(PROP_MYSQL_PORT),
-		GetPropStr(PROP_MYSQL_CONN_PARAM))
+	return InitMySQL(GetPropStr(PropMySqlUser),
+		GetPropStr(PropMySqlPassword),
+		GetPropStr(PropMySqldatabase),
+		GetPropStr(PropMySqlHost),
+		GetPropStr(PropMySqlPort),
+		GetPropStr(PropMySqlConnParam))
 }
 
 // Create new MySQL connection

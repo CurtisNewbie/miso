@@ -61,13 +61,13 @@ type ServiceListHolder struct {
 }
 
 func init() {
-	SetDefProp(PROP_CONSUL_ENABLED, false)
-	SetDefProp(PROP_CONSUL_CONSUL_ADDRESS, "localhost:8500")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_URL, "/health")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_INTERVAL, "15s")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_TIMEOUT, "3s")
-	SetDefProp(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER, "120s")
-	SetDefProp(PROP_CONSUL_REGISTER_DEFAULT_HEALTHCHECK, true)
+	SetDefProp(PropConsulEnabled, false)
+	SetDefProp(PropConsulAddress, "localhost:8500")
+	SetDefProp(PropConsulHealthcheckUrl, "/health")
+	SetDefProp(PropConsulHealthCheckInterval, "15s")
+	SetDefProp(PropConsulHealthcheckTimeout, "3s")
+	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
+	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 }
 
 // Subscribe to server list, refresh server list every 30s
@@ -114,7 +114,7 @@ This func looks for following prop:
 	"consul.enabled"
 */
 func IsConsulEnabled() bool {
-	return GetPropBool(PROP_CONSUL_ENABLED)
+	return GetPropBool(PropConsulEnabled)
 }
 
 // Poll all service list and cache them
@@ -295,20 +295,20 @@ func RegisterService() error {
 		return nil
 	}
 
-	serverPort := GetPropInt(PROP_SERVER_PORT)
-	registerName := GetPropStr(PROP_CONSUL_REGISTER_NAME)
+	serverPort := GetPropInt(PropServerPort)
+	registerName := GetPropStr(PropConsuleRegisterName)
 	if registerName == "" { // fallback to app.name
-		registerName = GetPropStr(PROP_APP_NAME)
+		registerName = GetPropStr(PropAppName)
 	}
-	registerAddress := GetPropStr(PROP_CONSUL_REGISTER_ADDRESS)
-	healthCheckUrl := GetPropStr(PROP_CONSUL_HEALTHCHECK_URL)
-	healthCheckInterval := GetPropStr(PROP_CONSUL_HEALTHCHECK_INTERVAL)
-	healthCheckTimeout := GetPropStr(PROP_CONSUL_HEALTHCHECK_TIMEOUT)
-	healthCheckDeregAfter := GetPropStr(PROP_CONSUL_HEALTHCHECK_FAILED_DEREG_AFTER)
+	registerAddress := GetPropStr(PropConsulRegisterAddress)
+	healthCheckUrl := GetPropStr(PropConsulHealthcheckUrl)
+	healthCheckInterval := GetPropStr(PropConsulHealthCheckInterval)
+	healthCheckTimeout := GetPropStr(PropConsulHealthcheckTimeout)
+	healthCheckDeregAfter := GetPropStr(PropConsulHealthCheckFailedDeregAfter)
 
 	// registerAddress not specified, resolve the ip address used for the server
 	if registerAddress == "" {
-		registerAddress = ResolveServerHost(GetPropStr(PROP_SERVER_HOST))
+		registerAddress = ResolveServerHost(GetPropStr(PropServerHost))
 	}
 
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
@@ -354,7 +354,7 @@ func GetConsulClient() (*api.Client, error) {
 		return consulp.consul, nil
 	}
 
-	addr := GetPropStr(PROP_CONSUL_CONSUL_ADDRESS)
+	addr := GetPropStr(PropConsulAddress)
 	c, err := api.NewClient(&api.Config{
 		Address: addr,
 	})

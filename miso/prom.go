@@ -7,8 +7,8 @@ import (
 )
 
 func init() {
-	SetDefProp(PROP_METRICS_ENABLED, true)
-	SetDefProp(PROP_PROM_ROUTE, "/metrics")
+	SetDefProp(PropMetricsEnabled, true)
+	SetDefProp(PropPromRoute, "/metrics")
 }
 
 func PrometheusHandler() http.Handler {

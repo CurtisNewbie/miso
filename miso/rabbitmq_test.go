@@ -25,8 +25,8 @@ func jsonMsgHandler(rail Rail, payload RabbitDummy) error {
 func TestInitClient(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
-	SetProp(PROP_RABBITMQ_USERNAME, "guest")
-	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
+	SetProp(PropRabbitMqUsername, "guest")
+	SetProp(PropRabbitMqPassword, "guest")
 
 	AddRabbitListener(JsonMsgListener[RabbitDummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
 	AddRabbitListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
@@ -62,8 +62,8 @@ func TestInitClient(t *testing.T) {
 func TestPublishMessage(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
-	SetProp(PROP_RABBITMQ_USERNAME, "guest")
-	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
+	SetProp(PropRabbitMqUsername, "guest")
+	SetProp(PropRabbitMqPassword, "guest")
 	rail.SetLogLevel("debug")
 
 	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
@@ -98,8 +98,8 @@ func TestPublishMessage(t *testing.T) {
 func TestPublishJsonMessage(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
 	LoadConfigFromFile("../app-conf-dev.yml", rail)
-	SetProp(PROP_RABBITMQ_USERNAME, "guest")
-	SetProp(PROP_RABBITMQ_PASSWORD, "guest")
+	SetProp(PropRabbitMqUsername, "guest")
+	SetProp(PropRabbitMqPassword, "guest")
 	rail.SetLogLevel("debug")
 
 	e := StartRabbitMqClient(rail)

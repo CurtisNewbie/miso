@@ -40,7 +40,7 @@ func GetSqlite() *gorm.DB {
 	defer sqlitep.mu.Unlock()
 
 	if sqlitep.sq == nil {
-		path := GetPropStr(PROP_SQLITE_FILE)
+		path := GetPropStr(PropSqliteFile)
 		logrus.Infof("Connecting to SQLite database '%s'", path)
 
 		db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})

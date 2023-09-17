@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetSqlite(t *testing.T) {
-	SetProp(PROP_SQLITE_FILE, "test.db")
+	SetProp(PropSqliteFile, "test.db")
 	tx := GetSqlite()
 	db, e := tx.DB()
 	if e != nil {
