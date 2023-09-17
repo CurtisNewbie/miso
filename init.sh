@@ -1,6 +1,6 @@
 #!/bin/bash
 
-branch="main"
+ver="v0.0.2"
 
 go version
 if [[ $? -ne 0 ]]; then
@@ -106,16 +106,16 @@ echo "package main" >> "$file"
 echo "" >> "$file"
 echo "import (" >> "$file"
 echo "    \"os\"" >> "$file"
-echo "    \"github.com/curtisnewbie/miso/server\"" >> "$file"
+echo "    \"github.com/curtisnewbie/miso/miso\"" >> "$file"
 echo ")" >> "$file"
 echo "" >> "$file"
 echo "func main() {" >> "$file"
-echo "    server.BootstrapServer(os.Args)" >> "$file"
+echo "    miso.BootstrapServer(os.Args)" >> "$file"
 echo "}" >> "$file"
 echo "" >> "$file"
 
 go mod init $app && \
-    go get github.com/curtisnewbie/miso@$branch && \
+    go get github.com/curtisnewbie/miso@$ver && \
     go mod tidy
 
 echo "Project ${app} initialized at $(pwd)"
