@@ -299,9 +299,9 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	if t.Rail.IsDebugLogEnabled() {
 		loggedBody := "***"
-		if req.Body != nil {
+		if req.Body != nil && req.GetBody != nil {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
-				if copy, err := req.GetBody(); err == nil {
+				if copy, err := req.GetBody(); err == nil && copy != nil {
 					if buf, e := io.ReadAll(copy); e == nil {
 						loggedBody = string(buf)
 					}

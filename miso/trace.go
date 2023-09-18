@@ -7,13 +7,6 @@ import (
 const (
 	X_TRACEID = "X-B3-TraceId"
 	X_SPANID  = "X-B3-SpanId"
-
-	X_USER_ID  = "id"
-	X_USERNAME = "username"
-	X_USERNO   = "userno"
-	X_ROLE     = "role"
-	X_ROLE_NO  = "roleno"
-	X_SERVICES = "services"
 )
 
 var (
