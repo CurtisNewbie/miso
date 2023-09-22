@@ -9,200 +9,195 @@ import (
 	"github.com/go-redis/redis"
 )
 
+type GetRCacheValue func(rail Rail, key string) (string, error)
+
 // RCache
 type RCache struct {
-	rclient *redis.Client
-	exp     time.Duration
+	rclient  *redis.Client
+	exp      time.Duration
+	supplier GetRCacheValue
+	name     string
 }
 
-// Lazy version of RCache
-type LazyRCache struct {
-	rcacheSupplier func() RCache
-	_rcache        *RCache
-	rwmu           sync.RWMutex
+// Put value to cache
+func (r *RCache) Put(rail Rail, key string, val string) error {
+	return RLockExec(rail, r.lockKey(key),
+		func() error {
+			err := r.rclient.Set(key, val, r.exp).Err()
+
+			// value not found
+			if err != nil && errors.Is(err, redis.Nil) {
+				return NoneErr
+			}
+
+			return err
+		},
+	)
 }
 
-// Lazy object RCache
-type LazyObjRCache[T any] struct {
-	lazyRCache *LazyRCache
+// Delete value from cache
+func (r *RCache) Del(rail Rail, key string) error {
+	return RLockExec(rail, r.lockKey(key),
+		func() error {
+			return r.rclient.Del(key).Err()
+		},
+	)
 }
 
-// Remove value from cache
-func (r *LazyObjRCache[T]) Del(ec Rail, key string) error {
-	return r.lazyRCache.Del(ec, key)
+// Lock key
+func (r *RCache) lockKey(key string) string {
+	return "rcache:" + r.name + ":" + key
 }
 
 // Get from cache else run supplier
-func (r *LazyObjRCache[T]) GetElse(ec Rail, key string, supplier func() (T, bool, error)) (val T, ok bool, e error) {
-	strVal, err := r.lazyRCache.GetElse(ec, key, func() (string, error) {
-		supplied, ok, err := supplier()
-		if err != nil {
-			return "", err
-		}
-		if !ok {
-			return "", nil
-		}
-		b, err := json.Marshal(&supplied)
-		if err != nil {
-			return "", err
-		}
-		return string(b), nil
-	})
+//
+// Return miso.NoneErr if none is found
+func (r *RCache) Get(rail Rail, key string) (string, error) {
 
-	var t T
-	if err != nil {
-		return t, false, err
+	// try not to always lock the whole operation, we only lock the write part
+	cmd := r.rclient.Get(key)
+
+	var err = cmd.Err()
+	if err == nil {
+		return cmd.Val(), nil
 	}
-	if strVal == "" {
-		return t, false, nil
+
+	// command failed
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return "", err
 	}
-	if err := json.Unmarshal([]byte(strVal), &t); err != nil {
-		return t, false, err
+
+	if r.supplier == nil {
+		return "", NoneErr
 	}
-	return t, true, nil
+
+	// attempts to load the missing value for the key
+	return RLockRun(rail, r.lockKey(key), func() (string, error) {
+
+		cmd := r.rclient.Get(key)
+		if cmd.Err() == nil {
+			return cmd.Val(), nil
+		}
+
+		// cmd failed
+		if !errors.Is(cmd.Err(), redis.Nil) {
+			return "", cmd.Err()
+		}
+
+		// call supplier and cache the supplied value
+		supplied, err := r.supplier(rail, key)
+		if err != nil {
+			return "", err
+		}
+
+		scmd := r.rclient.Set(key, supplied, r.exp)
+		if scmd.Err() != nil {
+			return "", scmd.Err()
+		}
+		return supplied, nil
+	})
 }
 
-func (r *LazyRCache) rcache() *RCache {
-	r.rwmu.RLock()
-	if r._rcache != nil {
-		defer r.rwmu.RUnlock()
-		return r._rcache
-	}
-	r.rwmu.RUnlock()
+// Create new RCache
+func NewRCache(name string, exp time.Duration, supplier GetRCacheValue) RCache {
+	return RCache{rclient: GetRedis(), exp: exp, supplier: supplier, name: name}
+}
 
-	r.rwmu.Lock()
-	defer r.rwmu.Unlock()
-	c := r.rcacheSupplier()
-	r._rcache = &c
+// Lazy RCache
+type LazyRCache struct {
+	rcacheSupplier  func() RCache
+	_rcache         *RCache
+	_initRCacheOnce sync.Once
+}
+
+// Obtain the wrapped *RCache object
+func (r *LazyRCache) rcache() *RCache {
+	r._initRCacheOnce.Do(func() {
+		c := r.rcacheSupplier()
+		r._rcache = &c
+	})
 	return r._rcache
 }
 
 // Put value to cache
-func (r *LazyRCache) Put(ec Rail, key string, val string) error {
-	return r.rcache().Put(ec, key, val)
+func (r *LazyRCache) Put(rail Rail, key string, val string) error {
+	return r.rcache().Put(rail, key, val)
 }
 
-// Get from cache
-func (r *LazyRCache) Get(ec Rail, key string) (val string, e error) {
-	return r.rcache().Get(ec, key)
+// Get value from cache
+func (r *LazyRCache) Get(rail Rail, key string) (val string, e error) {
+	return r.rcache().Get(rail, key)
 }
 
-// Get from cache else run supplier
-func (r *LazyRCache) GetElse(ec Rail, key string, supplier func() (string, error)) (val string, e error) {
-	return r.rcache().GetElse(ec, key, supplier)
-}
-
-// Remove value from cache
-func (r *LazyRCache) Del(ec Rail, key string) error {
-	return r.rcache().Del(ec, key)
-}
-
-// Put value to cache
-func (r *RCache) Put(ec Rail, key string, val string) error {
-	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
-		scmd := r.rclient.Set(key, val, r.exp)
-		if scmd.Err() != nil {
-			return nil, scmd.Err()
-		}
-		return nil, nil
-	})
-
-	if e != nil {
-		return e
-	}
-	return nil
-}
-
-// Remove value from cache
-func (r *RCache) Del(ec Rail, key string) error {
-	_, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
-		scmd := r.rclient.Del(key)
-		if scmd.Err() != nil {
-			return nil, scmd.Err()
-		}
-		ec.Infof("Removed '%v' from cache", key)
-		return nil, nil
-	})
-	return e
-}
-
-// Get from cache
-func (r *RCache) Get(ec Rail, key string) (val string, e error) {
-	return r.GetElse(ec, key, nil)
-}
-
-// Get from cache else run supplier, if supplier provides empty str, then the value is returned directly without call SET in redis
-func (r *RCache) GetElse(ec Rail, key string, supplier func() (string, error)) (val string, e error) {
-
-	// for the query, we try not to lock the operation, we only lock the write part
-	cmd := r.rclient.Get(key)
-	if cmd.Err() != nil {
-		if !errors.Is(cmd.Err(), redis.Nil) { // trying to GET key that is not present is a valid case
-			e = cmd.Err()
-			return
-		}
-	} else { // no error, return the value we retrieved
-		val = cmd.Val()
-		return
-	}
-
-	// both the key and the supplier are missing, there is nothing we can do
-	if supplier == nil {
-		return
-	}
-
-	// attempts to load the missing value for the key
-	res, e := RLockRun(ec, "rcache:"+key, func() (any, error) {
-
-		cmd := r.rclient.Get(key)
-
-		// key not found
-		if cmd.Err() != nil {
-
-			if !errors.Is(cmd.Err(), redis.Nil) {
-				return "", cmd.Err() // cmd failed
-			}
-
-			// the key is still missing, tries to run the value supplier for the key
-			supplied, err := supplier()
-			if err != nil {
-				return "", err
-			}
-			if supplied == "" {
-				return "", nil
-			}
-
-			scmd := r.rclient.Set(key, supplied, r.exp)
-			if scmd.Err() != nil {
-				return "", scmd.Err()
-			}
-			return supplied, nil
-		}
-
-		// key is present, return the value
-		return cmd.Val(), nil
-	})
-
-	if e != nil {
-		return
-	}
-
-	val = res.(string)
-	return
-}
-
-// Create new RCache
-func NewRCache(exp time.Duration) RCache {
-	return RCache{rclient: GetRedis(), exp: exp}
+// Delete value from cache
+func (r *LazyRCache) Del(rail Rail, key string) error {
+	return r.rcache().Del(rail, key)
 }
 
 // Create new lazy RCache
-func NewLazyRCache(exp time.Duration) LazyRCache {
-	return LazyRCache{rcacheSupplier: func() RCache { return NewRCache(exp) }}
+func NewLazyRCache(name string, exp time.Duration, supplier GetRCacheValue) LazyRCache {
+	return LazyRCache{
+		rcacheSupplier: func() RCache { return NewRCache(name, exp, supplier) },
+	}
+}
+
+type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
+
+// Lazy object RCache
+type LazyORCache[T any] struct {
+	lazyRCache *LazyRCache
+	supplier   GetORCacheValue[T]
+}
+
+// convert string to T
+func fromCachedStr[T any](v string) (T, error) {
+	var t T
+	err := json.Unmarshal([]byte(v), &t)
+	return t, err
+}
+
+// convert from T to string
+func toCachedStr(t any) (string, error) {
+	b, err := json.Marshal(&t)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// Delete value from cache
+func (r *LazyORCache[T]) Del(rail Rail, key string) error {
+	return r.lazyRCache.Del(rail, key)
+}
+
+// Get from cache else run the supplier provided
+//
+// Return T or error, returns miso.NoneErr if not found
+func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
+
+	strVal, err := r.lazyRCache.Get(rail, key)
+
+	var t T
+	if err != nil {
+		return t, err
+	}
+	return fromCachedStr[T](strVal)
 }
 
 // Create new lazy, object RCache
-func NewLazyObjectRCache[T any](exp time.Duration) LazyObjRCache[T] {
-	lr := NewLazyRCache(exp)
-	return LazyObjRCache[T]{lazyRCache: &lr}
+func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheValue[T]) (LazyORCache[T], error) {
+	var wrappedSupplier GetRCacheValue = nil
+
+	if supplier != nil {
+		wrappedSupplier = func(rail Rail, key string) (string, error) {
+			t, err := supplier(rail, key)
+			if err != nil {
+				return "", err
+			}
+			return toCachedStr(t)
+		}
+	}
+
+	lazyRCache := NewLazyRCache(name, exp, wrappedSupplier)
+	return LazyORCache[T]{lazyRCache: &lazyRCache, supplier: supplier}, nil
 }

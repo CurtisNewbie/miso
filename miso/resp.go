@@ -30,12 +30,12 @@ func (r GnResp[T]) Err() error {
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
-		if we, ok := e.(*WebError); ok {
-			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", we.Code, we.Msg, we.InternalMsg)
-			if HasCode(we) {
-				return ErrorRespWCode(we.Code, we.Msg)
+		if me, ok := e.(*MisoErr); ok {
+			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+			if HasCode(me) {
+				return ErrorRespWCode(me.Code, me.Msg)
 			} else {
-				return ErrorResp(we.Msg)
+				return ErrorResp(me.Msg)
 			}
 		}
 
@@ -43,7 +43,7 @@ func WrapResp(data interface{}, e error, rail Rail) Resp {
 			return ErrorResp(ve.Error())
 		}
 
-		// not a WebError, just return some generic msg
+		// not a MisoErr, just return some generic msg
 		rail.Errorf("Unknown error, %v", e)
 		return ErrorResp("Unknown system error, please try again later")
 	}

@@ -534,7 +534,7 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 		return
 	}
 
-	DispatchErrJson(c, rail, NewWebErr("Unknown error, please try again later"))
+	DispatchErrJson(c, rail, NewErr("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
@@ -717,7 +717,7 @@ func MySQLBootstrap(rail Rail) error {
 		return nil
 	}
 
-	defer DebugTimeOp(rail, time.Now(), "Connect MySQL")
+	defer TimeOp(rail, time.Now(), "Connect MySQL")
 	if e := InitMySQLFromProp(); e != nil {
 		return TraceErrf(e, "Failed to establish connection to MySQL")
 	}
@@ -728,7 +728,7 @@ func WebServerBootstrap(rail Rail) error {
 	if !GetPropBool(PropServerEnabled) {
 		return nil
 	}
-	defer DebugTimeOp(rail, time.Now(), "Prepare HTTP server")
+	defer TimeOp(rail, time.Now(), "Prepare HTTP server")
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing
@@ -774,7 +774,7 @@ func PrometheusBootstrap(rail Rail) error {
 		return nil
 	}
 
-	defer DebugTimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
+	defer TimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
 	handler := PrometheusHandler()
 	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
 		handler.ServeHTTP(c.Writer, c.Request)
@@ -786,7 +786,7 @@ func RabbitBootstrap(rail Rail) error {
 	if !RabbitMQEnabled() {
 		return nil
 	}
-	defer DebugTimeOp(rail, time.Now(), "Connect RabbitMQ")
+	defer TimeOp(rail, time.Now(), "Connect RabbitMQ")
 	if e := StartRabbitMqClient(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
 	}
@@ -797,7 +797,7 @@ func ConsulBootstrap(rail Rail) error {
 	if !IsConsulEnabled() {
 		return nil
 	}
-	defer DebugTimeOp(rail, time.Now(), "Connect Consul")
+	defer TimeOp(rail, time.Now(), "Connect Consul")
 
 	// create consul client
 	if _, e := GetConsulClient(); e != nil {
@@ -821,7 +821,7 @@ func RedisBootstrap(rail Rail) error {
 	if !IsRedisEnabled() {
 		return nil
 	}
-	defer DebugTimeOp(rail, time.Now(), "Connect Redis")
+	defer TimeOp(rail, time.Now(), "Connect Redis")
 	if _, e := InitRedisFromProp(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to Redis")
 	}
@@ -829,7 +829,7 @@ func RedisBootstrap(rail Rail) error {
 }
 
 func SchedulerBootstrap(rail Rail) error {
-	defer DebugTimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
+	defer TimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
 
 	// distributed task scheduler has pending tasks and is enabled
 	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {

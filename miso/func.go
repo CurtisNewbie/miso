@@ -11,3 +11,6 @@ type Consumer[T any] func(t T) error
 
 // Peek t
 type Peek[T any] func(t T) T
+
+// Supplier of T
+type Supplier[T any] func() T

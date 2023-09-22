@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"os"
@@ -14,20 +15,28 @@ var (
 	src    = filepath.Join(gopath, "src")
 )
 
-// Web Error
-type WebError struct {
-	Code        string
-	Msg         string
-	InternalMsg string
-	hasCode     bool
+var (
+	NoneErr = NewErr("Miso: None")
+)
+
+// Check if the error represents None
+func IsNoneErr(err error) bool {
+	return errors.Is(err, NoneErr)
 }
 
-func (e *WebError) Error() string {
+// Miso Error
+type MisoErr struct {
+	Code        string // error code
+	Msg         string // error message returned to web client
+	InternalMsg string // internal message only logged on server
+}
+
+func (e *MisoErr) Error() string {
 	return e.Msg
 }
 
-// Create new WebError
-func NewWebErr(msg string, args ...any) *WebError {
+// Create new MisoErr
+func NewErr(msg string, args ...any) *MisoErr {
 	var im string
 	l := len(args)
 	if l > 1 {
@@ -35,21 +44,19 @@ func NewWebErr(msg string, args ...any) *WebError {
 	} else if l > 0 {
 		im = fmt.Sprintf("%v", args[0])
 	}
-	return &WebError{Msg: msg, hasCode: false, InternalMsg: im}
+	return &MisoErr{Msg: msg, InternalMsg: im}
 }
 
-// Create new WebError with code
-func NewWebErrCode(code string, msg string, internalMsg ...string) *WebError {
-	var im string
-	if len(internalMsg) > 0 {
-		im = internalMsg[0]
-	}
-	return &WebError{Msg: msg, Code: code, hasCode: true, InternalMsg: im}
+// Create new MisoErr with code
+func NewErrCode(code string, msg string, args ...any) *MisoErr {
+	err := NewErr(msg, args)
+	err.Code = code
+	return err
 }
 
-// Check if WebError has a specified code
-func HasCode(e *WebError) bool {
-	return e.hasCode
+// Check if MisoErr has a specified code
+func HasCode(e *MisoErr) bool {
+	return !IsBlankStr(e.Code)
 }
 
 func srcPath(filename string) string {

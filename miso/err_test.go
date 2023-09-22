@@ -30,12 +30,12 @@ func TestTraceableError(t *testing.T) {
 	logrus.Infof("%v", err)
 }
 
-func TestNewWebErr(t *testing.T) {
-	err := NewWebErr("unknown error", "nope, that is not unknown error, that is %v", "fake error")
+func TestNewErr(t *testing.T) {
+	err := NewErr("unknown error", "nope, that is not unknown error, that is %v", "fake error")
 	TestEqual(t, fmt.Sprintf("nope, that is not unknown error, that is %v", "fake error"), err.InternalMsg)
 	TestEqual(t, "unknown error", err.Error())
 
-	err = NewWebErr("unknown error", "nope, that is not unknown error, that is %v")
+	err = NewErr("unknown error", "nope, that is not unknown error, that is %v")
 	TestEqual(t, "nope, that is not unknown error, that is %v", err.InternalMsg)
 	TestEqual(t, "unknown error", err.Error())
 }
