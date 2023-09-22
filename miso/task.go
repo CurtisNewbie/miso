@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	// taskdule group name
+	// schedule group name
 	group string = "default"
 
 	// identifier for current node
@@ -20,7 +20,7 @@ var (
 	// mutex for core proerties (group, nodeId, states, and masterNode election)
 	coreMut sync.Mutex
 
-	// _state (atomic int32) of distributed task taskduler, use getState()/setState() to load/store
+	// _state (atomic int32) of distributed task scheduler, use getState()/setState() to load/store
 	_state int32
 
 	masterTicker   *time.Ticker = nil // ticker for refreshing master node lock
@@ -28,10 +28,10 @@ var (
 )
 
 const (
-	taskInitState    int32 = 0 // intial state, no task being taskduled at all
-	taskPendingState int32 = 1 // pending state, tasks are taskduled, but the taskduler hasn't been started
-	taskStartedState int32 = 2 // started state, taskduler has been started
-	taskStoppedState int32 = 3 // stopped state, taskduler has been stopped
+	taskInitState    int32 = 0 // intial state, no task being scheduled at all
+	taskPendingState int32 = 1 // pending state, tasks are scheduled, but the scheduler hasn't been started
+	taskStartedState int32 = 2 // started state, scheduler has been started
+	taskStoppedState int32 = 3 // stopped state, scheduler has been stopped
 
 	// default ttl for master lock key in redis (1 min)
 	defMstLockTtl = 1 * time.Minute
@@ -52,7 +52,7 @@ func IsTaskSchedulingDisabled() bool {
 	return !GetPropBool(PropTaskSchedulingEnabled)
 }
 
-// Check whether task taskduler has pending tasks, waiting to be started
+// Check whether task scheduler has pending tasks, waiting to be started
 func IsTaskSchedulerPending() bool {
 	return getTaskState() == taskPendingState
 }
@@ -67,7 +67,7 @@ func getTaskState() int32 {
 	return atomic.LoadInt32(&_state)
 }
 
-// Enable distributed task taskduling, return whether task taskduling is enabled
+// Enable distributed task scheduling, return whether task scheduling is enabled
 func enableTaskScheduling() bool {
 	coreMut.Lock()
 	defer coreMut.Unlock()
@@ -90,11 +90,11 @@ func enableTaskScheduling() bool {
 		logrus.Fatalf("NewUUID: %v", e)
 	}
 	nodeId = uid.String()
-	logrus.Infof("Enable distributed task taskduling, current node id: '%s', group: '%s'", nodeId, group)
+	logrus.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
 	return true
 }
 
-// Set the taskdule group for current node, by default it's 'default'
+// Set the schedule group for current node, by default it's 'default'
 func SetScheduleGroup(groupName string) {
 	coreMut.Lock()
 	defer coreMut.Unlock()
@@ -126,16 +126,16 @@ func getTaskMasterKey() string {
 	return "task:master:group:" + group
 }
 
-// taskdule a distributed task.
+// Schedule a distributed task.
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
-// only the master node can run the taskduled tasks.
+// only the master node can run the scheduled tasks.
 //
-// Tasks are pending until StartTasktaskdulerAsync() is called.
+// Tasks are pending until StartTaskSchedulerAsync() is called.
 //
 // E.g.,
 //
-//	task.taskduleDistributedTask("0/1 * * * * ?", true, myTask)
+//	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
 func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	if getTaskState() == taskInitState {
 		coreMut.Lock()
@@ -148,7 +148,7 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	return ScheduleCron(cron, withSeconds, func() {
 		ec := EmptyRail()
 		if !tryTaskMaster() {
-			ec.Debug("Not master node, skip taskduled task")
+			ec.Debug("Not master node, skip scheduled task")
 			return
 		}
 
@@ -156,18 +156,18 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 	})
 }
 
-// taskdule a named distributed task
+// Schedule a named distributed task
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
-// only the master node can run the taskduled tasks.
+// only the master node can run the Scheduled tasks.
 //
-// Tasks are pending until StartTasktaskdulerAsync() is called.
+// Tasks are pending until StartTaskSchedulerAsync() is called.
 //
 // E.g.,
 //
-//	taskduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
+//	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
 func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
-	logrus.Infof("taskdule distributed task '%s' cron: '%s'", name, cron)
+	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
 	return ScheduleDistributedTask(cron, withSeconds, func(ec Rail) {
 		ec.Infof("Running task '%s'", name)
 		start := time.Now()
@@ -181,7 +181,7 @@ func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, ta
 	})
 }
 
-// Start distributed taskduler asynchronously
+// Start distributed scheduler asynchronously
 func StartTaskSchedulerAsync() {
 	if getTaskState() != taskPendingState {
 		return
@@ -192,7 +192,7 @@ func StartTaskSchedulerAsync() {
 	}
 }
 
-// Start distributed taskduler, current routine is blocked
+// Start distributed scheduler, current routine is blocked
 func StartTaskSchedulerBlocking() {
 	if getTaskState() != taskPendingState {
 		return
@@ -203,7 +203,7 @@ func StartTaskSchedulerBlocking() {
 	}
 }
 
-// Shutdown distributed job taskduling
+// Shutdown distributed job scheduling
 func StopTaskScheduler() {
 	coreMut.Lock()
 	defer coreMut.Unlock()
