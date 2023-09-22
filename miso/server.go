@@ -79,7 +79,14 @@ var (
 
 	// channel for signaling server shutdown
 	manualSigQuit = make(chan int, 1)
+
+	// handler of endpoint results (response object or error)
+	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, r any, e error) {
+		HandleResult(c, rail, r, e)
+	}
 )
+
+type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
 
 func init() {
 	SetDefProp(PropServerEnabled, true)
@@ -101,6 +108,15 @@ func init() {
 	RegisterBootstrapCallback(WebServerBootstrap)
 	RegisterBootstrapCallback(ConsulBootstrap)
 	RegisterBootstrapCallback(SchedulerBootstrap)
+}
+
+// Replace the default ServerResultHandler
+func SetServerResultHanlder(srh ServerResultHandler) error {
+	if srh == nil {
+		return NewErr("ServerResultHandler is nil")
+	}
+	serverResultHandler = srh
+	return nil
 }
 
 // Register shutdown hook, hook should never panic
@@ -635,7 +651,7 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 
 		// validate request
 		if e := Validate(req); e != nil {
-			HandleResult(c, rail, nil, e)
+			serverResultHandler(c, rail, nil, e)
 			return
 		}
 
@@ -643,7 +659,7 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		res, err := handler(c, rail, req)
 
 		// wrap result and error
-		HandleResult(c, rail, res, err)
+		serverResultHandler(c, rail, res, err)
 	}
 }
 
@@ -661,7 +677,7 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 		r, e := handler(c, rail)
-		HandleResult(c, rail, r, e)
+		serverResultHandler(c, rail, r, e)
 	}
 }
 
