@@ -546,11 +546,11 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	rail.Errorf("Recovered from panic, %v", e)
 
 	if err, ok := e.(error); ok {
-		DispatchErrJson(c, rail, err)
+		serverResultHandler(c, rail, nil, err)
 		return
 	}
 
-	DispatchErrJson(c, rail, NewErr("Unknown error, please try again later"))
+	serverResultHandler(c, rail, nil, NewErr("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
