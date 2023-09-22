@@ -33,32 +33,24 @@ func TestLazyObjRcache(t *testing.T) {
 	}
 
 	cache, err := NewLazyORCache("test", exp, supplier)
-	if err != nil {
-		t.Fatal(err)
-	}
+	TestIsNil(t, err)
 
 	cache.Del(rail, "1")
 
 	dummy, err := cache.Get(rail, "1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	TestIsNil(t, err)
 	rail.Infof("1. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
 	TestEqual(t, 1, invokeCount)
 
 	dummy, err = cache.Get(rail, "1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	TestIsNil(t, err)
 	rail.Infof("2. got from cache %+v, invokeCount: %v", dummy, invokeCount)
 	TestEqual(t, 1, invokeCount)
 
 	cache.Del(rail, "1")
 
 	dummy, err = cache.Get(rail, "1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	TestIsNil(t, err)
 	TestEqual(t, 2, invokeCount)
 
 	rail.Infof("3. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
