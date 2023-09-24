@@ -32,9 +32,7 @@ func TestLazyObjRcache(t *testing.T) {
 		}, nil
 	}
 
-	cache, err := NewLazyORCache("test", exp, supplier)
-	TestIsNil(t, err)
-
+	cache := NewLazyORCache("test", exp, supplier)
 	cache.Del(rail, "1")
 
 	dummy, err := cache.Get(rail, "1")

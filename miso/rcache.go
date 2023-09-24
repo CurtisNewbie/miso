@@ -185,7 +185,7 @@ func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
 }
 
 // Create new lazy, object RCache
-func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheValue[T]) (LazyORCache[T], error) {
+func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheValue[T]) LazyORCache[T] {
 	var wrappedSupplier GetRCacheValue = nil
 
 	if supplier != nil {
@@ -199,5 +199,5 @@ func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheVa
 	}
 
 	lazyRCache := NewLazyRCache(name, exp, wrappedSupplier)
-	return LazyORCache[T]{lazyRCache: &lazyRCache, supplier: supplier}, nil
+	return LazyORCache[T]{lazyRCache: &lazyRCache, supplier: supplier}
 }
