@@ -32,7 +32,7 @@ T should be a struct, where all fields are automatically mapped from the request
   - xml
   - form
 */
-type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
+type MappedTRouteHandler[Req any] func(c *gin.Context, rail Rail, req Req) (any, error)
 
 type routesRegistar func(*gin.Engine)
 
@@ -228,7 +228,7 @@ func Delete(url string, handler TRouteHandler, extra ...StrPair) {
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
 // The result or error is wrapped in Resp automatically.
-func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...StrPair) {
+func IPost[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) {
 	recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewMappedTRouteHandler(handler)) })
 }
@@ -236,7 +236,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], 
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...StrPair) {
+func IGet[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) {
 	recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewMappedTRouteHandler(handler)) })
 }
@@ -244,7 +244,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], e
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
-func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...StrPair) {
+func IDelete[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) {
 	recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewMappedTRouteHandler(handler)) })
 }
@@ -252,7 +252,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res], extra ...StrPair) {
+func IPut[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) {
 	recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
 	addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewMappedTRouteHandler(handler)) })
 }
@@ -641,7 +641,7 @@ func BuildRail(c *gin.Context) Rail {
 // Build route handler with the mapped payload object, context, and logger.
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
+func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 
