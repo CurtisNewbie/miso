@@ -21,9 +21,10 @@ type RCache struct {
 
 // Put value to cache
 func (r *RCache) Put(rail Rail, key string, val string) error {
-	return RLockExec(rail, r.lockKey(key),
+	cacheKey := r.cacheKey(key)
+	return RLockExec(rail, cacheKey,
 		func() error {
-			err := r.rclient.Set(key, val, r.exp).Err()
+			err := r.rclient.Set(cacheKey, val, r.exp).Err()
 
 			// value not found
 			if err != nil && errors.Is(err, redis.Nil) {
@@ -37,15 +38,16 @@ func (r *RCache) Put(rail Rail, key string, val string) error {
 
 // Delete value from cache
 func (r *RCache) Del(rail Rail, key string) error {
-	return RLockExec(rail, r.lockKey(key),
+	cacheKey := r.cacheKey(key)
+	return RLockExec(rail, cacheKey,
 		func() error {
-			return r.rclient.Del(key).Err()
+			return r.rclient.Del(cacheKey).Err()
 		},
 	)
 }
 
 // Lock key
-func (r *RCache) lockKey(key string) string {
+func (r *RCache) cacheKey(key string) string {
 	return "rcache:" + r.name + ":" + key
 }
 
@@ -55,7 +57,8 @@ func (r *RCache) lockKey(key string) string {
 func (r *RCache) Get(rail Rail, key string) (string, error) {
 
 	// try not to always lock the whole operation, we only lock the write part
-	cmd := r.rclient.Get(key)
+	cacheKey := r.cacheKey(key)
+	cmd := r.rclient.Get(cacheKey)
 
 	var err = cmd.Err()
 	if err == nil {
@@ -72,9 +75,9 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 	}
 
 	// attempts to load the missing value for the key
-	return RLockRun(rail, r.lockKey(key), func() (string, error) {
+	return RLockRun(rail, cacheKey, func() (string, error) {
 
-		cmd := r.rclient.Get(key)
+		cmd := r.rclient.Get(cacheKey)
 		if cmd.Err() == nil {
 			return cmd.Val(), nil
 		}
@@ -90,7 +93,7 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 			return "", err
 		}
 
-		scmd := r.rclient.Set(key, supplied, r.exp)
+		scmd := r.rclient.Set(cacheKey, supplied, r.exp)
 		if scmd.Err() != nil {
 			return "", scmd.Err()
 		}
@@ -146,7 +149,6 @@ type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
 // Lazy object RCache
 type LazyORCache[T any] struct {
 	lazyRCache *LazyRCache
-	supplier   GetORCacheValue[T]
 }
 
 // convert string to T
@@ -199,5 +201,5 @@ func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheVa
 	}
 
 	lazyRCache := NewLazyRCache(name, exp, wrappedSupplier)
-	return LazyORCache[T]{lazyRCache: &lazyRCache, supplier: supplier}
+	return LazyORCache[T]{lazyRCache: &lazyRCache}
 }
