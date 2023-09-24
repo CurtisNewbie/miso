@@ -3,6 +3,7 @@ package miso
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ type RCache struct {
 // Put value to cache
 func (r *RCache) Put(rail Rail, key string, val string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, cacheKey,
+	return RLockExec(rail, "lock"+cacheKey,
 		func() error {
 			err := r.rclient.Set(cacheKey, val, r.exp).Err()
 
@@ -39,7 +40,7 @@ func (r *RCache) Put(rail Rail, key string, val string) error {
 // Delete value from cache
 func (r *RCache) Del(rail Rail, key string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, cacheKey,
+	return RLockExec(rail, "lock"+cacheKey,
 		func() error {
 			return r.rclient.Del(cacheKey).Err()
 		},
@@ -75,7 +76,7 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 	}
 
 	// attempts to load the missing value for the key
-	return RLockRun(rail, cacheKey, func() (string, error) {
+	return RLockRun(rail, "lock:"+cacheKey, func() (string, error) {
 
 		cmd := r.rclient.Get(cacheKey)
 		if cmd.Err() == nil {
@@ -83,7 +84,7 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 		}
 
 		// cmd failed
-		if !errors.Is(cmd.Err(), redis.Nil) {
+		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) {
 			return "", cmd.Err()
 		}
 
@@ -155,6 +156,9 @@ type LazyORCache[T any] struct {
 func fromCachedStr[T any](v string) (T, error) {
 	var t T
 	err := json.Unmarshal([]byte(v), &t)
+	if err != nil {
+		return t, fmt.Errorf("unable to unmarshal from string, %v", err)
+	}
 	return t, err
 }
 
@@ -162,7 +166,7 @@ func fromCachedStr[T any](v string) (T, error) {
 func toCachedStr(t any) (string, error) {
 	b, err := json.Marshal(&t)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}
 	return string(b), nil
 }
@@ -176,7 +180,6 @@ func (r *LazyORCache[T]) Del(rail Rail, key string) error {
 //
 // Return T or error, returns miso.NoneErr if not found
 func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
-
 	strVal, err := r.lazyRCache.Get(rail, key)
 
 	var t T
