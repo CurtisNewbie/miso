@@ -64,8 +64,17 @@ func QueryPage[Req any, Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Req, R
 	var res PageRes[Res]
 	var total int
 
+	newQuery := func() *gorm.DB {
+		t := p.GetBaseQuery(tx)
+		if p.ApplyConditions != nil {
+			t = p.ApplyConditions(t, p.Req)
+		}
+		return t
+	}
+
 	// count
-	t := p.ApplyConditions(p.GetBaseQuery(tx), p.Req).Select("COUNT(*)").Scan(&total)
+	t := newQuery().Select("COUNT(*)").Scan(&total)
+
 	if t.Error != nil {
 		return res, t.Error
 	}
@@ -74,12 +83,8 @@ func QueryPage[Req any, Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Req, R
 
 	// the actual page
 	if total > 0 {
-		t = p.AddSelectQuery(
-			p.ApplyConditions(
-				p.GetBaseQuery(tx),
-				p.Req,
-			),
-		).Offset(p.ReqPage.GetOffset()).
+		t = p.AddSelectQuery(newQuery()).
+			Offset(p.ReqPage.GetOffset()).
 			Limit(p.ReqPage.GetLimit()).
 			Scan(&payload)
 		if t.Error != nil {
