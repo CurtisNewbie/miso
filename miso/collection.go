@@ -159,3 +159,16 @@ func Distinct(l []string) []string {
 	}
 	return SetToSlice(s)
 }
+
+// Build a map with string type key and any type of value
+func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V) map[string]V {
+	m := map[string]V{}
+	if l == nil {
+		return m
+	}
+	for i := range l {
+		li := l[i]
+		m[keyMapper(li)] = valueMapper(li)
+	}
+	return m
+}
