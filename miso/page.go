@@ -48,26 +48,31 @@ func RespPage(reqPage Paging, total int) Paging {
 	}
 }
 
-type QueryCondition[Req any] func(tx *gorm.DB, req Req) *gorm.DB
+type QueryCondition func(tx *gorm.DB) *gorm.DB
 type BaseQuery func(tx *gorm.DB) *gorm.DB
 type SelectQuery func(tx *gorm.DB) *gorm.DB
-type QueryPageParam[T any, V any] struct {
-	ReqPage         Paging            // Reques Paging Param
-	Req             T                 // Request Object
-	AddSelectQuery  SelectQuery       // Add SELECT query
-	GetBaseQuery    BaseQuery         // Base query
-	ApplyConditions QueryCondition[T] // Where Conditions
+type QueryPageParam[V any] struct {
+	ReqPage         Paging         // Reques Paging Param
+	AddSelectQuery  SelectQuery    // Add SELECT query
+	GetBaseQuery    BaseQuery      // Base query
+	ApplyConditions QueryCondition // Where Conditions
 	ForEach         Peek[V]
 }
 
-func QueryPage[Req any, Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Req, Res]) (PageRes[Res], error) {
+// Execute paged query
+func (q QueryPageParam[V]) ExecPageQuery(rail Rail, tx *gorm.DB) (PageRes[V], error) {
+	return QueryPage[V](rail, tx, q)
+}
+
+// Execute paged query
+func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
 	var res PageRes[Res]
 	var total int
 
 	newQuery := func() *gorm.DB {
 		t := p.GetBaseQuery(tx)
 		if p.ApplyConditions != nil {
-			t = p.ApplyConditions(t, p.Req)
+			t = p.ApplyConditions(t)
 		}
 		return t
 	}
