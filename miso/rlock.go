@@ -32,51 +32,18 @@ func ObtainRLocker() *redislock.Client {
 /*
 Lock and run the runnable using Redis
 
-The maximum time wait for the lock is 1s, retry every 10ms.
+The maximum time wait for the lock is 1s, retry every 5ms.
 
-May return 'redislock:.ErrNotObtained' when it fails to obtain the lock.
+May return 'redislock:ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun[T any](ec Rail, key string, runnable LRunnable[T]) (T, error) {
+func RLockRun[T any](rail Rail, key string, runnable LRunnable[T]) (T, error) {
 	var t T
-	var locker *redislock.Client = ObtainRLocker()
-	lock, err := locker.Obtain(key, lock_lease_time, &redislock.Options{
-		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(10*time.Millisecond), 100),
-	})
 
-	if err != nil {
+	lock := NewRLock(rail, key)
+	if err := lock.Lock(); err != nil {
 		return t, TraceErrf(err, "failed to obtain lock, key: %v", key)
 	}
-	ec.Debugf("Obtained lock for key '%s'", key)
-
-	var isReleased int32 = 0 // 0-locked, 1-released
-
-	// watchdog for the lock
-	go func() {
-		isReleased := func() bool { return atomic.LoadInt32(&isReleased) == 1 }
-		ticker := time.NewTicker(refresh_time)
-		for range ticker.C {
-			if isReleased() {
-				ticker.Stop()
-				return
-			}
-
-			if err := lock.Refresh(lock_lease_time, nil); err != nil {
-				ec.Warnf("Failed to refresh rlock for '%v'", key)
-			}
-			ec.Debugf("Refreshed rlock for '%v'", key)
-		}
-	}()
-
-	defer func() {
-		atomic.StoreInt32(&isReleased, 1)
-		re := lock.Release()
-
-		if re != nil {
-			ec.Errorf("Failed to release lock for key '%s', err: %v", key, re)
-		} else {
-			ec.Debugf("Released lock for key '%s'", key)
-		}
-	}()
+	defer lock.Unlock()
 
 	return runnable()
 }
@@ -84,7 +51,7 @@ func RLockRun[T any](ec Rail, key string, runnable LRunnable[T]) (T, error) {
 /*
 Lock and run the runnable using Redis
 
-The maximum time wait for the lock is 1s, retry every 10ms.
+The maximum time wait for the lock is 1s, retry every 5ms.
 
 May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */

@@ -10,13 +10,12 @@ import (
 )
 
 func TestRLockCallbacks(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
-	if _, e := InitRedisFromProp(c); e != nil {
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
+	rail.SetLogLevel("debug")
 
 	var violated int32 = 0
 
@@ -26,7 +25,7 @@ func TestRLockCallbacks(t *testing.T) {
 	go func() {
 		wg.Wait()
 
-		err := RLockExec(c, "test:rlock", func() error {
+		err := RLockExec(rail, "test:rlock", func() error {
 			t.Log("shouldn't be here")
 			atomic.StoreInt32(&violated, 1)
 			return nil
@@ -40,7 +39,7 @@ func TestRLockCallbacks(t *testing.T) {
 		}
 	}()
 
-	RLockExec(c, "test:rlock", func() error {
+	RLockExec(rail, "test:rlock", func() error {
 		t.Log("inside lock")
 		wg.Done()
 		time.Sleep(3 * time.Second)
