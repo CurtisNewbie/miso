@@ -29,7 +29,7 @@ if [ "$?" -ne 0 ]; then
 fi
 echo "Created commit for release"
 show=$(git show)
-printf ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n$show\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+printf "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n$show\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
 echo
 
 echo "3. Creating git tag for release"
