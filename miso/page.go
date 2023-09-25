@@ -3,7 +3,7 @@ package miso
 import "gorm.io/gorm"
 
 const (
-	DEF_PAGE_LIMIT = 30
+	DefaultPageLimit = 30
 )
 
 type Paging struct {
@@ -30,7 +30,7 @@ func (p Paging) GetOffset() int {
 
 func (p Paging) GetLimit() int {
 	if p.Limit < 1 {
-		p.Limit = DEF_PAGE_LIMIT
+		p.Limit = DefaultPageLimit
 	}
 	return p.Limit
 }
@@ -48,23 +48,27 @@ func RespPage(reqPage Paging, total int) Paging {
 	}
 }
 
-type QueryCondition func(tx *gorm.DB) *gorm.DB
-type BaseQuery func(tx *gorm.DB) *gorm.DB
-type SelectQuery func(tx *gorm.DB) *gorm.DB
+type PageQueryBuilder func(tx *gorm.DB) *gorm.DB
+
+// Create param for page query.
 type QueryPageParam[V any] struct {
-	ReqPage         Paging         // Reques Paging Param
-	AddSelectQuery  SelectQuery    // Add SELECT query
-	GetBaseQuery    BaseQuery      // Base query
-	ApplyConditions QueryCondition // Where Conditions
-	ForEach         Peek[V]
+	ReqPage         Paging           // Request Paging Param.
+	AddSelectQuery  PageQueryBuilder // Add SELECT query, e.g., return tx.Select(`*`).
+	GetBaseQuery    PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).
+	ApplyConditions PageQueryBuilder // Where Conditions, optional, e.g., return tx.Where(`field = 'abc'`).
+	ForEach         Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
 // Execute paged query
+//
+//	This internally calls QueryPage(...).
 func (q QueryPageParam[V]) ExecPageQuery(rail Rail, tx *gorm.DB) (PageRes[V], error) {
-	return QueryPage[V](rail, tx, q)
+	return QueryPage(rail, tx, q)
 }
 
-// Execute paged query
+// Execute paged query.
+//
+// COUNT query is called first, if none is found (i.e., COUNT(...) == 0), this method will not call the actual SELECT query to avoid unnecessary performance lost.
 func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
 	var res PageRes[Res]
 	var total int

@@ -12,7 +12,9 @@ import (
 
 type GetRCacheValue func(rail Rail, key string) (string, error)
 
-// RCache
+// RCache, cache that is backed by Redis.
+//
+//	Use NewRCache(...) to instantiate.
 type RCache struct {
 	rclient  *redis.Client
 	exp      time.Duration
@@ -23,7 +25,7 @@ type RCache struct {
 // Put value to cache
 func (r *RCache) Put(rail Rail, key string, val string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, "lock"+cacheKey,
+	return RLockExec(rail, r.lockKey(key),
 		func() error {
 			err := r.rclient.Set(cacheKey, val, r.exp).Err()
 
@@ -40,16 +42,19 @@ func (r *RCache) Put(rail Rail, key string, val string) error {
 // Delete value from cache
 func (r *RCache) Del(rail Rail, key string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, "lock"+cacheKey,
+	return RLockExec(rail, r.lockKey(key),
 		func() error {
 			return r.rclient.Del(cacheKey).Err()
 		},
 	)
 }
 
-// Lock key
 func (r *RCache) cacheKey(key string) string {
 	return "rcache:" + r.name + ":" + key
+}
+
+func (r *RCache) lockKey(key string) string {
+	return "lock:" + r.cacheKey(key)
 }
 
 // Get from cache else run supplier
@@ -76,7 +81,7 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 	}
 
 	// attempts to load the missing value for the key
-	return RLockRun(rail, "lock:"+cacheKey, func() (string, error) {
+	return RLockRun(rail, r.lockKey(key), func() (string, error) {
 
 		cmd := r.rclient.Get(cacheKey)
 		if cmd.Err() == nil {
@@ -107,9 +112,11 @@ func NewRCache(name string, exp time.Duration, supplier GetRCacheValue) RCache {
 	return RCache{rclient: GetRedis(), exp: exp, supplier: supplier, name: name}
 }
 
-// Lazy RCache
+// Lazy version of RCache, only initialized internally for the first method call.
+//
+//	Use NewLazyRCache(...) to instantiate.
 type LazyRCache struct {
-	rcacheSupplier  func() RCache
+	_rcacheSupplier func() RCache
 	_rcache         *RCache
 	_initRCacheOnce sync.Once
 }
@@ -117,7 +124,7 @@ type LazyRCache struct {
 // Obtain the wrapped *RCache object
 func (r *LazyRCache) rcache() *RCache {
 	r._initRCacheOnce.Do(func() {
-		c := r.rcacheSupplier()
+		c := r._rcacheSupplier()
 		r._rcache = &c
 	})
 	return r._rcache
@@ -138,21 +145,21 @@ func (r *LazyRCache) Del(rail Rail, key string) error {
 	return r.rcache().Del(rail, key)
 }
 
-// Create new lazy RCache
+// Create new lazy RCache.
 func NewLazyRCache(name string, exp time.Duration, supplier GetRCacheValue) LazyRCache {
 	return LazyRCache{
-		rcacheSupplier: func() RCache { return NewRCache(name, exp, supplier) },
+		_rcacheSupplier: func() RCache { return NewRCache(name, exp, supplier) },
 	}
 }
 
-type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
-
-// Lazy object RCache
+// Lazy object RCache.
+//
+//	Use NewLazyORCache(...) to instantiate.
 type LazyORCache[T any] struct {
 	lazyRCache *LazyRCache
 }
 
-// convert string to T
+// convert string to T.
 func fromCachedStr[T any](v string) (T, error) {
 	var t T
 	err := json.Unmarshal([]byte(v), &t)
@@ -162,7 +169,7 @@ func fromCachedStr[T any](v string) (T, error) {
 	return t, err
 }
 
-// convert from T to string
+// convert from T to string.
 func toCachedStr(t any) (string, error) {
 	b, err := json.Marshal(&t)
 	if err != nil {
@@ -176,9 +183,9 @@ func (r *LazyORCache[T]) Del(rail Rail, key string) error {
 	return r.lazyRCache.Del(rail, key)
 }
 
-// Get from cache else run the supplier provided
+// Get from cache else run the supplier provided.
 //
-// Return T or error, returns miso.NoneErr if not found
+// Return T or error, returns miso.NoneErr if not found.
 func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
 	strVal, err := r.lazyRCache.Get(rail, key)
 
@@ -189,7 +196,9 @@ func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
 	return fromCachedStr[T](strVal)
 }
 
-// Create new lazy, object RCache
+type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
+
+// Create new lazy object RCache.
 func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheValue[T]) LazyORCache[T] {
 	var wrappedSupplier GetRCacheValue = nil
 
