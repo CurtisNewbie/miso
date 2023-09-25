@@ -43,7 +43,10 @@ type HttpRoute struct {
 	HandlerName string
 }
 
-type ComponentBootstrap func(rail Rail) error
+type ComponentBootstrap struct {
+	Name      string
+	Bootstrap func(rail Rail) error
+}
 
 const (
 	OPEN_API_PREFIX = "/open/api" // merely a const value, doesn't have special meaning
@@ -104,13 +107,34 @@ func init() {
 	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
 
 	// bootstrap callbacks
-	RegisterBootstrapCallback(MySQLBootstrap)
-	RegisterBootstrapCallback(RedisBootstrap)
-	RegisterBootstrapCallback(RabbitBootstrap)
-	RegisterBootstrapCallback(PrometheusBootstrap)
-	RegisterBootstrapCallback(WebServerBootstrap)
-	RegisterBootstrapCallback(ConsulBootstrap)
-	RegisterBootstrapCallback(SchedulerBootstrap)
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap MySQL",
+		Bootstrap: MySQLBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Redis",
+		Bootstrap: RedisBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap RabbitMQ",
+		Bootstrap: RabbitBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Prometheus",
+		Bootstrap: PrometheusBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap HTTP Server",
+		Bootstrap: WebServerBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Boostrap Consul",
+		Bootstrap: ConsulBootstrap,
+	})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Cron/Task Scheduler",
+		Bootstrap: SchedulerBootstrap,
+	})
 
 	PreServerBootstrap(func(rail Rail) error {
 		requestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
@@ -362,31 +386,6 @@ func callPreServerBootstrapListeners(rail Rail) error {
 //
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
-//
-// e.g.,
-//
-//	RegisterBootstrapCallback(func(_ context.Context, c Rail) error {
-//		if !IsConsulEnabled() {
-//			return nil
-//		}
-//
-//		// create consul client
-//		if _, e := GetConsulClient(); e != nil {
-//			return TraceErrf(e, "Failed to establish connection to Consul")
-//		}
-//
-//		// deregister on shutdown
-//		AddShutdownHook(func() {
-//			if e := DeregisterService(); e != nil {
-//				c.Errorf("Failed to deregister on Consul, %v", e)
-//			}
-//		})
-//
-//		if e := RegisterService(); e != nil {
-//			return TraceErrf(e, "Failed to register on Consul")
-//		}
-//		return nil
-//	})
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 }
@@ -447,11 +446,13 @@ func BootstrapServer(args []string) {
 	}
 
 	// bootstrap components
-	for _, bootstrap := range serverBootrapCallbacks {
-		if e := bootstrap(rail); e != nil {
+	for _, sbc := range serverBootrapCallbacks {
+		start := time.Now()
+		if e := sbc.Bootstrap(rail); e != nil {
 			rail.Errorf("Failed to bootstrap server component, %v", e)
 			return
 		}
+		rail.Debugf("Callback %-30s - took %v", sbc.Name, time.Since(start))
 	}
 
 	end := time.Now().UnixMilli()
@@ -743,7 +744,6 @@ func MySQLBootstrap(rail Rail) error {
 		return nil
 	}
 
-	defer TimeOp(rail, time.Now(), "Connect MySQL")
 	if e := InitMySQLFromProp(); e != nil {
 		return TraceErrf(e, "Failed to establish connection to MySQL")
 	}
@@ -754,7 +754,6 @@ func WebServerBootstrap(rail Rail) error {
 	if !GetPropBool(PropServerEnabled) {
 		return nil
 	}
-	defer TimeOp(rail, time.Now(), "Prepare HTTP server")
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing
@@ -800,7 +799,6 @@ func PrometheusBootstrap(rail Rail) error {
 		return nil
 	}
 
-	defer TimeOp(rail, time.Now(), "Prepare Prometheus metrics endpoint")
 	handler := PrometheusHandler()
 	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
 		handler.ServeHTTP(c.Writer, c.Request)
@@ -812,7 +810,6 @@ func RabbitBootstrap(rail Rail) error {
 	if !RabbitMQEnabled() {
 		return nil
 	}
-	defer TimeOp(rail, time.Now(), "Connect RabbitMQ")
 	if e := StartRabbitMqClient(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
 	}
@@ -823,7 +820,6 @@ func ConsulBootstrap(rail Rail) error {
 	if !IsConsulEnabled() {
 		return nil
 	}
-	defer TimeOp(rail, time.Now(), "Connect Consul")
 
 	// create consul client
 	if _, e := GetConsulClient(); e != nil {
@@ -847,7 +843,6 @@ func RedisBootstrap(rail Rail) error {
 	if !IsRedisEnabled() {
 		return nil
 	}
-	defer TimeOp(rail, time.Now(), "Connect Redis")
 	if _, e := InitRedisFromProp(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to Redis")
 	}
@@ -855,8 +850,6 @@ func RedisBootstrap(rail Rail) error {
 }
 
 func SchedulerBootstrap(rail Rail) error {
-	defer TimeOp(rail, time.Now(), "Prepare cron scheduler and distributed task scheduler")
-
 	// distributed task scheduler has pending tasks and is enabled
 	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
 		StartTaskSchedulerAsync()
@@ -865,7 +858,7 @@ func SchedulerBootstrap(rail Rail) error {
 	} else if HasScheduler() {
 		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 		StartSchedulerAsync()
-		rail.Info("Scheduler started")
+		rail.Info("Cron Scheduler started")
 		AddShutdownHook(func() { StopScheduler() })
 	}
 	return nil
