@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -27,7 +28,12 @@ const (
 var (
 	_serviceRegistry         ServiceRegistry = nil
 	_initServiceRegistryOnce sync.Once
+	defaultClient            *http.Client
 )
+
+func init() {
+	defaultClient = &http.Client{Timeout: 5 * time.Second}
+}
 
 // Helper type for handling HTTP responses
 type TResponse struct {
@@ -376,12 +382,12 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 
 // Create new defualt TClient
 func NewDefaultTClient(ec Rail, url string) *TClient {
-	return NewTClient(ec, url, http.DefaultClient)
+	return NewTClient(ec, url, defaultClient)
 }
 
 // Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl, http.DefaultClient).EnableServiceDiscovery(serviceName)
+	return NewTClient(ec, relUrl, defaultClient).EnableServiceDiscovery(serviceName)
 }
 
 // Create new TClient
@@ -406,7 +412,7 @@ func SendGet(url string, headers map[string][]string) (*http.Response, error) {
 	}
 
 	AddHeaders(req, headers)
-	return http.DefaultClient.Do(req)
+	return defaultClient.Do(req)
 }
 
 // Add http headers
@@ -430,7 +436,7 @@ func SendPost(url string, body io.Reader) (*http.Response, error) {
 	if e != nil {
 		return nil, e
 	}
-	return http.DefaultClient.Do(req)
+	return defaultClient.Do(req)
 }
 
 // Create HEAD request
