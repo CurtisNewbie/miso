@@ -84,6 +84,8 @@ var (
 	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, r any, e error) {
 		HandleResult(c, rail, r, e)
 	}
+
+	requestValidationEnabled = false // whether request validation is enabled, read-only
 )
 
 type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
@@ -95,6 +97,7 @@ func init() {
 	SetDefProp(PropServerGracefulShutdownTimeSec, 5)
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
+	SetDefProp(PropServerRequestValidateEnabled, true)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -108,6 +111,11 @@ func init() {
 	RegisterBootstrapCallback(WebServerBootstrap)
 	RegisterBootstrapCallback(ConsulBootstrap)
 	RegisterBootstrapCallback(SchedulerBootstrap)
+
+	PreServerBootstrap(func(rail Rail) error {
+		requestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
+		return nil
+	})
 }
 
 // Replace the default ServerResultHandler
@@ -649,10 +657,12 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		var req Req
 		MustBind(c, &req)
 
-		// validate request
-		if e := Validate(req); e != nil {
-			serverResultHandler(c, rail, nil, e)
-			return
+		if requestValidationEnabled {
+			// validate request
+			if e := Validate(req); e != nil {
+				serverResultHandler(c, rail, nil, e)
+				return
+			}
 		}
 
 		// handle the requests

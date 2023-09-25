@@ -109,14 +109,15 @@ e.g.,
 
 ### Web Server Configuration
 
-| property                       | description                                           | default value |
-|--------------------------------|-------------------------------------------------------|---------------|
-| server.enabled                 | enable http server                                    | true          |
-| server.host                    | http server host                                      | 0.0.0.0       |
-| server.port                    | http server port                                      | 8080          |
-| server.gracefulShutdownTimeSec | time wait (in second) before server shutdown          | 30            |
-| server.perf.enabled            | enable logging time took for each http server request | false         |
-| server.trace.inbound.propagate | propagate trace info from inbound requests            | true          |
+| property                        | description                                           | default value |
+|---------------------------------|-------------------------------------------------------|---------------|
+| server.enabled                  | enable http server                                    | true          |
+| server.host                     | http server host                                      | 0.0.0.0       |
+| server.port                     | http server port                                      | 8080          |
+| server.gracefulShutdownTimeSec  | time wait (in second) before server shutdown          | 30            |
+| server.perf.enabled             | enable logging time took for each http server request | false         |
+| server.trace.inbound.propagate  | propagate trace info from inbound requests            | true          |
+| server.validate.request.enabled | enable server request parameter validation            | true          |
 
 ### Consul Configuration
 

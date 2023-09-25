@@ -74,6 +74,7 @@ const (
 	PropServerGracefulShutdownTimeSec = "server.gracefulShutdownTimeSec"
 	PropServerPerfEnabled             = "server.perf.enabled"
 	PropServerPropagateInboundTrace   = "server.trace.inbound.propagate"
+	PropServerRequestValidateEnabled  = "server.validate.request.enabled"
 
 	/*
 		------------------------------------
