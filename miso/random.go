@@ -3,6 +3,7 @@ package miso
 import (
 	cr "crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -115,17 +116,19 @@ func GenNoL(prefix string, len int) string {
 }
 
 // Generate random string with high entrophy
-func ERand(len int) (string, error) {
+func ERand(len int) string {
 	if len < 1 {
-		return "", nil
+		return ""
 	}
 
 	// each base64 character represent 6 bits of data
 	c := len * 3 / 4 // wihtout padding
 	b := make([]byte, c)
-	_, e := cr.Read(b)
-	if e != nil {
-		return "", e
+	_, err := cr.Read(b)
+
+	// not a real io operation, we don't really need to handle the err, it will always be nil
+	if err != nil {
+		panic(fmt.Errorf("cr.Read(..) returns error, shouldn't happen, %v", err))
 	}
-	return base64.RawStdEncoding.EncodeToString(b), nil
+	return base64.RawStdEncoding.EncodeToString(b)
 }

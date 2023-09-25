@@ -9,16 +9,13 @@ func TestERand(t *testing.T) {
 	var s string
 	var err error
 
-	s, err = ERand(0)
-	if err != nil {
-		t.Fatalf("Failed to generate random str, %v", err)
-	}
+	s = ERand(0)
 	if s != "" {
 		t.Fatalf("Generate random string should be '', actual: %s", s)
 	}
 
 	l := 10
-	s, err = ERand(l)
+	s = ERand(l)
 	if err != nil {
 		t.Fatalf("Failed to generate random str, %v", err)
 	}
