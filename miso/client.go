@@ -610,3 +610,14 @@ func GetServiceRegistry() ServiceRegistry {
 
 	return _serviceRegistry
 }
+
+// Read response as GnResp[T] object.
+//
+// Response is always closed automatically.
+//
+// Should migrate to TResponse.Json(...) instead.
+func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
+	var gr GnResp[T]
+	e := tr.Json(&gr)
+	return gr, e
+}
