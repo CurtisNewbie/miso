@@ -20,12 +20,14 @@ var (
 //
 // Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
 //
-// Before calling this method, the DeclareEventBus(...) should be called at least once to create the necessary components.
+// Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
 func PubEventBus(c Rail, eventObject any, bus string) error {
 	if bus == "" {
 		return errBusNameEmpty
 	}
-	NewEventBus(bus)
+	if err := NewEventBus(bus); err != nil {
+		return fmt.Errorf("failed to create event bus, %v", err)
+	}
 	busName := busName(bus)
 	return PublishJson(c, eventObject, busName, BUS_ROUTING_KEY)
 }
@@ -35,7 +37,7 @@ func PubEventBus(c Rail, eventObject any, bus string) error {
 // Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified by the same bus name.
 func NewEventBus(bus string) error {
 	if bus == "" {
-		panic(errBusNameEmpty)
+		return errBusNameEmpty
 	}
 	busName := busName(bus)
 	if _, ok := declaredBus.Load(busName); ok {
@@ -74,18 +76,21 @@ func NewEventBus(bus string) error {
 //
 // Internally, it registers a listener for the queue identified by the bus name.
 //
-// It also calls DeclareEventBus(...) automatically before it registers the listeners.
-func SubEventBus[T any](bus string, concurrency int, listener func(rail Rail, t T) error) {
+// It also calls NewEventBus(...) automatically before it registers the listeners.
+func SubEventBus[T any](bus string, concurrency int, listener func(rail Rail, t T) error) error {
 	if bus == "" {
-		panic(errBusNameEmpty)
+		return errBusNameEmpty
 	}
 
-	NewEventBus(bus)
+	if err := NewEventBus(bus); err != nil {
+		return fmt.Errorf("failed to create event bus, %v", err)
+	}
 
 	if concurrency < 1 {
 		concurrency = 1
 	}
 	AddRabbitListener(JsonMsgListener[T]{QueueName: busName(bus), Handler: listener, NumOfRoutines: concurrency})
+	return nil
 }
 
 func busName(bus string) string {
