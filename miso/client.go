@@ -52,12 +52,20 @@ func (tr *TResponse) Close() error {
 
 // Read response as []bytes, response is always closed automatically
 func (tr *TResponse) ReadBytes() ([]byte, error) {
+	if tr.Err != nil {
+		return nil, tr.Err
+	}
+
 	defer tr.Close()
 	return io.ReadAll(tr.Resp.Body)
 }
 
 // Read response as string, response is always closed automatically
 func (tr *TResponse) ReadStr() (string, error) {
+	if tr.Err != nil {
+		return "", tr.Err
+	}
+
 	defer tr.Close()
 	b, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
@@ -70,6 +78,10 @@ func (tr *TResponse) ReadStr() (string, error) {
 //
 // Should migrate to tr.Json(...) instead.
 func (tr *TResponse) ReadJson(ptr any) error {
+	if tr.Err != nil {
+		return tr.Err
+	}
+
 	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
@@ -87,6 +99,10 @@ func (tr *TResponse) ReadJson(ptr any) error {
 //
 // v shouldn't be a pointer, but a simple type like struct, after unmarshalling, v is returned directly to avoid heap allocation.
 func (tr *TResponse) Json(v any) (any, error) {
+	if tr.Err != nil {
+		return v, tr.Err
+	}
+
 	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
