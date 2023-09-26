@@ -67,6 +67,8 @@ func (tr *TResponse) ReadStr() (string, error) {
 }
 
 // Read response as JSON object, response is always closed automatically
+//
+// Should migrate to tr.Json(...) instead.
 func (tr *TResponse) ReadJson(ptr any) error {
 	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
@@ -79,6 +81,25 @@ func (tr *TResponse) ReadJson(ptr any) error {
 		return e
 	}
 	return nil
+}
+
+// Read response as JSON object, response is always closed automatically.
+//
+// v shouldn't be a pointer, but a simple type like struct, after unmarshalling, v is returned directly to avoid heap allocation.
+func (tr *TResponse) Json(v any) (any, error) {
+	defer tr.Close()
+	body, e := io.ReadAll(tr.Resp.Body)
+	if e != nil {
+		return v, e
+	}
+
+	if e = json.Unmarshal(body, &v); e != nil {
+		s := string(body)
+		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
+		tr.Rail.Error(errMsg)
+		return v, fmt.Errorf(errMsg)
+	}
+	return v, nil
 }
 
 // Is status code 2xx
@@ -201,9 +222,16 @@ func (t *TClient) PostForm(data url.Values) *TResponse {
 	return t.Post(strings.NewReader(data.Encode()))
 }
 
-// Send POST request with JSON
+// Send POST request with JSON.
+//
+// Use simple types like struct instad of pointer for body.
 func (t *TClient) PostJson(body any) *TResponse {
-	jsonBody, e := json.Marshal(body)
+	ptr := body
+	if reflect.TypeOf(body).Kind() != reflect.Pointer {
+		ptr = &body
+	}
+
+	jsonBody, e := json.Marshal(ptr)
 	if e != nil {
 		return t.errorResponse(e)
 	}
