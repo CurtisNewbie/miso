@@ -138,6 +138,7 @@ func init() {
 
 	PreServerBootstrap(func(rail Rail) error {
 		requestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
+		rail.Infof("Server request parameter validation enabled: %v", requestValidationEnabled)
 		return nil
 	})
 }
