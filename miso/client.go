@@ -33,6 +33,11 @@ var (
 
 func init() {
 	defaultClient = &http.Client{Timeout: 5 * time.Second}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 500
+	transport.MaxIdleConnsPerHost = 500
+	transport.IdleConnTimeout = time.Minute * 5
+	defaultClient.Transport = transport
 }
 
 // Helper type for handling HTTP responses
@@ -50,8 +55,10 @@ func (tr *TResponse) Close() error {
 	return tr.Resp.Body.Close()
 }
 
-// Read response as []bytes, response is always closed automatically
-func (tr *TResponse) ReadBytes() ([]byte, error) {
+// Read response as []bytes.
+//
+// Response is always closed automatically.
+func (tr *TResponse) Bytes() ([]byte, error) {
 	if tr.Err != nil {
 		return nil, tr.Err
 	}
@@ -60,8 +67,10 @@ func (tr *TResponse) ReadBytes() ([]byte, error) {
 	return io.ReadAll(tr.Resp.Body)
 }
 
-// Read response as string, response is always closed automatically
-func (tr *TResponse) ReadStr() (string, error) {
+// Read response as string.
+//
+// Response is always closed automatically.
+func (tr *TResponse) Str() (string, error) {
 	if tr.Err != nil {
 		return "", tr.Err
 	}
@@ -74,10 +83,10 @@ func (tr *TResponse) ReadStr() (string, error) {
 	return string(b), nil
 }
 
-// Read response as JSON object, response is always closed automatically
+// Read response as JSON object.
 //
-// Should migrate to tr.Json(...) instead.
-func (tr *TResponse) ReadJson(ptr any) error {
+// Response is always closed automatically.
+func (tr *TResponse) Json(ptr any) error {
 	if tr.Err != nil {
 		return tr.Err
 	}
@@ -89,33 +98,12 @@ func (tr *TResponse) ReadJson(ptr any) error {
 	}
 
 	if e = json.Unmarshal(body, ptr); e != nil {
-		TraceLogger(tr.Ctx).Errorf("Failed to unmarchal '%s' as %v, %v", string(body), reflect.TypeOf(ptr), e)
-		return e
-	}
-	return nil
-}
-
-// Read response as JSON object, response is always closed automatically.
-//
-// v shouldn't be a pointer, but a simple type like struct, after unmarshalling, v is returned directly to avoid heap allocation.
-func (tr *TResponse) Json(v any) (any, error) {
-	if tr.Err != nil {
-		return v, tr.Err
-	}
-
-	defer tr.Close()
-	body, e := io.ReadAll(tr.Resp.Body)
-	if e != nil {
-		return v, e
-	}
-
-	if e = json.Unmarshal(body, &v); e != nil {
 		s := string(body)
 		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
 		tr.Rail.Error(errMsg)
-		return v, fmt.Errorf(errMsg)
+		return fmt.Errorf(errMsg)
 	}
-	return v, nil
+	return nil
 }
 
 // Is status code 2xx
@@ -127,20 +115,13 @@ func (tr *TResponse) Is2xx() bool {
 func (tr *TResponse) Require2xx() error {
 	if !tr.Is2xx() {
 		var body string
-		byt, err := tr.ReadBytes()
+		byt, err := tr.Bytes()
 		if err == nil {
 			body = string(byt)
 		}
 		return fmt.Errorf("unknown error, status code: %v, body: %v", tr.StatusCode, body)
 	}
 	return nil
-}
-
-// Read response as GnResp[T] object, response is always closed automatically
-func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
-	var gr GnResp[T]
-	e := tr.ReadJson(&gr)
-	return gr, e
 }
 
 // Helper type for sending HTTP requests
