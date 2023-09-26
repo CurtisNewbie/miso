@@ -27,6 +27,10 @@ func (r GnResp[T]) Err() error {
 	return nil
 }
 
+func (r GnResp[T]) Res() (T, error) {
+	return r.Data, r.Err()
+}
+
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
