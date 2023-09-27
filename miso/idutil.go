@@ -20,7 +20,7 @@ var (
 	timestamp int64 = 0
 	/** previous seqNo */
 	seqNo int64 = 0
-	mu    sync.Mutex
+	_idMu sync.Mutex
 )
 
 // Overwrite the randomly generated machine code, machine code must be between 0 and 999999, at most 6 digits.
@@ -29,8 +29,8 @@ func SetMachineCode(code int) error {
 		return fmt.Errorf("machindCode must be between 0 and 999999")
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
+	_idMu.Lock()
+	defer _idMu.Unlock()
 	machineCode = PadNum(code, 6)
 	return nil
 }
@@ -61,8 +61,8 @@ The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.58
 This func is thread-safe
 */
 func GenId() (id string) {
-	mu.Lock()
-	defer mu.Unlock()
+	_idMu.Lock()
+	defer _idMu.Unlock()
 
 	currTimestamp := time.Now().UnixMilli()
 	if currTimestamp == timestamp {
