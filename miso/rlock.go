@@ -85,12 +85,12 @@ type RLockConfig struct {
 }
 
 // Create new RLock with default backoff configuration (5ms backoff window, 200 attempts, i.e., retry for 1s).
-func NewRLock(rail Rail, key string) RLock {
+func NewRLock(rail Rail, key string) *RLock {
 	return NewCustomRLock(rail, key, RLockConfig{})
 }
 
 // Create customized RLock.
-func NewCustomRLock(rail Rail, key string, config RLockConfig) RLock {
+func NewCustomRLock(rail Rail, key string, config RLockConfig) *RLock {
 	r := RLock{
 		rail:            rail,
 		key:             key,
@@ -109,7 +109,7 @@ func NewCustomRLock(rail Rail, key string, config RLockConfig) RLock {
 	}
 
 	rail.Debugf("Created RLock for key: '%v', with backoffWindow: %v, backoffSteps: %v", r.key, r.backoffWindow, r.backoffSteps)
-	return r
+	return &r
 }
 
 func (r *RLock) isLocked() bool {
