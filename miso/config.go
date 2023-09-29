@@ -57,7 +57,7 @@ func GetPropIntSlice(prop string) []int {
 }
 
 // Get prop as string slice
-func GetPropStringSlice(prop string) []string {
+func GetPropStrSlice(prop string) []string {
 	return doWithViperReadLock(func() []string { return viper.GetStringSlice(prop) })
 }
 
@@ -121,8 +121,20 @@ func DefaultReadConfig(args []string, c Rail) {
 		SetProp(PropProductinMode, true)
 	}
 
-	configFile := GuessConfigFilePath(args, profile)
-	LoadConfigFromFile(configFile, c)
+	defConfigFile := GuessConfigFilePath(args, profile)
+	if err := LoadConfigFromFile(defConfigFile, c); err != nil {
+		c.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
+	}
+
+	extraFiles := GetPropStrSlice(PropConfigExtraFiles)
+	for i := range extraFiles {
+		f := extraFiles[i]
+		if err := LoadConfigFromFile(f, c); err != nil {
+			c.Warnf("Failed to load extra config file, %v, %v", f, err)
+		} else {
+			c.Infof("Loaded extra config file: %v", f)
+		}
+	}
 
 	// overwrite loaded configuration with environment variables
 	env := os.Environ()
@@ -143,31 +155,33 @@ Load config from file
 
 Repetitively calling this method overides previously loaded config.
 */
-func LoadConfigFromFile(configFile string, r Rail) {
+func LoadConfigFromFile(configFile string, r Rail) error {
 	if configFile == "" {
-		return
+		return nil
 	}
 
-	loaded := false
+	var eo error
+
 	doWithViperWriteLock(func() {
 		f, err := os.Open(configFile)
 		if err != nil {
 			if os.IsNotExist(err) {
-				r.Debugf("Unable to find config file: '%s'", configFile)
+				eo = fmt.Errorf("unable to find config file: '%s'", configFile)
 				return
 			}
-			r.Fatalf("Failed to open config file: '%s', %v", configFile, err)
+
+			eo = fmt.Errorf("failed to open config file: '%s', %v", configFile, err)
+			return
 		}
 		viper.SetConfigType("yml")
 		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
-			r.Fatalf("Failed to load config file: '%s', %v", configFile, err)
+			eo = fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
 		}
-		loaded = true
+
+		r.Debugf("Loaded config file: '%v'", configFile)
 	})
 
-	if loaded {
-		r.Debugf("Loaded config file: '%v'", configFile)
-	}
+	return eo
 }
 
 // Get profile

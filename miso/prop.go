@@ -152,4 +152,13 @@ const (
 	*/
 	PropMetricsEnabled = "metrics.enabled"
 	PropPromRoute      = "metrics.route"
+
+	/*
+		------------------------------------
+
+		Prop for Configuration
+
+		------------------------------------
+	*/
+	PropConfigExtraFiles = "config.extra.files"
 )

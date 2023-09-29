@@ -113,7 +113,7 @@ func TestParseArg(t *testing.T) {
 		t.Error(s)
 	}
 
-	if sl := GetPropStringSlice("rabbitmq.declaration.queue"); len(sl) != 2 {
+	if sl := GetPropStrSlice("rabbitmq.declaration.queue"); len(sl) != 2 {
 		t.Error(sl)
 	}
 

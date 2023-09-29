@@ -101,11 +101,12 @@ e.g.,
 
 ### Common Configuration
 
-| property        | description                          | default value |
-|-----------------|--------------------------------------|---------------|
-| app.name        | name of the application              |               |
-| profile         | name of the profile used             | dev           |
-| mode.production | whether production mode is turned on | false         |
+| property           | description                                               | default value |
+|--------------------|-----------------------------------------------------------|---------------|
+| app.name           | name of the application                                   |               |
+| profile            | name of the profile used                                  | dev           |
+| mode.production    | whether production mode is turned on                      | false         |
+| config.extra.files | config files that should be loaded beside the default one |               |
 
 ### Web Server Configuration
 
