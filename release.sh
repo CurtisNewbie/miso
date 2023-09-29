@@ -43,4 +43,4 @@ fi
 
 echo "Done, it's time to push your tag to remote origin! :D"
 
-echo "git push && git push origin $version;"
+printf "\ngit push && git push origin $version"
