@@ -9,11 +9,11 @@ import (
 )
 
 func TestTaskScheduling(t *testing.T) {
-	c := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", c)
+	rail := EmptyRail()
+	LoadConfigFromFile("../app-conf-dev.yml", rail)
 	SetProp(".enabled", "true")
 
-	if _, e := InitRedisFromProp(c); e != nil {
+	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
 
@@ -29,7 +29,7 @@ func TestTaskScheduling(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	StartTaskSchedulerAsync()
+	StartTaskSchedulerAsync(rail)
 
 	time.Sleep(6 * time.Second)
 

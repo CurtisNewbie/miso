@@ -68,7 +68,7 @@ func getTaskState() int32 {
 }
 
 // Enable distributed task scheduling, return whether task scheduling is enabled
-func enableTaskScheduling() bool {
+func enableTaskScheduling(rail Rail) bool {
 	coreMut.Lock()
 	defer coreMut.Unlock()
 
@@ -90,7 +90,7 @@ func enableTaskScheduling() bool {
 		logrus.Fatalf("NewUUID: %v", e)
 	}
 	nodeId = uid.String()
-	logrus.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
+	rail.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
 	return true
 }
 
@@ -182,23 +182,23 @@ func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, ta
 }
 
 // Start distributed scheduler asynchronously
-func StartTaskSchedulerAsync() {
+func StartTaskSchedulerAsync(rail Rail) {
 	if getTaskState() != taskPendingState {
 		return
 	}
 
-	if enableTaskScheduling() {
+	if enableTaskScheduling(rail) {
 		StartSchedulerAsync()
 	}
 }
 
 // Start distributed scheduler, current routine is blocked
-func StartTaskSchedulerBlocking() {
+func StartTaskSchedulerBlocking(rail Rail) {
 	if getTaskState() != taskPendingState {
 		return
 	}
 
-	if enableTaskScheduling() {
+	if enableTaskScheduling(rail) {
 		StartSchedulerBlocking()
 	}
 }

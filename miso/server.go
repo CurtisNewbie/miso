@@ -881,7 +881,7 @@ func RedisBootstrap(rail Rail) error {
 func SchedulerBootstrap(rail Rail) error {
 	// distributed task scheduler has pending tasks and is enabled
 	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
-		StartTaskSchedulerAsync()
+		StartTaskSchedulerAsync(rail)
 		rail.Info("Distributed Task Scheduler started")
 		AddShutdownHook(func() { StopTaskScheduler() })
 	} else if HasScheduler() {
