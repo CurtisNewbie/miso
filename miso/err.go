@@ -49,7 +49,7 @@ func NewErr(msg string, args ...any) *MisoErr {
 
 // Create new MisoErr with code
 func NewErrCode(code string, msg string, args ...any) *MisoErr {
-	err := NewErr(msg, args)
+	err := NewErr(msg, args...)
 	err.Code = code
 	return err
 }
