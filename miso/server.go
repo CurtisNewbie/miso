@@ -895,13 +895,10 @@ func SchedulerBootstrap(rail Rail) error {
 
 // Change first rune to lower case
 func LowercaseNamingStrategy(name string) string {
-	newName := []rune{}
-	for i, c := range name {
-		if i == 0 {
-			newName = append(newName, unicode.ToLower(c))
-		} else {
-			newName = append(newName, c)
-		}
+	ru := []rune(name)
+	if len(ru) < 1 {
+		return name
 	}
-	return string(newName)
+	ru[0] = unicode.ToLower(ru[0])
+	return string(ru)
 }
