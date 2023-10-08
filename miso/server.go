@@ -11,10 +11,13 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/json-iterator/go/extra"
 )
 
 // Raw version of traced route handler.
@@ -101,6 +104,7 @@ func init() {
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
+	SetDefProp(PropServerJsonNamingLowercase, true)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -657,7 +661,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 
 		// bind to payload boject
 		var req Req
-		MustBind(c, &req)
+		MustBind(rail, c, &req)
 
 		if requestValidationEnabled {
 			// validate request
@@ -708,36 +712,55 @@ func HandleResult(c *gin.Context, rail Rail, r any, e error) {
 }
 
 // Must bind request payload to the given pointer, else panic
-func MustBind(c *gin.Context, ptr any) {
-	if err := c.ShouldBind(ptr); err != nil {
-		TraceLogger(c.Request.Context()).Errorf("Bind payload failed, %v", err)
+func MustBind(rail Rail, c *gin.Context, ptr any) {
+	onFailed := func(err error) {
+		rail.Errorf("Bind payload failed, %v", err)
 		panic("Illegal Arguments")
+	}
+
+	// we now use jsoniter
+	if c.ContentType() == gin.MIMEJSON {
+		if err := jsoniter.NewDecoder(c.Request.Body).Decode(ptr); err != nil {
+			onFailed(err)
+		}
+		return
+	}
+
+	// other mime types
+	if err := c.ShouldBind(ptr); err != nil {
+		onFailed(err)
 	}
 }
 
 // Dispatch a json response
 func DispatchJson(c *gin.Context, body interface{}) {
-	c.JSON(http.StatusOK, body)
-}
+	c.Status(http.StatusOK)
+	c.Header("Content-Type", applicationJson)
 
-// Dispatch error response in json format
-func DispatchErrJson(c *gin.Context, rail Rail, err error) {
-	c.JSON(http.StatusOK, WrapResp(nil, err, rail))
-}
-
-// Dispatch error response in json format
-func DispatchErrMsgJson(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, ErrorResp(msg))
-}
-
-// Dispatch an ok response in json format
-func DispatchOk(c *gin.Context) {
-	c.JSON(http.StatusOK, OkResp())
+	err := jsoniter.NewEncoder(c.Writer).Encode(body)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Dispatch an ok response with data in json format
 func DispatchOkWData(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, OkRespWData(data))
+	DispatchJson(c, OkRespWData(data))
+}
+
+// Dispatch error response in json format
+func DispatchErrJson(c *gin.Context, rail Rail, err error) {
+	DispatchJson(c, WrapResp(nil, err, rail))
+}
+
+// Dispatch error response in json format
+func DispatchErrMsgJson(c *gin.Context, msg string) {
+	DispatchJson(c, ErrorResp(msg))
+}
+
+// Dispatch an ok response in json format
+func DispatchOk(c *gin.Context) {
+	DispatchJson(c, OkResp())
 }
 
 func MySQLBootstrap(rail Rail) error {
@@ -756,6 +779,11 @@ func WebServerBootstrap(rail Rail) error {
 		return nil
 	}
 	rail.Info("Starting HTTP server")
+
+	if GetPropBool(PropServerJsonNamingLowercase) {
+		rail.Debug("HTTP Server using lowercase naming strategy for JSON processing.")
+		extra.SetNamingStrategy(LowercaseNamingStrategy)
+	}
 
 	// Load propagation keys for tracing
 	LoadPropagationKeyProp(rail)
@@ -863,4 +891,17 @@ func SchedulerBootstrap(rail Rail) error {
 		AddShutdownHook(func() { StopScheduler() })
 	}
 	return nil
+}
+
+// Change first rune to lower case
+func LowercaseNamingStrategy(name string) string {
+	newName := []rune{}
+	for i, c := range name {
+		if i == 0 {
+			newName = append(newName, unicode.ToLower(c))
+		} else {
+			newName = append(newName, c)
+		}
+	}
+	return string(newName)
 }
