@@ -64,7 +64,7 @@ func main() {
 }
 ```
 
-## Initialize Project
+<!-- ## Initialize Project
 
 Convenient way to initialize a new project:
 
@@ -73,7 +73,7 @@ mkdir myapp \
     && cd myapp \
     && curl https://raw.githubusercontent.com/CurtisNewbie/miso/main/init.sh \
     | bash
-```
+``` -->
 
 ## Command Line Arguments
 
