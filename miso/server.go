@@ -33,7 +33,9 @@ T should be a struct, where all fields are automatically mapped from the request
 
   - json
   - xml
-  - form
+  - form (supports: form-data, query param)
+
+For binding, go read https://gin-gonic.com/docs/
 */
 type MappedTRouteHandler[Req any] func(c *gin.Context, rail Rail, req Req) (any, error)
 
@@ -901,4 +903,115 @@ func LowercaseNamingStrategy(name string) string {
 	}
 	ru[0] = unicode.ToLower(ru[0])
 	return string(ru)
+}
+
+type GroupedRouteRegistar struct{ registerRoute func(baseUrl string) }
+type RoutingGroup struct{ Base string }
+
+// Group routes together to share the same base url.
+func BaseRoute(baseUrl string) RoutingGroup {
+	return RoutingGroup{Base: baseUrl}
+}
+
+func (rg RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
+	for i := range grouped {
+		grouped[i].registerRoute(rg.Base)
+	}
+}
+
+func GrpRawGet(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			RawGet(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpRawPost(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			RawPost(baseUrl+url, handler, extra...)
+		},
+	}
+
+}
+
+func GrpRawPut(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			RawPut(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpRawDelete(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			RawDelete(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpGet(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			Get(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpPost(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			Post(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpPut(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			Put(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpDelete(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			Delete(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpIGet[T any](url string, handler MappedTRouteHandler[T], extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			IGet(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpIPost[T any](url string, handler MappedTRouteHandler[T], extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			IPost(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpIDelete[T any](url string, handler MappedTRouteHandler[T], extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			IDelete(baseUrl+url, handler, extra...)
+		},
+	}
+}
+
+func GrpIPut[T any](url string, handler MappedTRouteHandler[T], extra ...StrPair) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		registerRoute: func(baseUrl string) {
+			IPut(baseUrl+url, handler, extra...)
+		},
+	}
 }
