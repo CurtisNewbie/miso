@@ -90,7 +90,7 @@ var (
 
 	// handler of endpoint results (response object or error)
 	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, r any, e error) {
-		HandleResult(c, rail, r, e)
+		defaultHandleResult(c, rail, r, e)
 	}
 
 	requestValidationEnabled = false // whether request validation is enabled, read-only
@@ -700,7 +700,11 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 }
 
 // Handle route's result
-func HandleResult(c *gin.Context, rail Rail, r any, e error) {
+func ServerHandleResult(c *gin.Context, rail Rail, result any, err error) {
+	serverResultHandler(c, rail, result, err)
+}
+
+func defaultHandleResult(c *gin.Context, rail Rail, r any, e error) {
 	if e != nil {
 		DispatchErrJson(c, rail, e)
 		return
