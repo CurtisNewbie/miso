@@ -11,13 +11,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/json-iterator/go/extra"
 )
 
 // Raw version of traced route handler.
@@ -106,7 +104,6 @@ func init() {
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
-	SetDefProp(PropServerJsonNamingLowercase, true)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -822,11 +819,6 @@ func WebServerBootstrap(rail Rail) error {
 	}
 	rail.Info("Starting HTTP server")
 
-	if GetPropBool(PropServerJsonNamingLowercase) {
-		rail.Debug("HTTP Server using lowercase naming strategy for JSON processing.")
-		extra.SetNamingStrategy(LowercaseNamingStrategy)
-	}
-
 	// Load propagation keys for tracing
 	LoadPropagationKeyProp(rail)
 
@@ -933,16 +925,6 @@ func SchedulerBootstrap(rail Rail) error {
 		AddShutdownHook(func() { StopScheduler() })
 	}
 	return nil
-}
-
-// Change first rune to lower case
-func LowercaseNamingStrategy(name string) string {
-	ru := []rune(name)
-	if len(ru) < 1 {
-		return name
-	}
-	ru[0] = unicode.ToLower(ru[0])
-	return string(ru)
 }
 
 type GroupedRouteRegistar func(baseUrl string)

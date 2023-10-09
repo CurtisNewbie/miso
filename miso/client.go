@@ -3,13 +3,11 @@ package miso
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -97,7 +95,7 @@ func (tr *TResponse) Json(ptr any) error {
 		return e
 	}
 
-	if e = json.Unmarshal(body, ptr); e != nil {
+	if e = ParseJson(body, ptr); e != nil {
 		s := string(body)
 		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
 		tr.Rail.Error(errMsg)
@@ -223,12 +221,7 @@ func (t *TClient) PostForm(data url.Values) *TResponse {
 //
 // Use simple types like struct instad of pointer for body.
 func (t *TClient) PostJson(body any) *TResponse {
-	ptr := body
-	if reflect.TypeOf(body).Kind() != reflect.Pointer {
-		ptr = &body
-	}
-
-	jsonBody, e := json.Marshal(ptr)
+	jsonBody, e := WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}
@@ -256,7 +249,7 @@ func (t *TClient) Post(body io.Reader) *TResponse {
 
 // Send PUT request with JSON
 func (t *TClient) PutJson(body any) *TResponse {
-	jsonBody, e := json.Marshal(body)
+	jsonBody, e := WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}

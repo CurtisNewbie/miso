@@ -1,7 +1,6 @@
 package miso
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -162,7 +161,7 @@ type LazyORCache[T any] struct {
 // convert string to T.
 func fromCachedStr[T any](v string) (T, error) {
 	var t T
-	err := json.Unmarshal([]byte(v), &t)
+	err := ParseJson([]byte(v), &t)
 	if err != nil {
 		return t, fmt.Errorf("unable to unmarshal from string, %v", err)
 	}
@@ -171,7 +170,7 @@ func fromCachedStr[T any](v string) (T, error) {
 
 // convert from T to string.
 func toCachedStr(t any) (string, error) {
-	b, err := json.Marshal(&t)
+	b, err := WriteJson(t)
 	if err != nil {
 		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}

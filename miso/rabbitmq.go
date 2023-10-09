@@ -2,7 +2,6 @@ package miso
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -110,7 +109,7 @@ func (m JsonMsgListener[T]) Queue() string {
 
 func (m JsonMsgListener[T]) Handle(rail Rail, payload string) error {
 	var t T
-	if e := json.Unmarshal([]byte(payload), &t); e != nil {
+	if e := ParseJson([]byte(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -157,7 +156,7 @@ func (m MsgListener) String() string {
 
 // Publish json message with confirmation
 func PublishJson(c Rail, obj any, exchange string, routingKey string) error {
-	j, err := json.Marshal(obj)
+	j, err := WriteJson(obj)
 	if err != nil {
 		return TraceErrf(err, "failed to marshal message body")
 	}

@@ -103,6 +103,14 @@ e.g.,
 ./main mode.production=true
 ```
 
+## Different Behaviour
+
+### Default JSON Field Naming Strategy
+
+In Golang, we export fields by capitalizing the first letter. This leads to a problem where we may have to add json tag for literally every exported fields. Miso internally uses `jsoniter`, it configures the naming strategy
+that always use lowercase for the first letter of the field name. Whenever Miso Marshal/Unmarshal JSON values, Miso uses the configured `jsoniter` instead of the standard one. This can be reverted by registering
+`PreServerBootstrap` callback to change the naming strategy back to the default one.
+
 ## Configuration
 
 ### Common Configuration
@@ -116,16 +124,15 @@ e.g.,
 
 ### Web Server Configuration
 
-| property                        | description                                                                               | default value |
-|---------------------------------|-------------------------------------------------------------------------------------------|---------------|
-| server.enabled                  | enable http server                                                                        | true          |
-| server.host                     | http server host                                                                          | 0.0.0.0       |
-| server.port                     | http server port                                                                          | 8080          |
-| server.gracefulShutdownTimeSec  | time wait (in second) before server shutdown                                              | 30            |
-| server.perf.enabled             | enable logging time took for each http server request                                     | false         |
-| server.trace.inbound.propagate  | propagate trace info from inbound requests                                                | true          |
-| server.validate.request.enabled | enable server request parameter validation                                                | true          |
-| server.json.naming.lowercase    | use lowercase json naming strategy (camelcase, but the first rune is always in lowercase) | true          |
+| property                        | description                                           | default value |
+|---------------------------------|-------------------------------------------------------|---------------|
+| server.enabled                  | enable http server                                    | true          |
+| server.host                     | http server host                                      | 0.0.0.0       |
+| server.port                     | http server port                                      | 8080          |
+| server.gracefulShutdownTimeSec  | time wait (in second) before server shutdown          | 30            |
+| server.perf.enabled             | enable logging time took for each http server request | false         |
+| server.trace.inbound.propagate  | propagate trace info from inbound requests            | true          |
+| server.validate.request.enabled | enable server request parameter validation            | true          |
 
 ### Consul Configuration
 

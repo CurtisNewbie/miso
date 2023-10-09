@@ -75,7 +75,6 @@ const (
 	PropServerPerfEnabled             = "server.perf.enabled"
 	PropServerPropagateInboundTrace   = "server.trace.inbound.propagate"
 	PropServerRequestValidateEnabled  = "server.validate.request.enabled"
-	PropServerJsonNamingLowercase     = "server.json.naming.lowercase"
 
 	/*
 		------------------------------------
