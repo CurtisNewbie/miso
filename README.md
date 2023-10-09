@@ -46,14 +46,14 @@ func main() {
 		}
 
 		// register http routes and handlers
-		miso.IPost[DoSomethingReq]("/open/api/demo/post", doSomethingEndpoint).Build()
+		miso.IPost[MyReq]("/open/api/demo/post", doSomethingEndpoint).Build()
 
 		// register grouped routes that share the same base url
-		miso.BaseRoute("/open/api").
+		miso.BaseRoute("/open/api/demo/grouped").
 			Group(
-				miso.IPost[DoSomethingReq]("/open/api/demo1", doSomethingEndpoint),
-				miso.IPost[DoSomethingReq]("/open/api/demo2", doSomethingEndpoint),
-				miso.IPost[DoSomethingReq]("/open/api/demo3", doSomethingEndpoint),
+				miso.IPost[MyReq]("/post1", doSomethingEndpoint),
+				miso.IPost[MyReq]("/post2", doSomethingEndpoint),
+				miso.IPost[MyReq]("/post3", doSomethingEndpoint),
 			)
 
 		return nil
