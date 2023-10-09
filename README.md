@@ -25,36 +25,42 @@ List of integration and functionalities provided:
 ```go
 func main() {
 
-    miso.PreServerBootstrap(func(rail miso.Rail) error {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
 
-        // prepare some event bus declaration
-        if err := miso.DeclareEventBus(demoEventBusName); err != nil {
-            return err
-        }
+		// prepare some event bus declaration
+		if err := miso.NewEventBus(demoEventBusName); err != nil {
+			return err
+		}
 
-        // register some cron scheduling job (not distributed)
-        miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+		// register some cron scheduling job (not distributed)
+		miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
-        // register some distributed tasks
-        err := miso.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-            func(miso miso.Rail) error {
-                return doSomething(rail)
-            }
-        )
-        if err != nil {
-            panic(err) // for demo only
-        }
+		// register some distributed tasks
+		err := miso.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+			func(miso miso.Rail) error {
+				return jobDoSomething(rail)
+			},
+		)
+		if err != nil {
+			panic(err) // for demo only
+		}
 
-        // register http routes and handlers
-        miso.IPost[DoSomethingReq]("/open/api/demo",
-            func(c *gin.Context, rail miso.Rail, req DoSomethingReq) (any, error) {
-                rail.Infof("Received request, %+v", req)
-                return doSomething(rail, req)
-            })
-        })
+		// register http routes and handlers
+		miso.IPost[DoSomethingReq]("/open/api/demo/post", doSomethingEndpoint).Build()
 
-    // bootstrap server
-    miso.BootstrapServer(os.Args)
+		// register grouped routes that share the same base url
+		miso.BaseRoute("/open/api").
+			Group(
+				miso.IPost[DoSomethingReq]("/open/api/demo1", doSomethingEndpoint),
+				miso.IPost[DoSomethingReq]("/open/api/demo2", doSomethingEndpoint),
+				miso.IPost[DoSomethingReq]("/open/api/demo3", doSomethingEndpoint),
+			)
+
+		return nil
+	})
+
+	// bootstrap server
+	miso.BootstrapServer(os.Args)
 }
 ```
 
