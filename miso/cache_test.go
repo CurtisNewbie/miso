@@ -194,3 +194,59 @@ func TestTTLCacheConcurrent(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestTinyTTLCacheMaxSize(t *testing.T) {
+	rail := EmptyRail()
+
+	type ttlDummy struct {
+		name string
+	}
+
+	cache := NewTinyTTLCache[ttlDummy](1*time.Second, 10)
+
+	cnt := 0
+	elseGet := func() (ttlDummy, bool) {
+		cnt += 1
+		rail.Infof("elseGet %v", cnt)
+		return ttlDummy{
+			name: "myDummy",
+		}, true
+	}
+
+	for i := 0; i < 10; i++ {
+		cache.Get(ERand(5), elseGet)
+	}
+
+	if cnt != 10 {
+		t.Fatalf("cnt should be 10, but %v", cnt)
+	}
+
+	// all the key should be evicted already
+	time.Sleep(2 * time.Second)
+
+	v, ok := cache.Get("abc", elseGet)
+	if !ok {
+		t.Fatal("not ok")
+	}
+
+	if v.name != "myDummy" {
+		t.Fatalf("name not myDummy, but %v", v.name)
+	}
+
+	if cnt != 11 {
+		t.Fatalf("cnt should be 11, but %v", cnt)
+	}
+
+	v, ok = cache.Get("abc", elseGet)
+	if !ok {
+		t.Fatal("not ok")
+	}
+
+	if v.name != "myDummy" {
+		t.Fatalf("name not myDummy, but %v", v.name)
+	}
+
+	if cnt != 11 {
+		t.Fatalf("cnt should be 11, but %v", cnt)
+	}
+}
