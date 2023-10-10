@@ -758,7 +758,7 @@ func MustBind(rail Rail, c *gin.Context, ptr any) {
 	}
 
 	// we now use jsoniter
-	if c.ContentType() == gin.MIMEJSON {
+	if c.Request.Method != http.MethodGet && c.ContentType() == gin.MIMEJSON {
 		if err := jsoniter.NewDecoder(c.Request.Body).Decode(ptr); err != nil {
 			onFailed(err)
 		}
