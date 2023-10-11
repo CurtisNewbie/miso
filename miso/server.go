@@ -97,6 +97,8 @@ var (
 type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
 
 func init() {
+	AddShutdownHook(func() { MarkServerShuttingDown() })
+
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "0.0.0.0")
 	SetDefProp(PropServerPort, 8080)
@@ -460,7 +462,6 @@ func BootstrapServer(args []string) {
 
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
-	AddShutdownHook(func() { MarkServerShuttingDown() })
 
 	rail, cancel := rail.WithCancel()
 	AddShutdownHook(func() { cancel() })
