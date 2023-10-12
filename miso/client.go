@@ -614,3 +614,8 @@ func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
 	e := tr.Json(&gr)
 	return gr, e
 }
+
+// Disable TLS certificate check.
+func ClientSkipTlsSecureCheck() {
+	defaultClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+}
