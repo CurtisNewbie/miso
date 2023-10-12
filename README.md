@@ -1,6 +1,6 @@
 # miso
 
-Miso, yet another simple application framework.
+Miso, yet another simple application framework. Learn by doing is great :D
 
 Miso provides a universal configuration management mechanism and integrates with various components and libraries to make life hopefully a bit easier.
 
