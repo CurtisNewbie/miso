@@ -595,6 +595,16 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	rail := BuildRail(c)
 	rail.Errorf("Recovered from panic, %v", e)
 
+	// response already written, avoid writting it again.
+	if c.Writer.Written() {
+		if me, ok := e.(*MisoErr); ok {
+			rail.Infof("Miso error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+			return
+		}
+		rail.Errorf("Unknown error, %v", e)
+		return
+	}
+
 	if err, ok := e.(error); ok {
 		serverResultHandler(c, rail, nil, err)
 		return
