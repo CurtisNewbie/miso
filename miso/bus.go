@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	BUS_ROUTING_KEY   = "#"
-	BUS_EXCHANGE_KIND = "direct"
+	BusRoutingKey   = "#"
+	BusExchangeKind = "direct"
 )
 
 var (
@@ -29,7 +29,7 @@ func PubEventBus(c Rail, eventObject any, bus string) error {
 		return fmt.Errorf("failed to create event bus, %v", err)
 	}
 	busName := busName(bus)
-	return PublishJson(c, eventObject, busName, BUS_ROUTING_KEY)
+	return PublishJson(c, eventObject, busName, BusRoutingKey)
 }
 
 // Declare event bus.
@@ -54,10 +54,10 @@ func NewEventBus(bus string) error {
 		if err := DeclareRabbitQueue(ch, QueueRegistration{Name: busName, Durable: true}); err != nil {
 			return err
 		}
-		if err := DeclareRabbitBinding(ch, BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName}); err != nil {
+		if err := DeclareRabbitBinding(ch, BindingRegistration{Queue: busName, RoutingKey: BusRoutingKey, Exchange: busName}); err != nil {
 			return err
 		}
-		if err := DeclareRabbitExchange(ch, ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND}); err != nil {
+		if err := DeclareRabbitExchange(ch, ExchangeRegistration{Name: busName, Durable: true, Kind: BusExchangeKind}); err != nil {
 			return err
 		}
 		declaredBus.Store(busName, true)
@@ -66,8 +66,8 @@ func NewEventBus(bus string) error {
 
 	// not connected yet, prepare the registration instead
 	RegisterRabbitQueue(QueueRegistration{Name: busName, Durable: true})
-	RegisterRabbitBinding(BindingRegistration{Queue: busName, RoutingKey: BUS_ROUTING_KEY, Exchange: busName})
-	RegisterRabbitExchange(ExchangeRegistration{Name: busName, Durable: true, Kind: BUS_EXCHANGE_KIND})
+	RegisterRabbitBinding(BindingRegistration{Queue: busName, RoutingKey: BusRoutingKey, Exchange: busName})
+	RegisterRabbitExchange(ExchangeRegistration{Name: busName, Durable: true, Kind: BusExchangeKind})
 	declaredBus.Store(busName, true)
 	return nil
 }
