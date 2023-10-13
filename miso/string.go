@@ -5,14 +5,6 @@ import (
 	"strings"
 )
 
-func RepeatStr(tkn string, times int) string {
-	var s string
-	for i := 0; i < times; i++ {
-		s += tkn
-	}
-	return s
-}
-
 func PadNum(n int, digit int) string {
 	var cnt int
 	var v int = n
@@ -24,9 +16,9 @@ func PadNum(n int, digit int) string {
 	num := strconv.Itoa(n)
 	if pad > 0 {
 		if pad == digit {
-			return RepeatStr("0", pad)
+			return strings.Repeat("0", pad)
 		}
-		return RepeatStr("0", pad) + num
+		return strings.Repeat("0", pad) + num
 	}
 	return num
 }
@@ -82,4 +74,11 @@ func IsBlankStr(s string) bool {
 func MaxLenStr(s string, max int) string {
 	ru := []rune(s)
 	return string(ru[:MinInt(len(ru), max)])
+}
+
+// Check if s has the prefix in a case-insensitive way.
+func HasPrefixIgnoreCase(s string, prefix string) bool {
+	prefix = strings.ToLower(prefix)
+	s = strings.ToLower(s)
+	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
 }
