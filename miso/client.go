@@ -58,9 +58,14 @@ func (tr *TResponse) Close() error {
 // Read response as []bytes.
 //
 // Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Bytes() ([]byte, error) {
 	if tr.Err != nil {
 		return nil, tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return nil, NoneErr
 	}
 
 	defer tr.Close()
@@ -70,9 +75,14 @@ func (tr *TResponse) Bytes() ([]byte, error) {
 // Read response as string.
 //
 // Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Str() (string, error) {
 	if tr.Err != nil {
 		return "", tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return "", NoneErr
 	}
 
 	defer tr.Close()
@@ -86,9 +96,14 @@ func (tr *TResponse) Str() (string, error) {
 // Read response as JSON object.
 //
 // Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Json(ptr any) error {
 	if tr.Err != nil {
 		return tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return NoneErr
 	}
 
 	defer tr.Close()

@@ -16,7 +16,10 @@ var (
 )
 
 var (
-	NoneErr = NewErr("Miso: None")
+	// Error represents None or Nil.
+	//
+	// Use miso.IsNoneErr(err) to check if an error represents None.
+	NoneErr *MisoErr = NewErr("none")
 )
 
 // Check if the error represents None
