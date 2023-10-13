@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ var (
 	_serviceRegistry         ServiceRegistry = nil
 	_initServiceRegistryOnce sync.Once
 	defaultClient            *http.Client
+	httpProtoRegex           = regexp.MustCompile(`(?i)https?://`)
 )
 
 func init() {
@@ -158,8 +160,9 @@ func (t *TClient) prepReqUrl() (string, error) {
 			return "", err
 		}
 		url = resolved
+	} else if !httpProtoRegex.MatchString(t.Url) { // missing a protocol
+		url = httpProto + t.Url
 	}
-
 	return concatQueryParam(url, t.QueryParam), nil
 }
 
@@ -185,7 +188,7 @@ func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
 	return t
 }
 
-// Enable tracing by putting propagation key/value pairs on http headers
+// Enable tracing by putting propagation key/value pairs on http headers.
 func (t *TClient) EnableTracing() *TClient {
 	t.trace = true
 	return t
@@ -194,6 +197,30 @@ func (t *TClient) EnableTracing() *TClient {
 // Set Content-Type
 func (t *TClient) SetContentType(ct string) *TClient {
 	t.SetHeaders(contentType, ct)
+	return t
+}
+
+// Append 'http://' protocol.
+//
+// If service discovery is enabled, or the url contains http protocol already, this will be skipped.
+func (t *TClient) Http(ct string) *TClient {
+	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
+		return t
+	}
+
+	t.Url = httpProto + t.Url
+	return t
+}
+
+// Append 'https://' protocol.
+//
+// If service discovery is enabled, or the url contains http protocol already, this will be skipped.
+func (t *TClient) Https(ct string) *TClient {
+	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
+		return t
+	}
+
+	t.Url = httpsProto + t.Url
 	return t
 }
 
@@ -403,9 +430,9 @@ func NewDefaultTClient(ec Rail, url string) *TClient {
 	return NewTClient(ec, url, defaultClient)
 }
 
-// Create new defualt TClient with service discovery enabled, relUrl should be a relative url starting with '/'
+// Create new defualt TClient with service discovery and tracing enabled, relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl, defaultClient).EnableServiceDiscovery(serviceName)
+	return NewTClient(ec, relUrl, defaultClient).EnableServiceDiscovery(serviceName).EnableTracing()
 }
 
 // Create new TClient
