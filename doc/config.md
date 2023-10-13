@@ -28,6 +28,8 @@ e.g.,
 ./main mode.production=true
 ```
 
+Notice that if you have more than one configuration file to load, you can use `config.extra.files` configuration property.
+
 ## Common Configuration
 
 | property           | description                                               | default value |

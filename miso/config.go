@@ -121,7 +121,11 @@ func DefaultReadConfig(args []string, c Rail) {
 		SetProp(PropProductinMode, true)
 	}
 
+	loaded := NewSet[string]()
+
 	defConfigFile := GuessConfigFilePath(args, profile)
+	loaded.Add(defConfigFile)
+
 	if err := LoadConfigFromFile(defConfigFile, c); err != nil {
 		c.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
 	}
@@ -129,6 +133,10 @@ func DefaultReadConfig(args []string, c Rail) {
 	extraFiles := GetPropStrSlice(PropConfigExtraFiles)
 	for i := range extraFiles {
 		f := extraFiles[i]
+		if !loaded.Add(f) {
+			continue
+		}
+
 		if err := LoadConfigFromFile(f, c); err != nil {
 			c.Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
@@ -147,6 +155,21 @@ func DefaultReadConfig(args []string, c Rail) {
 	kv = ArgKeyVal(args)
 	for k, v := range kv {
 		SetProp(k, v)
+	}
+
+	// try again, one may specify the extra files through cli args or environment variables
+	extraFiles = GetPropStrSlice(PropConfigExtraFiles)
+	for i := range extraFiles {
+		f := extraFiles[i]
+		if !loaded.Add(f) {
+			continue
+		}
+
+		if err := LoadConfigFromFile(f, c); err != nil {
+			c.Warnf("Failed to load extra config file, %v, %v", f, err)
+		} else {
+			c.Infof("Loaded extra config file: %v", f)
+		}
 	}
 }
 
