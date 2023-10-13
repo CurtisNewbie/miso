@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -87,6 +88,11 @@ type RLockConfig struct {
 // Create new RLock with default backoff configuration (5ms backoff window, 200 attempts, i.e., retry for 1s).
 func NewRLock(rail Rail, key string) *RLock {
 	return NewCustomRLock(rail, key, RLockConfig{})
+}
+
+// Create new RLock with default backoff configuration (5ms backoff window, 200 attempts, i.e., retry for 1s).
+func NewRLockf(rail Rail, keyPattern string, args ...any) *RLock {
+	return NewCustomRLock(rail, fmt.Sprintf(keyPattern, args...), RLockConfig{})
 }
 
 // Create customized RLock.
