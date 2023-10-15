@@ -209,126 +209,126 @@ func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
 
 // Register GET request route (raw version)
 func RawGet(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewRawTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Register POST request route (raw version)
 func RawPost(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewRawTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Register PUT request route (raw version)
 func RawPut(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewRawTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewRawTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for GET request.
 //
 // The result or error is wrapped in Resp automatically.
 func Get(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for POST request.
 //
 // The result or error is wrapped in Resp automatically.
 func Post(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
 func Put(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for DELETE request.
 //
 // The result and error are wrapped in Resp automatically as json.
 func Delete(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
 // The result or error is wrapped in Resp automatically.
 func IPost[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewMappedTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json.
 func IGet[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewMappedTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
 func IDelete[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewMappedTRouteHandler(handler)) })
-	}
+	})
 }
 
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
 func IPut[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
-	return func(baseUrl string) {
+	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
 		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewMappedTRouteHandler(handler)) })
-	}
+	})
 }
 
 func addRoutesRegistar(reg routesRegistar) {
@@ -938,10 +938,31 @@ func SchedulerBootstrap(rail Rail) error {
 	return nil
 }
 
-type GroupedRouteRegistar func(baseUrl string)
+type GroupedRouteRegistar struct {
+	RegisterFunc func(baseUrl string, extra ...StrPair)
+	Extras       []StrPair
+}
 
+// Build route.
 func (g GroupedRouteRegistar) Build() {
-	g("")
+	g.RegisterFunc("", g.Extras...)
+}
+
+// Add extra info to route.
+func (g GroupedRouteRegistar) Extra(ex StrPair) GroupedRouteRegistar {
+	if g.Extras == nil {
+		g.Extras = []StrPair{}
+	}
+	g.Extras = append(g.Extras, ex)
+	return g
+}
+
+// Create new GroupedRouteRegistar.
+func NewGroupedRouteRegistar(f func(baseUrl string, extra ...StrPair)) GroupedRouteRegistar {
+	return GroupedRouteRegistar{
+		RegisterFunc: f,
+		Extras:       []StrPair{},
+	}
 }
 
 type RoutingGroup struct{ Base string }
@@ -951,8 +972,9 @@ func BaseRoute(baseUrl string) RoutingGroup {
 	return RoutingGroup{Base: baseUrl}
 }
 
+// Group routes
 func (rg RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
 	for i := range grouped {
-		grouped[i](rg.Base)
+		grouped[i].RegisterFunc(rg.Base)
 	}
 }
