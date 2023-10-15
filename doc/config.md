@@ -50,6 +50,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 | server.perf.enabled             | enable logging time took for each http server request | false         |
 | server.trace.inbound.propagate  | propagate trace info from inbound requests            | true          |
 | server.validate.request.enabled | enable server request parameter validation            | true          |
+| server.request-log.enabled      | enable server request log enabled                     | false         |
 
 ## Consul Configuration
 

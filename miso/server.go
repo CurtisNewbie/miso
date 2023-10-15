@@ -91,7 +91,8 @@ var (
 		defaultHandleResult(c, rail, r, e)
 	}
 
-	requestValidationEnabled = false // whether request validation is enabled, read-only
+	serverRequestValidationEnabled = false // whether request validation is enabled, read-only
+	serverRequestLogEnabled        = false // enable request payload log, read-only
 )
 
 type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
@@ -142,8 +143,12 @@ func init() {
 	})
 
 	PreServerBootstrap(func(rail Rail) error {
-		requestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
-		rail.Infof("Server request parameter validation enabled: %v", requestValidationEnabled)
+		serverRequestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
+		rail.Debugf("Server request parameter validation enabled: %v", serverRequestValidationEnabled)
+
+		serverRequestLogEnabled = GetPropBool(PropServerRequestLogEnabled)
+		rail.Debugf("Server request log enabled: %v", serverRequestValidationEnabled)
+
 		return nil
 	})
 }
@@ -709,12 +714,16 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		var req Req
 		MustBind(rail, c, &req)
 
-		if requestValidationEnabled {
+		if serverRequestValidationEnabled {
 			// validate request
 			if e := Validate(req); e != nil {
 				serverResultHandler(c, rail, nil, e)
 				return
 			}
+		}
+
+		if serverRequestLogEnabled {
+			rail.Infof("Request Body: %+v", req)
 		}
 
 		// handle the requests

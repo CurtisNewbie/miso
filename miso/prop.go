@@ -73,6 +73,7 @@ const (
 	PropServerPort                    = "server.port"
 	PropServerGracefulShutdownTimeSec = "server.gracefulShutdownTimeSec"
 	PropServerPerfEnabled             = "server.perf.enabled"
+	PropServerRequestLogEnabled       = "server.request-log.enabled"
 	PropServerPropagateInboundTrace   = "server.trace.inbound.propagate"
 	PropServerRequestValidateEnabled  = "server.validate.request.enabled"
 
