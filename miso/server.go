@@ -984,6 +984,7 @@ func BaseRoute(baseUrl string) RoutingGroup {
 // Group routes
 func (rg RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
 	for i := range grouped {
-		grouped[i].RegisterFunc(rg.Base)
+		gi := grouped[i]
+		gi.RegisterFunc(rg.Base, gi.Extras...)
 	}
 }
