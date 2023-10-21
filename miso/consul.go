@@ -34,7 +34,37 @@ var (
 	serverListPSub = &serverListPollingSubscription{sub: nil}
 
 	ErrConsulServiceInstanceNotFound = errors.New("unable to find any available service instance")
+
+	ConsulApi = ConsulApiImpl{}
 )
+
+type ConsulApiImpl struct{}
+
+// Fetch registered service by name, this method always call Consul instead of reading from cache
+func (c ConsulApiImpl) CatalogFetchServiceNodes(rail Rail, name string) ([]*api.CatalogService, error) {
+	defer DebugTimeOp(rail, time.Now(), "CatalogFetchServiceNodes")
+	client, err := GetConsulClient()
+	if err != nil {
+		return nil, err
+	}
+
+	services, _, err := client.Catalog().Service(name, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
+// Fetch all registered services, this method always call Consul instead of reading from cache
+func (c ConsulApiImpl) CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
+	client, e := GetConsulClient()
+	if e != nil {
+		return nil, e
+	}
+	services, _, err := client.Catalog().Services(nil)
+	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
+	return services, err
+}
 
 type serverListPollingSubscription struct {
 	sub *time.Ticker
@@ -123,7 +153,7 @@ func IsConsulEnabled() bool {
 
 // Poll all service list and cache them.
 func PollServiceListInstances(rail Rail) {
-	names, err := CatalogFetchServiceNames(rail)
+	names, err := ConsulApi.CatalogFetchServiceNames(rail)
 	if err != nil {
 		rail.Errorf("Failed to CatalogFetchServiceNames, %v", err)
 		return
@@ -141,7 +171,7 @@ func PollServiceListInstances(rail Rail) {
 
 // Fetch services by name and cache the result from Consul, this func requires extra lock
 func fetchAndCacheServiceNodes(rail Rail, name string) error {
-	services, err := CatalogFetchServiceNodes(name)
+	services, err := ConsulApi.CatalogFetchServiceNodes(rail, name)
 	if err != nil {
 		return fmt.Errorf("failed to FetchServicesByName, name: %v, %v", name, err)
 	}
@@ -216,31 +246,6 @@ func ListConsulServers(name string) []ConsulServer {
 // Create a default health check endpoint that simply doesn't nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "UP")
-}
-
-// Fetch registered service by name, this method always call Consul instead of reading from cache
-func CatalogFetchServiceNodes(name string) ([]*api.CatalogService, error) {
-	client, err := GetConsulClient()
-	if err != nil {
-		return nil, err
-	}
-
-	services, _, err := client.Catalog().Service(name, "", nil)
-	if err != nil {
-		return nil, err
-	}
-	return services, nil
-}
-
-// Fetch all registered services, this method always call Consul instead of reading from cache
-func CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
-	client, e := GetConsulClient()
-	if e != nil {
-		return nil, e
-	}
-	services, _, err := client.Catalog().Services(nil)
-	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
-	return services, err
 }
 
 // Register current service
