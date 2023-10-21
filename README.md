@@ -86,6 +86,7 @@ mysql:
 - [Application Lifecycle](./doc/lifecycle.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
+- [Service Healthcheck](./doc/health.md)
 
 ## Different Behaviour
 
