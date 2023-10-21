@@ -830,6 +830,24 @@ func MySQLBootstrap(rail Rail) error {
 	if e := InitMySQLFromProp(); e != nil {
 		return TraceErrf(e, "Failed to establish connection to MySQL")
 	}
+
+	AddHealthIndicator(HealthIndicator{
+		Name: "MySQL Component",
+		CheckHealth: func(rail Rail) bool {
+			db, err := GetMySQL().DB()
+			if err != nil {
+				rail.Errorf("Failed to get MySQL DB, %v", err)
+				return false
+			}
+			err = db.Ping()
+			if err != nil {
+				rail.Errorf("Failed to ping MySQL, %v", err)
+				return false
+			}
+			return true
+		},
+	})
+
 	return nil
 }
 
@@ -929,6 +947,17 @@ func RedisBootstrap(rail Rail) error {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		return TraceErrf(e, "Failed to establish connection to Redis")
 	}
+	AddHealthIndicator(HealthIndicator{
+		Name: "Redis Component",
+		CheckHealth: func(rail Rail) bool {
+			cmd := GetRedis().Ping()
+			if err := cmd.Err(); err != nil {
+				rail.Errorf("Redis ping failed, %v", err)
+				return false
+			}
+			return true
+		},
+	})
 	return nil
 }
 

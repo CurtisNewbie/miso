@@ -1,11 +1,14 @@
 package miso
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // Indicator of health status
-type HealthIndicator interface {
-	Name() string               // name of the indicator
-	CheckHealth(rail Rail) bool // Check health
+type HealthIndicator struct {
+	Name        string               // name of the indicator
+	CheckHealth func(rail Rail) bool // Check health
 }
 
 type HealthStatus struct {
@@ -36,10 +39,12 @@ func CheckHealth(rail Rail) []HealthStatus {
 	hs := make([]HealthStatus, 0, len(aggIndi.indicators))
 	for i := range aggIndi.indicators {
 		indi := aggIndi.indicators[i]
+		start := time.Now()
 		hs = append(hs, HealthStatus{
 			Healthy: indi.CheckHealth(rail),
-			Name:    indi.Name(),
+			Name:    indi.Name,
 		})
+		rail.Debugf("HealthIndicator %v took %v", indi.Name, time.Since(start))
 	}
 	return hs
 }
