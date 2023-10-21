@@ -14,15 +14,16 @@ import (
 )
 
 const (
-	STATUS_PASSING = "passing"
+	// Service registration status - passing.
+	ConsulRegiStatusPassing = "passing"
+
+	// Zero value for empty serviceId
+	ServiceIdNil = "nil"
 )
 
 var (
 	// Service registration
-	regSub = &serviceRegistration{serviceId: SERVICE_ID_NIL}
-
-	// Zero value for empty serviceId
-	SERVICE_ID_NIL = "nil"
+	regSub = &serviceRegistration{serviceId: ServiceIdNil}
 
 	// Global handle to the Consul client
 	consulp = &consulHolder{consul: nil}
@@ -37,6 +38,17 @@ var (
 
 	ConsulApi = ConsulApiImpl{}
 )
+
+func init() {
+	SetDefProp(PropConsulEnabled, false)
+	SetDefProp(PropConsulAddress, "localhost:8500")
+	SetDefProp(PropConsulHealthcheckUrl, "/health")
+	SetDefProp(PropConsulHealthCheckInterval, "15s")
+	SetDefProp(PropConsulHealthcheckTimeout, "3s")
+	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
+	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
+	SetDefProp(PropConsulFetchServerInterval, 15)
+}
 
 type ConsulApiImpl struct{}
 
@@ -66,6 +78,14 @@ func (c ConsulApiImpl) CatalogFetchServiceNames(rail Rail) (map[string][]string,
 	return services, err
 }
 
+func (c ConsulApiImpl) DeregisterService(serviceId string) error {
+	client, err := GetConsulClient()
+	if err != nil {
+		return fmt.Errorf("failed to get consul client, %v", err)
+	}
+	return client.Agent().ServiceDeregister(serviceId)
+}
+
 type serverListPollingSubscription struct {
 	sub *time.Ticker
 	mu  sync.Mutex
@@ -83,7 +103,7 @@ type serviceRegistration struct {
 
 // Holder of a list of ServiceHolder
 type ServiceListHolder struct {
-	sync.Mutex
+	sync.RWMutex
 	Instances map[string][]ConsulServer
 }
 
@@ -95,17 +115,6 @@ type ConsulServer struct {
 
 func (c *ConsulServer) ServerAddress() string {
 	return fmt.Sprintf("%s:%d", c.Address, c.Port)
-}
-
-func init() {
-	SetDefProp(PropConsulEnabled, false)
-	SetDefProp(PropConsulAddress, "localhost:8500")
-	SetDefProp(PropConsulHealthcheckUrl, "/health")
-	SetDefProp(PropConsulHealthCheckInterval, "15s")
-	SetDefProp(PropConsulHealthcheckTimeout, "3s")
-	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
-	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
-	SetDefProp(PropConsulFetchServerInterval, 15)
 }
 
 // Subscribe to server list, refresh server list every 30s
@@ -160,17 +169,18 @@ func PollServiceListInstances(rail Rail) {
 	}
 
 	for name := range names {
-		serviceListHolder.Lock()
 		err := fetchAndCacheServiceNodes(rail, name)
 		if err != nil {
 			rail.Warnf("Failed to poll service service for '%s', err: %v", name, err)
 		}
-		serviceListHolder.Unlock()
 	}
 }
 
-// Fetch services by name and cache the result from Consul, this func requires extra lock
+// Fetch and cache services nodes.
 func fetchAndCacheServiceNodes(rail Rail, name string) error {
+	serviceListHolder.Lock()
+	defer serviceListHolder.Unlock()
+
 	services, err := ConsulApi.CatalogFetchServiceNodes(rail, name)
 	if err != nil {
 		return fmt.Errorf("failed to FetchServicesByName, name: %v, %v", name, err)
@@ -223,8 +233,8 @@ requests the consul
 Return consul.ErrServiceInstanceNotFound if no instance available
 */
 func ConsulResolveServiceAddr(name string) (string, error) {
-	serviceListHolder.Lock()
-	defer serviceListHolder.Unlock()
+	serviceListHolder.RLock()
+	defer serviceListHolder.RUnlock()
 	servers := serviceListHolder.Instances[name]
 	if len(servers) < 1 {
 		return "", ErrConsulServiceInstanceNotFound
@@ -235,8 +245,8 @@ func ConsulResolveServiceAddr(name string) (string, error) {
 
 // List Consul Servers already loaded in cache.
 func ListConsulServers(name string) []ConsulServer {
-	serviceListHolder.Lock()
-	defer serviceListHolder.Unlock()
+	serviceListHolder.RLock()
+	defer serviceListHolder.RUnlock()
 	servers := serviceListHolder.Instances[name]
 	copied := make([]ConsulServer, 0, len(servers))
 	copy(copied, servers)
@@ -258,19 +268,16 @@ func DeregisterService() error {
 	defer regSub.mu.Unlock()
 
 	// not registered
-	if regSub.serviceId == SERVICE_ID_NIL {
+	if regSub.serviceId == ServiceIdNil {
 		return nil
 	}
 
 	EmptyRail().Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
-	client, _ := GetConsulClient()
-	err := client.Agent().ServiceDeregister(regSub.serviceId)
 
-	// zero the serviceId
+	err := ConsulApi.DeregisterService(regSub.serviceId)
 	if err != nil {
-		regSub.serviceId = SERVICE_ID_NIL
+		regSub.serviceId = ServiceIdNil
 	}
-
 	return err
 }
 
@@ -301,7 +308,7 @@ func RegisterService() error {
 	defer regSub.mu.Unlock()
 
 	// registered already
-	if regSub.serviceId != SERVICE_ID_NIL {
+	if regSub.serviceId != ServiceIdNil {
 		return nil
 	}
 
@@ -332,7 +339,7 @@ func RegisterService() error {
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
-			Status:                         STATUS_PASSING, // for responsiveness
+			Status:                         ConsulRegiStatusPassing, // for responsiveness
 		},
 	}
 
