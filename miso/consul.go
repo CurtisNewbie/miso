@@ -3,6 +3,7 @@ package miso
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -27,10 +28,7 @@ var (
 	consulp = &consulHolder{consul: nil}
 
 	// Holder (cache) of service list and their instances
-	serviceListHolder = &ServiceListHolder{
-		Instances:   map[string][]*api.AgentService{},
-		ServiceList: NewSet[string](),
-	}
+	serviceListHolder = &ServiceListHolder{Instances: map[string][]ConsulServer{}}
 
 	// server list polling subscription
 	serverListPSub = &serverListPollingSubscription{sub: nil}
@@ -55,9 +53,18 @@ type serviceRegistration struct {
 
 // Holder of a list of ServiceHolder
 type ServiceListHolder struct {
-	mu          sync.Mutex
-	Instances   map[string][]*api.AgentService
-	ServiceList Set[string]
+	sync.Mutex
+	Instances map[string][]ConsulServer
+}
+
+type ConsulServer struct {
+	Address string
+	Port    int
+	Meta    map[string]string
+}
+
+func (c *ConsulServer) ServerAddress() string {
+	return fmt.Sprintf("%s:%d", c.Address, c.Port)
 }
 
 func init() {
@@ -68,15 +75,11 @@ func init() {
 	SetDefProp(PropConsulHealthcheckTimeout, "3s")
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
+	SetDefProp(PropConsulFetchServerInterval, 15)
 }
 
 // Subscribe to server list, refresh server list every 30s
-func SubscribeServerList() {
-	DoSubscribeServerList(30)
-}
-
-// Subscribe to server list
-func DoSubscribeServerList(everyNSec int) {
+func SubscribeServerList(everyNSec int) {
 	serverListPSub.mu.Lock()
 	defer serverListPSub.mu.Unlock()
 
@@ -87,8 +90,9 @@ func DoSubscribeServerList(everyNSec int) {
 	serverListPSub.sub = time.NewTicker(time.Duration(everyNSec) * time.Second)
 	c := serverListPSub.sub.C
 	go func() {
+		rail := EmptyRail()
 		for {
-			PollServiceListInstances()
+			PollServiceListInstances(rail)
 			<-c
 		}
 	}()
@@ -117,27 +121,42 @@ func IsConsulEnabled() bool {
 	return GetPropBool(PropConsulEnabled)
 }
 
-// Poll all service list and cache them
-func PollServiceListInstances() {
-	serviceListHolder.mu.Lock()
-	defer serviceListHolder.mu.Unlock()
+// Poll all service list and cache them.
+func PollServiceListInstances(rail Rail) {
+	names, err := CatalogFetchServiceNames(rail)
+	if err != nil {
+		rail.Errorf("Failed to CatalogFetchServiceNames, %v", err)
+		return
+	}
 
-	for k := range serviceListHolder.ServiceList.Keys {
-		_, err := _fetchAndCacheServicesByName(k)
+	for name := range names {
+		serviceListHolder.Lock()
+		err := fetchAndCacheServiceNodes(rail, name)
 		if err != nil {
-			EmptyRail().Warnf("Failed to poll service service for '%s', err: %v", k, err)
+			rail.Warnf("Failed to poll service service for '%s', err: %v", name, err)
 		}
+		serviceListHolder.Unlock()
 	}
 }
 
 // Fetch services by name and cache the result from Consul, this func requires extra lock
-func _fetchAndCacheServicesByName(name string) (map[string]*api.AgentService, error) {
-	services, err := FetchServicesByName(name)
+func fetchAndCacheServiceNodes(rail Rail, name string) error {
+	services, err := CatalogFetchServiceNodes(name)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to FetchServicesByName, name: %v, %v", name, err)
 	}
-	serviceListHolder.Instances[name] = MapValues(&services)
-	return services, err
+	servers := make([]ConsulServer, 0, len(services))
+	for i := range services {
+		s := services[i]
+		servers = append(servers, ConsulServer{
+			Meta:    s.ServiceMeta,
+			Address: s.ServiceAddress,
+			Port:    s.ServicePort,
+		})
+	}
+	rail.Debugf("Fetched nodes for service: %v, %+v", name, servers)
+	serviceListHolder.Instances[name] = servers
+	return err
 }
 
 /*
@@ -174,21 +193,24 @@ requests the consul
 Return consul.ErrServiceInstanceNotFound if no instance available
 */
 func ConsulResolveServiceAddr(name string) (string, error) {
-	serviceListHolder.mu.Lock()
-	defer serviceListHolder.mu.Unlock()
-
-	serviceListHolder.ServiceList.Add(name)
-	instances := serviceListHolder.Instances[name]
-	if instances == nil {
-		_fetchAndCacheServicesByName(name)
-		instances = serviceListHolder.Instances[name]
-	}
-
-	// no instances available
-	if instances == nil || len(instances) < 1 {
+	serviceListHolder.Lock()
+	defer serviceListHolder.Unlock()
+	servers := serviceListHolder.Instances[name]
+	if len(servers) < 1 {
 		return "", ErrConsulServiceInstanceNotFound
 	}
-	return extractServiceAddress(SliceGetOne(instances)), nil
+	selected := rand.Int() % len(servers)
+	return servers[selected].ServerAddress(), nil
+}
+
+// List Consul Servers already loaded in cache.
+func ListConsulServers(name string) []ConsulServer {
+	serviceListHolder.Lock()
+	defer serviceListHolder.Unlock()
+	servers := serviceListHolder.Instances[name]
+	copied := make([]ConsulServer, 0, len(servers))
+	copy(copied, servers)
+	return copied
 }
 
 // Create a default health check endpoint that simply doesn't nothing except returing 200
@@ -196,32 +218,14 @@ func DefaultHealthCheck(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "UP")
 }
 
-// Extract service address (host:port) from Agent.Service
-func extractServiceAddress(agent *api.AgentService) string {
-	if agent != nil {
-		return fmt.Sprintf("%s:%d", agent.Address, agent.Port)
-	}
-	return ""
-}
-
-// Fetch service address (host:port, without protocol)
-func FetchServiceAddress(name string) (string, error) {
-	services, err := FetchServicesByName(name)
-	if err != nil {
-		return "", err
-	}
-	agent := SliceGetOne(MapValues(&services))
-	return extractServiceAddress(agent), nil
-}
-
 // Fetch registered service by name, this method always call Consul instead of reading from cache
-func FetchServicesByName(name string) (map[string]*api.AgentService, error) {
+func CatalogFetchServiceNodes(name string) ([]*api.CatalogService, error) {
 	client, err := GetConsulClient()
 	if err != nil {
 		return nil, err
 	}
 
-	services, err := client.Agent().ServicesWithFilter(fmt.Sprintf("Service == \"%s\"", name))
+	services, _, err := client.Catalog().Service(name, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -229,13 +233,14 @@ func FetchServicesByName(name string) (map[string]*api.AgentService, error) {
 }
 
 // Fetch all registered services, this method always call Consul instead of reading from cache
-func FetchServices() (map[string]*api.AgentService, error) {
+func CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
 	client, e := GetConsulClient()
 	if e != nil {
 		return nil, e
 	}
-
-	return client.Agent().Services()
+	services, _, err := client.Catalog().Services(nil)
+	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
+	return services, err
 }
 
 // Register current service
@@ -364,7 +369,7 @@ func GetConsulClient() (*api.Client, error) {
 	consulp.consul = c
 	EmptyRail().Infof("Created Consul Client on %s", addr)
 
-	SubscribeServerList()
+	SubscribeServerList(GetPropInt(PropConsulFetchServerInterval))
 
 	return c, nil
 }

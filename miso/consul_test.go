@@ -2,6 +2,7 @@ package miso
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -15,6 +16,7 @@ func PreTest() {
 
 func TestPollServiceListInstances(t *testing.T) {
 	PreTest()
+	rail := EmptyRail()
 
 	_, err := GetConsulClient()
 	if err != nil {
@@ -22,18 +24,20 @@ func TestPollServiceListInstances(t *testing.T) {
 		return
 	}
 
-	address, err := ConsulResolveServiceAddr("file-service")
+	address, err := ConsulResolveServiceAddr("vfm")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	logrus.Infof("(first try) Address resolved: %s", address)
 
-	PollServiceListInstances()
+	PollServiceListInstances(rail)
 }
 
 func TestResolveServiceAddress(t *testing.T) {
 	PreTest()
+	rail := EmptyRail()
+	rail.SetLogLevel("debug")
 
 	_, err := GetConsulClient()
 	if err != nil {
@@ -41,14 +45,12 @@ func TestResolveServiceAddress(t *testing.T) {
 		return
 	}
 
-	address, err := ConsulResolveServiceAddr("file-service")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	logrus.Infof("(first try) Address resolved: %s", address)
+	address, err := ConsulResolveServiceAddr("vfm")
+	logrus.Infof("(first try) Address resolved: %s, %v", address, err)
 
-	address, err = ConsulResolveServiceAddr("file-service")
+	time.Sleep(1 * time.Second)
+
+	address, err = ConsulResolveServiceAddr("vfm")
 	if err != nil {
 		t.Error(err)
 		return
