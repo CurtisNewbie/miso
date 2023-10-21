@@ -661,3 +661,8 @@ func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
 func ClientSkipTlsSecureCheck() {
 	defaultClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 }
+
+// Set default http client timeout
+func SetDefaultTimeout(ttl time.Duration) {
+	defaultClient.Timeout = ttl
+}
