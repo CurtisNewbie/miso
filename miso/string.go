@@ -82,3 +82,10 @@ func HasPrefixIgnoreCase(s string, prefix string) bool {
 	s = strings.ToLower(s)
 	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
 }
+
+// Check if s has the suffix in a case-insensitive way.
+func HasSuffixIgnoreCase(s string, suffix string) bool {
+	suffix = strings.ToLower(suffix)
+	s = strings.ToLower(s)
+	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+}

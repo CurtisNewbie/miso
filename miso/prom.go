@@ -26,6 +26,7 @@ func PrometheusHandler() http.Handler {
 	return promhttp.Handler()
 }
 
+// Create new Prometheus timer (in seconds).
 func NewPromTimer(name string) *prometheus.Timer {
 	histoBuck.RLock()
 	if v, ok := histoBuck.buckets[name]; ok {
