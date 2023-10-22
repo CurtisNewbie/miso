@@ -2,6 +2,7 @@ package miso
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,7 +28,15 @@ func PrometheusHandler() http.Handler {
 }
 
 // Create new Prometheus timer (in seconds).
+//
+// The timer is backed by a Histogram, and the histogram is named by
+//
+//	name + "_seconds"
 func NewPromTimer(name string) *prometheus.Timer {
+	if !strings.HasSuffix(name, "_seconds") {
+		name += "_seconds"
+	}
+
 	histoBuck.RLock()
 	if v, ok := histoBuck.buckets[name]; ok {
 		defer histoBuck.RUnlock()
