@@ -899,11 +899,10 @@ func PrometheusBootstrap(rail Rail) error {
 	if !GetPropBool(PropMetricsEnabled) || !GetPropBool(PropServerEnabled) {
 		return nil
 	}
-
 	handler := PrometheusHandler()
 	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
 		handler.ServeHTTP(c.Writer, c.Request)
-	})
+	}).Build()
 	return nil
 }
 
