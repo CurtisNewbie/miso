@@ -23,6 +23,7 @@ func init() {
 	SetDefProp(PropPromRoute, "/metrics")
 }
 
+// Default handler for prometheus metrics.
 func PrometheusHandler() http.Handler {
 	return promhttp.Handler()
 }
@@ -32,7 +33,13 @@ func PrometheusHandler() http.Handler {
 // The timer is backed by a Histogram, and the histogram is named by
 //
 //	name + "_seconds"
+//
+// The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromTimer(name string) *prometheus.Timer {
+	if name == "" {
+		panic("name is empty")
+	}
+
 	if !strings.HasSuffix(name, "_seconds") {
 		name += "_seconds"
 	}
