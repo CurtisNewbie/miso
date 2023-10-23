@@ -38,6 +38,10 @@ func (e *MisoErr) Error() string {
 	return e.Msg
 }
 
+func (e *MisoErr) HasCode() bool {
+	return !IsBlankStr(e.Code)
+}
+
 // Create new MisoErr
 func NewErr(msg string, args ...any) *MisoErr {
 	var im string

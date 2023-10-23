@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+const (
+	ErrCodeGeneric = "XXXX"
+)
+
 // Web Endpoint's Resp
 type Resp struct {
 	ErrorCode string      `json:"errorCode"`
@@ -35,12 +39,11 @@ func (r GnResp[T]) Res() (T, error) {
 func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
 		if me, ok := e.(*MisoErr); ok {
-			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
-			if HasCode(me) {
-				return ErrorRespWCode(me.Code, me.Msg)
-			} else {
-				return ErrorResp(me.Msg)
+			if !me.HasCode() {
+				me.Code = ErrCodeGeneric
 			}
+			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+			return ErrorRespWCode(me.Code, me.Msg)
 		}
 
 		if ve, ok := e.(*ValidationError); ok {
@@ -62,7 +65,7 @@ func WrapResp(data interface{}, e error, rail Rail) Resp {
 // Build error Resp
 func ErrorResp(msg string) Resp {
 	return Resp{
-		ErrorCode: "XXXX", // just some random code
+		ErrorCode: ErrCodeGeneric, // just some random code
 		Msg:       msg,
 		Error:     true,
 	}
