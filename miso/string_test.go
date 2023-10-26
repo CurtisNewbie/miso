@@ -69,6 +69,17 @@ func TestHasPrefixIgnoreCase(t *testing.T) {
 	}
 }
 
+func TestHasSuffixIgnoreCaseFuzz(t *testing.T) {
+	for i := 0; i < 500; i++ {
+		s := strings.ToLower(RandStr(30))
+		p := strings.ToLower(RandStr(3))
+		if strings.HasSuffix(s, p) != HasSuffixIgnoreCase(s, p) {
+			t.Logf("s: %v, p: %v", s, p)
+			t.FailNow()
+		}
+	}
+}
+
 func TestHasPrefixIgnoreCaseFuzz(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		s := strings.ToLower(RandStr(30))

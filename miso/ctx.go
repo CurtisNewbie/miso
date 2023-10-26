@@ -143,12 +143,11 @@ func getCallerFn() string {
 }
 
 func getShortFnName(fn string) string {
-	j := strings.LastIndex(fn, "/")
+	j := strings.LastIndexAny(fn, "./")
 	if j < 0 {
 		return fn
 	}
-
-	return RString(fn).SubstrStart(j + 1)
+	return string([]rune(fn)[j+1:])
 }
 
 // Create empty Rail

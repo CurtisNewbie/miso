@@ -65,6 +65,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 | consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
 | consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
 | consul.registerDefaultHealthCheck       | register default health check endpoint on startup                    | true                            |
+| consul.fetchServerInterval              | fetch server list from consul in ever N seconds                      | 15                              |
 
 ## MySQL Configuration
 

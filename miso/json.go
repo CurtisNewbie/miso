@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"io"
 	"unicode"
 
 	jsoniter "github.com/json-iterator/go"
@@ -13,13 +14,23 @@ func init() {
 
 // Parse JSON using jsoniter.
 func ParseJson(body []byte, ptr any) error {
-	e := jsoniter.Unmarshal([]byte(body), ptr)
+	e := jsoniter.Unmarshal(body, ptr)
 	return e
 }
 
 // Write JSON using jsoniter.
 func WriteJson(body any) ([]byte, error) {
 	return jsoniter.Marshal(body)
+}
+
+// Decode JSON using jsoniter.
+func DecodeJson(reader io.Reader, ptr any) error {
+	return jsoniter.NewDecoder(reader).Decode(ptr)
+}
+
+// Encode JSON using jsoniter.
+func EncodeJson(writer io.Writer, body any) error {
+	return jsoniter.NewEncoder(writer).Encode(body)
 }
 
 // Change first rune to lower case.
