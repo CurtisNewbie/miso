@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -52,6 +53,8 @@ func NewPromTimer(name string) *prometheus.Timer {
 }
 
 // Create new Histogram.
+//
+// The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromHistogram(name string) prometheus.Histogram {
 	histoBuck.RLock()
 	if v, ok := histoBuck.buckets[name]; ok {
@@ -68,6 +71,10 @@ func NewPromHistogram(name string) prometheus.Histogram {
 	}
 
 	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
-	prometheus.DefaultRegisterer.MustRegister(hist)
+	e := prometheus.DefaultRegisterer.Register(hist)
+	if e != nil {
+		panic(fmt.Sprintf("failed to register histogram %v, %v", name, e))
+	}
+	histoBuck.buckets[name] = hist
 	return hist
 }
