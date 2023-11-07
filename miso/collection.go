@@ -3,6 +3,7 @@ package miso
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 )
 
 // Empty Struct
@@ -171,4 +172,40 @@ func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V
 		m[keyMapper(li)] = valueMapper(li)
 	}
 	return m
+}
+
+// Map with sync.RWMutex embeded.
+type RWMap[V any] struct {
+	sync.RWMutex
+	storage map[string]V
+	new     func(string) V
+}
+
+// Create new RWMap
+func NewRWMap[V any](newFunc func(string) V) *RWMap[V] {
+	return &RWMap[V]{
+		storage: make(map[string]V),
+		new:     newFunc,
+	}
+}
+
+// Get V using k, if V exists return, else create a new one and store it.
+func (r *RWMap[V]) Get(k string) V {
+	r.RLock()
+	if v, ok := r.storage[k]; ok {
+		defer r.RUnlock()
+		return v
+	}
+	r.RUnlock()
+
+	r.Lock()
+	defer r.Unlock()
+
+	if v, ok := r.storage[k]; ok {
+		return v
+	}
+
+	newItem := r.new(k)
+	r.storage[k] = newItem
+	return newItem
 }

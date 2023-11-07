@@ -4,20 +4,30 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	histoBuck = &histogramBucket{buckets: make(map[string]prometheus.Histogram)}
-)
+	histoBuck = NewRWMap[prometheus.Histogram](func(name string) prometheus.Histogram {
+		hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
+		e := prometheus.DefaultRegisterer.Register(hist)
+		if e != nil {
+			panic(fmt.Sprintf("failed to register histogram %v, %v", name, e))
+		}
+		return hist
+	})
 
-type histogramBucket struct {
-	sync.RWMutex
-	buckets map[string]prometheus.Histogram
-}
+	counterBuck = NewRWMap[prometheus.Counter](func(name string) prometheus.Counter {
+		counter := prometheus.NewCounter(prometheus.CounterOpts{Name: name})
+		e := prometheus.DefaultRegisterer.Register(counter)
+		if e != nil {
+			panic(fmt.Sprintf("failed to register counter %v, %v", name, e))
+		}
+		return counter
+	})
+)
 
 func init() {
 	SetDefProp(PropMetricsEnabled, true)
@@ -56,25 +66,12 @@ func NewPromTimer(name string) *prometheus.Timer {
 //
 // The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromHistogram(name string) prometheus.Histogram {
-	histoBuck.RLock()
-	if v, ok := histoBuck.buckets[name]; ok {
-		defer histoBuck.RUnlock()
-		return v
-	}
-	histoBuck.RUnlock()
+	return histoBuck.Get(name)
+}
 
-	histoBuck.Lock()
-	defer histoBuck.Unlock()
-
-	if v, ok := histoBuck.buckets[name]; ok {
-		return v
-	}
-
-	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
-	e := prometheus.DefaultRegisterer.Register(hist)
-	if e != nil {
-		panic(fmt.Sprintf("failed to register histogram %v, %v", name, e))
-	}
-	histoBuck.buckets[name] = hist
-	return hist
+// Create new Counter.
+//
+// The Counter with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
+func NewPromCounter(name string) prometheus.Counter {
+	return counterBuck.Get(name)
 }
