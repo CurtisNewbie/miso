@@ -35,6 +35,10 @@ func PrometheusHandler() http.Handler {
 //	name + "_seconds"
 //
 // The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
+//
+// In Grafana, you can write the following query to measure the average ms each op takes.
+//
+//	rate(my_op_seconds_sum{job="my-job"}[$__rate_interval]) * 1000
 func NewPromTimer(name string) *prometheus.Timer {
 	if name == "" {
 		panic("name is empty")
@@ -44,10 +48,15 @@ func NewPromTimer(name string) *prometheus.Timer {
 		name += "_seconds"
 	}
 
+	return prometheus.NewTimer(NewPromHistogram(name))
+}
+
+// Create new Histogram.
+func NewPromHistogram(name string) prometheus.Histogram {
 	histoBuck.RLock()
 	if v, ok := histoBuck.buckets[name]; ok {
 		defer histoBuck.RUnlock()
-		return prometheus.NewTimer(v)
+		return v
 	}
 	histoBuck.RUnlock()
 
@@ -55,11 +64,10 @@ func NewPromTimer(name string) *prometheus.Timer {
 	defer histoBuck.Unlock()
 
 	if v, ok := histoBuck.buckets[name]; ok {
-		return prometheus.NewTimer(v)
+		return v
 	}
 
 	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
 	prometheus.DefaultRegisterer.MustRegister(hist)
-	histoBuck.buckets[name] = hist
-	return prometheus.NewTimer(hist)
+	return hist
 }
