@@ -84,11 +84,6 @@ func GetPropInt(prop string) int {
 
 // Get prop as bool
 func GetPropBool(prop string) bool {
-	return doWithViperReadLock(func() bool { return viper.GetBool(prop) })
-}
-
-// Fast Get prop as bool
-func FastGetPropBool(prop string) bool {
 	return doWithViperReadLock(func() bool {
 		v, ok := configVar.fastBoolCache[prop]
 		if ok {
