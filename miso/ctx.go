@@ -143,7 +143,7 @@ func getCallerFn() string {
 }
 
 func getShortFnName(fn string) string {
-	j := strings.LastIndexAny(fn, "./")
+	j := strings.LastIndex(fn, "/")
 	if j < 0 {
 		return fn
 	}
