@@ -259,3 +259,46 @@ func TestArgKeyVal(t *testing.T) {
 	}
 	t.Logf("%+v", v)
 }
+
+func BenchmarkFastGetProbOol(b *testing.B) {
+	args := make([]string, 2)
+	args[0] = "profile=dev"
+	args[1] = "configFile=../app-conf-dev.yml"
+	DefaultReadConfig(args, EmptyRail())
+	SetProp("correct_type", true)
+
+	b.Run("GetPropBool_correct_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("correct_type")
+		}
+	})
+	b.Run("FastGetPropBool_correct_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			FastGetPropBool("correct_type")
+		}
+	})
+
+	SetProp("incorrect_type", "true")
+	b.Run("GetPropBool_incorrect_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("incorrect_type")
+		}
+	})
+	b.Run("FastGetPropBool_incorrect_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			FastGetPropBool("incorrect_type")
+		}
+	})
+
+	SetProp("incorrect_type_2", "nope")
+	b.Run("GetPropBool_incorrect_type_2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("incorrect_type_2")
+		}
+	})
+	b.Run("FastGetPropBool_incorrect_type_2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			FastGetPropBool("incorrect_type_2")
+		}
+	})
+}
