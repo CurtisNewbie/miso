@@ -30,10 +30,18 @@ func TestPadNum(t *testing.T) {
 
 func TestMaxLenStr(t *testing.T) {
 	s := "123456"
-	TestEqual(t, MaxLenStr(s, 3), "123")
+	ml := MaxLenStr(s, 3)
+	if ml != "123" {
+		t.Logf("%v != '123'", ml)
+		t.FailNow()
+	}
 
 	s = "12"
-	TestEqual(t, MaxLenStr(s, 3), "12")
+	ml = MaxLenStr(s, 3)
+	if ml != "12" {
+		t.Logf("%v != '12'", ml)
+		t.FailNow()
+	}
 }
 
 func TestHasPrefixIgnoreCase(t *testing.T) {

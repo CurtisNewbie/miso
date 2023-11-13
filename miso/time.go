@@ -9,13 +9,6 @@ import (
 )
 
 const (
-	F_E_YEAR  = "2006"
-	F_E_MONTH = "01"
-	F_E_DAY   = "02"
-	F_E_HOUR  = "15"
-	F_E_MIN   = "04"
-	F_E_SEC   = "05"
-
 	unixSecPersudoMax = 9999999999 // 2286-11-21, should be enough :D
 
 	sqlTimeFormat = "2006/01/02 15:04:05"
