@@ -38,7 +38,7 @@ func main() {
 		miso.ScheduleCron("0 0/15 * * * *", true, myJob)
 
 		// register some distributed tasks
-		err := miso.ScheduleNamedDistributedTask("*/15 * * * *", false, "MyDistributedTask",
+		err := miso.ScheduleDistributedTask("*/15 * * * *", false, "MyDistributedTask",
 			func(miso miso.Rail) error {
 				return jobDoSomething(rail)
 			},
