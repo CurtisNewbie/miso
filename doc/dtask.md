@@ -8,7 +8,7 @@ func main() {
     miso.SetScheduleGroup("myApp")
 
     // add task
-    miso.ScheduleDistributedTask("0/1 * * * * ?", true, func(rail miso.Rail) {
+    miso.ScheduleDistributedTask("0/1 * * * * ?", true, "myTask", func(rail miso.Rail) error {
         // ...
     })
 
@@ -25,7 +25,8 @@ The code above is automatically handled by `miso.BootstrapServer(...)` func.
 ```go
 func main() {
     // add tasks
-    miso.ScheduleDistributedTask("0 0/15 * * * *", true, func(rail miso.Rail) {
+    miso.ScheduleDistributedTask("0/1 * * * * ?", true, "myTask", func(rail miso.Rail) error {
+        // ...
     })
 
     // bootstrap server
