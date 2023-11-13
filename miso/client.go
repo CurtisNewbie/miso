@@ -32,7 +32,7 @@ var (
 )
 
 func init() {
-	defaultClient = &http.Client{Timeout: 5 * time.Second}
+	defaultClient = &http.Client{Timeout: 15 * time.Second}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
 	transport.MaxIdleConnsPerHost = 500
