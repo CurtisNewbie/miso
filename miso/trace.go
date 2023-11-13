@@ -28,7 +28,7 @@ func init() {
 // This func looks for following property.
 //
 //	"tracing.propagation.keys"
-func LoadPropagationKeyProp(r Rail) {
+func LoadPropagationKeys(r Rail) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
 
