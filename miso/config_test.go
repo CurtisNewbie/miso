@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 func TestParseProfile(t *testing.T) {
@@ -258,4 +259,51 @@ func TestArgKeyVal(t *testing.T) {
 		t.Fatal("value should be apple")
 	}
 	t.Logf("%+v", v)
+}
+
+func BenchmarkGetProbool(b *testing.B) {
+	args := make([]string, 2)
+	args[0] = "profile=dev"
+	args[1] = "configFile=../app-conf-dev.yml"
+	DefaultReadConfig(args, EmptyRail())
+	SetProp("correct_type", true)
+
+	slowGetPropBool := func(prop string) bool {
+		return doWithViperReadLock(func() bool { return viper.GetBool(prop) })
+	}
+
+	b.Run("GetPropBool_correct_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("correct_type")
+		}
+	})
+	b.Run("slowGetPropBool_correct_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			slowGetPropBool("correct_type")
+		}
+	})
+
+	SetProp("incorrect_type", "true")
+	b.Run("GetPropBool_incorrect_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("incorrect_type")
+		}
+	})
+	b.Run("slowGetPropBool_incorrect_type", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			slowGetPropBool("incorrect_type")
+		}
+	})
+
+	SetProp("incorrect_type_2", "nope")
+	b.Run("GetPropBool_incorrect_type_2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			GetPropBool("incorrect_type_2")
+		}
+	})
+	b.Run("slowGetPropBool_incorrect_type_2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			slowGetPropBool("incorrect_type_2")
+		}
+	})
 }

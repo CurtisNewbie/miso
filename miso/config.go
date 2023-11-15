@@ -19,7 +19,17 @@ var (
 	viperRWMutex sync.RWMutex
 
 	PRODUCTION_PROFILE_NAME = "prod"
+
+	// var for config.go
+	configVar = configVarHolder{
+		fastBoolCache: make(map[string]bool),
+	}
 )
+
+type configVarHolder struct {
+	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
+	fastBoolCache map[string]bool
+}
 
 func init() {
 	SetDefProp(PropProfile, "dev")
@@ -28,12 +38,18 @@ func init() {
 
 // Set default value for the prop
 func SetProp(prop string, val any) {
-	doWithViperWriteLock(func() { viper.Set(prop, val) })
+	doWithViperWriteLock(func() {
+		cleanFastBoolCache(prop)
+		viper.Set(prop, val)
+	})
 }
 
 // Set default value for the prop
 func SetDefProp(prop string, defVal any) {
-	doWithViperWriteLock(func() { viper.SetDefault(prop, defVal) })
+	doWithViperWriteLock(func() {
+		cleanFastBoolCache(prop)
+		viper.SetDefault(prop, defVal)
+	})
 }
 
 // Check whether the prop exists
@@ -68,7 +84,21 @@ func GetPropInt(prop string) int {
 
 // Get prop as bool
 func GetPropBool(prop string) bool {
-	return doWithViperReadLock(func() bool { return viper.GetBool(prop) })
+	return doWithViperReadLock(func() bool {
+		v, ok := configVar.fastBoolCache[prop]
+		if ok {
+			return v
+		}
+
+		v = viper.GetBool(prop)
+		configVar.fastBoolCache[prop] = v
+		return v
+	})
+}
+
+// clean the fast bool cache
+func cleanFastBoolCache(prop string) {
+	delete(configVar.fastBoolCache, prop)
 }
 
 /*
@@ -202,6 +232,11 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 		}
 
 		r.Debugf("Loaded config file: '%v'", configFile)
+
+		// reset the whole fastBoolCache
+		if len(configVar.fastBoolCache) > 0 {
+			configVar.fastBoolCache = make(map[string]bool)
+		}
 	})
 
 	return eo

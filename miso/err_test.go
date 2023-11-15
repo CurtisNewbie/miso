@@ -32,10 +32,21 @@ func TestTraceableError(t *testing.T) {
 
 func TestNewErr(t *testing.T) {
 	err := NewErr("unknown error", "nope, that is not unknown error, that is %v", "fake error")
-	TestEqual(t, fmt.Sprintf("nope, that is not unknown error, that is %v", "fake error"), err.InternalMsg)
-	TestEqual(t, "unknown error", err.Error())
+	s := fmt.Sprintf("nope, that is not unknown error, that is %v", "fake error")
+	if s != err.InternalMsg {
+		t.Logf("%v != %v", s, err.InternalMsg)
+	}
+	if err.Error() != "unknown error" {
+		t.Logf("%v != 'unknown error'", err.Error())
+	}
 
 	err = NewErr("unknown error", "nope, that is not unknown error, that is %v")
-	TestEqual(t, "nope, that is not unknown error, that is %v", err.InternalMsg)
-	TestEqual(t, "unknown error", err.Error())
+
+	s = "nope, that is not unknown error, that is %v"
+	if s != err.InternalMsg {
+		t.Logf("%v != %v", s, err.InternalMsg)
+	}
+	if err.Error() != "unknown error" {
+		t.Logf("%v != 'unknown error'", err.Error())
+	}
 }

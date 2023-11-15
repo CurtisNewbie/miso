@@ -858,7 +858,7 @@ func WebServerBootstrap(rail Rail) error {
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing
-	LoadPropagationKeyProp(rail)
+	LoadPropagationKeys(rail)
 
 	// always set to releaseMode
 	gin.SetMode(gin.ReleaseMode)

@@ -1,22 +1,33 @@
 package miso
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	histoBuck = &histogramBucket{buckets: make(map[string]prometheus.Histogram)}
-)
+	histoBuck = NewRWMap[prometheus.Histogram](func(name string) prometheus.Histogram {
+		hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
+		e := prometheus.DefaultRegisterer.Register(hist)
+		if e != nil {
+			panic(fmt.Sprintf("failed to register histogram %v, %v", name, e))
+		}
+		return hist
+	})
 
-type histogramBucket struct {
-	sync.RWMutex
-	buckets map[string]prometheus.Histogram
-}
+	counterBuck = NewRWMap[prometheus.Counter](func(name string) prometheus.Counter {
+		counter := prometheus.NewCounter(prometheus.CounterOpts{Name: name})
+		e := prometheus.DefaultRegisterer.Register(counter)
+		if e != nil {
+			panic(fmt.Sprintf("failed to register counter %v, %v", name, e))
+		}
+		return counter
+	})
+)
 
 func init() {
 	SetDefProp(PropMetricsEnabled, true)
@@ -35,6 +46,10 @@ func PrometheusHandler() http.Handler {
 //	name + "_seconds"
 //
 // The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
+//
+// In Grafana, you can write the following query to measure the average ms each op takes.
+//
+//	rate(my_op_seconds_sum{job="my-job"}[$__rate_interval]) * 1000
 func NewPromTimer(name string) *prometheus.Timer {
 	if name == "" {
 		panic("name is empty")
@@ -44,22 +59,19 @@ func NewPromTimer(name string) *prometheus.Timer {
 		name += "_seconds"
 	}
 
-	histoBuck.RLock()
-	if v, ok := histoBuck.buckets[name]; ok {
-		defer histoBuck.RUnlock()
-		return prometheus.NewTimer(v)
-	}
-	histoBuck.RUnlock()
+	return prometheus.NewTimer(NewPromHistogram(name))
+}
 
-	histoBuck.Lock()
-	defer histoBuck.Unlock()
+// Create new Histogram.
+//
+// The Histogram with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
+func NewPromHistogram(name string) prometheus.Histogram {
+	return histoBuck.Get(name)
+}
 
-	if v, ok := histoBuck.buckets[name]; ok {
-		return prometheus.NewTimer(v)
-	}
-
-	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
-	prometheus.DefaultRegisterer.MustRegister(hist)
-	histoBuck.buckets[name] = hist
-	return prometheus.NewTimer(hist)
+// Create new Counter.
+//
+// The Counter with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
+func NewPromCounter(name string) prometheus.Counter {
+	return counterBuck.Get(name)
 }

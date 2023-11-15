@@ -32,7 +32,7 @@ var (
 )
 
 func init() {
-	defaultClient = &http.Client{Timeout: 5 * time.Second}
+	defaultClient = &http.Client{Timeout: 15 * time.Second}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
 	transport.MaxIdleConnsPerHost = 500
@@ -53,6 +53,23 @@ type TResponse struct {
 // Close Response
 func (tr *TResponse) Close() error {
 	return tr.Resp.Body.Close()
+}
+
+// Write the response data to the given writer.
+//
+// Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
+func (tr *TResponse) WriterTo(writer io.Writer) (int64, error) {
+	if tr.Err != nil {
+		return 0, tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return 0, NoneErr
+	}
+
+	defer tr.Close()
+	return io.Copy(writer, tr.Resp.Body)
 }
 
 // Read response as []bytes.

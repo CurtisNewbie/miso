@@ -11,10 +11,16 @@ func TestETimeScan(t *testing.T) {
 	et.Scan(now.UnixMilli())
 	tt := time.Time(et)
 	t.Logf("MS: %v", tt)
-	TestEqual(t, now.Unix(), tt.Unix())
+	if now.Unix() != tt.Unix() {
+		t.Log("now.Unix != tt.Unix")
+		t.FailNow()
+	}
 
 	et.Scan(now.Unix())
 	tt = time.Time(et)
 	t.Logf("S: %v", tt)
-	TestEqual(t, now.Unix(), tt.Unix())
+	if now.Unix() != tt.Unix() {
+		t.Log("now.Unix != tt.Unix")
+		t.FailNow()
+	}
 }
