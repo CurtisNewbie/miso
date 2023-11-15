@@ -36,12 +36,7 @@ var (
 			}
 
 			// attach a finalizer to it since sync.Pool may GC it at any time
-			runtime.SetFinalizer(c, func(c *amqp.Channel) {
-				if !c.IsClosed() {
-					logrus.Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
-					c.Close()
-				}
-			})
+			runtime.SetFinalizer(c, amqpChannelFinalizer)
 
 			return c
 		},
@@ -64,6 +59,13 @@ func init() {
 	SetDefProp(PropRabbitMqPassword, "")
 	SetDefProp(PropRabbitMqVhost, "")
 	SetDefProp(PropRabbitMqConsumerQos, DEFAULT_QOS)
+}
+
+func amqpChannelFinalizer(c *amqp.Channel) {
+	if !c.IsClosed() {
+		logrus.Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
+		c.Close()
+	}
 }
 
 type BindingRegistration struct {
