@@ -38,7 +38,6 @@ const (
 )
 
 type NamedTask = func(Rail) error
-type Task = func(Rail)
 
 func init() {
 	SetDefProp(PropTaskSchedulingEnabled, true)
@@ -126,36 +125,6 @@ func getTaskMasterKey() string {
 	return "task:master:group:" + group
 }
 
-// Schedule a distributed task.
-//
-// Applications are grouped together as a cluster (each cluster is differentiated by its group name),
-// only the master node can run the scheduled tasks.
-//
-// Tasks are pending until StartTaskSchedulerAsync() is called.
-//
-// E.g.,
-//
-//	task.ScheduleDistributedTask("0/1 * * * * ?", true, myTask)
-func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
-	if getTaskState() == taskInitState {
-		coreMut.Lock()
-		if getTaskState() == taskInitState {
-			setTaskState(taskPendingState)
-		}
-		coreMut.Unlock()
-	}
-
-	return ScheduleCron(cron, withSeconds, func() {
-		ec := EmptyRail()
-		if !tryTaskMaster() {
-			ec.Debug("Not master node, skip scheduled task")
-			return
-		}
-
-		task(ec)
-	})
-}
-
 // Schedule a named distributed task
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its group name),
@@ -165,20 +134,27 @@ func ScheduleDistributedTask(cron string, withSeconds bool, task Task) error {
 //
 // E.g.,
 //
-//	ScheduleNamedDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
-func ScheduleNamedDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
+//	ScheduleDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
+func ScheduleDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
 	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
-	return ScheduleDistributedTask(cron, withSeconds, func(ec Rail) {
-		ec.Infof("Running task '%s'", name)
-		start := time.Now()
-		e := task(ec)
-		if e == nil {
-			ec.Infof("Task '%s' finished, took: %s", name, time.Since(start))
-			return
-		}
 
-		ec.Errorf("Task '%s' failed, took: %s, %v", name, time.Since(start), e)
-	})
+	if getTaskState() == taskInitState {
+		coreMut.Lock()
+		if getTaskState() == taskInitState {
+			setTaskState(taskPendingState)
+		}
+		coreMut.Unlock()
+	}
+
+	wrappedTask := func(rail Rail) error {
+		if !tryTaskMaster() {
+			rail.Debug("Not master node, skip scheduled task")
+			return nil
+		}
+		return task(rail)
+	}
+
+	return ScheduleCron(name, cron, withSeconds, wrappedTask)
 }
 
 // Start distributed scheduler asynchronously

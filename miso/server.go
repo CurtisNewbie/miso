@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -50,10 +49,6 @@ type ComponentBootstrap struct {
 	Name      string
 	Bootstrap func(rail Rail) error
 }
-
-const (
-	OPEN_API_PREFIX = "/open/api" // merely a const value, doesn't have special meaning
-)
 
 var (
 	loggerOut    io.Writer = os.Stdout
@@ -98,7 +93,7 @@ var (
 type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
 
 func init() {
-	AddShutdownHook(func() { MarkServerShuttingDown() })
+	AddShutdownHook(MarkServerShuttingDown)
 
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "0.0.0.0")
@@ -192,7 +187,7 @@ func recordHttpServerRoute(url string, method string, handlerName string, extra 
 
 // Get recorded server routes (deprecated, use GetHttpRoutes() instead)
 func GetRecordedHttpServerRoutes() []string {
-	urls := []string{}
+	urls := make([]string, len(serverHttpRoutes))
 	for _, r := range serverHttpRoutes {
 		urls = append(urls, r.Url)
 	}
@@ -469,7 +464,7 @@ func BootstrapServer(args []string) {
 	defer triggerShutdownHook()
 
 	rail, cancel := rail.WithCancel()
-	AddShutdownHook(func() { cancel() })
+	AddShutdownHook(cancel)
 
 	// default way to load configuration
 	DefaultReadConfig(args, rail)
@@ -479,7 +474,7 @@ func BootstrapServer(args []string) {
 
 	appName := GetPropStr(PropAppName)
 	if appName == "" {
-		rail.Fatalf("Propertity '%s' is required", PropAppName)
+		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
@@ -568,31 +563,6 @@ func shutdownHttpServer(server *http.Server) {
 	// shutdown web server with the timeout
 	server.Shutdown(ctx)
 	logrus.Infof("Http server exited")
-}
-
-// Resolve handler path for open api (it doesn't really affect anything, just a path prefix)
-func OpenApiPath(relPath string) string {
-	return ResolvePath(relPath, true)
-}
-
-// Resolve handler path for internal endpoints, (it doesn't really affect anything, just a path prefix)
-func InternalApiPath(relPath string) string {
-	return ResolvePath(relPath, false)
-}
-
-// Resolve handler path.
-//
-// deprecated.
-func ResolvePath(relPath string, isOpenApi bool) string {
-	if !strings.HasPrefix(relPath, "/") {
-		relPath = "/" + relPath
-	}
-
-	if isOpenApi {
-		return OPEN_API_PREFIX + relPath
-	}
-
-	return "/remote" + relPath
 }
 
 // Default Recovery func
@@ -858,7 +828,7 @@ func WebServerBootstrap(rail Rail) error {
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing
-	LoadPropagationKeyProp(rail)
+	LoadPropagationKeys(rail)
 
 	// always set to releaseMode
 	gin.SetMode(gin.ReleaseMode)
@@ -987,9 +957,6 @@ func (g GroupedRouteRegistar) Build() {
 
 // Add extra info to route.
 func (g GroupedRouteRegistar) Extra(ex StrPair) GroupedRouteRegistar {
-	if g.Extras == nil {
-		g.Extras = []StrPair{}
-	}
 	g.Extras = append(g.Extras, ex)
 	return g
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
+type ScheduledJob func(Rail) error
 type schedState = int
 
 var (
@@ -53,17 +54,27 @@ func newScheduler() *gocron.Scheduler {
 	return sche
 }
 
-func doScheduleCron(s *gocron.Scheduler, cron string, withSeconds bool, runnable func()) error {
+func doScheduleCron(s *gocron.Scheduler, name string, cron string, withSeconds bool, job ScheduledJob) error {
 	var err error
-	if withSeconds {
-		_, err = s.CronWithSeconds(cron).Do(func() {
-			runnable()
-		})
-	} else {
-		_, err = s.Cron(cron).Do(func() {
-			runnable()
-		})
+
+	wrappedJob := func() {
+		rail := EmptyRail()
+		rail.Infof("Running job '%s'", name)
+		start := time.Now()
+		e := job(rail)
+		if e == nil {
+			rail.Infof("Job '%s' finished, took: %s", name, time.Since(start))
+			return
+		}
+		rail.Errorf("Job '%s' failed, took: %s, %v", name, time.Since(start), e)
 	}
+
+	if withSeconds {
+		_, err = s.CronWithSeconds(cron).Do(wrappedJob)
+	} else {
+		_, err = s.Cron(cron).Do(wrappedJob)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", cron, withSeconds, err)
 	}
@@ -110,7 +121,7 @@ func StartSchedulerAsync() {
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
-func ScheduleCron(cron string, withSeconds bool, runnable func()) error {
+func ScheduleCron(name string, cron string, withSeconds bool, job ScheduledJob) error {
 	s := getScheduler()
-	return doScheduleCron(s, cron, withSeconds, runnable)
+	return doScheduleCron(s, name, cron, withSeconds, job)
 }

@@ -36,20 +36,39 @@ func TestLazyObjRcache(t *testing.T) {
 	cache.Del(rail, "1")
 
 	dummy, err := cache.Get(rail, "1")
-	TestIsNil(t, err)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	rail.Infof("1. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
-	TestEqual(t, 1, invokeCount)
+	if invokeCount != 1 {
+		t.Logf("invokeCount: %v", invokeCount)
+		t.FailNow()
+	}
 
 	dummy, err = cache.Get(rail, "1")
-	TestIsNil(t, err)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	rail.Infof("2. got from cache %+v, invokeCount: %v", dummy, invokeCount)
-	TestEqual(t, 1, invokeCount)
+
+	if invokeCount != 1 {
+		t.Logf("invokeCount: %v", invokeCount)
+		t.FailNow()
+	}
 
 	cache.Del(rail, "1")
 
 	dummy, err = cache.Get(rail, "1")
-	TestIsNil(t, err)
-	TestEqual(t, 2, invokeCount)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if invokeCount != 2 {
+		t.Logf("invokeCount: %v", invokeCount)
+		t.FailNow()
+	}
 
 	rail.Infof("3. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
 }
