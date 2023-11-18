@@ -4,8 +4,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 func TestTaskScheduling(t *testing.T) {
@@ -20,9 +18,9 @@ func TestTaskScheduling(t *testing.T) {
 	SetScheduleGroup("miso")
 
 	var count int32 = 0
-	err := ScheduleDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(ec Rail) error {
+	err := ScheduleDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(rail Rail) error {
 		atomic.AddInt32(&count, 1)
-		logrus.Infof("%v", count)
+		rail.Infof("%v", count)
 		return nil
 	})
 	if err != nil {

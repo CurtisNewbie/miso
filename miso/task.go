@@ -86,7 +86,7 @@ func enableTaskScheduling(rail Rail) bool {
 
 	uid, e := uuid.NewUUID()
 	if e != nil {
-		logrus.Fatalf("NewUUID: %v", e)
+		rail.Fatalf("NewUUID: %v", e)
 	}
 	nodeId = uid.String()
 	rail.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
@@ -106,14 +106,14 @@ func SetScheduleGroup(groupName string) {
 }
 
 // Check if current node is master
-func IsTaskMaster() bool {
+func IsTaskMaster(rail Rail) bool {
 	key := getTaskMasterKey()
 	val, e := GetStr(key)
 	if e != nil {
-		logrus.Errorf("check is master failed: %v", e)
+		rail.Errorf("check is master failed: %v", e)
 		return false
 	}
-	logrus.Debugf("check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, nodeId)
+	rail.Debugf("check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, nodeId)
 	return val == nodeId
 }
 
@@ -147,7 +147,7 @@ func ScheduleDistributedTask(cron string, withSeconds bool, name string, task Na
 	}
 
 	wrappedTask := func(rail Rail) error {
-		if !tryTaskMaster() {
+		if !tryTaskMaster(rail) {
 			rail.Debug("Not master node, skip scheduled task")
 			return nil
 		}
@@ -187,16 +187,17 @@ func StopTaskScheduler() {
 	if getTaskState() != taskStartedState {
 		return
 	}
+
 	setTaskState(taskStoppedState)
-
 	StopScheduler()
-
 	stopTaskMasterLockTicker()
-	releaseMasterNodeLock()
+
+	rail := EmptyRail()
+	releaseMasterNodeLock(rail)
 
 	// if we are previously the master node, the lock is refreshed every 5 seconds with the ttl 1m
 	// this should be pretty enough to release the lock before the expiration
-	if IsTaskMaster() {
+	if IsTaskMaster(rail) {
 		GetRedis().Expire(getTaskMasterKey(), 1*time.Second) // release master node after 1s
 	}
 }
@@ -219,7 +220,7 @@ func startTaskMasterLockTicker() {
 	}(masterTicker.C)
 }
 
-func releaseMasterNodeLock() {
+func releaseMasterNodeLock(rail Rail) {
 	cmd := GetRedis().Eval(`
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
@@ -231,10 +232,10 @@ func releaseMasterNodeLock() {
 	end;
 	return 0;`, []string{getTaskMasterKey()}, nodeId)
 	if cmd.Err() != nil {
-		logrus.Errorf("Failed to release master node lock, %v", cmd.Err())
+		rail.Errorf("Failed to release master node lock, %v", cmd.Err())
 		return
 	}
-	logrus.Debugf("Release master node lock, %v", cmd.Val())
+	rail.Debugf("Release master node lock, %v", cmd.Val())
 }
 
 // Stop refreshing master lock ticker
@@ -255,23 +256,23 @@ func refreshTaskMasterLock() error {
 }
 
 // Try to become master node
-func tryTaskMaster() bool {
+func tryTaskMaster(rail Rail) bool {
 	coreMut.Lock()
 	defer coreMut.Unlock()
 
-	if IsTaskMaster() {
+	if IsTaskMaster(rail) {
 		return true
 	}
 
 	bcmd := GetRedis().SetNX(getTaskMasterKey(), nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
-		logrus.Errorf("try to become master node: '%v'", bcmd.Err())
+		rail.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false
 	}
 
 	isMaster := bcmd.Val()
 	if isMaster {
-		logrus.Infof("Elected to be the master node for group: '%s'", group)
+		rail.Infof("Elected to be the master node for group: '%s'", group)
 		startTaskMasterLockTicker()
 	} else {
 		stopTaskMasterLockTicker()
