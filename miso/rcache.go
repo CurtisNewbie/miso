@@ -9,6 +9,11 @@ import (
 	"github.com/go-redis/redis"
 )
 
+type RCacheConfig struct {
+	Exp    time.Duration // exp of each entry
+	NoSync bool          // doesn't use distributed lock to synchronize access to cache
+}
+
 type GetRCacheValue func(rail Rail, key string) (string, error)
 
 // RCache, cache that is backed by Redis.
@@ -19,33 +24,40 @@ type RCache struct {
 	exp      time.Duration
 	supplier GetRCacheValue
 	name     string
+	sync     bool
 }
 
 // Put value to cache
 func (r *RCache) Put(rail Rail, key string, val string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, r.lockKey(key),
-		func() error {
-			err := r.rclient.Set(cacheKey, val, r.exp).Err()
+	op := func() error {
+		err := r.rclient.Set(cacheKey, val, r.exp).Err()
 
-			// value not found
-			if err != nil && errors.Is(err, redis.Nil) {
-				return NoneErr
-			}
+		// value not found
+		if err != nil && errors.Is(err, redis.Nil) {
+			return NoneErr
+		}
 
-			return err
-		},
-	)
+		return err
+	}
+
+	if r.sync {
+		return RLockExec(rail, r.lockKey(key), op)
+	}
+
+	return op()
 }
 
 // Delete value from cache
 func (r *RCache) Del(rail Rail, key string) error {
 	cacheKey := r.cacheKey(key)
-	return RLockExec(rail, r.lockKey(key),
-		func() error {
-			return r.rclient.Del(cacheKey).Err()
-		},
-	)
+	op := func() error {
+		return r.rclient.Del(cacheKey).Err()
+	}
+	if r.sync {
+		return RLockExec(rail, r.lockKey(key), op)
+	}
+	return op()
 }
 
 func (r *RCache) cacheKey(key string) string {
@@ -80,7 +92,7 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 	}
 
 	// attempts to load the missing value for the key
-	return RLockRun(rail, r.lockKey(key), func() (string, error) {
+	op := func() (string, error) {
 
 		cmd := r.rclient.Get(cacheKey)
 		if cmd.Err() == nil {
@@ -103,12 +115,18 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 			return "", scmd.Err()
 		}
 		return supplied, nil
-	})
+	}
+
+	if r.sync {
+		return RLockRun(rail, r.lockKey(key), op)
+	}
+
+	return op()
 }
 
 // Create new RCache
-func NewRCache(name string, exp time.Duration, supplier GetRCacheValue) RCache {
-	return RCache{rclient: GetRedis(), exp: exp, supplier: supplier, name: name}
+func NewRCache(name string, supplier GetRCacheValue, conf RCacheConfig) RCache {
+	return RCache{rclient: GetRedis(), exp: conf.Exp, supplier: supplier, name: name, sync: !conf.NoSync}
 }
 
 // Lazy version of RCache, only initialized internally for the first method call.
@@ -145,9 +163,9 @@ func (r *LazyRCache) Del(rail Rail, key string) error {
 }
 
 // Create new lazy RCache.
-func NewLazyRCache(name string, exp time.Duration, supplier GetRCacheValue) LazyRCache {
+func NewLazyRCache(name string, supplier GetRCacheValue, conf RCacheConfig) LazyRCache {
 	return LazyRCache{
-		_rcacheSupplier: func() RCache { return NewRCache(name, exp, supplier) },
+		_rcacheSupplier: func() RCache { return NewRCache(name, supplier, conf) },
 	}
 }
 
@@ -198,7 +216,7 @@ func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
 type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
 
 // Create new lazy object RCache.
-func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheValue[T]) LazyORCache[T] {
+func NewLazyORCache[T any](name string, supplier GetORCacheValue[T], conf RCacheConfig) LazyORCache[T] {
 	var wrappedSupplier GetRCacheValue = nil
 
 	if supplier != nil {
@@ -211,6 +229,6 @@ func NewLazyORCache[T any](name string, exp time.Duration, supplier GetORCacheVa
 		}
 	}
 
-	lazyRCache := NewLazyRCache(name, exp, wrappedSupplier)
+	lazyRCache := NewLazyRCache(name, wrappedSupplier, conf)
 	return LazyORCache[T]{lazyRCache: &lazyRCache}
 }

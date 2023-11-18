@@ -13,6 +13,7 @@ type RCacheDummy struct {
 func preRCacheTest(t *testing.T) Rail {
 	rail := EmptyRail()
 	SetProp(PropRedisEnabled, true)
+	rail.SetLogLevel("debug")
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
@@ -32,7 +33,7 @@ func TestLazyObjRcache(t *testing.T) {
 		}, nil
 	}
 
-	cache := NewLazyORCache("test", exp, supplier)
+	cache := NewLazyORCache("test", supplier, RCacheConfig{Exp: exp})
 	cache.Del(rail, "1")
 
 	dummy, err := cache.Get(rail, "1")
@@ -76,7 +77,7 @@ func TestLazyObjRcache(t *testing.T) {
 func TestRCache(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
-	rcache := NewRCache("test", exp, nil)
+	rcache := NewRCache("test", nil, RCacheConfig{Exp: exp})
 
 	_, e := rcache.Get(rail, "absent key")
 	if e == nil || !IsNoneErr(e) {
@@ -103,10 +104,11 @@ func TestLazyRCache(t *testing.T) {
 
 	exp := 10 * time.Second
 
-	rcache := NewLazyRCache("test", exp,
+	rcache := NewLazyRCache("test",
 		func(rail Rail, key string) (string, error) {
 			return "", NoneErr
 		},
+		RCacheConfig{Exp: exp},
 	)
 
 	e := rcache.Put(rail, "1", "2")
