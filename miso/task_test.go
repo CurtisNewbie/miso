@@ -18,11 +18,18 @@ func TestTaskScheduling(t *testing.T) {
 	SetScheduleGroup("miso")
 
 	var count int32 = 0
-	err := ScheduleDistributedTask("0/1 * * * * ?", true, "AddInt32 Task", func(rail Rail) error {
-		atomic.AddInt32(&count, 1)
-		rail.Infof("%v", count)
-		return nil
-	})
+	j := Job{
+		Name:            "AddInt32 Task",
+		Cron:            "0/1 * * * * ?",
+		CronWithSeconds: true,
+		Run: func(rail Rail) error {
+			atomic.AddInt32(&count, 1)
+			rail.Infof("%v", count)
+			return nil
+		},
+	}
+
+	err := ScheduleDistributedTask(j)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,8 +37,6 @@ const (
 	defMstLockTtl = 1 * time.Minute
 )
 
-type NamedTask = func(Rail) error
-
 func init() {
 	SetDefProp(PropTaskSchedulingEnabled, true)
 
@@ -135,8 +133,8 @@ func getTaskMasterKey() string {
 // E.g.,
 //
 //	ScheduleDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
-func ScheduleDistributedTask(cron string, withSeconds bool, name string, task NamedTask) error {
-	logrus.Infof("Schedule distributed task '%s' cron: '%s'", name, cron)
+func ScheduleDistributedTask(t Job) error {
+	logrus.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 
 	if getTaskState() == taskInitState {
 		coreMut.Lock()
@@ -146,15 +144,16 @@ func ScheduleDistributedTask(cron string, withSeconds bool, name string, task Na
 		coreMut.Unlock()
 	}
 
-	wrappedTask := func(rail Rail) error {
+	preWrap := t.Run
+	t.Run = func(rail Rail) error {
 		if !tryTaskMaster(rail) {
 			rail.Debug("Not master node, skip scheduled task")
 			return nil
 		}
-		return task(rail)
+		return preWrap(rail)
 	}
 
-	return ScheduleCron(name, cron, withSeconds, wrappedTask)
+	return ScheduleCron(t)
 }
 
 // Start distributed scheduler asynchronously

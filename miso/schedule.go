@@ -8,8 +8,14 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
-type ScheduledJob func(Rail) error
 type schedState = int
+
+type Job struct {
+	Name            string
+	Cron            string
+	CronWithSeconds bool
+	Run             func(Rail) error
+}
 
 var (
 	// lazy-init, cached scheduler
@@ -54,29 +60,29 @@ func newScheduler() *gocron.Scheduler {
 	return sche
 }
 
-func doScheduleCron(s *gocron.Scheduler, name string, cron string, withSeconds bool, job ScheduledJob) error {
+func doScheduleCron(s *gocron.Scheduler, job Job) error {
 	var err error
 
 	wrappedJob := func() {
 		rail := EmptyRail()
-		rail.Infof("Running job '%s'", name)
+		rail.Infof("Running job '%s'", job.Name)
 		start := time.Now()
-		e := job(rail)
+		e := job.Run(rail)
 		if e == nil {
-			rail.Infof("Job '%s' finished, took: %s", name, time.Since(start))
+			rail.Infof("Job '%s' finished, took: %s", job.Name, time.Since(start))
 			return
 		}
-		rail.Errorf("Job '%s' failed, took: %s, %v", name, time.Since(start), e)
+		rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, time.Since(start), e)
 	}
 
-	if withSeconds {
-		_, err = s.CronWithSeconds(cron).Do(wrappedJob)
+	if job.CronWithSeconds {
+		_, err = s.CronWithSeconds(job.Cron).Do(wrappedJob)
 	} else {
-		_, err = s.Cron(cron).Do(wrappedJob)
+		_, err = s.Cron(job.Cron).Do(wrappedJob)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", cron, withSeconds, err)
+		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 	return nil
 }
@@ -121,7 +127,7 @@ func StartSchedulerAsync() {
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
-func ScheduleCron(name string, cron string, withSeconds bool, job ScheduledJob) error {
+func ScheduleCron(job Job) error {
 	s := getScheduler()
-	return doScheduleCron(s, name, cron, withSeconds, job)
+	return doScheduleCron(s, job)
 }
