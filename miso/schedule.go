@@ -17,6 +17,23 @@ type Job struct {
 	Run             func(Rail) error
 }
 
+// Hook triggered before job's execution.
+type PreJobHook func(rail Rail, inf JobInf) error
+
+// Hook triggered after job's execution.
+type PostJobHook func(rail Rail, inf JobInf, stats JobExecStats) error
+
+type JobExecStats struct {
+	Time time.Duration
+	Err  error
+}
+
+type JobInf struct {
+	Name            string
+	Cron            string
+	CronWithSeconds bool
+}
+
 var (
 	// lazy-init, cached scheduler
 	scheduler *gocron.Scheduler = nil
@@ -26,6 +43,9 @@ var (
 
 	// state of scheduler
 	state = scheInitState
+
+	preJobHooks  = []PreJobHook{}
+	postJobHooks = []PostJobHook{}
 )
 
 const (
@@ -65,14 +85,36 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 
 	wrappedJob := func() {
 		rail := EmptyRail()
+
+		inf := JobInf{
+			Name:            job.Name,
+			Cron:            job.Cron,
+			CronWithSeconds: job.CronWithSeconds,
+		}
+
+		for _, hook := range preJobHooks {
+			if err := hook(rail, inf); err != nil {
+				rail.Errorf("PreJobHook returns err for job: %v, %v", job.Name, err)
+			}
+		}
+
 		rail.Infof("Running job '%s'", job.Name)
 		start := time.Now()
-		e := job.Run(rail)
-		if e == nil {
-			rail.Infof("Job '%s' finished, took: %s", job.Name, time.Since(start))
-			return
+		errRun := job.Run(rail)
+		took := time.Since(start)
+		if errRun == nil {
+			rail.Infof("Job '%s' finished, took: %s", job.Name, took)
+		} else {
+			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
 		}
-		rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, time.Since(start), e)
+
+		stats := JobExecStats{Time: took, Err: errRun}
+
+		for _, hook := range postJobHooks {
+			if err := hook(rail, inf, stats); err != nil {
+				rail.Errorf("PostJobHook returns err for job: %v, %v", job.Name, err)
+			}
+		}
 	}
 
 	if job.CronWithSeconds {
@@ -130,4 +172,18 @@ func StartSchedulerAsync() {
 func ScheduleCron(job Job) error {
 	s := getScheduler()
 	return doScheduleCron(s, job)
+}
+
+// Callback triggered before job execution.
+//
+// The job and other callbacks will still be executed even if one of the callback returns error.
+func PreJobExec(hook PreJobHook) {
+	preJobHooks = append(preJobHooks, hook)
+}
+
+// Callback triggered after job execution.
+//
+// Other callbacks will still be executed even if one of them returns error.
+func PostJobExec(hook PostJobHook) {
+	postJobHooks = append(postJobHooks, hook)
 }
