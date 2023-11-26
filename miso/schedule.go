@@ -54,6 +54,13 @@ const (
 	scheStoppedState schedState = 2
 )
 
+func init() {
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Cron/Task Scheduler",
+		Bootstrap: SchedulerBootstrap,
+	})
+}
+
 // Whether scheduler is initialized
 func HasScheduler() bool {
 	scheLock.Lock()
@@ -186,4 +193,19 @@ func PreJobExec(hook PreJobHook) {
 // Other callbacks will still be executed even if one of them returns error.
 func PostJobExec(hook PostJobHook) {
 	postJobHooks = append(postJobHooks, hook)
+}
+
+func SchedulerBootstrap(rail Rail) error {
+	// distributed task scheduler has pending tasks and is enabled
+	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
+		StartTaskSchedulerAsync(rail)
+		rail.Info("Distributed Task Scheduler started")
+		AddShutdownHook(func() { StopTaskScheduler() })
+	} else if HasScheduler() {
+		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
+		StartSchedulerAsync()
+		rail.Info("Cron Scheduler started")
+		AddShutdownHook(func() { StopScheduler() })
+	}
+	return nil
 }

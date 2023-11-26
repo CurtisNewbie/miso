@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -32,6 +33,12 @@ var (
 func init() {
 	SetDefProp(PropMetricsEnabled, true)
 	SetDefProp(PropPromRoute, "/metrics")
+
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Prometheus",
+		Bootstrap: PrometheusBootstrap,
+		Condition: PrometheusBootstrapCondition,
+	})
 }
 
 // Default handler for prometheus metrics.
@@ -74,4 +81,16 @@ func NewPromHistogram(name string) prometheus.Histogram {
 // The Counter with this name is only created once and is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromCounter(name string) prometheus.Counter {
 	return counterBuck.Get(name)
+}
+
+func PrometheusBootstrapCondition(rail Rail) (bool, error) {
+	return GetPropBool(PropMetricsEnabled) && GetPropBool(PropServerEnabled), nil
+}
+
+func PrometheusBootstrap(rail Rail) error {
+	handler := PrometheusHandler()
+	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
+		handler.ServeHTTP(c.Writer, c.Request)
+	}).Build()
+	return nil
 }

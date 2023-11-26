@@ -25,6 +25,12 @@ func init() {
 	SetDefProp(PropRedisUsername, "")
 	SetDefProp(PropRedisPassword, "")
 	SetDefProp(PropRedisDatabas, 0)
+
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Redis",
+		Bootstrap: RedisBootstrap,
+		Condition: RedisBootstrapCondition,
+	})
 }
 
 /*
@@ -138,4 +144,26 @@ func IsRedisClientInitialized() bool {
 	redisp.mu.RLock()
 	defer redisp.mu.RUnlock()
 	return redisp.client != nil
+}
+
+func RedisBootstrap(rail Rail) error {
+	if _, e := InitRedisFromProp(rail); e != nil {
+		return TraceErrf(e, "Failed to establish connection to Redis")
+	}
+	AddHealthIndicator(HealthIndicator{
+		Name: "Redis Component",
+		CheckHealth: func(rail Rail) bool {
+			cmd := GetRedis().Ping()
+			if err := cmd.Err(); err != nil {
+				rail.Errorf("Redis ping failed, %v", err)
+				return false
+			}
+			return true
+		},
+	})
+	return nil
+}
+
+func RedisBootstrapCondition(rail Rail) (bool, error) {
+	return IsRedisEnabled(), nil
 }

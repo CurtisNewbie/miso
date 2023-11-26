@@ -1,8 +1,16 @@
 package miso
 
 import (
+	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+const (
+	ServiceStatusUp   = "UP"
+	ServiceStatusDown = "DOWN"
 )
 
 // Indicator of health status
@@ -47,4 +55,20 @@ func CheckHealth(rail Rail) []HealthStatus {
 		rail.Debugf("HealthIndicator %v took %v", indi.Name, time.Since(start))
 	}
 	return hs
+}
+
+// Create a default health check endpoint that simply doesn't nothing except returing 200
+func DefaultHealthCheck(ctx *gin.Context) {
+	rail := EmptyRail()
+	hs := CheckHealth(rail)
+	for i := range hs {
+		s := hs[i]
+		if !s.Healthy {
+			rail.Warnf("Component %s is down, healthcheck failed", s.Name)
+			ctx.String(http.StatusServiceUnavailable, ServiceStatusDown)
+			return
+		}
+	}
+	rail.Debugf("Service healthcheck pass")
+	ctx.String(http.StatusOK, ServiceStatusUp)
 }

@@ -48,6 +48,7 @@ type HttpRoute struct {
 type ComponentBootstrap struct {
 	Name      string
 	Bootstrap func(rail Rail) error
+	Condition func(rail Rail) (bool, error) // check whether component should be bootstraped
 }
 
 var (
@@ -107,44 +108,10 @@ func init() {
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
 	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
 
-	// bootstrap callbacks
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap MySQL",
-		Bootstrap: MySQLBootstrap,
-	})
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap Redis",
-		Bootstrap: RedisBootstrap,
-	})
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap RabbitMQ",
-		Bootstrap: RabbitBootstrap,
-	})
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap Prometheus",
-		Bootstrap: PrometheusBootstrap,
-	})
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap HTTP Server",
 		Bootstrap: WebServerBootstrap,
-	})
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Boostrap Consul",
-		Bootstrap: ConsulBootstrap,
-	})
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap Cron/Task Scheduler",
-		Bootstrap: SchedulerBootstrap,
-	})
-
-	PreServerBootstrap(func(rail Rail) error {
-		serverRequestValidationEnabled = GetPropBool(PropServerRequestValidateEnabled)
-		rail.Debugf("Server request parameter validation enabled: %v", serverRequestValidationEnabled)
-
-		serverRequestLogEnabled = GetPropBool(PropServerRequestLogEnabled)
-		rail.Debugf("Server request log enabled: %v", serverRequestValidationEnabled)
-
-		return nil
+		Condition: WebServerBootstrapCondition,
 	})
 }
 
@@ -488,6 +455,17 @@ func BootstrapServer(args []string) {
 
 	// bootstrap components
 	for _, sbc := range serverBootrapCallbacks {
+		if sbc.Condition != nil {
+			ok, ce := sbc.Condition(rail)
+			if ce != nil {
+				rail.Errorf("Failed to bootstrap server component, failed on condition check, %v", ce)
+				return
+			}
+			if !ok {
+				continue
+			}
+		}
+
 		start := time.Now()
 		if e := sbc.Bootstrap(rail); e != nil {
 			rail.Errorf("Failed to bootstrap server component, %v", e)
@@ -792,39 +770,11 @@ func DispatchOk(c *gin.Context) {
 	DispatchJson(c, OkResp())
 }
 
-func MySQLBootstrap(rail Rail) error {
-	if !IsMySqlEnabled() {
-		return nil
-	}
-
-	if e := InitMySQLFromProp(); e != nil {
-		return TraceErrf(e, "Failed to establish connection to MySQL")
-	}
-
-	AddHealthIndicator(HealthIndicator{
-		Name: "MySQL Component",
-		CheckHealth: func(rail Rail) bool {
-			db, err := GetMySQL().DB()
-			if err != nil {
-				rail.Errorf("Failed to get MySQL DB, %v", err)
-				return false
-			}
-			err = db.Ping()
-			if err != nil {
-				rail.Errorf("Failed to ping MySQL, %v", err)
-				return false
-			}
-			return true
-		},
-	})
-
-	return nil
+func WebServerBootstrapCondition(rail Rail) (bool, error) {
+	return GetPropBool(PropServerEnabled), nil
 }
 
 func WebServerBootstrap(rail Rail) error {
-	if !GetPropBool(PropServerEnabled) {
-		return nil
-	}
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing
@@ -849,7 +799,7 @@ func WebServerBootstrap(rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if IsConsulEnabled() && GetPropBool(PropConsulRegisterDefaultHealthcheck) {
+	if GetPropBool(PropConsulEnabled) && GetPropBool(PropConsulRegisterDefaultHealthcheck) {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
@@ -862,86 +812,6 @@ func WebServerBootstrap(rail Rail) error {
 	go startHttpServer(rail, server)
 
 	AddShutdownHook(func() { shutdownHttpServer(server) })
-	return nil
-}
-
-func PrometheusBootstrap(rail Rail) error {
-	if !GetPropBool(PropMetricsEnabled) || !GetPropBool(PropServerEnabled) {
-		return nil
-	}
-	handler := PrometheusHandler()
-	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
-		handler.ServeHTTP(c.Writer, c.Request)
-	}).Build()
-	return nil
-}
-
-func RabbitBootstrap(rail Rail) error {
-	if !RabbitMQEnabled() {
-		return nil
-	}
-	if e := StartRabbitMqClient(rail); e != nil {
-		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
-	}
-	return nil
-}
-
-func ConsulBootstrap(rail Rail) error {
-	if !IsConsulEnabled() {
-		return nil
-	}
-
-	// create consul client
-	if _, e := GetConsulClient(); e != nil {
-		return TraceErrf(e, "Failed to establish connection to Consul")
-	}
-
-	// deregister on shutdown
-	AddShutdownHook(func() {
-		if e := DeregisterService(); e != nil {
-			rail.Errorf("Failed to deregister on Consul, %v", e)
-		}
-	})
-
-	if e := RegisterService(); e != nil {
-		return TraceErrf(e, "Failed to register on Consul")
-	}
-	return nil
-}
-
-func RedisBootstrap(rail Rail) error {
-	if !IsRedisEnabled() {
-		return nil
-	}
-	if _, e := InitRedisFromProp(rail); e != nil {
-		return TraceErrf(e, "Failed to establish connection to Redis")
-	}
-	AddHealthIndicator(HealthIndicator{
-		Name: "Redis Component",
-		CheckHealth: func(rail Rail) bool {
-			cmd := GetRedis().Ping()
-			if err := cmd.Err(); err != nil {
-				rail.Errorf("Redis ping failed, %v", err)
-				return false
-			}
-			return true
-		},
-	})
-	return nil
-}
-
-func SchedulerBootstrap(rail Rail) error {
-	// distributed task scheduler has pending tasks and is enabled
-	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
-		StartTaskSchedulerAsync(rail)
-		rail.Info("Distributed Task Scheduler started")
-		AddShutdownHook(func() { StopTaskScheduler() })
-	} else if HasScheduler() {
-		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
-		StartSchedulerAsync()
-		rail.Info("Cron Scheduler started")
-		AddShutdownHook(func() { StopScheduler() })
-	}
 	return nil
 }
 

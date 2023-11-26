@@ -1,22 +1,20 @@
+//go:build !excl_consul
+// +build !excl_consul
+
 package miso
 
 import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
 )
 
 const (
-	ServiceStatusUp   = "UP"
-	ServiceStatusDown = "DOWN"
-
 	// Service registration status - passing.
 	ConsulRegiStatusPassing = "passing"
 
@@ -51,6 +49,12 @@ func init() {
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 15)
+
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Boostrap Consul",
+		Bootstrap: ConsulBootstrap,
+		Condition: ConsulBootstrapCondition,
+	})
 }
 
 type ConsulApiImpl struct{}
@@ -256,22 +260,6 @@ func ListConsulServers(name string) []ConsulServer {
 	return copied
 }
 
-// Create a default health check endpoint that simply doesn't nothing except returing 200
-func DefaultHealthCheck(ctx *gin.Context) {
-	rail := EmptyRail()
-	hs := CheckHealth(rail)
-	for i := range hs {
-		s := hs[i]
-		if !s.Healthy {
-			rail.Warnf("Component %s is down, healthcheck failed", s.Name)
-			ctx.String(http.StatusServiceUnavailable, ServiceStatusDown)
-			return
-		}
-	}
-	rail.Debugf("Service healthcheck pass")
-	ctx.String(http.StatusOK, ServiceStatusUp)
-}
-
 // Register current service
 func DeregisterService() error {
 	if !IsConsulClientInitialized() {
@@ -405,4 +393,39 @@ func IsConsulClientInitialized() bool {
 	consulp.mu.RLock()
 	defer consulp.mu.RUnlock()
 	return consulp.consul != nil
+}
+
+func ConsulBootstrap(rail Rail) error {
+	// create consul client
+	if _, e := GetConsulClient(); e != nil {
+		return TraceErrf(e, "Failed to establish connection to Consul")
+	}
+
+	// deregister on shutdown
+	AddShutdownHook(func() {
+		if e := DeregisterService(); e != nil {
+			rail.Errorf("Failed to deregister on Consul, %v", e)
+		}
+	})
+
+	if e := RegisterService(); e != nil {
+		return TraceErrf(e, "Failed to register on Consul")
+	}
+
+	ClientServiceRegistry = consulServiceRegistry{}
+	rail.Debug("Using consulServiceRegistry")
+
+	return nil
+}
+
+func ConsulBootstrapCondition(rail Rail) (bool, error) {
+	return IsConsulEnabled(), nil
+}
+
+// Service registry based on Consul
+type consulServiceRegistry struct {
+}
+
+func (r consulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
+	return ConsulResolveRequestUrl(service, relativeUrl)
 }

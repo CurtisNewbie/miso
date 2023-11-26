@@ -1,3 +1,6 @@
+//go:build !excl_mysql
+// +build !excl_mysql
+
 package miso
 
 import (
@@ -38,6 +41,12 @@ func init() {
 	SetDefProp(PropMySqlHost, "localhost")
 	SetDefProp(PropMySqlPort, 3306)
 	SetDefProp(PropMySqlConnParam, defaultConnParams)
+
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap MySQL",
+		Bootstrap: MySQLBootstrap,
+		Condition: MySQLBootstrapCondition,
+	})
 }
 
 /*
@@ -157,4 +166,33 @@ func IsMySQLInitialized() bool {
 	mysqlp.mu.RLock()
 	defer mysqlp.mu.RUnlock()
 	return mysqlp.mysql != nil
+}
+
+func MySQLBootstrap(rail Rail) error {
+	if e := InitMySQLFromProp(); e != nil {
+		return TraceErrf(e, "Failed to establish connection to MySQL")
+	}
+
+	AddHealthIndicator(HealthIndicator{
+		Name: "MySQL Component",
+		CheckHealth: func(rail Rail) bool {
+			db, err := GetMySQL().DB()
+			if err != nil {
+				rail.Errorf("Failed to get MySQL DB, %v", err)
+				return false
+			}
+			err = db.Ping()
+			if err != nil {
+				rail.Errorf("Failed to ping MySQL, %v", err)
+				return false
+			}
+			return true
+		},
+	})
+
+	return nil
+}
+
+func MySQLBootstrapCondition(rail Rail) (bool, error) {
+	return IsMySqlEnabled(), nil
 }

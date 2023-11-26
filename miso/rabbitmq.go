@@ -59,6 +59,12 @@ func init() {
 	SetDefProp(PropRabbitMqPassword, "")
 	SetDefProp(PropRabbitMqVhost, "")
 	SetDefProp(PropRabbitMqConsumerQos, DEFAULT_QOS)
+
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap RabbitMQ",
+		Bootstrap: RabbitBootstrap,
+		Condition: RabbitBootstrapCondition,
+	})
 }
 
 func amqpChannelFinalizer(c *amqp.Channel) {
@@ -617,4 +623,15 @@ func newChan() (*amqp.Channel, error) {
 	}
 
 	return _conn.Channel()
+}
+
+func RabbitBootstrap(rail Rail) error {
+	if e := StartRabbitMqClient(rail); e != nil {
+		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
+	}
+	return nil
+}
+
+func RabbitBootstrapCondition(rail Rail) (bool, error) {
+	return RabbitMQEnabled(), nil
 }

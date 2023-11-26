@@ -1,3 +1,6 @@
+//go:build !excl_sqlite
+// +build !excl_sqlite
+
 package miso
 
 import (

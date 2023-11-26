@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -25,10 +24,10 @@ const (
 )
 
 var (
-	_serviceRegistry         ServiceRegistry = nil
-	_initServiceRegistryOnce sync.Once
-	defaultClient            *http.Client
-	httpProtoRegex           = regexp.MustCompile(`(?i)https?://`)
+	defaultClient  *http.Client
+	httpProtoRegex = regexp.MustCompile(`(?i)https?://`)
+
+	ClientServiceRegistry ServiceRegistry = nil
 )
 
 func init() {
@@ -618,14 +617,6 @@ type ServiceRegistry interface {
 	resolve(service string, relativeUrl string) (string, error)
 }
 
-// Service registry based on Consul
-type consulServiceRegistry struct {
-}
-
-func (r consulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
-	return ConsulResolveRequestUrl(service, relativeUrl)
-}
-
 // Service registry backed by loaded configuration
 type hardcodedServiceRegistry struct {
 }
@@ -647,20 +638,10 @@ func (r hardcodedServiceRegistry) resolve(service string, relativeUrl string) (s
 //
 // Service registry initialization is lazy, don't call this for global var
 func GetServiceRegistry() ServiceRegistry {
-	_initServiceRegistryOnce.Do(func() {
-		rail := EmptyRail()
-		if IsConsulClientInitialized() {
-			_serviceRegistry = consulServiceRegistry{}
-			rail.Debug("Detected Consul client, using consulServiceRegistry")
-			return
-		}
-
-		// fallback to configuration based
-		_serviceRegistry = hardcodedServiceRegistry{}
-		rail.Debug("No dynamic service registry detected, fallback to hardcodedServiceRegistry")
-	})
-
-	return _serviceRegistry
+	if ClientServiceRegistry != nil {
+		return ClientServiceRegistry
+	}
+	return hardcodedServiceRegistry{}
 }
 
 // Read response as GnResp[T] object.
