@@ -24,19 +24,19 @@ const (
 )
 
 var (
-	defaultClient  *http.Client
 	httpProtoRegex = regexp.MustCompile(`(?i)https?://`)
 
+	MisoDefaultClient     *http.Client
 	ClientServiceRegistry ServiceRegistry = nil
 )
 
 func init() {
-	defaultClient = &http.Client{Timeout: 15 * time.Second}
+	MisoDefaultClient = &http.Client{Timeout: 15 * time.Second}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
 	transport.MaxIdleConnsPerHost = 500
 	transport.IdleConnTimeout = time.Minute * 5
-	defaultClient.Transport = transport
+	MisoDefaultClient.Transport = transport
 }
 
 // Helper type for handling HTTP responses
@@ -443,12 +443,12 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 
 // Create new defualt TClient
 func NewDefaultTClient(ec Rail, url string) *TClient {
-	return NewTClient(ec, url, defaultClient)
+	return NewTClient(ec, url, MisoDefaultClient)
 }
 
 // Create new defualt TClient with service discovery and tracing enabled, relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl, defaultClient).EnableServiceDiscovery(serviceName).EnableTracing()
+	return NewTClient(ec, relUrl, MisoDefaultClient).EnableServiceDiscovery(serviceName).EnableTracing()
 }
 
 // Create new TClient
@@ -473,7 +473,7 @@ func SendGet(url string, headers map[string][]string) (*http.Response, error) {
 	}
 
 	AddHeaders(req, headers)
-	return defaultClient.Do(req)
+	return MisoDefaultClient.Do(req)
 }
 
 // Add http headers
@@ -497,7 +497,7 @@ func SendPost(url string, body io.Reader) (*http.Response, error) {
 	if e != nil {
 		return nil, e
 	}
-	return defaultClient.Do(req)
+	return MisoDefaultClient.Do(req)
 }
 
 // Create HEAD request
@@ -642,10 +642,10 @@ func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
 
 // Disable TLS certificate check.
 func ClientSkipTlsSecureCheck() {
-	defaultClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+	MisoDefaultClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 }
 
 // Set default http client timeout
 func SetDefaultTimeout(ttl time.Duration) {
-	defaultClient.Timeout = ttl
+	MisoDefaultClient.Timeout = ttl
 }
