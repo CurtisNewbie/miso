@@ -87,6 +87,7 @@ mysql:
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
+- [Customize Build](./doc/customize_build.md)
 
 ## Different Behaviour
 
