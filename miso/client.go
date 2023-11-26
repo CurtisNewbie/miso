@@ -197,22 +197,7 @@ func (t *TClient) prepReqUrl() (string, error) {
 	return concatQueryParam(url, t.QueryParam), nil
 }
 
-/*
-Enable service discovery, the Url specified when creating the TClient must be relative, starting with '/'
-
-For example:
-
-	tr := NewDynTClient(ctx, "/open/api/gallery/brief/owned", "fantahsea").
-		AddHeaders(map[string]string{
-			"TestCase": "TestGet",
-		}).
-		EnableTracing().
-		Get()
-
-The resolved request url will be (imagine that the service 'fantahsea' is hosted on 'localhost:8081'):
-
-	"http://localhost:8081/open/api/gallery/brief/owned?name=yongj.zhuang&name=zhuangyongj&age=103"
-*/
+// Enable service discovery
 func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
 	t.serviceName = serviceName
 	t.discoverService = true
