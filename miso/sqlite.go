@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -51,7 +50,7 @@ func initSqlite() {
 }
 
 func newSqlite(path string) (*gorm.DB, error) {
-	logrus.Infof("Connecting to SQLite database '%s'", path)
+	Infof("Connecting to SQLite database '%s'", path)
 
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
@@ -69,7 +68,7 @@ func newSqlite(path string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to ping SQLite, %v", err)
 	}
 
-	logrus.Infof("SQLite connected")
+	Infof("SQLite connected")
 	return db, nil
 }
 

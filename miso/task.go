@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -134,7 +133,7 @@ func getTaskMasterKey() string {
 //
 //	ScheduleDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
 func ScheduleDistributedTask(t Job) error {
-	logrus.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
+	Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 
 	if getTaskState() == taskInitState {
 		coreMut.Lock()

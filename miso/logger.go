@@ -134,3 +134,51 @@ func ParseLogLevel(logLevel string) (logrus.Level, bool) {
 	}
 	return logrus.InfoLevel, false
 }
+
+func Debugf(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Debugf(format, args...)
+}
+
+func Infof(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Infof(format, args...)
+}
+
+func Warnf(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Warnf(format, args...)
+}
+
+func Errorf(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Errorf(format, args...)
+}
+
+func Debug(args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Debug(args...)
+}
+
+func Info(args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Info(args...)
+}
+
+func Warn(args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Warn(args...)
+}
+
+func Error(args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Error(args...)
+}
+
+func SetLogLevel(level string) {
+	ll, ok := ParseLogLevel(level)
+	if !ok {
+		return
+	}
+	logrus.SetLevel(ll)
+}
+
+func getCallerFn() string {
+	clr := getCaller(4)
+	if clr == nil {
+		return ""
+	}
+	return getShortFnName(clr.Function)
+}

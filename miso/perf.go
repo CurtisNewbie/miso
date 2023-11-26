@@ -3,17 +3,15 @@ package miso
 import (
 	"log"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
-// Run timer for named operation and print result using logrus
+// Run timer for named operation and print result
 //
 // e.g.,
 //
 //	defer LTimeOp(ec, time.Now(), "someOperation")
 func LTimeOp(start time.Time, name string) {
-	logrus.Infof("%s took %s", name, time.Since(start))
+	Infof("%s took %s", name, time.Since(start))
 }
 
 // Run timer for named operation and print result in log

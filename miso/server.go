@@ -136,7 +136,7 @@ func triggerShutdownHook() {
 	shmu.Lock()
 	defer shmu.Unlock()
 
-	logrus.Info("Triggering shutdown hook")
+	Info("Triggering shutdown hook")
 	for _, hook := range shutdownHook {
 		hook()
 	}
@@ -527,7 +527,7 @@ This func looks for following prop:
 	"server.gracefulShutdownTimeSec"
 */
 func shutdownHttpServer(server *http.Server) {
-	logrus.Info("Shutting down http server gracefully")
+	Info("Shutting down http server gracefully")
 
 	// set timeout for graceful shutdown
 	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
@@ -540,7 +540,7 @@ func shutdownHttpServer(server *http.Server) {
 
 	// shutdown web server with the timeout
 	server.Shutdown(ctx)
-	logrus.Infof("Http server exited")
+	Infof("Http server exited")
 }
 
 // Default Recovery func

@@ -99,11 +99,7 @@ func (r Rail) IsLogLevelEnabled(level string) bool {
 }
 
 func (r Rail) SetLogLevel(level string) {
-	ll, ok := ParseLogLevel(level)
-	if !ok {
-		return
-	}
-	r.log.Logger.SetLevel(ll)
+	SetLogLevel(level)
 }
 
 func (r Rail) WithCtxVal(key string, val any) Rail {
@@ -132,14 +128,6 @@ func getCaller(level int) *runtime.Frame {
 		return &f //nolint:scopelint
 	}
 	return nil
-}
-
-func getCallerFn() string {
-	clr := getCaller(4)
-	if clr == nil {
-		return ""
-	}
-	return getShortFnName(clr.Function)
 }
 
 func getShortFnName(fn string) string {

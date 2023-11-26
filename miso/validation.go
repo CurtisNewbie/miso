@@ -134,7 +134,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 		return nil
 	}
 
-	// logrus.Infof("Validating '%s' with value '%v' against rule '%s'", fname, value, rule)
+	// Infof("Validating '%s' with value '%v' against rule '%s'", fname, value, rule)
 
 	switch rule {
 	case MAX_LEN:

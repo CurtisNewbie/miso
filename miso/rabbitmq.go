@@ -10,7 +10,6 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -31,7 +30,7 @@ var (
 		New: func() any {
 			c, err := newPubChan()
 			if err != nil {
-				logrus.Errorf("Failed to create new publishing channel, %v", err)
+				Errorf("Failed to create new publishing channel, %v", err)
 				return nil
 			}
 
@@ -69,7 +68,7 @@ func init() {
 
 func amqpChannelFinalizer(c *amqp.Channel) {
 	if !c.IsClosed() {
-		logrus.Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
+		Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
 		c.Close()
 	}
 }
@@ -235,7 +234,7 @@ func DeclareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	if e != nil {
 		return TraceErrf(e, "failed to declare queue, %v", queue.Name)
 	}
-	logrus.Debugf("Declared queue '%s'", dqueue.Name)
+	Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
 }
 
@@ -267,7 +266,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	if e != nil {
 		return TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 	}
-	logrus.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
+	Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 
 	// declare a redeliver queue, this queue will not have any subscriber, once the messages are expired, they are
 	// routed to the original queue
@@ -285,7 +284,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 		return TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
 	}
 	redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
-	logrus.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
+	Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
 	return nil
 }
 
@@ -299,7 +298,7 @@ func DeclareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) erro
 	if e != nil {
 		return TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
 	}
-	logrus.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
+	Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
 }
 
@@ -330,7 +329,7 @@ func StartRabbitMqClient(rail Rail) error {
 			} else {
 				notifyCloseChan, err = initRabbitClient(rail)
 				if err != nil {
-					logrus.Errorf("Error connecting to RabbitMQ: %v", err)
+					Errorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
 					continue
 				}
@@ -343,7 +342,7 @@ func StartRabbitMqClient(rail Rail) error {
 			// context is done, close the connection, and exit
 			case <-doneCh:
 				if err := RabbitDisconnect(rail); err != nil {
-					logrus.Warnf("Failed to close connection to RabbitMQ: %v", err)
+					Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
 				return
 			}
@@ -496,19 +495,19 @@ func startRabbitConsumers(conn *amqp.Connection) error {
 			}
 			msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 			if err != nil {
-				logrus.Errorf("Failed to listen to '%s', err: %v", qname, err)
+				Errorf("Failed to listen to '%s', err: %v", qname, err)
 			}
 			startListening(msgCh, listener, ic)
 		}
 	}
 
-	logrus.Debug("RabbitMQ consumer initialization finished")
+	Debug("RabbitMQ consumer initialization finished")
 	return nil
 }
 
 func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
-		logrus.Debugf("%d-%v started", routineNo, listener)
+		Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {
 
 			// read trace from headers
@@ -563,7 +562,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			msg.Nack(false, true)
 			rail.Debugf("Nacked message: %v", msg.MessageId)
 		}
-		logrus.Debugf("%d-%v stopped", routineNo, listener)
+		Debugf("%d-%v stopped", routineNo, listener)
 	}()
 }
 
@@ -609,7 +608,7 @@ func newPubChan() (*amqp.Channel, error) {
 		return nil, TraceErrf(err, "channel could not be put into confirm mode")
 	}
 
-	logrus.Debugf("Created new RabbitMQ publishing channel")
+	Debugf("Created new RabbitMQ publishing channel")
 
 	return newChan, nil
 }

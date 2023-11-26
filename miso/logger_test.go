@@ -2,18 +2,16 @@ package miso
 
 import (
 	"testing"
-
-	"github.com/sirupsen/logrus"
 )
 
-func TestFormatter(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-
-	logrus.Info("test message")
-	determineIdealMethodName()
+func determineIdealMethodName() {
+	Info("Whispering")
+	Debug("Whispering ???? :D")
 }
 
-func determineIdealMethodName() {
-	logrus.Info("Whispering")
-	logrus.Debug("Whispering ???? :D")
+func TestGetCallerFn(t *testing.T) {
+	Info("yo")
+	determineIdealMethodName()
+
+	EmptyRail().Info("oops")
 }
