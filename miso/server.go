@@ -17,6 +17,47 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+var (
+	loggerOut    io.Writer = os.Stdout
+	loggerErrOut io.Writer = os.Stderr
+
+	routesRegiatarList []routesRegistar = []routesRegistar{}
+	serverHttpRoutes   []HttpRoute      = []HttpRoute{}
+
+	shuttingDown   bool         = false
+	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
+
+	shutdownHook []func()
+	shmu         sync.Mutex // mutex for shutdownHook
+
+	// server component bootstrap callbacks
+	serverBootrapCallbacks []ComponentBootstrap = []ComponentBootstrap{}
+
+	// listener for events trigger before server components being bootstrapped
+	preServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
+	// listener for events trigger after server components bootstrapped
+	postServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
+
+	// all http methods
+	anyHttpMethods = []string{
+		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch,
+		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
+		http.MethodTrace,
+	}
+
+	// channel for signaling server shutdown
+	manualSigQuit = make(chan int, 1)
+
+	defaultResultBodyBuilder = ResultBodyBuilder{
+		ErrJsonBuilder:     func(rail Rail, err error) any { return WrapResp(nil, err, rail) },
+		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
+		OkJsonBuilder:      func() any { return OkResp() },
+	}
+	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
+		DefaultHandleResult(c, rail, payload, err, defaultResultBodyBuilder)
+	}
+)
+
 // Raw version of traced route handler.
 type RawTRouteHandler func(c *gin.Context, rail Rail)
 
@@ -51,47 +92,20 @@ type ComponentBootstrap struct {
 	Condition func(rail Rail) (bool, error) // check whether component should be bootstraped
 }
 
-var (
-	loggerOut    io.Writer = os.Stdout
-	loggerErrOut io.Writer = os.Stderr
+type ResultBodyBuilder struct {
+	ErrJsonBuilder     func(rail Rail, err error) any // wrap error in json.
+	PayloadJsonBuilder func(payload any) any          // wrap payload in json.
+	OkJsonBuilder      func() any                     // build empty ok json.
+}
 
-	routesRegiatarList []routesRegistar = []routesRegistar{}
-	serverHttpRoutes   []HttpRoute      = []HttpRoute{}
+type ServerResultHandler func(c *gin.Context, rail Rail, payload any, err error)
 
-	shuttingDown   bool         = false
-	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
+type GroupedRouteRegistar struct {
+	RegisterFunc func(baseUrl string, extra ...StrPair)
+	Extras       []StrPair
+}
 
-	shutdownHook []func()
-	shmu         sync.Mutex // mutex for shutdownHook
-
-	// server component bootstrap callbacks
-	serverBootrapCallbacks []ComponentBootstrap = []ComponentBootstrap{}
-
-	// listener for events trigger before server components being bootstrapped
-	preServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
-	// listener for events trigger after server components bootstrapped
-	postServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
-
-	// all http methods
-	anyHttpMethods = []string{
-		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch,
-		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
-		http.MethodTrace,
-	}
-
-	// channel for signaling server shutdown
-	manualSigQuit = make(chan int, 1)
-
-	// handler of endpoint results (response object or error)
-	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, r any, e error) {
-		defaultHandleResult(c, rail, r, e)
-	}
-
-	serverRequestValidationEnabled = false // whether request validation is enabled, read-only
-	serverRequestLogEnabled        = false // enable request payload log, read-only
-)
-
-type ServerResultHandler func(c *gin.Context, rail Rail, r any, e error)
+type RoutingGroup struct{ Base string }
 
 func init() {
 	AddShutdownHook(MarkServerShuttingDown)
@@ -662,7 +676,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		var req Req
 		MustBind(rail, c, &req)
 
-		if serverRequestValidationEnabled {
+		if GetPropBool(PropServerRequestValidateEnabled) {
 			// validate request
 			if e := Validate(req); e != nil {
 				serverResultHandler(c, rail, nil, e)
@@ -670,7 +684,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 			}
 		}
 
-		if serverRequestLogEnabled {
+		if GetPropBool(PropServerRequestLogEnabled) {
 			rail.Infof("Request Body: %+v", req)
 		}
 
@@ -705,17 +719,16 @@ func ServerHandleResult(c *gin.Context, rail Rail, result any, err error) {
 	serverResultHandler(c, rail, result, err)
 }
 
-func defaultHandleResult(c *gin.Context, rail Rail, r any, e error) {
-	if e != nil {
-		DispatchErrJson(c, rail, e)
+func DefaultHandleResult(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
+	if err != nil {
+		DispatchJson(c, builder.ErrJsonBuilder)
 		return
 	}
-
-	if r != nil {
-		DispatchOkWData(c, r)
+	if payload != nil {
+		DispatchJson(c, builder.PayloadJsonBuilder)
 		return
 	}
-	DispatchOk(c)
+	DispatchJson(c, builder.OkJsonBuilder)
 }
 
 // Must bind request payload to the given pointer, else panic
@@ -815,11 +828,6 @@ func WebServerBootstrap(rail Rail) error {
 	return nil
 }
 
-type GroupedRouteRegistar struct {
-	RegisterFunc func(baseUrl string, extra ...StrPair)
-	Extras       []StrPair
-}
-
 // Build route.
 func (g GroupedRouteRegistar) Build() {
 	g.RegisterFunc("", g.Extras...)
@@ -838,8 +846,6 @@ func NewGroupedRouteRegistar(f func(baseUrl string, extra ...StrPair)) GroupedRo
 		Extras:       []StrPair{},
 	}
 }
-
-type RoutingGroup struct{ Base string }
 
 // Group routes together to share the same base url.
 func BaseRoute(baseUrl string) RoutingGroup {
