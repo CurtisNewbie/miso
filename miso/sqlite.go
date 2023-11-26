@@ -4,6 +4,7 @@
 package miso
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -12,69 +13,71 @@ import (
 )
 
 var (
-	sqlitep = &sqliteHolder{sq: nil}
+	sqliteDb   *gorm.DB = nil
+	sqliteOnce sync.Once
 )
 
-type sqliteHolder struct {
-	sq *gorm.DB
-	mu sync.RWMutex
+func init() {
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap SQLite",
+		Bootstrap: SqliteBootstrap,
+		Condition: SqliteBootstrapCondition,
+	})
 }
 
 /*
-Get sqlite client
+Get sqlite client.
 
-# Client is initialized if necessary
+Client is initialized if necessary.
 
 This func looks for prop:
 
 	PROP_SQLITE_FILE
 */
 func GetSqlite() *gorm.DB {
-	if IsSqliteInitialized() {
-		if IsProdMode() {
-			return sqlitep.sq
-		}
-
-		// not prod mode, enable debugging for printing SQLs
-		return sqlitep.sq.Debug()
-	}
-
-	sqlitep.mu.Lock()
-	defer sqlitep.mu.Unlock()
-
-	if sqlitep.sq == nil {
-		path := GetPropStr(PropSqliteFile)
-		logrus.Infof("Connecting to SQLite database '%s'", path)
-
-		db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
-		if err != nil {
-			panic(err)
-		}
-
-		tx, err := db.DB()
-		if err != nil {
-			panic(tx)
-		}
-
-		// make sure the handle is actually connected
-		err = tx.Ping()
-		if err != nil {
-			panic(err)
-		}
-		logrus.Infof("SQLite conn initialized")
-		sqlitep.sq = db
-	}
-
+	sqliteOnce.Do(initSqlite)
 	if IsDebugLevel() {
-		return sqlitep.sq.Debug()
+		return sqliteDb.Debug()
 	}
-
-	return sqlitep.sq
+	return sqliteDb
 }
 
-// Check whether sqlite client is initialized
-func IsSqliteInitialized() bool {
-	sqlitep.mu.RLock()
-	defer sqlitep.mu.RUnlock()
-	return sqlitep.sq != nil
+func initSqlite() {
+	sq, err := newSqlite(GetPropStr(PropSqliteFile))
+	if err != nil {
+		panic(err)
+	}
+	sqliteDb = sq
+}
+
+func newSqlite(path string) (*gorm.DB, error) {
+	logrus.Infof("Connecting to SQLite database '%s'", path)
+
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to open SQLite, %v", err)
+	}
+
+	tx, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect SQLite, %v", err)
+	}
+
+	// make sure the handle is actually connected
+	err = tx.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping SQLite, %v", err)
+	}
+
+	logrus.Infof("SQLite connected")
+	return db, nil
+}
+
+func SqliteBootstrap(rail Rail) error {
+	GetSqlite()
+	return nil
+}
+
+func SqliteBootstrapCondition(rail Rail) (bool, error) {
+	return !IsBlankStr(GetPropStr(PropSqliteFile)), nil
 }
