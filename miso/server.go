@@ -721,14 +721,14 @@ func ServerHandleResult(c *gin.Context, rail Rail, result any, err error) {
 
 func DefaultHandleResult(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
 	if err != nil {
-		DispatchJson(c, builder.ErrJsonBuilder)
+		DispatchJson(c, builder.ErrJsonBuilder(rail, err))
 		return
 	}
 	if payload != nil {
-		DispatchJson(c, builder.PayloadJsonBuilder)
+		DispatchJson(c, builder.PayloadJsonBuilder(rail))
 		return
 	}
-	DispatchJson(c, builder.OkJsonBuilder)
+	DispatchJson(c, builder.OkJsonBuilder())
 }
 
 // Must bind request payload to the given pointer, else panic
