@@ -172,6 +172,12 @@ type TClient struct {
 	require2xx      bool
 }
 
+// Change the underlying *http.Client
+func (t *TClient) UseClient(client *http.Client) *TClient {
+	t.client = client
+	return t
+}
+
 // Prepare request url.
 //
 // If service discovery is enabled, serviceName will be resolved using Consul.
@@ -455,19 +461,14 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 	return t
 }
 
-// Create new defualt TClient
-func NewDefaultTClient(ec Rail, url string) *TClient {
-	return NewTClient(ec, url, MisoDefaultClient)
-}
-
 // Create new defualt TClient with service discovery and tracing enabled, relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl, MisoDefaultClient).EnableServiceDiscovery(serviceName).EnableTracing()
+	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing()
 }
 
 // Create new TClient
-func NewTClient(rail Rail, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: client, Rail: rail, QueryParam: map[string][]string{}}
+func NewTClient(rail Rail, url string) *TClient {
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient, Rail: rail, QueryParam: map[string][]string{}}
 }
 
 // Concatenate url and query parameters
