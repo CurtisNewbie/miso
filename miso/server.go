@@ -18,6 +18,7 @@ import (
 )
 
 var (
+	logRotator   *DailyLogRotator
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
@@ -341,13 +342,17 @@ func ConfigureLogging(rail Rail) {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if ContainsProp(PropLoggingRollingFile) {
-		loggerOut = BuildRollingLogFileWriter(NewRollingLogFileParam{
+		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
 			Filename:   GetPropStr(PropLoggingRollingFile),
 			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
 			MaxAge:     GetPropInt(PropLoggingRollingFileMaxAge),  //days
 			MaxBackups: GetPropInt(PropLoggingRollingFileMaxBackups),
 		})
-		loggerErrOut = loggerOut
+		loggerOut = log
+		loggerErrOut = log
+		logRotator = NewDailyLogRotator(log)
+		logRotator.Start()
+		AddShutdownHook(func() { logRotator.Stop() })
 	}
 
 	logrus.SetOutput(loggerOut)
