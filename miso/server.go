@@ -725,7 +725,7 @@ func DefaultHandleResult(c *gin.Context, rail Rail, payload any, err error, buil
 		return
 	}
 	if payload != nil {
-		DispatchJson(c, builder.PayloadJsonBuilder(rail))
+		DispatchJson(c, builder.PayloadJsonBuilder(payload))
 		return
 	}
 	DispatchJson(c, builder.OkJsonBuilder())
