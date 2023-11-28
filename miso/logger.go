@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -181,30 +180,4 @@ func getCallerFn() string {
 		return ""
 	}
 	return getShortFnName(clr.Function)
-}
-
-type DailyLogRotator struct {
-	ticker *time.Ticker
-	log    *lumberjack.Logger
-}
-
-func (r *DailyLogRotator) Start() {
-	go func() {
-		for {
-			<-r.ticker.C
-			r.log.Rotate()
-		}
-	}()
-}
-
-func (r *DailyLogRotator) Stop() {
-	r.ticker.Stop()
-}
-
-func NewDailyLogRotator(log *lumberjack.Logger) *DailyLogRotator {
-	ticker := time.NewTicker(time.Hour * 24)
-	return &DailyLogRotator{
-		ticker: ticker,
-		log:    log,
-	}
 }
