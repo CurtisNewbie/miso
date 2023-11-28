@@ -169,6 +169,13 @@ type TClient struct {
 	serviceName     string
 	trace           bool
 	discoverService bool
+	require2xx      bool
+}
+
+// Change the underlying *http.Client
+func (t *TClient) UseClient(client *http.Client) *TClient {
+	t.client = client
+	return t
 }
 
 // Prepare request url.
@@ -195,6 +202,12 @@ func (t *TClient) prepReqUrl() (string, error) {
 		url = httpProto + t.Url
 	}
 	return concatQueryParam(url, t.QueryParam), nil
+}
+
+// Requires response to have 2xx status code, if not, the *TResponse will contain error built for this specific reason.
+func (t *TClient) Require2xx() *TClient {
+	t.require2xx = true
+	return t
 }
 
 // Enable service discovery
@@ -387,7 +400,14 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		respHeaders = r.Header
 	}
 
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+
+	// check http status code
+	if tr.Err == nil && t.require2xx {
+		tr.Err = tr.Require2xx()
+	}
+
+	return tr
 }
 
 func contentTypeLoggable(contentType string) bool {
@@ -441,19 +461,14 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 	return t
 }
 
-// Create new defualt TClient
-func NewDefaultTClient(ec Rail, url string) *TClient {
-	return NewTClient(ec, url, MisoDefaultClient)
-}
-
 // Create new defualt TClient with service discovery and tracing enabled, relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl, MisoDefaultClient).EnableServiceDiscovery(serviceName).EnableTracing()
+	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing()
 }
 
 // Create new TClient
-func NewTClient(rail Rail, url string, client *http.Client) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: client, Rail: rail, QueryParam: map[string][]string{}}
+func NewTClient(rail Rail, url string) *TClient {
+	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient, Rail: rail, QueryParam: map[string][]string{}}
 }
 
 // Concatenate url and query parameters
