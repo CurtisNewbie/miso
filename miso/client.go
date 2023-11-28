@@ -169,6 +169,7 @@ type TClient struct {
 	serviceName     string
 	trace           bool
 	discoverService bool
+	require2xx      bool
 }
 
 // Prepare request url.
@@ -195,6 +196,12 @@ func (t *TClient) prepReqUrl() (string, error) {
 		url = httpProto + t.Url
 	}
 	return concatQueryParam(url, t.QueryParam), nil
+}
+
+// Requires response to have 2xx status code, if not, the *TResponse will contain error built for this specific reason.
+func (t *TClient) Require2xx() *TClient {
+	t.require2xx = true
+	return t
 }
 
 // Enable service discovery
@@ -387,7 +394,14 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		respHeaders = r.Header
 	}
 
-	return &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+
+	// check http status code
+	if tr.Err == nil && t.require2xx {
+		tr.Err = tr.Require2xx()
+	}
+
+	return tr
 }
 
 func contentTypeLoggable(contentType string) bool {
