@@ -35,14 +35,25 @@ func main() {
 		}
 
 		// register some cron scheduling job (not distributed)
-		miso.ScheduleCron("0 0/15 * * * *", true, myJob)
+		err := miso.ScheduleCron(miso.Job{
+			Name:            "MyJob",
+			Cron:            "0 0/15 * * * *",
+			CronWithSeconds: true,
+			Run:             myJob,
+		})
+		if err != nil {
+			panic(err) // for demo only
+		}
 
 		// register some distributed tasks
-		err := miso.ScheduleDistributedTask("*/15 * * * *", false, "MyDistributedTask",
-			func(miso miso.Rail) error {
+		err = miso.ScheduleDistributedTask(miso.Job{
+			Cron:            "*/15 * * * *",
+			CronWithSeconds: false,
+			Name:            "MyDistributedTask",
+			Run: func(miso miso.Rail) error {
 				return jobDoSomething(rail)
 			},
-		)
+		})
 		if err != nil {
 			panic(err) // for demo only
 		}
