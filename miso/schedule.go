@@ -11,10 +11,11 @@ import (
 type schedState = int
 
 type Job struct {
-	Name            string
-	Cron            string
-	CronWithSeconds bool
-	Run             func(Rail) error
+	Name            string           // name of the job.
+	Cron            string           // cron expr.
+	CronWithSeconds bool             // whether cron expr contains the second field.
+	Run             func(Rail) error // actual job execution logic.
+	LogJobExec      bool             // whether job execution should be logged, error msg is always logged and is not affected by this option.
 }
 
 // Hook triggered before job's execution.
@@ -105,12 +106,17 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 			}
 		}
 
-		rail.Infof("Running job '%s'", job.Name)
+		if job.LogJobExec {
+			rail.Infof("Running job '%s'", job.Name)
+		}
+
 		start := time.Now()
 		errRun := job.Run(rail)
 		took := time.Since(start)
 		if errRun == nil {
-			rail.Infof("Job '%s' finished, took: %s", job.Name, took)
+			if job.LogJobExec {
+				rail.Infof("Job '%s' finished, took: %s", job.Name, took)
+			}
 		} else {
 			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
 		}
@@ -124,15 +130,18 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		}
 	}
 
+	var j *gocron.Job
 	if job.CronWithSeconds {
-		_, err = s.CronWithSeconds(job.Cron).Do(wrappedJob)
+		j, err = s.CronWithSeconds(job.Cron).Do(wrappedJob)
 	} else {
-		_, err = s.Cron(job.Cron).Do(wrappedJob)
+		j, err = s.Cron(job.Cron).Do(wrappedJob)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
+
+	Infof("Job '%v' next run scheduled at: %v", job.Name, j.NextRun())
 	return nil
 }
 
