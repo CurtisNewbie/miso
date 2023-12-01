@@ -1,26 +1,10 @@
 # miso
 
-Miso, yet another simple application framework. Learn by doing is great :D
+Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to understand how things work under the hook, but it really kinda works :D.
 
-Miso provides a universal configuration management mechanism and integrates with various components and libraries to make life hopefully a bit easier.
+Miso provides a opinioned way to write application, common functionalities such as service discovery, log tracing, task scheduling, message queue and so on, are all implemented in an opinioned way. You can use miso to write almost any kind of application, feel free to read the code.
 
-List of integration and functionalities provided:
-
-- MySQL
-- Consul
-- Redis
-- SQLite
-- RabbitMQ
-- JWT Encoding / Decoding
-- Gin
-- Http Client
-- Logrus & Lumberjack (for rotating log files)
-- Prometheus
-- Tracing (based on context.Context, it's not integrated with anything like Zipkin)
-- Cron job scheduling (non-distributed)
-- Distributed task scheduling (based on cron job scheduler & Redis)
-- Convenient JSON processing configuration (e.g., lowercase json key naming)
-- and so on.
+The overall target is to make it as small and simple as possible. The backward compatibility may break in future releases.
 
 **How a miso app may look like:**
 
@@ -91,6 +75,20 @@ mysql:
   port: 3306
 ```
 
+## Include miso in your project
+
+Get the latest release of miso:
+
+```
+go get -u github.com/curtisnewbie/miso
+```
+
+Or get the specific release of miso:
+
+```
+go get github.com/curtisnewbie/miso@v0.0.8
+```
+
 ## Documentations
 
 - [Configuration](./doc/config.md)
@@ -99,11 +97,5 @@ mysql:
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
 - [Customize Build](./doc/customize_build.md)
-
-## Different Behaviour
-
-### Default JSON Field Naming Strategy
-
-In Golang, we export fields by capitalizing the first letter. This leads to a problem where we may have to add json tag for literally every exported fields. Miso internally uses `jsoniter`, it configures the naming strategy
-that always use lowercase for the first letter of the field name unless sepcified explicitly. Whenever Miso Marshal/Unmarshal JSON values, Miso uses the configured `jsoniter` instead of the standard one. This can be reverted by registering
-`PreServerBootstrap` callback to change the naming strategy back to the default one.
+- [JSON Processing](./doc/json.md)
+- More in the future (maybe) :D
