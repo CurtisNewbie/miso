@@ -1,10 +1,8 @@
 package miso
 
 const (
-	// name of the profile used
-	PropProfile = "profile"
 	// whether production mode is turned on (true/false)
-	PropProductinMode = "mode.production"
+	PropProdMode = "mode.production"
 
 	/*
 		------------------------------------

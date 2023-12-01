@@ -2,21 +2,17 @@
 
 ## Command Line Arguments
 
-- To specify profile: `profile=${PROFILE_NAME}`
 - To specify where the config file is: `configFile=${PATH_TO_CONFIG_FILE}`
 
-By convention, without specifiying where the configuration file is, it looks for the file `app-conf-${PROFILE_NAME}.yml` and load the configuration properties from it.
+By convention, without specifiying where the configuration file is, it looks for the file `conf.yml` and load the configuration properties from it.
 
 e.g.,
 
 ```sh
-# both profile and configFile are specified
-./main profile='prod' configFile=/myapp/my-conf.yml
+# the configFile is specified, file '/myapp/my-conf.yml' is loaded.
+./main configFile=/myapp/my-conf.yml
 
-# only profile is specified, the configFile will be 'app-conf-prod.yml'
-./main profile='prod'
-
-# using default profile 'dev', the configFile will be 'app-conf-dev.yml'
+# using default `conf.yml` file
 ./main
 ```
 
@@ -35,7 +31,6 @@ Notice that if you have more than one configuration file to load, you can use `c
 | property           | description                                               | default value |
 |--------------------|-----------------------------------------------------------|---------------|
 | app.name           | name of the application                                   |               |
-| profile            | name of the profile used                                  | dev           |
 | mode.production    | whether production mode is turned on                      | false         |
 | config.extra.files | config files that should be loaded beside the default one |               |
 

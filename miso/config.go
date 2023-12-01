@@ -18,8 +18,6 @@ var (
 	// mutex for viper
 	viperRWMutex sync.RWMutex
 
-	PRODUCTION_PROFILE_NAME = "prod"
-
 	// var for config.go
 	configVar = configVarHolder{
 		fastBoolCache: make(map[string]bool),
@@ -32,8 +30,7 @@ type configVarHolder struct {
 }
 
 func init() {
-	SetDefProp(PropProfile, "dev")
-	SetDefProp(PropProductinMode, "false")
+	SetDefProp(PropProdMode, "false")
 }
 
 // Set default value for the prop
@@ -130,47 +127,52 @@ func UnmarshalFromProp(ptr any) {
 /*
 Default way to read config file.
 
-By reading the provided args, this func identifies the profile to use and the
-associated name of the config file to look for.
-
 Repetitively calling this method overides previously loaded config.
 
-You can also use ReadConfig to load your custom configFile.
+You can also use ReadConfig to load your custom configFile. This func is essentially:
 
-It's essentially:
-
-	LoadConfigFromFile(GuessConfigFilePath(args, GuessProfile(args)))
+	LoadConfigFromFile(GuessConfigFilePath(args))
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func DefaultReadConfig(args []string, c Rail) {
-	profile := GuessProfile(args)
-	SetProfile(profile)
-
-	if strings.ToLower(profile) == PRODUCTION_PROFILE_NAME {
-		SetProp(PropProductinMode, true)
-	}
-
+func DefaultReadConfig(args []string, rail Rail) {
 	loaded := NewSet[string]()
 
-	defConfigFile := GuessConfigFilePath(args, profile)
+	defConfigFile := GuessConfigFilePath(args)
 	loaded.Add(defConfigFile)
 
-	if err := LoadConfigFromFile(defConfigFile, c); err != nil {
-		c.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
+	if err := LoadConfigFromFile(defConfigFile, rail); err != nil {
+		rail.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
 	}
+	rail.Infof("Loaded config file: %v", defConfigFile)
 
+	// the load config file may specifiy extra files to be loaded
 	extraFiles := GetPropStrSlice(PropConfigExtraFiles)
+
+	// for backword compatibility only
+	// TODO: deleted this in future releases
+	extraFiles = append(extraFiles, "app-conf-dev.yml")
+
 	for i := range extraFiles {
 		f := extraFiles[i]
+
 		if !loaded.Add(f) {
 			continue
 		}
 
-		if err := LoadConfigFromFile(f, c); err != nil {
-			c.Warnf("Failed to load extra config file, %v, %v", f, err)
+		if ok, err := FileExists(f); err != nil || !ok {
+			if err != nil {
+				rail.Warnf("Failed to open extra config file, %v, %v", f, err)
+			}
+
+			rail.Debugf("Extra config file %v not found", f)
+			continue
+		}
+
+		if err := LoadConfigFromFile(f, rail); err != nil {
+			rail.Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
-			c.Infof("Loaded extra config file: %v", f)
+			rail.Infof("Loaded config file: %v", f)
 		}
 	}
 
@@ -195,10 +197,10 @@ func DefaultReadConfig(args []string, c Rail) {
 			continue
 		}
 
-		if err := LoadConfigFromFile(f, c); err != nil {
-			c.Warnf("Failed to load extra config file, %v, %v", f, err)
+		if err := LoadConfigFromFile(f, rail); err != nil {
+			rail.Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
-			c.Infof("Loaded extra config file: %v", f)
+			rail.Infof("Loaded extra config file: %v", f)
 		}
 	}
 }
@@ -242,50 +244,14 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 	return eo
 }
 
-// Get profile
-func GetProfile() (profile string) {
-	profile = GetPropStr(PropProfile)
-	return
-}
-
-// Set profile
-func SetProfile(profile string) {
-	SetProp(PropProfile, profile)
-}
-
-/*
-Parse Cli Arg to extract a profile
-
-It looks for the arg that matches the pattern "profile=[profileName]"
-For example, for "profile=prod", the extracted profile is "prod"
-*/
-func GuessProfile(args []string) string {
-	profile := "dev" // the default one
-
-	profile = ExtractArgValue(args, func(key string) bool { return key == PropProfile })
-	if strings.TrimSpace(profile) == "" {
-		profile = "dev" // the default is dev
-	}
-	return profile
-}
-
-/*
-Parse args to guess a absolute path to the config file
-
-- It looks for the arg that matches the pattern "configFile=/path/to/configFile".
-
-- If none is found, and the profile is empty, it's by default 'app-conf-dev.yml'.
-
-- If profile is specified, then it looks for 'app-conf-${profile}.yml'.
-*/
-func GuessConfigFilePath(args []string, profile string) string {
-	if strings.TrimSpace(profile) == "" {
-		profile = "dev"
-	}
-
+// Guess config file path.
+//
+// It first looks for the arg that matches the pattern "configFile=/path/to/configFile".
+// If none is found, it's by default 'conf.yml'.
+func GuessConfigFilePath(args []string) string {
 	path := ExtractArgValue(args, func(key string) bool { return key == "configFile" })
 	if strings.TrimSpace(path) == "" {
-		path = fmt.Sprintf("app-conf-%v.yml", profile)
+		path = "conf.yml"
 	}
 	return path
 }
@@ -354,10 +320,10 @@ func GetEnvElse(key string, defVal string) string {
 // if the prop value equals to true (case insensitive), then
 // true is returned else false
 func IsProdMode() bool {
-	if !ContainsProp(PropProductinMode) {
+	if !ContainsProp(PropProdMode) {
 		return false
 	}
-	mode := GetPropBool(PropProductinMode)
+	mode := GetPropBool(PropProdMode)
 	return mode
 }
 

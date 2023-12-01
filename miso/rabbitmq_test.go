@@ -24,7 +24,7 @@ func jsonMsgHandler(rail Rail, payload RabbitDummy) error {
 
 func TestInitClient(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(PropRabbitMqUsername, "guest")
 	SetProp(PropRabbitMqPassword, "guest")
 
@@ -61,7 +61,7 @@ func TestInitClient(t *testing.T) {
 
 func TestPublishMessage(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(PropRabbitMqUsername, "guest")
 	SetProp(PropRabbitMqPassword, "guest")
 	rail.SetLogLevel("debug")
@@ -97,7 +97,7 @@ func TestPublishMessage(t *testing.T) {
 
 func TestPublishJsonMessage(t *testing.T) {
 	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(PropRabbitMqUsername, "guest")
 	SetProp(PropRabbitMqPassword, "guest")
 	rail.SetLogLevel("debug")

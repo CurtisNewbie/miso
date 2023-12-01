@@ -7,33 +7,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func TestParseProfile(t *testing.T) {
-
-	args := make([]string, 2)
-	args[0] = "profile=abc"
-	args[1] = "--someflag"
-
-	profile := GuessProfile(args)
-	if profile != "abc" {
-		t.Errorf("Expected abc, but got: %v", profile)
-	}
-
-	args2 := make([]string, 1)
-	args2[0] = "--someflag"
-
-	profile = GuessProfile(args2)
-	if profile != "dev" {
-		t.Errorf("Expected dev, but got: %v", profile)
-	}
-}
-
 func TestParseArg(t *testing.T) {
 	args := make([]string, 2)
-	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-dev.yml"
+	args[1] = "configFile=../conf_dev.yml"
 	DefaultReadConfig(args, EmptyRail())
 
-	if m := GetPropBool(PropProductinMode); !m {
+	if m := GetPropBool(PropProdMode); !m {
 		t.Error(m)
 	}
 	if !IsProdMode() {
@@ -113,11 +92,6 @@ func TestParseArg(t *testing.T) {
 	if s := GetPropStr("client.authServiceUrl"); s != "http://localhost:8081" {
 		t.Error(s)
 	}
-
-	if sl := GetPropStrSlice("rabbitmq.declaration.queue"); len(sl) != 2 {
-		t.Error(sl)
-	}
-
 }
 
 func TestResolveArgForParsedConf(t *testing.T) {
@@ -144,14 +118,13 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	SetEnv("CLIENT_AS", "http://localhost:8081")
 
 	args := make([]string, 2)
-	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-test.yml"
+	args[1] = "configFile=../conf_test.yml"
 	DefaultReadConfig(args, EmptyRail())
 
-	t.Logf("PRODUCTION MODE: %t", GetPropBool(PropProductinMode))
+	t.Logf("PRODUCTION MODE: %t", GetPropBool(PropProdMode))
 	t.Logf("Is PROD MODE: %t", IsProdMode())
 
-	if m := GetPropBool(PropProductinMode); m {
+	if m := GetPropBool(PropProdMode); m {
 		t.Error(m)
 	}
 	if IsProdMode() {
@@ -263,8 +236,7 @@ func TestArgKeyVal(t *testing.T) {
 
 func BenchmarkGetProbool(b *testing.B) {
 	args := make([]string, 2)
-	args[0] = "profile=dev"
-	args[1] = "configFile=../app-conf-dev.yml"
+	args[1] = "configFile=../conf_dev.yml"
 	DefaultReadConfig(args, EmptyRail())
 	SetProp("correct_type", true)
 

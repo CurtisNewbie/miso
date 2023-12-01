@@ -8,7 +8,7 @@ import (
 
 func TestTaskScheduling(t *testing.T) {
 	rail := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(".enabled", "true")
 
 	if _, e := InitRedisFromProp(rail); e != nil {

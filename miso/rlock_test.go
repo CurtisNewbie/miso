@@ -11,7 +11,7 @@ import (
 
 func TestRLockCallbacks(t *testing.T) {
 	rail := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
@@ -55,7 +55,7 @@ func TestRLock(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	rail := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
@@ -105,7 +105,7 @@ func TestRLockCount(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	rail := EmptyRail()
-	LoadConfigFromFile("../app-conf-dev.yml", rail)
+	LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
