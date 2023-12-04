@@ -57,6 +57,10 @@ func (t *ETime) FormatClassic() string {
 	return t.ToTime().Format("2006/01/02 15:04:05")
 }
 
+func (t *ETime) FormatClassicLocale() string {
+	return t.ToTime().Format("2006/01/02 15:04:05 (MST)")
+}
+
 // database driver -> ETime
 func (et *ETime) Scan(value interface{}) (err error) {
 	switch v := value.(type) {

@@ -23,4 +23,6 @@ func TestETimeScan(t *testing.T) {
 		t.Log("now.Unix != tt.Unix")
 		t.FailNow()
 	}
+
+	t.Log(et.FormatClassicLocale())
 }
