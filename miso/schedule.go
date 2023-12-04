@@ -8,8 +8,6 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
-type schedState = int
-
 type Job struct {
 	Name            string           // name of the job.
 	Cron            string           // cron expr.
@@ -36,23 +34,11 @@ type JobInf struct {
 }
 
 var (
-	// lazy-init, cached scheduler
-	scheduler *gocron.Scheduler = nil
-
-	// lock for scheduler
-	scheLock sync.Mutex
-
-	// state of scheduler
-	state = scheInitState
+	_scheduler     *gocron.Scheduler = nil
+	_schedulerOnce sync.Once
 
 	preJobHooks  = []PreJobHook{}
 	postJobHooks = []PostJobHook{}
-)
-
-const (
-	scheInitState    schedState = 0
-	scheStartedState schedState = 1
-	scheStoppedState schedState = 2
 )
 
 func init() {
@@ -63,23 +49,14 @@ func init() {
 }
 
 // Whether scheduler is initialized
-func HasScheduler() bool {
-	scheLock.Lock()
-	defer scheLock.Unlock()
-	return scheduler != nil
+func HasScheduledJobs() bool {
+	return getScheduler().Len() > 0
 }
 
 // Get the lazy-initialized, cached scheduler
 func getScheduler() *gocron.Scheduler {
-	scheLock.Lock()
-	defer scheLock.Unlock()
-
-	if scheduler != nil {
-		return scheduler
-	}
-
-	scheduler = newScheduler()
-	return scheduler
+	_schedulerOnce.Do(func() { _scheduler = newScheduler() })
+	return _scheduler
 }
 
 // Create new Schedulr at UTC time, with default-mode
@@ -158,39 +135,25 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 
 // Stop scheduler
 func StopScheduler() {
-	scheLock.Lock()
-	if scheduler == nil || state != scheStartedState {
-		return
-	}
-	state = scheStoppedState
-	scheLock.Unlock()
-
 	getScheduler().Stop()
 }
 
 // Start scheduler and block current routine
 func StartSchedulerBlocking() {
-	scheLock.Lock()
-	defer scheLock.Unlock()
-
-	if scheduler == nil || state != scheInitState {
+	s := getScheduler()
+	if s.IsRunning() {
 		return
 	}
-
-	state = scheStartedState
-	getScheduler().StartBlocking()
+	s.StartBlocking()
 }
 
 // Start scheduler asynchronously
 func StartSchedulerAsync() {
-	scheLock.Lock()
-	if scheduler == nil || state != scheInitState {
+	s := getScheduler()
+	if s.IsRunning() {
 		return
 	}
-	state = scheStartedState
-	scheLock.Unlock()
-
-	getScheduler().StartAsync()
+	s.StartAsync()
 }
 
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
@@ -221,7 +184,7 @@ func SchedulerBootstrap(rail Rail) error {
 		StartTaskSchedulerAsync(rail)
 		rail.Info("Distributed Task Scheduler started")
 		AddShutdownHook(func() { StopTaskScheduler() })
-	} else if HasScheduler() {
+	} else if HasScheduledJobs() {
 		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
 		StartSchedulerAsync()
 		rail.Info("Cron Scheduler started")
