@@ -1,12 +1,12 @@
 package miso
 
+// TODO: Refactor this
+
 import (
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -81,11 +81,7 @@ func enableTaskScheduling(rail Rail) bool {
 		group = proposedGroup
 	}
 
-	uid, e := uuid.NewUUID()
-	if e != nil {
-		rail.Fatalf("NewUUID: %v", e)
-	}
-	nodeId = uid.String()
+	nodeId = ERand(30)
 	rail.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
 	return true
 }
