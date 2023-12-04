@@ -140,20 +140,12 @@ func StopScheduler() {
 
 // Start scheduler and block current routine
 func StartSchedulerBlocking() {
-	s := getScheduler()
-	if s.IsRunning() {
-		return
-	}
-	s.StartBlocking()
+	getScheduler().StartBlocking()
 }
 
 // Start scheduler asynchronously
 func StartSchedulerAsync() {
-	s := getScheduler()
-	if s.IsRunning() {
-		return
-	}
-	s.StartAsync()
+	getScheduler().StartAsync()
 }
 
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
