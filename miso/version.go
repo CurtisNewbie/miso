@@ -1,5 +1,5 @@
 package miso
 
 const (
-	MisoVersion = "v0.0.8"
+	MisoVersion = "v0.0.9-beta.1"
 )
