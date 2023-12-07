@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -88,4 +89,12 @@ func HasSuffixIgnoreCase(s string, suffix string) bool {
 	suffix = strings.ToLower(suffix)
 	s = strings.ToLower(s)
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+}
+
+func ToStr(v any) string {
+	switch v.(type) {
+	case float32, float64:
+		return fmt.Sprintf("%f", v)
+	}
+	return fmt.Sprintf("%v", v)
 }
