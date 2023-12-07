@@ -55,7 +55,10 @@ func HasScheduledJobs() bool {
 
 // Get the lazy-initialized, cached scheduler
 func getScheduler() *gocron.Scheduler {
-	_schedulerOnce.Do(func() { _scheduler = newScheduler() })
+	_schedulerOnce.Do(func() {
+		_scheduler = newScheduler()
+		_scheduler.ChangeLocation(time.Local)
+	})
 	return _scheduler
 }
 
