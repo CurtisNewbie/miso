@@ -189,7 +189,7 @@ func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
 }
 
 // Register GET request route (raw version)
-func RawGet(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func RawGet(url string, handler RawTRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
@@ -198,7 +198,7 @@ func RawGet(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRoute
 }
 
 // Register POST request route (raw version)
-func RawPost(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func RawPost(url string, handler RawTRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
@@ -207,7 +207,7 @@ func RawPost(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRout
 }
 
 // Register PUT request route (raw version)
-func RawPut(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func RawPut(url string, handler RawTRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
@@ -216,7 +216,7 @@ func RawPut(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRoute
 }
 
 // Register DELETE request route (raw version)
-func RawDelete(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func RawDelete(url string, handler RawTRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
@@ -227,7 +227,7 @@ func RawDelete(url string, handler RawTRouteHandler, extra ...StrPair) GroupedRo
 // Add RoutesRegistar for GET request.
 //
 // The result or error is wrapped in Resp automatically.
-func Get(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func Get(url string, handler TRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
@@ -238,7 +238,7 @@ func Get(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegist
 // Add RoutesRegistar for POST request.
 //
 // The result or error is wrapped in Resp automatically.
-func Post(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func Post(url string, handler TRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
@@ -249,7 +249,7 @@ func Post(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegis
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func Put(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func Put(url string, handler TRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
@@ -260,7 +260,7 @@ func Put(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegist
 // Add RoutesRegistar for DELETE request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func Delete(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteRegistar {
+func Delete(url string, handler TRouteHandler) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
@@ -271,7 +271,7 @@ func Delete(url string, handler TRouteHandler, extra ...StrPair) GroupedRouteReg
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
 // The result or error is wrapped in Resp automatically.
-func IPost[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
+func IPost[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
@@ -282,7 +282,7 @@ func IPost[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPa
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IGet[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
+func IGet[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
@@ -293,7 +293,7 @@ func IGet[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPai
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
-func IDelete[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
+func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
@@ -304,7 +304,7 @@ func IDelete[Req any](url string, handler MappedTRouteHandler[Req], extra ...Str
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IPut[Req any](url string, handler MappedTRouteHandler[Req], extra ...StrPair) GroupedRouteRegistar {
+func IPut[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
 	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
 		url := baseUrl + url
 		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
