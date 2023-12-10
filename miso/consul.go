@@ -54,6 +54,7 @@ func init() {
 		Name:      "Boostrap Consul",
 		Bootstrap: ConsulBootstrap,
 		Condition: ConsulBootstrapCondition,
+		Order:     -10,
 	})
 }
 

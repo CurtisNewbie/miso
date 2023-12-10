@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -90,6 +91,7 @@ type ComponentBootstrap struct {
 	Name      string
 	Bootstrap func(rail Rail) error
 	Condition func(rail Rail) (bool, error) // check whether component should be bootstraped
+	Order     int                           // order of which the components are bootstraped, natural order
 }
 
 type ResultBodyBuilder struct {
@@ -126,6 +128,7 @@ func init() {
 		Name:      "Bootstrap HTTP Server",
 		Bootstrap: WebServerBootstrap,
 		Condition: WebServerBootstrapCondition,
+		Order:     10,
 	})
 }
 
@@ -427,6 +430,9 @@ func callPreServerBootstrapListeners(rail Rail) error {
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
+	sort.Slice(serverBootrapCallbacks, func(i, j int) bool {
+		return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order
+	})
 }
 
 /*

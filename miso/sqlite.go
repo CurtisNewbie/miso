@@ -21,6 +21,7 @@ func init() {
 		Name:      "Bootstrap SQLite",
 		Bootstrap: SqliteBootstrap,
 		Condition: SqliteBootstrapCondition,
+		Order:     -10,
 	})
 }
 

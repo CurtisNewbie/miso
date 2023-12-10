@@ -30,6 +30,7 @@ func init() {
 		Name:      "Bootstrap Redis",
 		Bootstrap: RedisBootstrap,
 		Condition: RedisBootstrapCondition,
+		Order:     -10,
 	})
 }
 

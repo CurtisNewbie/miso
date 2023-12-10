@@ -45,6 +45,7 @@ func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Cron/Task Scheduler",
 		Bootstrap: SchedulerBootstrap,
+		Order:     10,
 	})
 }
 
