@@ -8,9 +8,17 @@ func main() {
     miso.SetScheduleGroup("myApp")
 
     // add task
-    miso.ScheduleDistributedTask("0/1 * * * * ?", true, "myTask", func(rail miso.Rail) error {
-        // ...
+    err = miso.ScheduleDistributedTask(miso.Job{
+        Cron:            "*/15 * * * *",
+        CronWithSeconds: false,
+        Name:            "MyDistributedTask",
+        Run: func(miso miso.Rail) error {
+            return jobDoSomething(rail)
+        },
     })
+    if err != nil {
+        panic(err) // for demo only
+    }
 
     // start task scheduler
     miso.StartTaskSchedulerAsync()
@@ -25,9 +33,17 @@ The code above is automatically handled by `miso.BootstrapServer(...)` func.
 ```go
 func main() {
     // add tasks
-    miso.ScheduleDistributedTask("0/1 * * * * ?", true, "myTask", func(rail miso.Rail) error {
-        // ...
+    err = miso.ScheduleDistributedTask(miso.Job{
+        Cron:            "*/15 * * * *",
+        CronWithSeconds: false,
+        Name:            "MyDistributedTask",
+        Run: func(miso miso.Rail) error {
+            return jobDoSomething(rail)
+        },
     })
+    if err != nil {
+        panic(err) // for demo only
+    }
 
     // bootstrap server
     miso.BootstrapServer(os.Args)
