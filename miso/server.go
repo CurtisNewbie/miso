@@ -490,6 +490,7 @@ func BootstrapServer(args []string) {
 	}
 
 	// bootstrap components
+	Debugf("serverBootrapCallbacks: %+v", serverBootrapCallbacks)
 	for _, sbc := range serverBootrapCallbacks {
 		if sbc.Condition != nil {
 			ok, ce := sbc.Condition(rail)
