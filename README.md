@@ -1,8 +1,8 @@
 # miso
 
-Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to understand how things work under the hook, but it really kinda works :D.
+Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to understand how things work, but it indeed kinda works :D.
 
-Miso provides a opinioned way to write application, common functionalities such as service discovery, log tracing, task scheduling, message queue and so on, are all implemented in an opinioned way. You can use miso to write almost any kind of application, feel free to read the code.
+Miso provides a opinionated way to write application, common functionalities such as service discovery, log tracing, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application, feel free to read the code.
 
 The overall target is to make it as small and simple as possible. The backward compatibility may break in future releases.
 
@@ -67,10 +67,10 @@ func main() {
 mode.production: true
 
 mysql:
-  enabled: false
+  enabled: true
   user: root
   password: 123456
-  database: fileServer
+  database: mydb
   host: localhost
   port: 3306
 ```
