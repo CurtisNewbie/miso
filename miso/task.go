@@ -127,7 +127,13 @@ func getTaskMasterKey() string {
 //
 // E.g.,
 //
-//	ScheduleDistributedTask("0/1 * * * * ?", true, "Very important task", myTask)
+//	job := miso.Job{
+//		Name:            "Very important task",
+//		Cron:            "0/1 * * * * ?",
+//		CronWithSeconds: true,
+//		Run: MyTask,
+//	}
+//	ScheduleDistributedTask(job)
 func ScheduleDistributedTask(t Job) error {
 	Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 
