@@ -23,15 +23,24 @@ func TestPollServiceListInstances(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	PollServiceListInstances(rail)
 
 	address, err := ConsulResolveServiceAddr("vfm")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	logrus.Infof("(first try) Address resolved: %s", address)
+	logrus.Infof("Address resolved: %s", address)
 
-	PollServiceListInstances(rail)
+	resolved, err := ConsulResolveRequestUrl("vfm", "/file")
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	t.Log(resolved)
+	if resolved != "http://"+address+"/file" {
+		t.FailNow()
+	}
 }
 
 func TestResolveServiceAddress(t *testing.T) {

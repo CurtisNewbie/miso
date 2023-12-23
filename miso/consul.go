@@ -99,6 +99,17 @@ func (c ConsulApiImpl) DeregisterService(serviceId string) error {
 	return client.Agent().ServiceDeregister(serviceId)
 }
 
+func (c ConsulApiImpl) RegisterService(registration *api.AgentServiceRegistration) error {
+	client, err := GetConsulClient()
+	if err != nil {
+		return fmt.Errorf("failed to get consul client, %v", err)
+	}
+	if err := client.Agent().ServiceRegister(registration); err != nil {
+		return fmt.Errorf("failed to register consul service, registration: %+v, %w", registration, err)
+	}
+	return nil
+}
+
 type serverListPollingSubscription struct {
 	sub *time.Ticker
 	mu  sync.Mutex
@@ -155,6 +166,7 @@ func SubscribeServerList(everyNSec int) {
 	go func() {
 		rail := EmptyRail()
 		for {
+			// make sure we poll service instance right after we created ticker
 			PollServiceListInstances(rail)
 			<-c
 		}
@@ -239,11 +251,7 @@ func ConsulResolveRequestUrl(serviceName string, relUrl string) (string, error) 
 }
 
 /*
-Resolve service address (host:port)
-
-This func will first read the cache, trying to resolve the services address
-without actually requesting consul, and only when the cache missed, it then
-requests the consul
+Resolve service address (host:port).
 
 Return ErrServiceInstanceNotFound if no instance is found.
 */
@@ -297,7 +305,7 @@ func DeregisterService() error {
 		return nil
 	}
 
-	EmptyRail().Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
+	Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
 
 	err := ConsulApi.DeregisterService(regSub.serviceId)
 	if err != nil {
@@ -322,13 +330,6 @@ This func looks for following prop:
 	"consul.healthCheckFailedDeregisterAfter"
 */
 func RegisterService() error {
-	var client *api.Client
-	var e error
-
-	if client, e = GetConsulClient(); e != nil {
-		return e
-	}
-
 	regSub.mu.Lock()
 	defer regSub.mu.Unlock()
 
@@ -368,12 +369,12 @@ func RegisterService() error {
 		},
 	}
 
-	if e = client.Agent().ServiceRegister(registration); e != nil {
-		return TraceErrf(e, "failed to register on consul, registration: %+v", registration)
+	if err := ConsulApi.RegisterService(registration); err != nil {
+		return err
 	}
 	regSub.serviceId = proposedServiceId
 
-	EmptyRail().Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
+	Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
 }
 
@@ -401,13 +402,11 @@ func GetConsulClient() (*api.Client, error) {
 		Address: addr,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new Consul client, %w", err)
 	}
 	consulp.consul = c
-	EmptyRail().Infof("Created Consul Client on %s", addr)
-
+	Infof("Created Consul Client on %s", addr)
 	SubscribeServerList(GetPropInt(PropConsulFetchServerInterval))
-
 	return c, nil
 }
 
