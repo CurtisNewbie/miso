@@ -103,11 +103,12 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
 		}
 
-		stats := JobExecStats{Time: took, Err: errRun}
-
-		for _, hook := range postJobHooks {
-			if err := hook(rail, inf, stats); err != nil {
-				rail.Errorf("PostJobHook returns err for job: %v, %v", job.Name, err)
+		if len(postJobHooks) > 0 {
+			stats := JobExecStats{Time: took, Err: errRun}
+			for _, hook := range postJobHooks {
+				if err := hook(rail, inf, stats); err != nil {
+					rail.Errorf("PostJobHook returns err for job: %v, %v", job.Name, err)
+				}
 			}
 		}
 	}
