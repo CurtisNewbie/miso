@@ -43,9 +43,10 @@ var (
 
 func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap Cron/Task Scheduler",
+		Name:      "Bootstrap Cron Scheduler",
+		Condition: func(rail Rail) (bool, error) { return HasScheduledJobs(), nil },
 		Bootstrap: SchedulerBootstrap,
-		Order:     10,
+		Order:     11,
 	})
 }
 
@@ -175,16 +176,8 @@ func PostJobExec(hook PostJobHook) {
 }
 
 func SchedulerBootstrap(rail Rail) error {
-	// distributed task scheduler has pending tasks and is enabled
-	if IsTaskSchedulerPending() && !IsTaskSchedulingDisabled() {
-		StartTaskSchedulerAsync(rail)
-		rail.Info("Distributed Task Scheduler started")
-		AddShutdownHook(func() { StopTaskScheduler() })
-	} else if HasScheduledJobs() {
-		// cron scheduler, note that task scheduler internally wraps cron scheduler, we only starts one of them
-		StartSchedulerAsync()
-		rail.Info("Cron Scheduler started")
-		AddShutdownHook(func() { StopScheduler() })
-	}
+	StartSchedulerAsync()
+	rail.Info("Cron Scheduler started")
+	AddShutdownHook(func() { StopScheduler() })
 	return nil
 }

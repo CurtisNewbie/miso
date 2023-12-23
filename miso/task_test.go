@@ -10,6 +10,7 @@ func TestTaskScheduling(t *testing.T) {
 	rail := EmptyRail()
 	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(".enabled", "true")
+	rail.SetLogLevel("debug")
 
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)

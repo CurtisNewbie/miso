@@ -1,37 +1,30 @@
 package miso
 
-// TODO: Refactor this
-
 import (
+	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 var (
+	// mutex for core proerties (group, nodeId, states, and masterNode election)
+	dtaskMut sync.Mutex
+
 	// schedule group name
 	group string = "default"
 
 	// identifier for current node
 	nodeId string
 
-	// mutex for core proerties (group, nodeId, states, and masterNode election)
-	coreMut sync.Mutex
+	// tasks
+	dtasks []Job = []Job{}
 
-	// _state (atomic int32) of distributed task scheduler, use getState()/setState() to load/store
-	_state int32
-
-	masterTicker   *time.Ticker = nil // ticker for refreshing master node lock
-	masterTickerMu sync.Mutex         // mutex for masterTicker
+	// ticker for refreshing master node lock
+	masterTicker *time.Ticker = nil
 )
 
 const (
-	taskInitState    int32 = 0 // intial state, no task being scheduled at all
-	taskPendingState int32 = 1 // pending state, tasks are scheduled, but the scheduler hasn't been started
-	taskStartedState int32 = 2 // started state, scheduler has been started
-	taskStoppedState int32 = 3 // stopped state, scheduler has been stopped
-
 	// default ttl for master lock key in redis (1 min)
 	defMstLockTtl = 1 * time.Minute
 )
@@ -39,8 +32,15 @@ const (
 func init() {
 	SetDefProp(PropTaskSchedulingEnabled, true)
 
-	// set initial state
-	setTaskState(taskInitState)
+	// run before SchedulerBootstrap
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name: "Bootstrap Distributed Task Scheduler",
+		Condition: func(rail Rail) (bool, error) {
+			return !IsTaskSchedulingDisabled() && len(dtasks) > 0, nil
+		},
+		Bootstrap: DistributedTaskSchedulerBootstrap,
+		Order:     10,
+	})
 }
 
 // Check if it's disabled (based on configuration, doesn't affect method call)
@@ -48,31 +48,22 @@ func IsTaskSchedulingDisabled() bool {
 	return !GetPropBool(PropTaskSchedulingEnabled)
 }
 
-// Check whether task scheduler has pending tasks, waiting to be started
-func IsTaskSchedulerPending() bool {
-	return getTaskState() == taskPendingState
-}
-
-// Atomically set state (should lock first before invoke this func)
-func setTaskState(newState int32) {
-	atomic.StoreInt32(&_state, int32(newState))
-}
-
-// Atomically load state (it's save to read without locking)
-func getTaskState() int32 {
-	return atomic.LoadInt32(&_state)
-}
-
-// Enable distributed task scheduling, return whether task scheduling is enabled
-func enableTaskScheduling(rail Rail) bool {
-	coreMut.Lock()
-	defer coreMut.Unlock()
-
-	if getTaskState() != taskPendingState {
-		return false
+func registerTasks(rail Rail, tasks []Job) error {
+	if len(tasks) < 1 {
+		return nil
 	}
-	setTaskState(taskStartedState)
+	for _, d := range tasks {
+		if err := ScheduleCron(d); err != nil {
+			return fmt.Errorf("failed to schedule cron job, %+v, %w", d, err)
+		}
+	}
+	return nil
+}
 
+func prepareTaskScheduling(rail Rail, tasks []Job) error {
+	if len(tasks) < 1 {
+		return nil
+	}
 	proposedGroup := GetPropStr(ProptaskSchedulingGroup)
 	if proposedGroup == "" {
 		proposedGroup = GetPropStr(PropAppName)
@@ -80,16 +71,19 @@ func enableTaskScheduling(rail Rail) bool {
 	if proposedGroup != "" {
 		group = proposedGroup
 	}
-
 	nodeId = ERand(30)
-	rail.Infof("Enable distributed task scheduling, current node id: '%s', group: '%s'", nodeId, group)
-	return true
+
+	if err := registerTasks(rail, tasks); err != nil {
+		return err
+	}
+	rail.Infof("Scheduled %d distributed tasks, current node id: '%s', group: '%s'", len(tasks), nodeId, group)
+	return nil
 }
 
 // Set the schedule group for current node, by default it's 'default'
 func SetScheduleGroup(groupName string) {
-	coreMut.Lock()
-	defer coreMut.Unlock()
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
 
 	g := strings.TrimSpace(groupName)
 	if g == "" {
@@ -136,15 +130,6 @@ func getTaskMasterKey() string {
 //	ScheduleDistributedTask(job)
 func ScheduleDistributedTask(t Job) error {
 	Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
-
-	if getTaskState() == taskInitState {
-		coreMut.Lock()
-		if getTaskState() == taskInitState {
-			setTaskState(taskPendingState)
-		}
-		coreMut.Unlock()
-	}
-
 	preWrap := t.Run
 	t.Run = func(rail Rail) error {
 		if !tryTaskMaster(rail) {
@@ -153,64 +138,53 @@ func ScheduleDistributedTask(t Job) error {
 		}
 		return preWrap(rail)
 	}
-
-	return ScheduleCron(t)
+	dtasks = append(dtasks, t)
+	return nil
 }
 
 // Start distributed scheduler asynchronously
-func StartTaskSchedulerAsync(rail Rail) {
-	if getTaskState() != taskPendingState {
-		return
+func StartTaskSchedulerAsync(rail Rail) error {
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
+	if len(dtasks) < 1 {
+		return nil
 	}
-
-	if enableTaskScheduling(rail) {
-		StartSchedulerAsync()
+	if err := prepareTaskScheduling(rail, dtasks); err != nil {
+		return err
 	}
+	StartSchedulerAsync()
+	return nil
 }
 
 // Start distributed scheduler, current routine is blocked
-func StartTaskSchedulerBlocking(rail Rail) {
-	if getTaskState() != taskPendingState {
-		return
+func StartTaskSchedulerBlocking(rail Rail) error {
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
+	if len(dtasks) < 1 {
+		return nil
 	}
-
-	if enableTaskScheduling(rail) {
-		StartSchedulerBlocking()
+	if err := prepareTaskScheduling(rail, dtasks); err != nil {
+		return err
 	}
+	StartSchedulerBlocking()
+	return nil
 }
 
 // Shutdown distributed job scheduling
 func StopTaskScheduler() {
-	coreMut.Lock()
-	defer coreMut.Unlock()
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
 
-	if getTaskState() != taskStartedState {
-		return
-	}
-
-	setTaskState(taskStoppedState)
 	StopScheduler()
 	stopTaskMasterLockTicker()
-
-	rail := EmptyRail()
-	releaseMasterNodeLock(rail)
-
-	// if we are previously the master node, the lock is refreshed every 5 seconds with the ttl 1m
-	// this should be pretty enough to release the lock before the expiration
-	if IsTaskMaster(rail) {
-		GetRedis().Expire(getTaskMasterKey(), 1*time.Second) // release master node after 1s
-	}
+	releaseMasterNodeLock(EmptyRail())
 }
 
 // Start refreshing master lock ticker
 func startTaskMasterLockTicker() {
-	masterTickerMu.Lock()
-	defer masterTickerMu.Unlock()
-
 	if masterTicker != nil {
 		return
 	}
-
 	masterTicker = time.NewTicker(5 * time.Second)
 	go func(c <-chan time.Time) {
 		for {
@@ -235,13 +209,11 @@ func releaseMasterNodeLock(rail Rail) {
 		rail.Errorf("Failed to release master node lock, %v", cmd.Err())
 		return
 	}
-	rail.Debugf("Release master node lock, %v", cmd.Val())
+	rail.Debugf("Release master node lock, released? %v", cmd.Val())
 }
 
 // Stop refreshing master lock ticker
 func stopTaskMasterLockTicker() {
-	masterTickerMu.Lock()
-	defer masterTickerMu.Unlock()
 	if masterTicker == nil {
 		return
 	}
@@ -257,8 +229,8 @@ func refreshTaskMasterLock() error {
 
 // Try to become master node
 func tryTaskMaster(rail Rail) bool {
-	coreMut.Lock()
-	defer coreMut.Unlock()
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
 
 	if IsTaskMaster(rail) {
 		return true
@@ -278,4 +250,15 @@ func tryTaskMaster(rail Rail) bool {
 		stopTaskMasterLockTicker()
 	}
 	return isMaster
+}
+
+func DistributedTaskSchedulerBootstrap(rail Rail) error {
+	AddShutdownHook(func() { StopTaskScheduler() })
+
+	if err := StartTaskSchedulerAsync(rail); err != nil {
+		return fmt.Errorf("failed to StartTaskSchedulerAsync, %w", err)
+	}
+	rail.Info("Distributed Task Scheduler started")
+
+	return nil
 }
