@@ -35,9 +35,14 @@ var (
 	// server list polling subscription
 	serverListPSub = &serverListPollingSubscription{sub: nil}
 
-	ErrConsulServiceInstanceNotFound = errors.New("unable to find any available service instance")
+	// server instance not found
+	ErrConsulServiceInstanceNotFound error = errors.New("unable to find any available service instance")
 
+	// Api for Consul
 	ConsulApi = ConsulApiImpl{}
+
+	// Select ConsulServer randomly.
+	RandomConsulServerSelector = func(servers []ConsulServer) int { return rand.Int() % len(servers) }
 )
 
 func init() {
@@ -116,9 +121,20 @@ type ServiceListHolder struct {
 }
 
 type ConsulServer struct {
-	Address string
-	Port    int
-	Meta    map[string]string
+	Protocol string
+	Address  string
+	Port     int
+	Meta     map[string]string
+}
+
+func (c *ConsulServer) BuildUrl(relUrl string) string {
+	if !strings.HasPrefix(relUrl, "/") {
+		relUrl = "/" + relUrl
+	}
+	if c.Protocol == "" {
+		c.Protocol = "http://"
+	}
+	return c.Protocol + c.ServerAddress() + relUrl
 }
 
 func (c *ConsulServer) ServerAddress() string {
@@ -210,25 +226,16 @@ func fetchAndCacheServiceNodes(rail Rail, name string) error {
 /*
 Resolve request url for the given service.
 
-	"http://" + host ":" + port + "/" + relUrl
+The resolved url will be in format: "http://" + host + ":" + port + "/" + relUrl.
 
-This func will first read the cache, trying to resolve the services address
-without actually requesting consul, and only when the cache missed, it then
-requests the consul.
-
-Return ErrServiceInstanceNotFound if no instance available
+Return ErrServiceInstanceNotFound if no instance is found.
 */
 func ConsulResolveRequestUrl(serviceName string, relUrl string) (string, error) {
-	if !strings.HasPrefix(relUrl, "/") {
-		relUrl = "/" + relUrl
-	}
-
-	address, err := ConsulResolveServiceAddr(serviceName)
+	server, err := SelectConsulServer(serviceName, RandomConsulServerSelector)
 	if err != nil {
 		return "", err
 	}
-
-	return "http://" + address + relUrl, nil
+	return server.BuildUrl(relUrl), nil
 }
 
 /*
@@ -238,17 +245,32 @@ This func will first read the cache, trying to resolve the services address
 without actually requesting consul, and only when the cache missed, it then
 requests the consul
 
-Return consul.ErrServiceInstanceNotFound if no instance available
+Return ErrServiceInstanceNotFound if no instance is found.
 */
 func ConsulResolveServiceAddr(name string) (string, error) {
+	selected, err := SelectConsulServer(name, RandomConsulServerSelector)
+	if err != nil {
+		return "", err
+	}
+	return selected.ServerAddress(), nil
+}
+
+// Select one ConsulServer based on the provided selector.
+//
+// If none is matched, ErrConsulServiceInstanceNotFound is returned.
+func SelectConsulServer(name string, selector func(servers []ConsulServer) int) (ConsulServer, error) {
 	serviceListHolder.RLock()
 	defer serviceListHolder.RUnlock()
 	servers := serviceListHolder.Instances[name]
+
 	if len(servers) < 1 {
-		return "", ErrConsulServiceInstanceNotFound
+		return ConsulServer{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
 	}
-	selected := rand.Int() % len(servers)
-	return servers[selected].ServerAddress(), nil
+	selected := selector(servers)
+	if selected >= 0 && selected < len(servers) {
+		return servers[selected], nil
+	}
+	return ConsulServer{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
 }
 
 // List Consul Servers already loaded in cache.
