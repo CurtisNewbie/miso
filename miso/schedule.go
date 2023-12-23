@@ -165,14 +165,26 @@ func ScheduleCron(job Job) error {
 // Callback triggered before job execution.
 //
 // The job and other callbacks will still be executed even if one of the callback returns error.
+//
+// Callback will be ignored, if the scheduler is already running.
 func PreJobExec(hook PreJobHook) {
+	if getScheduler().IsRunning() {
+		Warn("Ignored PreJobHook, cron scheduler is already running")
+		return
+	}
 	preJobHooks = append(preJobHooks, hook)
 }
 
 // Callback triggered after job execution.
 //
 // Other callbacks will still be executed even if one of them returns error.
+//
+// Callback will be ignored, if the scheduler is already running.
 func PostJobExec(hook PostJobHook) {
+	if getScheduler().IsRunning() {
+		Warn("Ignored PostJobHook, cron scheduler is already running")
+		return
+	}
 	postJobHooks = append(postJobHooks, hook)
 }
 
