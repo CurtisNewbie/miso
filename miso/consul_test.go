@@ -45,8 +45,7 @@ func TestPollServiceListInstances(t *testing.T) {
 
 func TestResolveServiceAddress(t *testing.T) {
 	PreTest()
-	rail := EmptyRail()
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	_, err := GetConsulClient()
 	if err != nil {

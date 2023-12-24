@@ -98,10 +98,6 @@ func (r Rail) IsLogLevelEnabled(level string) bool {
 	return r.log.Logger.IsLevelEnabled(ll)
 }
 
-func (r Rail) SetLogLevel(level string) {
-	SetLogLevel(level)
-}
-
 func (r Rail) WithCtxVal(key string, val any) Rail {
 	ctx := context.WithValue(r.Ctx, key, val) //lint:ignore SA1029 keys must be exposed for user to use
 	return NewRail(ctx)

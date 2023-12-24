@@ -15,7 +15,7 @@ func TestRLockCallbacks(t *testing.T) {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	var violated int32 = 0
 
@@ -59,7 +59,7 @@ func TestRLock(t *testing.T) {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	var violated int32 = 0
 
@@ -109,7 +109,7 @@ func TestRLockCount(t *testing.T) {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	total := 1000
 	var count int32 = 0

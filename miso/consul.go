@@ -420,7 +420,7 @@ func IsConsulClientInitialized() bool {
 func ConsulBootstrap(rail Rail) error {
 	// create consul client
 	if _, e := GetConsulClient(); e != nil {
-		return TraceErrf(e, "Failed to establish connection to Consul")
+		return fmt.Errorf("failed to establish connection to Consul, %w", e)
 	}
 
 	// deregister on shutdown
@@ -431,7 +431,7 @@ func ConsulBootstrap(rail Rail) error {
 	})
 
 	if e := RegisterService(); e != nil {
-		return TraceErrf(e, "Failed to register on Consul")
+		return fmt.Errorf("failed to register on Consul, %w", e)
 	}
 
 	ClientServiceRegistry = consulServiceRegistry{}

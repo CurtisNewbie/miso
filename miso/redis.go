@@ -132,7 +132,7 @@ func InitRedis(rail Rail, p RedisConnParam) (*redis.Client, error) {
 
 	cmd := rdb.Ping()
 	if cmd.Err() != nil {
-		return nil, TraceErrf(cmd.Err(), "ping redis failed")
+		return nil, fmt.Errorf("ping redis failed, %w", cmd.Err())
 	}
 
 	rail.Info("Redis connection initialized")
@@ -149,7 +149,7 @@ func IsRedisClientInitialized() bool {
 
 func RedisBootstrap(rail Rail) error {
 	if _, e := InitRedisFromProp(rail); e != nil {
-		return TraceErrf(e, "Failed to establish connection to Redis")
+		return fmt.Errorf("failed to establish connection to Redis, %w", e)
 	}
 	AddHealthIndicator(HealthIndicator{
 		Name: "Redis Component",

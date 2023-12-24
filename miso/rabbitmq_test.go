@@ -64,7 +64,7 @@ func TestPublishMessage(t *testing.T) {
 	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(PropRabbitMqUsername, "guest")
 	SetProp(PropRabbitMqPassword, "guest")
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
 	RegisterRabbitQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
@@ -100,7 +100,7 @@ func TestPublishJsonMessage(t *testing.T) {
 	LoadConfigFromFile("../conf_dev.yml", rail)
 	SetProp(PropRabbitMqUsername, "guest")
 	SetProp(PropRabbitMqPassword, "guest")
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 
 	e := StartRabbitMqClient(rail)
 	if e != nil {

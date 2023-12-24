@@ -13,7 +13,7 @@ type RCacheDummy struct {
 func preRCacheTest(t *testing.T) Rail {
 	rail := EmptyRail()
 	SetProp(PropRedisEnabled, true)
-	rail.SetLogLevel("debug")
+	SetLogLevel("debug")
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}

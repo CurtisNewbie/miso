@@ -138,9 +138,9 @@ func InitMySQL(user string, password string, dbname string, host string, port st
 		return nil
 	}
 
-	conn, enc := NewMySQLConn(user, password, dbname, host, port, connParam)
-	if enc != nil {
-		return TraceErrf(enc, "failed to create mysql connection, %v:%v/%v", user, password, dbname)
+	conn, err := NewMySQLConn(user, password, dbname, host, port, connParam)
+	if err != nil {
+		return fmt.Errorf("failed to create mysql connection, %v:%v/%v, %w", user, password, dbname, err)
 	}
 	mysqlp.mysql = conn
 	return nil
@@ -171,7 +171,7 @@ func IsMySQLInitialized() bool {
 
 func MySQLBootstrap(rail Rail) error {
 	if e := InitMySQLFromProp(); e != nil {
-		return TraceErrf(e, "Failed to establish connection to MySQL")
+		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
 	}
 
 	AddHealthIndicator(HealthIndicator{

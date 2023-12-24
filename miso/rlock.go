@@ -42,7 +42,7 @@ func RLockRun[T any](rail Rail, key string, runnable LRunnable[T]) (T, error) {
 
 	lock := NewRLock(rail, key)
 	if err := lock.Lock(); err != nil {
-		return t, TraceErrf(err, "failed to obtain lock, key: %v", key)
+		return t, fmt.Errorf("failed to obtain lock, key: %v, %w", key, err)
 	}
 	defer lock.Unlock()
 
@@ -141,7 +141,7 @@ func (r *RLock) Lock() error {
 	})
 
 	if err != nil {
-		return TraceErrf(err, "failed to obtain lock, key: %v", r.key)
+		return fmt.Errorf("failed to obtain lock, key: %v, %w", r.key, err)
 	}
 	r.rail.Debugf("Obtained lock for key '%s'", r.key)
 

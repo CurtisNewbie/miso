@@ -166,7 +166,7 @@ func (m MsgListener) String() string {
 func PublishJson(c Rail, obj any, exchange string, routingKey string) error {
 	j, err := WriteJson(obj)
 	if err != nil {
-		return TraceErrf(err, "failed to marshal message body")
+		return fmt.Errorf("failed to marshal message body, %w", err)
 	}
 	return PublishMsg(c, j, exchange, routingKey, "application/json", nil)
 }
@@ -183,7 +183,7 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 
 	pc, err := borrowPubChan()
 	if err != nil {
-		return TraceErrf(err, "failed to obtain channel is closed, unable to publish message")
+		return fmt.Errorf("failed to obtain channel, unable to publish message, %w", err)
 	}
 	defer returnPubChan(pc)
 
@@ -206,7 +206,7 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
 	if err != nil {
-		return TraceErrf(err, "failed to publish message")
+		return fmt.Errorf("failed to publish message, %w", err)
 	}
 
 	if !confirm.Wait() {
@@ -233,7 +233,7 @@ func AddRabbitListener(listener RabbitListener) {
 func DeclareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 	if e != nil {
-		return TraceErrf(e, "failed to declare queue, %v", queue.Name)
+		return fmt.Errorf("failed to declare queue, %v, %w", queue.Name, e)
 	}
 	Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
@@ -265,7 +265,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	}
 	e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
 	if e != nil {
-		return TraceErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
+		return fmt.Errorf("failed to declare binding, queue: %v, routingkey: %v, exchange: %v, %w", bind.Queue, bind.RoutingKey, bind.Exchange, e)
 	}
 	Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 
@@ -282,7 +282,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 		"x-dead-letter-routing-key": bind.RoutingKey,
 	})
 	if e != nil {
-		return TraceErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
+		return fmt.Errorf("failed to declare redeliver queue '%v' for '%v', %w", rq, bind.Queue, e)
 	}
 	redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
 	Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
@@ -297,7 +297,7 @@ func DeclareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) erro
 
 	e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
 	if e != nil {
-		return TraceErrf(e, "failed to declare exchange, %v", exchange.Name)
+		return fmt.Errorf("failed to declare exchange, %v, %w", exchange.Name, e)
 	}
 	Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
@@ -451,7 +451,7 @@ func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
 	rail.Debugf("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
-		return nil, TraceErrf(e, "failed to create channel")
+		return nil, fmt.Errorf("failed to create channel, %w", e)
 	}
 
 	// queues, exchanges, bindings
@@ -464,7 +464,7 @@ func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
 	// consumers
 	if e = startRabbitConsumers(conn); e != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", e)
-		return nil, TraceErrf(e, "failed to create consumer")
+		return nil, fmt.Errorf("failed to create consumer, %w", e)
 	}
 
 	rail.Debugf("RabbitMQ client initialization finished")
@@ -571,7 +571,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 func borrowPubChan() (*amqp.Channel, error) {
 	ch := _pubChanPool.Get()
 	if ch == nil {
-		return nil, NewTraceErrf("could not create new RabbitMQ channel")
+		return nil, errors.New("could not create new RabbitMQ channel")
 	}
 
 	ach := ch.(*amqp.Channel)
@@ -580,7 +580,7 @@ func borrowPubChan() (*amqp.Channel, error) {
 		ach = ch.(*amqp.Channel)
 
 		if ach == nil { // still unable to create a new channel, the connection may be broken
-			return nil, NewTraceErrf("could not create new RabbitMQ channel")
+			return nil, errors.New("could not create new RabbitMQ channel")
 		}
 	}
 	return ach, nil
@@ -602,11 +602,11 @@ func returnPubChan(ch *amqp.Channel) {
 func newPubChan() (*amqp.Channel, error) {
 	newChan, err := newChan()
 	if err != nil {
-		return nil, TraceErrf(err, "could not create new RabbitMQ channel")
+		return nil, fmt.Errorf("could not create new RabbitMQ channel, %w", err)
 	}
 
 	if err = newChan.Confirm(false); err != nil {
-		return nil, TraceErrf(err, "channel could not be put into confirm mode")
+		return nil, fmt.Errorf("channel could not be put into confirm mode, %w", err)
 	}
 
 	Debugf("Created new RabbitMQ publishing channel")
@@ -619,7 +619,7 @@ func newChan() (*amqp.Channel, error) {
 	defer _mutex.Unlock()
 
 	if _conn == nil {
-		return nil, NewTraceErrf("rabbitmq connection is missing")
+		return nil, errors.New("rabbitmq connection is missing")
 	}
 
 	return _conn.Channel()
@@ -627,7 +627,7 @@ func newChan() (*amqp.Channel, error) {
 
 func RabbitBootstrap(rail Rail) error {
 	if e := StartRabbitMqClient(rail); e != nil {
-		return TraceErrf(e, "Failed to establish connection to RabbitMQ")
+		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
 	return nil
 }
