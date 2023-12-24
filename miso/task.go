@@ -38,7 +38,7 @@ func init() {
 		Condition: func(rail Rail) (bool, error) {
 			return !IsTaskSchedulingDisabled() && len(dtasks) > 0, nil
 		},
-		Bootstrap: DistributedTaskSchedulerBootstrap,
+		Bootstrap: DistriTaskBootstrap,
 		Order:     10,
 	})
 }
@@ -252,7 +252,7 @@ func tryTaskMaster(rail Rail) bool {
 	return isMaster
 }
 
-func DistributedTaskSchedulerBootstrap(rail Rail) error {
+func DistriTaskBootstrap(rail Rail) error {
 	AddShutdownHook(func() { StopTaskScheduler() })
 
 	if err := StartTaskSchedulerAsync(rail); err != nil {

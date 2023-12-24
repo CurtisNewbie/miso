@@ -340,13 +340,11 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 // Configure logging level and output target based on loaded configuration.
-func ConfigureLogging(rail Rail) {
+func ConfigureLogging(rail Rail) error {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if ContainsProp(PropLoggingRollingFile) {
 		logFile := GetPropStr(PropLoggingRollingFile)
-		logFileExists, _ := FileExists(logFile)
-
 		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
 			Filename:   logFile,
 			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
@@ -356,17 +354,15 @@ func ConfigureLogging(rail Rail) {
 		loggerOut = log
 		loggerErrOut = log
 
-		if logFileExists {
-			log.Rotate()
-		}
-
 		// schedule a job to rotate the log at 00:00:00
-		ScheduleCron(Job{
+		if err := ScheduleCron(Job{
 			Name:            "RotateLogJob",
 			Cron:            "0 0 0 * * ?",
 			CronWithSeconds: true,
 			Run:             func(r Rail) error { return log.Rotate() },
-		})
+		}); err != nil {
+			return fmt.Errorf("failed to register RotateLogJob, %v", err)
+		}
 	}
 
 	logrus.SetOutput(loggerOut)
@@ -376,6 +372,7 @@ func ConfigureLogging(rail Rail) {
 			logrus.SetLevel(level)
 		}
 	}
+	return nil
 }
 
 func callPostServerBootstrapListeners(rail Rail) error {
@@ -473,7 +470,10 @@ func BootstrapServer(args []string) {
 	DefaultReadConfig(args, rail)
 
 	// configure logging
-	ConfigureLogging(rail)
+	if err := ConfigureLogging(rail); err != nil {
+		rail.Errorf("Configure logging failed, %v", err)
+		return
+	}
 
 	appName := GetPropStr(PropAppName)
 	if appName == "" {
