@@ -143,15 +143,12 @@ func DefaultReadConfig(args []string, rail Rail) {
 
 	if err := LoadConfigFromFile(defConfigFile, rail); err != nil {
 		rail.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
+	} else {
+		rail.Infof("Loaded config file: %v", defConfigFile)
 	}
-	rail.Infof("Loaded config file: %v", defConfigFile)
 
 	// the load config file may specifiy extra files to be loaded
 	extraFiles := GetPropStrSlice(PropConfigExtraFiles)
-
-	// for backword compatibility only
-	// TODO: deleted this in future releases
-	extraFiles = append(extraFiles, "app-conf-dev.yml")
 
 	for i := range extraFiles {
 		f := extraFiles[i]
