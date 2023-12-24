@@ -99,7 +99,3 @@ go get github.com/curtisnewbie/miso@v0.0.11
 - [Customize Build](./doc/customize_build.md)
 - [JSON Processing](./doc/json.md)
 - More in the future (maybe) :D
-
-## Updates
-
-- Since v0.0.12, event bus will no longer contains the predefined prefix `"event.bus"`.
