@@ -86,7 +86,7 @@ go get -u github.com/curtisnewbie/miso
 Or get the specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.0.8
+go get github.com/curtisnewbie/miso@v0.0.11
 ```
 
 ## Documentations
@@ -99,3 +99,7 @@ go get github.com/curtisnewbie/miso@v0.0.8
 - [Customize Build](./doc/customize_build.md)
 - [JSON Processing](./doc/json.md)
 - More in the future (maybe) :D
+
+## Updates
+
+- Since v0.0.12, event bus will no longer contains the predefined prefix `"event.bus"`.

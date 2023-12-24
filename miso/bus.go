@@ -18,29 +18,24 @@ var (
 
 // Send msg to event bus.
 //
-// Internally, it serialize eventObject to a json string and dispatch the message to the exchange that is identified by the bus name.
+// It's identical to sending a message to an exchange identified by the name using routing key '#'.
 //
 // Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
-func PubEventBus(c Rail, eventObject any, bus string) error {
-	if bus == "" {
+func PubEventBus(rail Rail, eventObject any, name string) error {
+	if name == "" {
 		return errBusNameEmpty
 	}
-	if err := NewEventBus(bus); err != nil {
-		return fmt.Errorf("failed to create event bus, %v", err)
-	}
-	busName := busName(bus)
-	return PublishJson(c, eventObject, busName, BusRoutingKey)
+	return PublishJson(rail, eventObject, name, BusRoutingKey)
 }
 
 // Declare event bus.
 //
-// Internally, it creates the RabbitMQ queue, binding, and exchange that are uniformally identified by the same bus name.
-func NewEventBus(bus string) error {
-	if bus == "" {
+// It basically is to create an direct exchange and a queue identified by the name, and bind them using routing key '#'.
+func NewEventBus(name string) error {
+	if name == "" {
 		return errBusNameEmpty
 	}
-	busName := busName(bus)
-	if _, ok := declaredBus.Load(busName); ok {
+	if _, ok := declaredBus.Load(name); ok {
 		return nil // race condition is harmless, don't worry
 	}
 
@@ -51,48 +46,37 @@ func NewEventBus(bus string) error {
 			return fmt.Errorf("failed to obtain channel for event bus declaration, %w", err)
 		}
 		defer ch.Close()
-		if err := DeclareRabbitQueue(ch, QueueRegistration{Name: busName, Durable: true}); err != nil {
+		if err := DeclareRabbitQueue(ch, QueueRegistration{Name: name, Durable: true}); err != nil {
 			return err
 		}
-		if err := DeclareRabbitBinding(ch, BindingRegistration{Queue: busName, RoutingKey: BusRoutingKey, Exchange: busName}); err != nil {
+		if err := DeclareRabbitBinding(ch, BindingRegistration{Queue: name, RoutingKey: BusRoutingKey, Exchange: name}); err != nil {
 			return err
 		}
-		if err := DeclareRabbitExchange(ch, ExchangeRegistration{Name: busName, Durable: true, Kind: BusExchangeKind}); err != nil {
+		if err := DeclareRabbitExchange(ch, ExchangeRegistration{Name: name, Durable: true, Kind: BusExchangeKind}); err != nil {
 			return err
 		}
-		declaredBus.Store(busName, true)
+		declaredBus.Store(name, true)
 		return nil
 	}
 
 	// not connected yet, prepare the registration instead
-	RegisterRabbitQueue(QueueRegistration{Name: busName, Durable: true})
-	RegisterRabbitBinding(BindingRegistration{Queue: busName, RoutingKey: BusRoutingKey, Exchange: busName})
-	RegisterRabbitExchange(ExchangeRegistration{Name: busName, Durable: true, Kind: BusExchangeKind})
-	declaredBus.Store(busName, true)
+	RegisterRabbitQueue(QueueRegistration{Name: name, Durable: true})
+	RegisterRabbitBinding(BindingRegistration{Queue: name, RoutingKey: BusRoutingKey, Exchange: name})
+	RegisterRabbitExchange(ExchangeRegistration{Name: name, Durable: true, Kind: BusExchangeKind})
+	declaredBus.Store(name, true)
 	return nil
 }
 
 // Subscribe to event bus.
 //
 // Internally, it registers a listener for the queue identified by the bus name.
-//
-// It also calls NewEventBus(...) automatically before it registers the listeners.
-func SubEventBus[T any](bus string, concurrency int, listener func(rail Rail, t T) error) error {
-	if bus == "" {
+func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t T) error) error {
+	if name == "" {
 		return errBusNameEmpty
 	}
-
-	if err := NewEventBus(bus); err != nil {
-		return fmt.Errorf("failed to create event bus, %v", err)
-	}
-
 	if concurrency < 1 {
 		concurrency = 1
 	}
-	AddRabbitListener(JsonMsgListener[T]{QueueName: busName(bus), Handler: listener, NumOfRoutines: concurrency})
+	AddRabbitListener(JsonMsgListener[T]{QueueName: name, Handler: listener, NumOfRoutines: concurrency})
 	return nil
-}
-
-func busName(bus string) string {
-	return "event.bus." + bus
 }
