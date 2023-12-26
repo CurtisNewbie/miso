@@ -134,6 +134,10 @@ func ParseLogLevel(logLevel string) (logrus.Level, bool) {
 	return logrus.InfoLevel, false
 }
 
+func Tracef(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Tracef(format, args...)
+}
+
 func Debugf(format string, args ...interface{}) {
 	logrus.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }
