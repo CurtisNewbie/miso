@@ -111,10 +111,10 @@ func NewCustomRLock(rail Rail, key string, config RLockConfig) *RLock {
 		// this is merely an approximate
 		nsteps := int64(config.BackoffDuration) / int64(r.backoffWindow)
 		r.backoffSteps = int(nsteps)
-		rail.Debugf("Update backoff steps to %v", nsteps)
+		rail.Tracef("Update backoff steps to %v", nsteps)
 	}
 
-	rail.Debugf("Created RLock for key: '%v', with backoffWindow: %v, backoffSteps: %v", r.key, r.backoffWindow, r.backoffSteps)
+	rail.Tracef("Created RLock for key: '%v', with backoffWindow: %v, backoffSteps: %v", r.key, r.backoffWindow, r.backoffSteps)
 	return &r
 }
 
@@ -143,7 +143,7 @@ func (r *RLock) Lock() error {
 	if err != nil {
 		return fmt.Errorf("failed to obtain lock, key: %v, %w", r.key, err)
 	}
-	r.rail.Debugf("Obtained lock for key '%s'", r.key)
+	r.rail.Tracef("Obtained lock for key '%s'", r.key)
 
 	r.setLocked()
 	r.lock = lock
@@ -159,10 +159,10 @@ func (r *RLock) Lock() error {
 				if err := lock.Refresh(lock_lease_time, nil); err != nil {
 					subrail.Warnf("Failed to refresh RLock for '%v'", r.key)
 				} else {
-					subrail.Debugf("Refreshed rlock for '%v'", r.key)
+					subrail.Tracef("Refreshed rlock for '%v'", r.key)
 				}
 			case <-subrail.Ctx.Done():
-				subrail.Debugf("RLock Refresher cancelled for '%v'", r.key)
+				subrail.Tracef("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
@@ -189,7 +189,7 @@ func (r *RLock) Unlock() error {
 			r.rail.Errorf("Failed to release lock for key '%s', err: %v", r.key, err)
 			return err
 		} else {
-			r.rail.Debugf("Released lock for key '%s'", r.key)
+			r.rail.Tracef("Released lock for key '%s'", r.key)
 		}
 	}
 	r.setUnlocked()

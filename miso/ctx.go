@@ -46,6 +46,10 @@ func (r Rail) SpanId() string {
 	return r.CtxValStr(X_SPANID)
 }
 
+func (r Rail) Tracef(format string, args ...interface{}) {
+	r.log.WithField(callerField, getCallerFn()).Tracef(format, args...)
+}
+
 func (r Rail) Debugf(format string, args ...interface{}) {
 	r.log.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }
