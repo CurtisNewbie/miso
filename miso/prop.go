@@ -153,8 +153,10 @@ const (
 
 		------------------------------------
 	*/
-	PropMetricsEnabled = "metrics.enabled"
-	PropPromRoute      = "metrics.route"
+	PropMetricsEnabled     = "metrics.enabled"
+	PropMetricsRoute       = "metrics.route"
+	PropMetricsAuthEnabled = "metrics.auth.enabled"
+	PropMetricsAuthBearer  = "metrics.auth.bearer"
 
 	/*
 		------------------------------------

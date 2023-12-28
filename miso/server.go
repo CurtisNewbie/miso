@@ -498,7 +498,7 @@ func BootstrapServer(args []string) {
 		if sbc.Condition != nil {
 			ok, ce := sbc.Condition(rail)
 			if ce != nil {
-				rail.Errorf("Failed to bootstrap server component, failed on condition check, %v", ce)
+				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
 				return
 			}
 			if !ok {
@@ -508,7 +508,7 @@ func BootstrapServer(args []string) {
 
 		start := time.Now()
 		if e := sbc.Bootstrap(rail); e != nil {
-			rail.Errorf("Failed to bootstrap server component, %v", e)
+			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
 			return
 		}
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, time.Since(start))

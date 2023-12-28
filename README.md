@@ -2,7 +2,7 @@
 
 Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to understand how things work, but it indeed kinda works :D.
 
-Miso provides a opinionated way to write application, common functionalities such as service discovery, log tracing, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application, feel free to read the code.
+Miso provides an opinionated way to write application, common functionalities such as service discovery, log tracing, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application, feel free to read the code.
 
 The overall target is to make it as small and simple as possible. The backward compatibility may break in future releases.
 

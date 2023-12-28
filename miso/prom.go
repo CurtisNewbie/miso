@@ -32,7 +32,7 @@ var (
 
 func init() {
 	SetDefProp(PropMetricsEnabled, true)
-	SetDefProp(PropPromRoute, "/metrics")
+	SetDefProp(PropMetricsRoute, "/metrics")
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Prometheus",
@@ -89,7 +89,27 @@ func PrometheusBootstrapCondition(rail Rail) (bool, error) {
 
 func PrometheusBootstrap(rail Rail) error {
 	handler := PrometheusHandler()
-	RawGet(GetPropStr(PropPromRoute), func(c *gin.Context, rail Rail) {
+
+	if GetPropBool(PropMetricsAuthEnabled) {
+		if IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
+			return fmt.Errorf("metrics authorization enabled, but secret is missing, please configure property '%v'",
+				PropMetricsAuthBearer)
+		}
+		rail.Info("Enabled metrics authorization")
+	}
+
+	RawGet(GetPropStr(PropMetricsRoute), func(c *gin.Context, rail Rail) {
+
+		if GetPropBool(PropMetricsAuthEnabled) {
+			authorization := c.GetHeader("Authorization")
+			secret, ok := ParseBearer(authorization)
+			if !ok || secret != GetPropStr(PropMetricsAuthBearer) {
+				rail.Debug("metrics endpoint authorization failed")
+				c.Status(http.StatusUnauthorized)
+				return
+			}
+		}
+
 		handler.ServeHTTP(c.Writer, c.Request)
 	}).Build()
 	return nil
