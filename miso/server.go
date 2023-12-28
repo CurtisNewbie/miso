@@ -123,6 +123,7 @@ func init() {
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
 	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
+	SetDefProp(PropLoggingRollingFileRotateDaily, true)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap HTTP Server",
@@ -354,14 +355,16 @@ func ConfigureLogging(rail Rail) error {
 		loggerOut = log
 		loggerErrOut = log
 
-		// schedule a job to rotate the log at 00:00:00
-		if err := ScheduleCron(Job{
-			Name:            "RotateLogJob",
-			Cron:            "0 0 0 * * ?",
-			CronWithSeconds: true,
-			Run:             func(r Rail) error { return log.Rotate() },
-		}); err != nil {
-			return fmt.Errorf("failed to register RotateLogJob, %v", err)
+		if GetPropBool(PropLoggingRollingFileRotateDaily) {
+			// schedule a job to rotate the log at 00:00:00
+			if err := ScheduleCron(Job{
+				Name:            "RotateLogJob",
+				Cron:            "0 0 0 * * ?",
+				CronWithSeconds: true,
+				Run:             func(r Rail) error { return log.Rotate() },
+			}); err != nil {
+				return fmt.Errorf("failed to register RotateLogJob, %v", err)
+			}
 		}
 	}
 

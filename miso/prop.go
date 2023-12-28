@@ -118,11 +118,12 @@ const (
 
 		------------------------------------
 	*/
-	PropLoggingFile                  = "logging.level"
-	PropLoggingRollingFile           = "logging.rolling.file"
-	PropLoggingRollingFileMaxAge     = "logging.file.max-age"
-	PropLoggingRollingFileMaxSize    = "logging.file.max-size"
-	PropLoggingRollingFileMaxBackups = "logging.file.max-backups"
+	PropLoggingFile                   = "logging.level"
+	PropLoggingRollingFile            = "logging.rolling.file"
+	PropLoggingRollingFileMaxAge      = "logging.file.max-age"
+	PropLoggingRollingFileMaxSize     = "logging.file.max-size"
+	PropLoggingRollingFileMaxBackups  = "logging.file.max-backups"
+	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 
 	/*
 		------------------------------------
