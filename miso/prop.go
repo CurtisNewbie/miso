@@ -30,6 +30,8 @@ const (
 	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
 	PropConsulRegisterDefaultHealthcheck  = "consul.registerDefaultHealthCheck"
 	PropConsulFetchServerInterval         = "consul.fetchServerInterval"
+	PropConsulDeregisterUrl               = "consul.deregisterUrl"
+	PropConsulEnableDeregisterUrl         = "consul.enableDeregisterUrl"
 
 	/*
 		------------------------------------
