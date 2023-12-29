@@ -254,11 +254,10 @@ func tryTaskMaster(rail Rail) bool {
 
 func DistriTaskBootstrap(rail Rail) error {
 	AddShutdownHook(func() { StopTaskScheduler() })
-
-	if err := StartTaskSchedulerAsync(rail); err != nil {
-		return fmt.Errorf("failed to StartTaskSchedulerAsync, %w", err)
+	dtaskMut.Lock()
+	defer dtaskMut.Unlock()
+	if err := prepareTaskScheduling(rail, dtasks); err != nil {
+		return fmt.Errorf("failed to prepareTaskScheduling, %w", err)
 	}
-	rail.Info("Distributed Task Scheduler started")
-
 	return nil
 }
