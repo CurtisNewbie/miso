@@ -38,6 +38,7 @@ func init() {
 		Name:      "Bootstrap Prometheus",
 		Bootstrap: PrometheusBootstrap,
 		Condition: PrometheusBootstrapCondition,
+		Order:     BootstrapOrderL2,
 	})
 }
 

@@ -46,7 +46,6 @@ func init() {
 		Name:      "Bootstrap Cron Scheduler",
 		Condition: func(rail Rail) (bool, error) { return HasScheduledJobs(), nil },
 		Bootstrap: SchedulerBootstrap,
-		Order:     11,
 	})
 }
 

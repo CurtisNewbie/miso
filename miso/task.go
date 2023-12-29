@@ -39,7 +39,7 @@ func init() {
 			return !IsTaskSchedulingDisabled() && len(dtasks) > 0, nil
 		},
 		Bootstrap: DistriTaskBootstrap,
-		Order:     10,
+		Order:     BootstrapOrderL4,
 	})
 }
 

@@ -19,7 +19,20 @@ import (
 )
 
 const (
-	bootstrapComponentDefaultOrder = 15
+	// Components like database that are essential and must be ready before anything else.
+	BootstrapOrderL1 = -20
+
+	// Components that are bootstraped before the web server, such as metrics stuff.
+	BootstrapOrderL2 = -15
+
+	// The web server or anything similar, bootstraping web server doesn't really mean that we will receive inbound requests.
+	BootstrapOrderL3 = -10
+
+	// Components that introduce inbound requests or job scheduling.
+	//
+	// When these components bootstrap, the server is considered truly running.
+	// For example, service registration (for service discovery), MQ broker connection and so on.
+	BootstrapOrderL4 = -5
 )
 
 var (
@@ -135,7 +148,7 @@ func init() {
 		Name:      "Bootstrap HTTP Server",
 		Bootstrap: WebServerBootstrap,
 		Condition: WebServerBootstrapCondition,
-		Order:     10,
+		Order:     BootstrapOrderL3,
 	})
 }
 
@@ -435,9 +448,6 @@ func callPreServerBootstrapListeners(rail Rail) error {
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
-	if bootstrapComponent.Order == 0 {
-		bootstrapComponent.Order = bootstrapComponentDefaultOrder
-	}
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 	sort.Slice(serverBootrapCallbacks, func(i, j int) bool {
 		return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order
