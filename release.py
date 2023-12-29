@@ -5,6 +5,7 @@ import subprocess
 
 def cli_run(cmd: str):
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
+        if p.returncode != 0: raise ValueError(f"'{cmd}' failed")
         std = str(p.stdout.read(), 'utf-8')
         return std
 
