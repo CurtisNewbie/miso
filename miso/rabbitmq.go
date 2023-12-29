@@ -63,7 +63,7 @@ func init() {
 		Name:      "Bootstrap RabbitMQ",
 		Bootstrap: RabbitBootstrap,
 		Condition: RabbitBootstrapCondition,
-		Order:     10,
+		Order:     BootstrapOrderL4,
 	})
 }
 

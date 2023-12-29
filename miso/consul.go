@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -54,12 +55,14 @@ func init() {
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 15)
+	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
+	SetDefProp(PropConsulEnableDeregisterUrl, false)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Boostrap Consul",
 		Bootstrap: ConsulBootstrap,
 		Condition: ConsulBootstrapCondition,
-		Order:     -10,
+		Order:     BootstrapOrderL4,
 	})
 }
 
@@ -308,10 +311,21 @@ func DeregisterService() error {
 	Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
 
 	err := ConsulApi.DeregisterService(regSub.serviceId)
-	if err != nil {
+	if err == nil {
 		regSub.serviceId = ServiceIdNil
 	}
 	return err
+}
+
+// Check if current instance is registered on consul.
+func IsConsulServiceRegistered() bool {
+	if !IsConsulClientInitialized() {
+		return false
+	}
+
+	regSub.mu.Lock()
+	defer regSub.mu.Unlock()
+	return regSub.serviceId != ServiceIdNil
 }
 
 /*
@@ -418,6 +432,29 @@ func IsConsulClientInitialized() bool {
 }
 
 func ConsulBootstrap(rail Rail) error {
+
+	if GetPropBool(PropConsulEnableDeregisterUrl) {
+		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
+		if !IsBlankStr(deregisterUrl) {
+			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
+			Get(deregisterUrl, func(c *gin.Context, rail Rail) (any, error) {
+				if !IsConsulServiceRegistered() {
+					rail.Info("Current instance is not registered on consul")
+					return nil, nil
+				}
+
+				rail.Info("deregistering consul service registration")
+				if err := DeregisterService(); err != nil {
+					rail.Errorf("failed to deregistered consul service, %v", err)
+					return nil, err
+				} else {
+					rail.Info("consul service deregistered")
+				}
+				return nil, nil
+			}).Build()
+		}
+	}
+
 	// create consul client
 	if _, e := GetConsulClient(); e != nil {
 		return fmt.Errorf("failed to establish connection to Consul, %w", e)
@@ -425,6 +462,9 @@ func ConsulBootstrap(rail Rail) error {
 
 	// deregister on shutdown
 	AddShutdownHook(func() {
+		if !IsConsulServiceRegistered() {
+			return
+		}
 		if e := DeregisterService(); e != nil {
 			rail.Errorf("Failed to deregister on Consul, %v", e)
 		}

@@ -18,6 +18,23 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+const (
+	// Components like database that are essential and must be ready before anything else.
+	BootstrapOrderL1 = -20
+
+	// Components that are bootstraped before the web server, such as metrics stuff.
+	BootstrapOrderL2 = -15
+
+	// The web server or anything similar, bootstraping web server doesn't really mean that we will receive inbound requests.
+	BootstrapOrderL3 = -10
+
+	// Components that introduce inbound requests or job scheduling.
+	//
+	// When these components bootstrap, the server is considered truly running.
+	// For example, service registration (for service discovery), MQ broker connection and so on.
+	BootstrapOrderL4 = -5
+)
+
 var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
@@ -90,8 +107,10 @@ type HttpRoute struct {
 type ComponentBootstrap struct {
 	Name      string
 	Bootstrap func(rail Rail) error
-	Condition func(rail Rail) (bool, error) // check whether component should be bootstraped
-	Order     int                           // order of which the components are bootstraped, natural order
+	// check whether component should be bootstraped
+	Condition func(rail Rail) (bool, error)
+	// order of which the components are bootstraped, natural order, it's by default 15
+	Order int
 }
 
 type ResultBodyBuilder struct {
@@ -123,12 +142,13 @@ func init() {
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
 	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
+	SetDefProp(PropLoggingRollingFileRotateDaily, true)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap HTTP Server",
 		Bootstrap: WebServerBootstrap,
 		Condition: WebServerBootstrapCondition,
-		Order:     10,
+		Order:     BootstrapOrderL3,
 	})
 }
 
@@ -354,14 +374,16 @@ func ConfigureLogging(rail Rail) error {
 		loggerOut = log
 		loggerErrOut = log
 
-		// schedule a job to rotate the log at 00:00:00
-		if err := ScheduleCron(Job{
-			Name:            "RotateLogJob",
-			Cron:            "0 0 0 * * ?",
-			CronWithSeconds: true,
-			Run:             func(r Rail) error { return log.Rotate() },
-		}); err != nil {
-			return fmt.Errorf("failed to register RotateLogJob, %v", err)
+		if GetPropBool(PropLoggingRollingFileRotateDaily) {
+			// schedule a job to rotate the log at 00:00:00
+			if err := ScheduleCron(Job{
+				Name:            "RotateLogJob",
+				Cron:            "0 0 0 * * ?",
+				CronWithSeconds: true,
+				Run:             func(r Rail) error { return log.Rotate() },
+			}); err != nil {
+				return fmt.Errorf("failed to register RotateLogJob, %v", err)
+			}
 		}
 	}
 
@@ -427,9 +449,6 @@ func callPreServerBootstrapListeners(rail Rail) error {
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
-	sort.Slice(serverBootrapCallbacks, func(i, j int) bool {
-		return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order
-	})
 }
 
 /*
@@ -489,13 +508,14 @@ func BootstrapServer(args []string) {
 		return
 	}
 
-	// bootstrap components
+	// bootstrap components, these are sorted by their orders
+	sort.Slice(serverBootrapCallbacks, func(i, j int) bool { return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order })
 	Debugf("serverBootrapCallbacks: %+v", serverBootrapCallbacks)
 	for _, sbc := range serverBootrapCallbacks {
 		if sbc.Condition != nil {
 			ok, ce := sbc.Condition(rail)
 			if ce != nil {
-				rail.Errorf("Failed to bootstrap server component, failed on condition check, %v", ce)
+				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
 				return
 			}
 			if !ok {
@@ -505,7 +525,7 @@ func BootstrapServer(args []string) {
 
 		start := time.Now()
 		if e := sbc.Bootstrap(rail); e != nil {
-			rail.Errorf("Failed to bootstrap server component, %v", e)
+			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
 			return
 		}
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, time.Since(start))
