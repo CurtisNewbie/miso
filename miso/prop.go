@@ -153,10 +153,12 @@ const (
 
 		------------------------------------
 	*/
-	PropMetricsEnabled     = "metrics.enabled"
-	PropMetricsRoute       = "metrics.route"
-	PropMetricsAuthEnabled = "metrics.auth.enabled"
-	PropMetricsAuthBearer  = "metrics.auth.bearer"
+	PropMetricsEnabled              = "metrics.enabled"
+	PropMetricsRoute                = "metrics.route"
+	PropMetricsAuthEnabled          = "metrics.auth.enabled"
+	PropMetricsAuthBearer           = "metrics.auth.bearer"
+	PropMetricsEnableMemStatsLogJob = "metrics.memstat.log.job.enabled"
+	PropMetricsMemStatsLogJobCron   = "metrics.memstat.log.job.cron"
 
 	/*
 		------------------------------------

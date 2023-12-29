@@ -18,6 +18,10 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+const (
+	bootstrapComponentDefaultOrder = 15
+)
+
 var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
@@ -90,8 +94,10 @@ type HttpRoute struct {
 type ComponentBootstrap struct {
 	Name      string
 	Bootstrap func(rail Rail) error
-	Condition func(rail Rail) (bool, error) // check whether component should be bootstraped
-	Order     int                           // order of which the components are bootstraped, natural order
+	// check whether component should be bootstraped
+	Condition func(rail Rail) (bool, error)
+	// order of which the components are bootstraped, natural order, it's by default 15
+	Order int
 }
 
 type ResultBodyBuilder struct {
@@ -429,6 +435,9 @@ func callPreServerBootstrapListeners(rail Rail) error {
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
+	if bootstrapComponent.Order == 0 {
+		bootstrapComponent.Order = bootstrapComponentDefaultOrder
+	}
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
 	sort.Slice(serverBootrapCallbacks, func(i, j int) bool {
 		return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order

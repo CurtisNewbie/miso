@@ -34,7 +34,30 @@ const (
 
 var (
 	MetricsMemoryMatcher = regexp.MustCompile(`^/memory/.*`)
+
+	memStatsCollector = NewMetricsCollector(DefaultMetricDesc(nil))
 )
+
+func init() {
+	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
+	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
+
+	PreServerBootstrap(func(rail Rail) error {
+		if !GetPropBool(PropMetricsEnableMemStatsLogJob) {
+			return nil
+		}
+		return ScheduleCron(Job{
+			Name:            "MetricsMemStatLogJob",
+			CronWithSeconds: true,
+			Cron:            GetPropStr(PropMetricsMemStatsLogJobCron),
+			Run: func(r Rail) error {
+				memStatsCollector.Read()
+				r.Infof("\n\n%s", SprintMemStats(memStatsCollector.MemStats()))
+				return nil
+			},
+		})
+	})
+}
 
 // Collector of runtime/metrics.
 //

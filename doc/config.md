@@ -144,12 +144,14 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 ## Metrics Configuration
 
-| property             | description                                     | default value |
-| -------------------- | ----------------------------------------------- | ------------- |
-| metrics.enabled      | enable metrics collection using prometheus      | true          |
-| metrics.route        | route used to expose collected metrics          | /metrics      |
-| metrics.auth.enabled | enabled authorization for metrics endpoint      | false         |
-| metrics.auth.bearer  | bearer token for metrics endpoint authorization |               |
+| property                        | description                                                               | default value   |
+| ------------------------------- | ------------------------------------------------------------------------- | --------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                                | true            |
+| metrics.route                   | route used to expose collected metrics                                    | /metrics        |
+| metrics.auth.enabled            | enabled authorization for metrics endpoint                                | false           |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                           |                 |
+| metrics.memstat.log.job.enabled | enabled job that logs memory stats periodically (using `runtime/metrics`) | false           |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                               | `0 */1 * * * *` |
 
 
 ## Yaml Configuration File Example
