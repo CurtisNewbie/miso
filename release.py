@@ -29,25 +29,25 @@ if __name__ == '__main__':
         exit(1)
 
     branch = current_branch()
-    print(branch)
+    # print(branch)
 
     if branch == 'dev':
         print("Cannot release on dev branch")
         exit(1)
 
     release = sys.argv[1]
-    latest = current_tag()
+    latest = current_tag().strip()
     if latest == release:
         print(f"{release} has been released")
         exit(1)
 
-    with open("./miso/version.go") as f:
+    with open("./miso/version.go", "w") as f:
         f.writelines([
-            "package miso",
-            "",
-            "const (",
-            f"\tMisoVersion = \"{release}\""
-            ")"
+            "package miso\n",
+            "\n",
+            "const (\n",
+            f"\tMisoVersion = \"{release}\"\n"
+            ")\n"
             ""
         ])
 
