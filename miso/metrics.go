@@ -35,7 +35,7 @@ const (
 var (
 	MetricsMemoryMatcher = regexp.MustCompile(`^/memory/.*`)
 
-	memStatsCollector = NewMetricsCollector(DefaultMetricDesc(nil))
+	memStatsCollector *MetricsCollector
 )
 
 func init() {
@@ -46,6 +46,8 @@ func init() {
 		if !GetPropBool(PropMetricsEnableMemStatsLogJob) {
 			return nil
 		}
+		collector := NewMetricsCollector(DefaultMetricDesc(nil))
+		memStatsCollector = &collector
 		return ScheduleCron(Job{
 			Name:            "MetricsMemStatLogJob",
 			CronWithSeconds: true,
