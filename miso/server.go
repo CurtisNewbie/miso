@@ -449,9 +449,6 @@ func callPreServerBootstrapListeners(rail Rail) error {
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
-	sort.Slice(serverBootrapCallbacks, func(i, j int) bool {
-		return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order
-	})
 }
 
 /*
@@ -511,7 +508,8 @@ func BootstrapServer(args []string) {
 		return
 	}
 
-	// bootstrap components
+	// bootstrap components, these are sorted by their orders
+	sort.Slice(serverBootrapCallbacks, func(i, j int) bool { return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order })
 	Debugf("serverBootrapCallbacks: %+v", serverBootrapCallbacks)
 	for _, sbc := range serverBootrapCallbacks {
 		if sbc.Condition != nil {
