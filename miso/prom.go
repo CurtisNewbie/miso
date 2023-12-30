@@ -28,6 +28,8 @@ var (
 		}
 		return counter
 	})
+
+	manualBootstrap = false
 )
 
 func init() {
@@ -43,8 +45,19 @@ func init() {
 }
 
 // Default handler for prometheus metrics.
-func PrometheusHandler() http.Handler {
-	return promhttp.Handler()
+func PrometheusHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		if GetPropBool(PropMetricsAuthEnabled) {
+			authorization := req.Header.Get("Authorization")
+			secret, ok := ParseBearer(authorization)
+			if !ok || secret != GetPropStr(PropMetricsAuthBearer) {
+				Debug("metrics endpoint authorization failed")
+				writer.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+		promhttp.Handler().ServeHTTP(writer, req)
+	}
 }
 
 // Create new Prometheus timer (in seconds).
@@ -99,19 +112,15 @@ func PrometheusBootstrap(rail Rail) error {
 		rail.Info("Enabled metrics authorization")
 	}
 
-	RawGet(GetPropStr(PropMetricsRoute), func(c *gin.Context, rail Rail) {
-
-		if GetPropBool(PropMetricsAuthEnabled) {
-			authorization := c.GetHeader("Authorization")
-			secret, ok := ParseBearer(authorization)
-			if !ok || secret != GetPropStr(PropMetricsAuthBearer) {
-				rail.Debug("metrics endpoint authorization failed")
-				c.Status(http.StatusUnauthorized)
-				return
-			}
-		}
-
-		handler.ServeHTTP(c.Writer, c.Request)
-	}).Build()
+	if !manualBootstrap {
+		RawGet(GetPropStr(PropMetricsRoute), func(c *gin.Context, rail Rail) { handler.ServeHTTP(c.Writer, c.Request) }).Build()
+	}
 	return nil
+}
+
+// Caller wants to bootstrap prometheus manually.
+//
+// This is mainly used for gateway that implements handler for all endpoints.
+func ManualBootstrapPrometheus() {
+	manualBootstrap = true
 }
