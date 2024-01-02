@@ -32,6 +32,7 @@ const (
 	PropConsulFetchServerInterval         = "consul.fetchServerInterval"
 	PropConsulDeregisterUrl               = "consul.deregisterUrl"
 	PropConsulEnableDeregisterUrl         = "consul.enableDeregisterUrl"
+	PropConsulMetadata                    = "consul.metadata"
 
 	/*
 		------------------------------------

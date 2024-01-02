@@ -63,6 +63,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 | consul.fetchServerInterval              | fetch server list from consul in ever N seconds                      | 15                              |
 | consul.enableDeregisterUrl              | enable endpoint for manual consul service deregistration             | false                           |
 | consul.deregisterUrl                    | endpoint url for manual consul service deregistration                | `/consul/deregister`            |
+| consul.metadata                         | instance metadata (`map[string]string`)                              |                                 |
 
 
 ## MySQL Configuration

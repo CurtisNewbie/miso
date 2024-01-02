@@ -80,6 +80,11 @@ func GetPropInt(prop string) int {
 	return doWithViperReadLock(func() int { return viper.GetInt(prop) })
 }
 
+// Get prop as string based map.
+func GetPropStrMap(prop string) map[string]string {
+	return doWithViperReadLock(func() map[string]string { return viper.GetStringMapString(prop) })
+}
+
 // Get prop as time.Duration
 func GetPropDur(prop string, unit time.Duration) time.Duration {
 	return time.Duration(GetPropInt(prop)) * unit

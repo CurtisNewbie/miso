@@ -390,6 +390,7 @@ func RegisterService() error {
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
 			Status:                         ConsulRegiStatusPassing, // for responsiveness
 		},
+		Meta: GetPropStrMap(PropConsulMetadata),
 	}
 
 	if err := ConsulApi.RegisterService(registration); err != nil {
