@@ -107,8 +107,7 @@ type MySQLConnParam struct {
 }
 
 // Create new MySQL connection
-func NewMySQLConn(p MySQLConnParam) (*gorm.DB, error) {
-	rail := EmptyRail()
+func NewMySQLConn(rail Rail, p MySQLConnParam) (*gorm.DB, error) {
 	p.ConnParam = strings.TrimSpace(p.ConnParam)
 	if p.ConnParam != "" && !strings.HasPrefix(p.ConnParam, "?") {
 		p.ConnParam = "?" + p.ConnParam
@@ -166,7 +165,7 @@ func InitMySQL(rail Rail, p MySQLConnParam) error {
 		return nil
 	}
 
-	conn, err := NewMySQLConn(p)
+	conn, err := NewMySQLConn(rail, p)
 	if err != nil {
 		return fmt.Errorf("failed to create mysql connection, %v:%v/%v, %w", p.User, p.Password, p.Schema, err)
 	}
