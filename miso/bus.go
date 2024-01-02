@@ -2,7 +2,6 @@ package miso
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -31,32 +30,12 @@ func PubEventBus(rail Rail, eventObject any, name string) error {
 // Declare event bus.
 //
 // It basically is to create an direct exchange and a queue identified by the name, and bind them using routing key '#'.
-func NewEventBus(name string) error {
+func NewEventBus(name string) {
 	if name == "" {
-		return errBusNameEmpty
+		panic("event bus name is empty")
 	}
 	if _, ok := declaredBus.Load(name); ok {
-		return nil // race condition is harmless, don't worry
-	}
-
-	// already connected
-	if RabbitConnected() {
-		ch, err := NewRabbitChan()
-		if err != nil {
-			return fmt.Errorf("failed to obtain channel for event bus declaration, %w", err)
-		}
-		defer ch.Close()
-		if err := DeclareRabbitQueue(ch, QueueRegistration{Name: name, Durable: true}); err != nil {
-			return err
-		}
-		if err := DeclareRabbitBinding(ch, BindingRegistration{Queue: name, RoutingKey: BusRoutingKey, Exchange: name}); err != nil {
-			return err
-		}
-		if err := DeclareRabbitExchange(ch, ExchangeRegistration{Name: name, Durable: true, Kind: BusExchangeKind}); err != nil {
-			return err
-		}
-		declaredBus.Store(name, true)
-		return nil
+		return // race condition is harmless, don't worry
 	}
 
 	// not connected yet, prepare the registration instead
@@ -64,7 +43,6 @@ func NewEventBus(name string) error {
 	RegisterRabbitBinding(BindingRegistration{Queue: name, RoutingKey: BusRoutingKey, Exchange: name})
 	RegisterRabbitExchange(ExchangeRegistration{Name: name, Durable: true, Kind: BusExchangeKind})
 	declaredBus.Store(name, true)
-	return nil
 }
 
 // Subscribe to event bus.
