@@ -36,14 +36,21 @@ var (
 	// server list polling subscription
 	serverListPSub = &serverListPollingSubscription{sub: nil}
 
-	// server instance not found
+	// server instance not found.
 	ErrConsulServiceInstanceNotFound error = errors.New("unable to find any available service instance")
 
-	// Api for Consul
+	// Api for Consul.
 	ConsulApi = ConsulApiImpl{}
 
 	// Select ConsulServer randomly.
-	RandomConsulServerSelector = func(servers []ConsulServer) int { return rand.Int() % len(servers) }
+	RandomConsulServerSelector ServerSelector = func(servers []ConsulServer) int { return rand.Int() % len(servers) }
+
+	// Consul's implementation of ServiceRegistry.
+	//
+	// Customize server selection by replacing Rule.
+	ConsulBasedServiceRegistry = ConsulServiceRegistry{
+		Rule: RandomConsulServerSelector,
+	}
 )
 
 func init() {
@@ -65,6 +72,8 @@ func init() {
 		Order:     BootstrapOrderL4,
 	})
 }
+
+type ServerSelector func(servers []ConsulServer) int
 
 type ConsulApiImpl struct{}
 
@@ -474,8 +483,8 @@ func ConsulBootstrap(rail Rail) error {
 		return fmt.Errorf("failed to register on Consul, %w", e)
 	}
 
-	ClientServiceRegistry = consulServiceRegistry{}
-	rail.Debug("Using consulServiceRegistry")
+	ClientServiceRegistry = ConsulBasedServiceRegistry
+	rail.Debug("Using ConsulBasedServiceRegistry")
 
 	return nil
 }
@@ -485,9 +494,10 @@ func ConsulBootstrapCondition(rail Rail) (bool, error) {
 }
 
 // Service registry based on Consul
-type consulServiceRegistry struct {
+type ConsulServiceRegistry struct {
+	Rule ServerSelector
 }
 
-func (r consulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
+func (r ConsulServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
 	return ConsulResolveRequestUrl(service, relativeUrl)
 }
