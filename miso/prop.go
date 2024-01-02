@@ -30,6 +30,8 @@ const (
 	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
 	PropConsulRegisterDefaultHealthcheck  = "consul.registerDefaultHealthCheck"
 	PropConsulFetchServerInterval         = "consul.fetchServerInterval"
+	PropConsulDeregisterUrl               = "consul.deregisterUrl"
+	PropConsulEnableDeregisterUrl         = "consul.enableDeregisterUrl"
 
 	/*
 		------------------------------------
@@ -116,11 +118,12 @@ const (
 
 		------------------------------------
 	*/
-	PropLoggingFile                  = "logging.level"
-	PropLoggingRollingFile           = "logging.rolling.file"
-	PropLoggingRollingFileMaxAge     = "logging.file.max-age"
-	PropLoggingRollingFileMaxSize    = "logging.file.max-size"
-	PropLoggingRollingFileMaxBackups = "logging.file.max-backups"
+	PropLoggingFile                   = "logging.level"
+	PropLoggingRollingFile            = "logging.rolling.file"
+	PropLoggingRollingFileMaxAge      = "logging.file.max-age"
+	PropLoggingRollingFileMaxSize     = "logging.file.max-size"
+	PropLoggingRollingFileMaxBackups  = "logging.file.max-backups"
+	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 
 	/*
 		------------------------------------
@@ -150,8 +153,12 @@ const (
 
 		------------------------------------
 	*/
-	PropMetricsEnabled = "metrics.enabled"
-	PropPromRoute      = "metrics.route"
+	PropMetricsEnabled              = "metrics.enabled"
+	PropMetricsRoute                = "metrics.route"
+	PropMetricsAuthEnabled          = "metrics.auth.enabled"
+	PropMetricsAuthBearer           = "metrics.auth.bearer"
+	PropMetricsEnableMemStatsLogJob = "metrics.memstat.log.job.enabled"
+	PropMetricsMemStatsLogJobCron   = "metrics.memstat.log.job.cron"
 
 	/*
 		------------------------------------

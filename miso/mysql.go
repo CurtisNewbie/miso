@@ -46,7 +46,7 @@ func init() {
 		Name:      "Bootstrap MySQL",
 		Bootstrap: MySQLBootstrap,
 		Condition: MySQLBootstrapCondition,
-		Order:     -10,
+		Order:     BootstrapOrderL1,
 	})
 }
 

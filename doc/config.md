@@ -29,7 +29,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 ## Common Configuration
 
 | property           | description                                               | default value |
-|--------------------|-----------------------------------------------------------|---------------|
+| ------------------ | --------------------------------------------------------- | ------------- |
 | app.name           | name of the application                                   |               |
 | mode.production    | whether production mode is turned on                      | false         |
 | config.extra.files | config files that should be loaded beside the default one |               |
@@ -37,7 +37,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 ## Web Server Configuration
 
 | property                        | description                                           | default value |
-|---------------------------------|-------------------------------------------------------|---------------|
+| ------------------------------- | ----------------------------------------------------- | ------------- |
 | server.enabled                  | enable http server                                    | true          |
 | server.host                     | http server host                                      | 0.0.0.0       |
 | server.port                     | http server port                                      | 8080          |
@@ -50,7 +50,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 ## Consul Configuration
 
 | property                                | description                                                          | default value                   |
-|-----------------------------------------|----------------------------------------------------------------------|---------------------------------|
+| --------------------------------------- | -------------------------------------------------------------------- | ------------------------------- |
 | consul.enabled                          | whether Consul is enabled                                            | false                           |
 | consul.registerName                     | registered service name                                              | `${app.name}`                   |
 | consul.registerAddress                  | registered service address                                           | `${server.host}:${server.port}` |
@@ -61,11 +61,14 @@ Notice that if you have more than one configuration file to load, you can use `c
 | consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
 | consul.registerDefaultHealthCheck       | register default health check endpoint on startup                    | true                            |
 | consul.fetchServerInterval              | fetch server list from consul in ever N seconds                      | 15                              |
+| consul.enableDeregisterUrl              | enable endpoint for manual consul service deregistration             | false                           |
+| consul.deregisterUrl                    | endpoint url for manual consul service deregistration                | `/consul/deregister`            |
+
 
 ## MySQL Configuration
 
 | property                    | description                                 | default value                                                                          |
-|-----------------------------|---------------------------------------------|----------------------------------------------------------------------------------------|
+| --------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
 | mysql.enabled               | whether MySQL is enabled                    | false                                                                                  |
 | mysql.user                  | username                                    | root                                                                                   |
 | mysql.password              | password                                    |                                                                                        |
@@ -77,7 +80,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 ## Redis Configuration
 
 | property       | description              | default value |
-|----------------|--------------------------|---------------|
+| -------------- | ------------------------ | ------------- |
 | redis.enabled  | whether Redis is enabled | false         |
 | redis.address  | address of Redis server  | `localhost`   |
 | redis.port     | port of Redis server     | 6379          |
@@ -88,7 +91,7 @@ Notice that if you have more than one configuration file to load, you can use `c
 ## RabbitMQ Configuration
 
 | property              | description                        | default value |
-|-----------------------|------------------------------------|---------------|
+| --------------------- | ---------------------------------- | ------------- |
 | rabbitmq.enabled      | whether RabbitMQ client is enabled | false         |
 | rabbitmq.host         | host of the RabbitMQ server        | `localhost`   |
 | rabbitmq.port         | port of the RabbitMQ server        | 5672          |
@@ -102,37 +105,38 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## SQLite Configuration
 
 | property    | description                  | default value |
-|-------------|------------------------------|---------------|
+| ----------- | ---------------------------- | ------------- |
 | sqlite.file | path to SQLite database file |               |
 
 ## Logging Configuration
 
-| property                 | description                    | default value                  |
-|--------------------------|--------------------------------|--------------------------------|
-| logging.level            | log level                      | info                           |
-| logging.rolling.file     | path to rolling log file       |                                |
-| logging.file.max-age     | max age of log files in days   | 0 (files are retained forever) |
-| logging.file.max-size    | max size of each log file      | 100                            |
-| logging.file.max-backups | max number of backup log files | 0 (all files are retained)     |
+| property                  | description                                | default value                  |
+| ------------------------- | ------------------------------------------ | ------------------------------ |
+| logging.level             | log level                                  | info                           |
+| logging.rolling.file      | path to rolling log file                   |                                |
+| logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
+| logging.file.max-size     | max size of each log file                  | 100                            |
+| logging.file.max-backups  | max number of backup log files             | 0 (all files are retained)     |
+| logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
 
 ## Distributed Task Scheduling Configuration
 
 | property                | description                                                    | default value |
-|-------------------------|----------------------------------------------------------------|---------------|
+| ----------------------- | -------------------------------------------------------------- | ------------- |
 | task.scheduling.enabled | enabled distributed task scheduling                            | true          |
 | task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. | default       |
 
 ## Client Package Configuration
 
 | property      | description                             | default value |
-|---------------|-----------------------------------------|---------------|
+| ------------- | --------------------------------------- | ------------- |
 | client.host.* | static hostname and port of the service |               |
 
 
 ## JWT Configuration
 
 | property        | description                            | default value |
-|-----------------|----------------------------------------|---------------|
+| --------------- | -------------------------------------- | ------------- |
 | jwt.key.public  | public key for verifying the JWT token |               |
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
@@ -140,10 +144,14 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 ## Metrics Configuration
 
-| property        | description                                | default value |
-|-----------------|--------------------------------------------|---------------|
-| metrics.enabled | enable metrics collection using prometheus | true          |
-| metrics.route   | route used to expose collected metrics     | /metrics      |
+| property                        | description                                                               | default value   |
+| ------------------------------- | ------------------------------------------------------------------------- | --------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                                | true            |
+| metrics.route                   | route used to expose collected metrics                                    | /metrics        |
+| metrics.auth.enabled            | enabled authorization for metrics endpoint                                | false           |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                           |                 |
+| metrics.memstat.log.job.enabled | enabled job that logs memory stats periodically (using `runtime/metrics`) | false           |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                               | `0 */1 * * * *` |
 
 
 ## Yaml Configuration File Example
