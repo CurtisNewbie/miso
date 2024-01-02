@@ -54,13 +54,16 @@ const (
 
 		------------------------------------
 	*/
-	PropMySqlEnabled   = "mysql.enabled"
-	PropMySqlUser      = "mysql.user"
-	PropMySqlPassword  = "mysql.password"
-	PropMySqldatabase  = "mysql.database"
-	PropMySqlHost      = "mysql.host"
-	PropMySqlPort      = "mysql.port"
-	PropMySqlConnParam = "mysql.connection.parameters"
+	PropMySQLEnabled      = "mysql.enabled"
+	PropMySQLUser         = "mysql.user"
+	PropMySQLPassword     = "mysql.password"
+	PropMySQLSchema       = "mysql.database"
+	PropMySQLHost         = "mysql.host"
+	PropMySQLPort         = "mysql.port"
+	PropMySQLConnParam    = "mysql.connection.parameters"
+	PropMySQLConnLifetime = "mysql.connection.lifetime"
+	PropMySQLMaxOpenConns = "mysql.connection.open.max"
+	PropMySQLMaxIdleConns = "mysql.connection.idle.max"
 
 	/*
 		------------------------------------

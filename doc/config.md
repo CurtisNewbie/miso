@@ -67,15 +67,20 @@ Notice that if you have more than one configuration file to load, you can use `c
 
 ## MySQL Configuration
 
-| property                    | description                                 | default value                                                                          |
-| --------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| mysql.enabled               | whether MySQL is enabled                    | false                                                                                  |
-| mysql.user                  | username                                    | root                                                                                   |
-| mysql.password              | password                                    |                                                                                        |
-| mysql.database              | database                                    |                                                                                        |
-| mysql.host                  | host                                        | `localhost`                                                                            |
-| mysql.port                  | port                                        | 3306                                                                                   |
-| mysql.connection.parameters | query parameters declared on connection url | `charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s` |
+| property                    | description                               | default value                                                                                                   |
+| --------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| mysql.enabled               | whether MySQL is enabled                  | false                                                                                                           |
+| mysql.user                  | username                                  | root                                                                                                            |
+| mysql.password              | password                                  |                                                                                                                 |
+| mysql.database              | database                                  |                                                                                                                 |
+| mysql.host                  | host                                      | `localhost`                                                                                                     |
+| mysql.port                  | port                                      | 3306                                                                                                            |
+| mysql.connection.parameters | connection parameters (slices of strings) | "charset=utf8mb4"<br>"parseTime=True"<br>"loc=Local"<br>"readTimeout=30s"<br>"writeTimeout=30s"<br>"timeout=3s" |
+| mysql.connection.lifetime   | connection lifetime in minutes            | 30                                                                                                              |
+| mysql.connection.open.max   | max number of open connections            | 10                                                                                                              |
+| mysql.connection.idle.max   | max number of idle connections            | 10                                                                                                              |
+
+
 
 ## Redis Configuration
 
@@ -157,13 +162,27 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## Yaml Configuration File Example
 
 ```yml
+app.name: "myapp"
+
 mode.production: true
 
 mysql:
-  enabled: false
-  user: root
-  password: 123456
-  database: fileServer
-  host: localhost
+  enabled: true
+  user: "root"
+  password: "123456"
+  database: "mydb"
+  host: "localhost"
   port: 3306
+  connection:
+    parameters:
+      - "charset=utf8mb4"
+      - "parseTime=True"
+      - "loc=Local"
+      - "readTimeout=30s"
+      - "writeTimeout=30s"
+      - "timeout=3s"
+
+server:
+  host: localhost
+  port: 8080
 ```

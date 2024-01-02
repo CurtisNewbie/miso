@@ -18,19 +18,19 @@ func TestParseArg(t *testing.T) {
 	if !IsProdMode() {
 		t.Error()
 	}
-	if s := GetPropStr(PropMySqlUser); s != "root" {
+	if s := GetPropStr(PropMySQLUser); s != "root" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlPassword); s != "123456" {
+	if s := GetPropStr(PropMySQLPassword); s != "123456" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqldatabase); s != "fileServer" {
+	if s := GetPropStr(PropMySQLSchema); s != "fileServer" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlHost); s != "localhost" {
+	if s := GetPropStr(PropMySQLHost); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlPort); s != "3306" {
+	if s := GetPropStr(PropMySQLPort); s != "3306" {
 		t.Error(s)
 	}
 
@@ -130,19 +130,19 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	if IsProdMode() {
 		t.Error()
 	}
-	if s := GetPropStr(PropMySqlUser); s != "root" {
+	if s := GetPropStr(PropMySQLUser); s != "root" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlPassword); s != "123456" {
+	if s := GetPropStr(PropMySQLPassword); s != "123456" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqldatabase); s != "fileServer" {
+	if s := GetPropStr(PropMySQLSchema); s != "fileServer" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlHost); s != "localhost" {
+	if s := GetPropStr(PropMySQLHost); s != "localhost" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropMySqlPort); s != "3306" {
+	if s := GetPropStr(PropMySQLPort); s != "3306" {
 		t.Error(s)
 	}
 

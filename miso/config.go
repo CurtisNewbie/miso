@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -77,6 +78,11 @@ func GetPropStrSlice(prop string) []string {
 // Get prop as int
 func GetPropInt(prop string) int {
 	return doWithViperReadLock(func() int { return viper.GetInt(prop) })
+}
+
+// Get prop as time.Duration
+func GetPropDur(prop string, unit time.Duration) time.Duration {
+	return time.Duration(GetPropInt(prop)) * unit
 }
 
 // Get prop as bool
