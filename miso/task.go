@@ -130,13 +130,15 @@ func getTaskMasterKey() string {
 //	ScheduleDistributedTask(job)
 func ScheduleDistributedTask(t Job) error {
 	Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
-	preWrap := t.Run
+	actualRun := t.Run
 	t.Run = func(rail Rail) error {
+		dtaskMut.Lock()
 		if !tryTaskMaster(rail) {
 			rail.Debug("Not master node, skip scheduled task")
 			return nil
 		}
-		return preWrap(rail)
+		dtaskMut.Unlock()
+		return actualRun(rail)
 	}
 	dtasks = append(dtasks, t)
 	return nil
@@ -229,9 +231,6 @@ func refreshTaskMasterLock() error {
 
 // Try to become master node
 func tryTaskMaster(rail Rail) bool {
-	dtaskMut.Lock()
-	defer dtaskMut.Unlock()
-
 	if IsTaskMaster(rail) {
 		return true
 	}
@@ -259,5 +258,6 @@ func DistriTaskBootstrap(rail Rail) error {
 	if err := prepareTaskScheduling(rail, dtasks); err != nil {
 		return fmt.Errorf("failed to prepareTaskScheduling, %w", err)
 	}
+	tryTaskMaster(rail)
 	return nil
 }
