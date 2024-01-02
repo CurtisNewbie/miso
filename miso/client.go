@@ -34,7 +34,7 @@ func init() {
 	MisoDefaultClient = &http.Client{Timeout: 15 * time.Second}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
-	transport.MaxIdleConnsPerHost = 500
+	transport.MaxIdleConnsPerHost = 50
 	transport.IdleConnTimeout = time.Minute * 5
 	MisoDefaultClient.Transport = transport
 }
