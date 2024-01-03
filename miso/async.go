@@ -35,14 +35,81 @@ func (f future[T]) TimedGet(timeout int) (T, error) {
 	}
 }
 
-// Create Future, once the future is created, it starts running on a new goroutine
-func RunAsync[T any](task func() (T, error)) Future[T] {
+func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 	fut := future[T]{}
-	fut.ch = make(chan func() (T, error))
-	go func(cha chan func() (T, error), runTask func() (T, error)) {
-		t, err := runTask()
+	fut.ch = make(chan func() (T, error), 1)
+	wrp := func() {
+		t, err := task()
 		f := func() (T, error) { return t, err }
-		cha <- f
-	}(fut.ch, task)
+		fut.ch <- f
+	}
+	return fut, wrp
+}
+
+// Create Future, once the future is created, it starts running on a new goroutine.
+func RunAsync[T any](task func() (T, error)) Future[T] {
+	fut, wrp := buildFuture(task)
+	go wrp()
 	return fut
+}
+
+// Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
+func RunAsyncPool[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
+	fut, wrp := buildFuture(task)
+	pool.Go(wrp)
+	return fut
+}
+
+// Bounded pool of goroutines.
+type AsyncPool struct {
+	tasks   chan func()
+	workers chan struct{}
+}
+
+// Create a bounded pool of goroutines.
+//
+// The maxTasks determines the capacity of the task queues. If the task queue is full,
+// the caller of *AsyncPool.Go is blocked.
+//
+// The maxWorkers determines the max number of workers.
+func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
+	if maxTasks < 0 {
+		maxTasks = 0
+	}
+	if maxWorkers < 1 {
+		maxWorkers = 1
+	}
+	return &AsyncPool{
+		tasks:   make(chan func(), maxTasks),
+		workers: make(chan struct{}, maxWorkers),
+	}
+}
+
+// Submit task to the pool.
+//
+// If the task queue is full, the caller is blocked.
+//
+// If the pool is closed, return ErrAsyncPoolClosed.
+func (p *AsyncPool) Go(f func()) {
+	select {
+	case p.workers <- struct{}{}:
+		go func() { p.spawn(f) }()
+	case p.tasks <- f:
+		return
+	}
+}
+
+// spawn a new worker.
+func (p *AsyncPool) spawn(first func()) {
+	Debug("Spawned Worker")
+	defer func() { <-p.workers }()
+
+	if first != nil {
+		first()
+	}
+
+	for f := range p.tasks {
+		f()
+	}
+	Debug("Worker exited")
 }
