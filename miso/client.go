@@ -192,7 +192,7 @@ func (t *TClient) prepReqUrl() (string, error) {
 			return "", errors.New("service discovery enabled, but no service registry available")
 		}
 
-		resolved, err := sr.resolve(t.serviceName, t.Url)
+		resolved, err := sr.resolve(t.Rail, t.serviceName, t.Url)
 		if err != nil {
 			t.Rail.Errorf("Resolve service address failed, service: %v, %v", t.serviceName, err)
 			return "", err
@@ -614,14 +614,14 @@ func resolveHostFromProp(name string) string {
 type ServiceRegistry interface {
 
 	// Resolve request url dynamically based on the services discovered
-	resolve(service string, relativeUrl string) (string, error)
+	resolve(rail Rail, service string, relativeUrl string) (string, error)
 }
 
 // Service registry backed by loaded configuration
 type hardcodedServiceRegistry struct {
 }
 
-func (r hardcodedServiceRegistry) resolve(service string, relativeUrl string) (string, error) {
+func (r hardcodedServiceRegistry) resolve(rail Rail, service string, relativeUrl string) (string, error) {
 	if IsBlankStr(service) {
 		return "", fmt.Errorf("service name is required")
 	}
