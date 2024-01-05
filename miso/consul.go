@@ -229,7 +229,7 @@ func (c *ConsulServer) ServerAddress() string {
 }
 
 // Subscribe to server list, refresh server list every 30s
-func SubscribeServerList(everyNSec int) {
+func StartServerListPoller(everyNSec int) {
 	consulServerListPoller.mu.Lock()
 	defer consulServerListPoller.mu.Unlock()
 
@@ -497,7 +497,7 @@ func GetConsulClient() (*api.Client, error) {
 	}
 	consulp.consul = c
 	Infof("Created Consul Client on %s", addr)
-	SubscribeServerList(GetPropInt(PropConsulFetchServerInterval))
+	StartServerListPoller(GetPropInt(PropConsulFetchServerInterval))
 	return c, nil
 }
 
