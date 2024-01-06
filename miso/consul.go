@@ -4,6 +4,7 @@
 package miso
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -51,8 +52,9 @@ type consulHolder struct {
 }
 
 type serviceRegistration struct {
-	serviceId string
-	mu        sync.Mutex
+	serviceName string
+	serviceId   string
+	mu          sync.Mutex
 }
 
 func init() {
@@ -61,7 +63,7 @@ func init() {
 	SetDefProp(PropConsulHealthcheckUrl, "/health")
 	SetDefProp(PropConsulHealthCheckInterval, "15s")
 	SetDefProp(PropConsulHealthcheckTimeout, "3s")
-	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "120s")
+	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "55s")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
@@ -196,7 +198,7 @@ func PollServiceListInstances(rail Rail) {
 	}
 
 	for name := range names {
-		if name == "consul" {
+		if name == "consul" || name == consulRegistration.serviceName {
 			continue
 		}
 		err := fetchAndCacheServiceNodes(rail, name)
@@ -379,6 +381,7 @@ func RegisterService() error {
 		return err
 	}
 	consulRegistration.serviceId = proposedServiceId
+	consulRegistration.serviceName = registerName
 
 	Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
@@ -512,15 +515,35 @@ type ConsulServiceRegistry struct {
 }
 
 func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
+	// always try to create a watch for the service
+	consulServerList.Subscribe(rail, service)
+
+	// select one of the instance for this service
 	server, err := SelectServer(service, c.Rule)
+
 	if err != nil {
-		return "", err
+		// it's possible that we haven't created a watch for the service
+		// and the last time we polled the service instances, there was no instance returned for it
+		// we may just try to fetch again and hope for the best
+		if errors.Is(err, ErrConsulServiceInstanceNotFound) {
+			// fetch immediately
+			if err := fetchAndCacheServiceNodes(rail, service); err != nil {
+				return "", err
+			}
+			// select again
+			if server, err = SelectServer(service, c.Rule); err != nil {
+				// pretty sure that the service is completely down
+				return "", err
+			}
+		} else {
+			// recovered
+			return "", err
+		}
 	}
+
 	addr := server.BuildUrl(relativeUrl)
-	if err == nil {
-		consulServerList.Subscribe(rail, service)
-	}
-	return addr, err
+
+	return addr, nil
 }
 
 func (c *ConsulServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {

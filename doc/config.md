@@ -28,49 +28,49 @@ Notice that if you have more than one configuration file to load, you can use `c
 
 ## Common Configuration
 
-| property           | description                                               | default value |
-| ------------------ | --------------------------------------------------------- | ------------- |
-| app.name           | name of the application                                   |               |
-| mode.production    | whether production mode is turned on                      | false         |
-| config.extra.files | config files that should be loaded beside the default one |               |
+| property           | description                              | default value |
+| ------------------ | ---------------------------------------- | ------------- |
+| app.name           | name of the application                  |               |
+| mode.production    | whether production mode is turned on     | false         |
+| config.extra.files | extra config files that should be loaded |               |
 
 ## Web Server Configuration
 
-| property                        | description                                           | default value |
-| ------------------------------- | ----------------------------------------------------- | ------------- |
-| server.enabled                  | enable http server                                    | true          |
-| server.host                     | http server host                                      | 0.0.0.0       |
-| server.port                     | http server port                                      | 8080          |
-| server.gracefulShutdownTimeSec  | time wait (in second) before server shutdown          | 30            |
-| server.perf.enabled             | enable logging time took for each http server request | false         |
-| server.trace.inbound.propagate  | propagate trace info from inbound requests            | true          |
-| server.validate.request.enabled | enable server request parameter validation            | true          |
-| server.request-log.enabled      | enable server request log enabled                     | false         |
+| property                        | description                                       | default value |
+| ------------------------------- | ------------------------------------------------- | ------------- |
+| server.enabled                  | enable http server                                | true          |
+| server.host                     | http server host                                  | 0.0.0.0       |
+| server.port                     | http server port                                  | 8080          |
+| server.gracefulShutdownTimeSec  | time wait (in second) before http server shutdown | 30            |
+| server.perf.enabled             | logs time duration for each inbound http request  | false         |
+| server.trace.inbound.propagate  | propagate trace info from inbound requests        | true          |
+| server.validate.request.enabled | enable inbound request parameter validation       | true          |
+| server.request-log.enabled      | enable server request log                         | false         |
 
 ## Consul Configuration
 
-| property                                | description                                                          | default value                   |
-| --------------------------------------- | -------------------------------------------------------------------- | ------------------------------- |
-| consul.enabled                          | whether Consul is enabled                                            | false                           |
-| consul.registerName                     | registered service name                                              | `${app.name}`                   |
-| consul.registerAddress                  | registered service address                                           | `${server.host}:${server.port}` |
-| consul.consulAddress                    | address of the Consul server                                         | `localhost:8500`                |
-| consul.healthCheckUrl                   | health check url                                                     | `/health`                       |
-| consul.healthCheckInterval              | health check interval                                                | 15s                             |
-| consul.healthCheckTimeout               | health check timeout                                                 | 3s                              |
-| consul.healthCheckFailedDeregisterAfter | timeout for current service to deregister after health check failure | 120s                            |
-| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                    | true                            |
-| consul.fetchServerInterval              | fetch server list from consul in ever N seconds                      | 15                              |
-| consul.enableDeregisterUrl              | enable endpoint for manual consul service deregistration             | false                           |
-| consul.deregisterUrl                    | endpoint url for manual consul service deregistration                | `/consul/deregister`            |
-| consul.metadata                         | instance metadata (`map[string]string`)                              |                                 |
+| property                                | description                                                                        | default value                   |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| consul.enabled                          | enable Consul client, service registration and service discovery                   | false                           |
+| consul.registerName                     | registered service name                                                            | `${app.name}`                   |
+| consul.registerAddress                  | registered service address                                                         | `${server.host}:${server.port}` |
+| consul.consulAddress                    | consul server address                                                              | `localhost:8500`                |
+| consul.healthCheckUrl                   | health check url                                                                   | `/health`                       |
+| consul.healthCheckInterval              | health check interval                                                              | 15s                             |
+| consul.healthCheckTimeout               | health check timeout                                                               | 3s                              |
+| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 55s                             |
+| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true                            |
+| consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                              |
+| consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false                           |
+| consul.deregisterUrl                    | endpoint url for manual Consul service deregistration                              | `/consul/deregister`            |
+| consul.metadata                         | instance metadata (`map[string]string`)                                            |                                 |
 
 
 ## MySQL Configuration
 
 | property                    | description                               | default value                                                                                                   |
 | --------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| mysql.enabled               | whether MySQL is enabled                  | false                                                                                                           |
+| mysql.enabled               | enable MySQL client                       | false                                                                                                           |
 | mysql.user                  | username                                  | root                                                                                                            |
 | mysql.password              | password                                  |                                                                                                                 |
 | mysql.database              | database                                  |                                                                                                                 |
@@ -85,22 +85,22 @@ Notice that if you have more than one configuration file to load, you can use `c
 
 ## Redis Configuration
 
-| property       | description              | default value |
-| -------------- | ------------------------ | ------------- |
-| redis.enabled  | whether Redis is enabled | false         |
-| redis.address  | address of Redis server  | `localhost`   |
-| redis.port     | port of Redis server     | 6379          |
-| redis.username | username                 |               |
-| redis.password | password                 |               |
-| redis.database | 0                        |               |
+| property       | description         | default value |
+| -------------- | ------------------- | ------------- |
+| redis.enabled  | enable Redis client | false         |
+| redis.address  | Redis server host   | `localhost`   |
+| redis.port     | Redis server port   | 6379          |
+| redis.username | username            |               |
+| redis.password | password            |               |
+| redis.database | 0                   |               |
 
 ## RabbitMQ Configuration
 
 | property              | description                        | default value |
 | --------------------- | ---------------------------------- | ------------- |
-| rabbitmq.enabled      | whether RabbitMQ client is enabled | false         |
-| rabbitmq.host         | host of the RabbitMQ server        | `localhost`   |
-| rabbitmq.port         | port of the RabbitMQ server        | 5672          |
+| rabbitmq.enabled      | enable RabbitMQ client             | false         |
+| rabbitmq.host         | RabbitMQ server host               | `localhost`   |
+| rabbitmq.port         | RabbitMQ server port               | 5672          |
 | rabbitmq.username     | username used to connect to server |               |
 | rabbitmq.password     | password used to connect to server |               |
 | rabbitmq.vhost        | virtual host                       |               |
@@ -129,8 +129,8 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 | property                | description                                                    | default value |
 | ----------------------- | -------------------------------------------------------------- | ------------- |
-| task.scheduling.enabled | enabled distributed task scheduling                            | true          |
-| task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. | default       |
+| task.scheduling.enabled | enable distributed task scheduling                             | true          |
+| task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. |               |
 
 ## Client Package Configuration
 
@@ -151,14 +151,14 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 ## Metrics Configuration
 
-| property                        | description                                                               | default value   |
-| ------------------------------- | ------------------------------------------------------------------------- | --------------- |
-| metrics.enabled                 | enable metrics collection using prometheus                                | true            |
-| metrics.route                   | route used to expose collected metrics                                    | /metrics        |
-| metrics.auth.enabled            | enabled authorization for metrics endpoint                                | false           |
-| metrics.auth.bearer             | bearer token for metrics endpoint authorization                           |                 |
-| metrics.memstat.log.job.enabled | enabled job that logs memory stats periodically (using `runtime/metrics`) | false           |
-| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                               | `0 */1 * * * *` |
+| property                        | description                                                              | default value   |
+| ------------------------------- | ------------------------------------------------------------------------ | --------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                               | true            |
+| metrics.route                   | route used to expose collected metrics                                   | /metrics        |
+| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false           |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |                 |
+| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false           |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | `0 */1 * * * *` |
 
 
 ## Yaml Configuration File Example
