@@ -80,10 +80,7 @@ type ConsulApiImpl struct{}
 // Fetch registered service by name, this method always call Consul instead of reading from cache
 func (c ConsulApiImpl) CatalogFetchServiceNodes(rail Rail, name string) ([]*api.CatalogService, error) {
 	defer DebugTimeOp(rail, time.Now(), "CatalogFetchServiceNodes")
-	client, err := GetConsulClient()
-	if err != nil {
-		return nil, err
-	}
+	client := GetConsulClient()
 
 	services, _, err := client.Catalog().Service(name, "", nil)
 	if err != nil {
@@ -94,28 +91,19 @@ func (c ConsulApiImpl) CatalogFetchServiceNodes(rail Rail, name string) ([]*api.
 
 // Fetch all registered services, this method always call Consul instead of reading from cache
 func (c ConsulApiImpl) CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
-	client, e := GetConsulClient()
-	if e != nil {
-		return nil, e
-	}
+	client := GetConsulClient()
 	services, _, err := client.Catalog().Services(nil)
 	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
 	return services, err
 }
 
 func (c ConsulApiImpl) DeregisterService(serviceId string) error {
-	client, err := GetConsulClient()
-	if err != nil {
-		return fmt.Errorf("failed to get consul client, %v", err)
-	}
+	client := GetConsulClient()
 	return client.Agent().ServiceDeregister(serviceId)
 }
 
 func (c ConsulApiImpl) RegisterService(registration *api.AgentServiceRegistration) error {
-	client, err := GetConsulClient()
-	if err != nil {
-		return fmt.Errorf("failed to get consul client, %v", err)
-	}
+	client := GetConsulClient()
 	if err := client.Agent().ServiceRegister(registration); err != nil {
 		return fmt.Errorf("failed to register consul service, registration: %+v, %w", registration, err)
 	}
@@ -167,10 +155,7 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 		}
 	}
 
-	client, err := GetConsulClient()
-	if err != nil {
-		return fmt.Errorf("failed to GetConsulClient, %w", err)
-	}
+	client := GetConsulClient()
 
 	s.serviceWatches[service] = wp
 
@@ -399,6 +384,18 @@ func RegisterService() error {
 	return nil
 }
 
+// Get the already created consul client.
+//
+// InitConsulClient() must be called before this func.
+//
+// If the client is not already created, this func will panic.
+func GetConsulClient() *api.Client {
+	if !IsConsulClientInitialized() {
+		panic("consul client is not initialized")
+	}
+	return consulp.consul
+}
+
 /*
 Get or init new consul client
 
@@ -406,16 +403,16 @@ For the first time that the consul client is initialized, this func will look fo
 
 	"consul.consulAddress"
 */
-func GetConsulClient() (*api.Client, error) {
+func InitConsulClient() error {
 	if IsConsulClientInitialized() {
-		return consulp.consul, nil
+		return nil
 	}
 
 	consulp.mu.Lock()
 	defer consulp.mu.Unlock()
 
 	if consulp.consul != nil {
-		return consulp.consul, nil
+		return nil
 	}
 
 	addr := GetPropStr(PropConsulAddress)
@@ -423,19 +420,21 @@ func GetConsulClient() (*api.Client, error) {
 		Address: addr,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new Consul client, %w", err)
+		return fmt.Errorf("failed to create new Consul client, %w", err)
 	}
 	consulp.consul = c
 	Infof("Created Consul Client on %s", addr)
 
-	consulServerListPoller = NewTickRuner(GetPropDur(PropConsulFetchServerInterval, time.Second),
+	consulServerListPoller = NewTickRuner(
+		GetPropDur(PropConsulFetchServerInterval, time.Second),
 		func() {
 			rail := EmptyRail()
 			// make sure we poll service instance right after we created ticker
 			PollServiceListInstances(rail)
 		})
+	consulServerListPoller.Start()
 
-	return c, nil
+	return nil
 }
 
 // Check whether consul client is initialized
@@ -470,19 +469,18 @@ func ConsulBootstrap(rail Rail) error {
 	}
 
 	// create consul client
-	if _, e := GetConsulClient(); e != nil {
-		return fmt.Errorf("failed to establish connection to Consul, %w", e)
+	if err := InitConsulClient(); err != nil {
+		return fmt.Errorf("failed to create Consul client, %w", err)
 	}
 
 	// deregister on shutdown
 	AddShutdownHook(func() {
-		if !IsConsulServiceRegistered() {
-			return
-		}
 
 		// deregister current instnace
-		if e := DeregisterService(); e != nil {
-			rail.Errorf("Failed to deregister on Consul, %v", e)
+		if IsConsulServiceRegistered() {
+			if e := DeregisterService(); e != nil {
+				rail.Errorf("Failed to deregister on Consul, %v", e)
+			}
 		}
 
 		// stop service instance poller
