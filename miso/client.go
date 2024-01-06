@@ -26,8 +26,7 @@ const (
 var (
 	httpProtoRegex = regexp.MustCompile(`(?i)https?://`)
 
-	MisoDefaultClient     *http.Client
-	ClientServiceRegistry ServiceRegistry = nil
+	MisoDefaultClient *http.Client
 )
 
 func init() {
@@ -192,13 +191,15 @@ func (t *TClient) prepReqUrl() (string, error) {
 			return "", errors.New("service discovery enabled, but no service registry available")
 		}
 
-		resolved, err := sr.resolve(t.Rail, t.serviceName, t.Url)
+		resolved, err := sr.ResolveUrl(t.Rail, t.serviceName, t.Url)
 		if err != nil {
 			t.Rail.Errorf("Resolve service address failed, service: %v, %v", t.serviceName, err)
 			return "", err
 		}
 		url = resolved
-	} else if !httpProtoRegex.MatchString(t.Url) { // missing a protocol
+	}
+
+	if !httpProtoRegex.MatchString(t.Url) { // missing a protocol
 		url = httpProto + t.Url
 	}
 	return concatQueryParam(url, t.QueryParam), nil
@@ -461,14 +462,18 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 	return t
 }
 
-// Create new defualt TClient with service discovery and tracing enabled, relUrl should be a relative url starting with '/'.
+// Create new defualt TClient with service discovery and tracing enabled,
+// relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
 	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing()
 }
 
 // Create new TClient
 func NewTClient(rail Rail, url string) *TClient {
-	return &TClient{Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient, Rail: rail, QueryParam: map[string][]string{}}
+	return &TClient{
+		Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient,
+		Rail: rail, QueryParam: map[string][]string{},
+	}
 }
 
 // Concatenate url and query parameters
@@ -601,47 +606,6 @@ func JoinQueryParam(queryParams map[string][]string) string {
 		}
 	}
 	return strings.Join(seg, "&")
-}
-
-func resolveHostFromProp(name string) string {
-	if name == "" {
-		return ""
-	}
-	return GetPropStr("client.host." + name)
-}
-
-// Service registry
-type ServiceRegistry interface {
-
-	// Resolve request url dynamically based on the services discovered
-	resolve(rail Rail, service string, relativeUrl string) (string, error)
-}
-
-// Service registry backed by loaded configuration
-type hardcodedServiceRegistry struct {
-}
-
-func (r hardcodedServiceRegistry) resolve(rail Rail, service string, relativeUrl string) (string, error) {
-	if IsBlankStr(service) {
-		return "", fmt.Errorf("service name is required")
-	}
-
-	host := resolveHostFromProp(service)
-	if host != "" {
-		return httpProto + host + relativeUrl, nil
-	}
-
-	return httpProto + service + relativeUrl, nil // use the
-}
-
-// Get service registry
-//
-// Service registry initialization is lazy, don't call this for global var
-func GetServiceRegistry() ServiceRegistry {
-	if ClientServiceRegistry != nil {
-		return ClientServiceRegistry
-	}
-	return hardcodedServiceRegistry{}
 }
 
 // Read response as GnResp[T] object.

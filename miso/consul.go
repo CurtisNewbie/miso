@@ -4,10 +4,7 @@
 package miso
 
 import (
-	"errors"
 	"fmt"
-	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,33 +23,37 @@ const (
 
 var (
 	// Service registration
-	regSub = &serviceRegistration{serviceId: ServiceIdNil}
+	consulRegistration = &serviceRegistration{serviceId: ServiceIdNil}
 
 	// Global handle to the Consul client
 	consulp = &consulHolder{consul: nil}
 
 	// Holder (cache) of service list and their instances
-	consulServiceList = &ConsulServerList{servers: map[string][]ConsulServer{}, serviceWatches: map[string]*watch.Plan{}}
+	consulServerList = &ServerList{servers: map[string][]Server{}, serviceWatches: map[string]*watch.Plan{}}
 
 	// server list polling subscription
-	consulServerListPoller = &serverListPoller{sub: nil}
-
-	// server instance not found.
-	ErrConsulServiceInstanceNotFound error = errors.New("unable to find any available service instance")
+	consulServerListPoller *TickRunner = nil
 
 	// Api for Consul.
 	ConsulApi = ConsulApiImpl{}
 
-	// Select ConsulServer randomly.
-	RandomConsulServerSelector ServerSelector = func(servers []ConsulServer) int { return rand.Int() % len(servers) }
-
 	// Consul's implementation of ServiceRegistry.
 	//
 	// Customize server selection by replacing Rule.
-	ConsulBasedServiceRegistry = ConsulServiceRegistry{
-		Rule: RandomConsulServerSelector,
+	ConsulBasedServiceRegistry = &ConsulServiceRegistry{
+		Rule: RandomServerSelector,
 	}
 )
+
+type consulHolder struct {
+	consul *api.Client
+	mu     sync.RWMutex
+}
+
+type serviceRegistration struct {
+	serviceId string
+	mu        sync.Mutex
+}
 
 func init() {
 	SetDefProp(PropConsulEnabled, false)
@@ -73,8 +74,6 @@ func init() {
 		Order:     BootstrapOrderL4,
 	})
 }
-
-type ServerSelector func(servers []ConsulServer) int
 
 type ConsulApiImpl struct{}
 
@@ -123,38 +122,23 @@ func (c ConsulApiImpl) RegisterService(registration *api.AgentServiceRegistratio
 	return nil
 }
 
-type serverListPoller struct {
-	sub *time.Ticker
-	mu  sync.Mutex
-}
-
-type consulHolder struct {
-	consul *api.Client
-	mu     sync.RWMutex
-}
-
-type serviceRegistration struct {
-	serviceId string
-	mu        sync.Mutex
-}
-
 // Holder of a list of ServiceHolder
-type ConsulServerList struct {
+type ServerList struct {
 	sync.RWMutex
-	servers        map[string][]ConsulServer
+	servers        map[string][]Server
 	serviceWatches map[string]*watch.Plan
 }
 
-func (s *ConsulServerList) Subscribe(rail Rail, service string) error {
-	consulServiceList.RLock()
+func (s *ServerList) Subscribe(rail Rail, service string) error {
+	consulServerList.RLock()
 	if _, ok := s.serviceWatches[service]; ok {
-		consulServiceList.RUnlock()
+		consulServerList.RUnlock()
 		return nil
 	}
-	consulServiceList.RUnlock()
+	consulServerList.RUnlock()
 
-	consulServiceList.Lock()
-	defer consulServiceList.Unlock()
+	consulServerList.Lock()
+	defer consulServerList.Unlock()
 	if _, ok := s.serviceWatches[service]; ok {
 		return nil
 	}
@@ -170,9 +154,9 @@ func (s *ConsulServerList) Subscribe(rail Rail, service string) error {
 	wp.Handler = func(idx uint64, data interface{}) {
 		switch dat := data.(type) {
 		case []*api.ServiceEntry:
-			instances := make([]ConsulServer, 0, len(dat))
+			instances := make([]Server, 0, len(dat))
 			for _, entry := range dat {
-				instances = append(instances, ConsulServer{
+				instances = append(instances, Server{
 					Address: entry.Service.Address,
 					Port:    entry.Service.Port,
 					Meta:    entry.Service.Meta,
@@ -197,68 +181,14 @@ func (s *ConsulServerList) Subscribe(rail Rail, service string) error {
 	return nil
 }
 
-func (s *ConsulServerList) UnsubscribeAll(rail Rail) error {
+func (s *ServerList) UnsubscribeAll(rail Rail) error {
 	s.Lock()
 	defer s.Unlock()
 	for _, v := range s.serviceWatches {
 		v.Stop()
 	}
-	rail.Infof("Stopped all service watches, in total %d watches", len(s.serviceWatches))
+	rail.Debugf("Stopped all service watches, in total %d watches", len(s.serviceWatches))
 	return nil
-}
-
-type ConsulServer struct {
-	Protocol string
-	Address  string
-	Port     int
-	Meta     map[string]string
-}
-
-func (c *ConsulServer) BuildUrl(relUrl string) string {
-	if !strings.HasPrefix(relUrl, "/") {
-		relUrl = "/" + relUrl
-	}
-	if c.Protocol == "" {
-		c.Protocol = "http://"
-	}
-	return c.Protocol + c.ServerAddress() + relUrl
-}
-
-func (c *ConsulServer) ServerAddress() string {
-	return fmt.Sprintf("%s:%d", c.Address, c.Port)
-}
-
-// Subscribe to server list, refresh server list every 30s
-func StartServerListPoller(everyNSec int) {
-	consulServerListPoller.mu.Lock()
-	defer consulServerListPoller.mu.Unlock()
-
-	if consulServerListPoller.sub != nil {
-		return
-	}
-
-	consulServerListPoller.sub = time.NewTicker(time.Duration(everyNSec) * time.Second)
-	c := consulServerListPoller.sub.C
-	go func() {
-		rail := EmptyRail()
-		for {
-			// make sure we poll service instance right after we created ticker
-			PollServiceListInstances(rail)
-			<-c
-		}
-	}()
-}
-
-// stop refreshing server list
-func UnsubscribeServerList() {
-	consulServerListPoller.mu.Lock()
-	defer consulServerListPoller.mu.Unlock()
-
-	if consulServerListPoller.sub == nil {
-		return
-	}
-
-	consulServerListPoller.sub.Stop()
 }
 
 /*
@@ -293,24 +223,24 @@ func PollServiceListInstances(rail Rail) {
 
 // Fetch and cache services nodes.
 func fetchAndCacheServiceNodes(rail Rail, name string) error {
-	consulServiceList.Lock()
-	defer consulServiceList.Unlock()
+	consulServerList.Lock()
+	defer consulServerList.Unlock()
 
 	services, err := ConsulApi.CatalogFetchServiceNodes(rail, name)
 	if err != nil {
 		return fmt.Errorf("failed to FetchServicesByName, name: %v, %v", name, err)
 	}
-	servers := make([]ConsulServer, 0, len(services))
+	servers := make([]Server, 0, len(services))
 	for i := range services {
 		s := services[i]
-		servers = append(servers, ConsulServer{
+		servers = append(servers, Server{
 			Meta:    s.ServiceMeta,
 			Address: s.ServiceAddress,
 			Port:    s.ServicePort,
 		})
 	}
 	rail.Debugf("Fetched nodes for service: %v, %+v", name, servers)
-	consulServiceList.servers[name] = servers
+	consulServerList.servers[name] = servers
 	return err
 }
 
@@ -322,7 +252,7 @@ The resolved url will be in format: "http://" + host + ":" + port + "/" + relUrl
 Return ErrServiceInstanceNotFound if no instance is found.
 */
 func ConsulResolveRequestUrl(serviceName string, relUrl string) (string, error) {
-	server, err := SelectConsulServer(serviceName, RandomConsulServerSelector)
+	server, err := SelectServer(serviceName, RandomServerSelector)
 	if err != nil {
 		return "", err
 	}
@@ -335,37 +265,37 @@ Resolve service address (host:port).
 Return ErrServiceInstanceNotFound if no instance is found.
 */
 func ConsulResolveServiceAddr(name string) (string, error) {
-	selected, err := SelectConsulServer(name, RandomConsulServerSelector)
+	selected, err := SelectServer(name, RandomServerSelector)
 	if err != nil {
 		return "", err
 	}
 	return selected.ServerAddress(), nil
 }
 
-// Select one ConsulServer based on the provided selector.
+// Select one Server based on the provided selector.
 //
 // If none is matched, ErrConsulServiceInstanceNotFound is returned.
-func SelectConsulServer(name string, selector func(servers []ConsulServer) int) (ConsulServer, error) {
-	consulServiceList.RLock()
-	defer consulServiceList.RUnlock()
-	servers := consulServiceList.servers[name]
+func SelectServer(name string, selector func(servers []Server) int) (Server, error) {
+	consulServerList.RLock()
+	defer consulServerList.RUnlock()
+	servers := consulServerList.servers[name]
 
 	if len(servers) < 1 {
-		return ConsulServer{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
+		return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
 	}
 	selected := selector(servers)
 	if selected >= 0 && selected < len(servers) {
 		return servers[selected], nil
 	}
-	return ConsulServer{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
+	return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrConsulServiceInstanceNotFound)
 }
 
 // List Consul Servers already loaded in cache.
-func ListConsulServers(name string) []ConsulServer {
-	consulServiceList.RLock()
-	defer consulServiceList.RUnlock()
-	servers := consulServiceList.servers[name]
-	copied := make([]ConsulServer, 0, len(servers))
+func ListServers(name string) []Server {
+	consulServerList.RLock()
+	defer consulServerList.RUnlock()
+	servers := consulServerList.servers[name]
+	copied := make([]Server, 0, len(servers))
 	copy(copied, servers)
 	return copied
 }
@@ -376,19 +306,19 @@ func DeregisterService() error {
 		return nil
 	}
 
-	regSub.mu.Lock()
-	defer regSub.mu.Unlock()
+	consulRegistration.mu.Lock()
+	defer consulRegistration.mu.Unlock()
 
 	// not registered
-	if regSub.serviceId == ServiceIdNil {
+	if consulRegistration.serviceId == ServiceIdNil {
 		return nil
 	}
 
-	Infof("Deregistering current instance on Consul, service_id: '%s'", regSub.serviceId)
+	Infof("Deregistering current instance on Consul, service_id: '%s'", consulRegistration.serviceId)
 
-	err := ConsulApi.DeregisterService(regSub.serviceId)
+	err := ConsulApi.DeregisterService(consulRegistration.serviceId)
 	if err == nil {
-		regSub.serviceId = ServiceIdNil
+		consulRegistration.serviceId = ServiceIdNil
 	}
 	return err
 }
@@ -399,9 +329,9 @@ func IsConsulServiceRegistered() bool {
 		return false
 	}
 
-	regSub.mu.Lock()
-	defer regSub.mu.Unlock()
-	return regSub.serviceId != ServiceIdNil
+	consulRegistration.mu.Lock()
+	defer consulRegistration.mu.Unlock()
+	return consulRegistration.serviceId != ServiceIdNil
 }
 
 /*
@@ -420,11 +350,11 @@ This func looks for following prop:
 	"consul.healthCheckFailedDeregisterAfter"
 */
 func RegisterService() error {
-	regSub.mu.Lock()
-	defer regSub.mu.Unlock()
+	consulRegistration.mu.Lock()
+	defer consulRegistration.mu.Unlock()
 
 	// registered already
-	if regSub.serviceId != ServiceIdNil {
+	if consulRegistration.serviceId != ServiceIdNil {
 		return nil
 	}
 
@@ -463,7 +393,7 @@ func RegisterService() error {
 	if err := ConsulApi.RegisterService(registration); err != nil {
 		return err
 	}
-	regSub.serviceId = proposedServiceId
+	consulRegistration.serviceId = proposedServiceId
 
 	Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
 	return nil
@@ -497,7 +427,14 @@ func GetConsulClient() (*api.Client, error) {
 	}
 	consulp.consul = c
 	Infof("Created Consul Client on %s", addr)
-	StartServerListPoller(GetPropInt(PropConsulFetchServerInterval))
+
+	consulServerListPoller = NewTickRuner(GetPropDur(PropConsulFetchServerInterval, time.Second),
+		func() {
+			rail := EmptyRail()
+			// make sure we poll service instance right after we created ticker
+			PollServiceListInstances(rail)
+		})
+
 	return c, nil
 }
 
@@ -542,10 +479,19 @@ func ConsulBootstrap(rail Rail) error {
 		if !IsConsulServiceRegistered() {
 			return
 		}
+
+		// deregister current instnace
 		if e := DeregisterService(); e != nil {
 			rail.Errorf("Failed to deregister on Consul, %v", e)
 		}
-		consulServiceList.UnsubscribeAll(rail)
+
+		// stop service instance poller
+		if consulServerListPoller != nil {
+			consulServerListPoller.Stop()
+		}
+
+		// stop service watches
+		consulServerList.UnsubscribeAll(rail)
 	})
 
 	if e := RegisterService(); e != nil {
@@ -567,14 +513,22 @@ type ConsulServiceRegistry struct {
 	Rule ServerSelector
 }
 
-func (r ConsulServiceRegistry) resolve(rail Rail, service string, relativeUrl string) (string, error) {
-	addr, err := ConsulResolveRequestUrl(service, relativeUrl)
+func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
+	server, err := SelectServer(service, c.Rule)
+	if err != nil {
+		return "", err
+	}
+	addr := server.BuildUrl(relativeUrl)
 	if err == nil {
-		consulServiceList.Subscribe(rail, service)
+		consulServerList.Subscribe(rail, service)
 	}
 	return addr, err
 }
 
+func (c *ConsulServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
+	return ListServers(service), nil
+}
+
 func SubscribeConsulService(rail Rail, service string) error {
-	return consulServiceList.Subscribe(rail, service)
+	return consulServerList.Subscribe(rail, service)
 }

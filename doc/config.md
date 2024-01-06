@@ -134,9 +134,10 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 
 ## Client Package Configuration
 
-| property      | description                             | default value |
-| ------------- | --------------------------------------- | ------------- |
-| client.host.* | static hostname and port of the service |               |
+| property                         | description         | default value |
+| -------------------------------- | ------------------- | ------------- |
+| client.addr.${SERVICE_NAME}.host | client service host |               |
+| client.addr.${SERVICE_NAME}.port | client service port |               |
 
 
 ## JWT Configuration
