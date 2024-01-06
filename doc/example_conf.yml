@@ -1,0 +1,62 @@
+# this is a configuration example, the configuration shown here is not complete
+# this is mainly used to demonstrate how configuration properties are mapped
+
+# enable production mode
+# you may set this to false for development environment
+mode.production: true
+
+# app name, required
+# this is used to identify current application
+# by default, it will be used to register service instance on consul
+app.name: "vfm"
+
+# mysql client configuration
+mysql:
+  enabled: true
+  user: "root"
+  password: "123456"
+  database: "mydb"
+  host: "localhost"
+  port: 3306
+
+# redis client configuration
+redis:
+  enabled: true
+  address: "redis"
+  port: 6379
+  username:
+  password:
+  database: 0
+
+# web server configuration
+server:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
+
+# consul client configuration
+consul:
+  enabled: true
+  consulAddress: consul:8500
+  registerName: "${app.name}"
+
+
+# rabbitmq client configuration
+rabbitmq:
+  enabled: true
+  host: "localhost"
+  port: 5672
+  username: "guest"
+  password: "guest"
+  vhost: "/"
+
+# logging configuration
+logging:
+  level: info
+  rolling.file: "/usr/src/logs/${app.name}.log"
+
+# distributed task scheduling configuration
+# this is by default enabled
+task.scheduling:
+  enabled: true
+  group: "${app.name}"

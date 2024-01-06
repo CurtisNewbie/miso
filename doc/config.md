@@ -26,6 +26,8 @@ e.g.,
 
 Notice that if you have more than one configuration file to load, you can use `config.extra.files` configuration property.
 
+The tables shown below list all configuration that you can tune. You can also read [example_conf.yml](./example_conf.yml) to get a better understanding on how these configuration properties are mapped in a yaml file.
+
 ## Common Configuration
 
 | property           | description                              | default value |

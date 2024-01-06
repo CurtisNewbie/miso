@@ -68,6 +68,7 @@ func init() {
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
+	SetDefProp(PropConsuleRegisterName, "${app.name}")
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Boostrap Consul",
@@ -355,9 +356,6 @@ func RegisterService() error {
 
 	serverPort := GetPropInt(PropServerPort)
 	registerName := GetPropStr(PropConsuleRegisterName)
-	if registerName == "" { // fallback to app.name
-		registerName = GetPropStr(PropAppName)
-	}
 	registerAddress := GetPropStr(PropConsulRegisterAddress)
 	healthCheckUrl := GetPropStr(PropConsulHealthcheckUrl)
 	healthCheckInterval := GetPropStr(PropConsulHealthCheckInterval)

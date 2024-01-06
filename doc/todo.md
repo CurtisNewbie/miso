@@ -6,7 +6,7 @@
 - [x] Update consul server list in real time using watch.
 - [x] Refactor consul.go, move service discovery related stuff to a discovery.go.
 - [x] Filter consul services that are not `passing`.
-- [ ] Add a complete configuration example.
+- [x] Add an *almost* complete configuration example.
 - [ ] Provide a demo project.
 - [ ] Document service discovery and load balancing.
 - [ ] Document MySQL and Redis client.
