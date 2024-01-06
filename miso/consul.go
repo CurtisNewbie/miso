@@ -16,7 +16,7 @@ import (
 
 const (
 	// Service registration status - passing.
-	ConsulRegiStatusPassing = "passing"
+	ConsulStatusPassing = "passing"
 
 	// Zero value for empty serviceId
 	ServiceIdNil = "nil"
@@ -61,9 +61,9 @@ func init() {
 	SetDefProp(PropConsulEnabled, false)
 	SetDefProp(PropConsulAddress, "localhost:8500")
 	SetDefProp(PropConsulHealthcheckUrl, "/health")
-	SetDefProp(PropConsulHealthCheckInterval, "15s")
+	SetDefProp(PropConsulHealthCheckInterval, "5s")
 	SetDefProp(PropConsulHealthcheckTimeout, "3s")
-	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "55s")
+	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "30m")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
@@ -146,14 +146,19 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 		case []*api.ServiceEntry:
 			instances := make([]Server, 0, len(dat))
 			for _, entry := range dat {
+				if entry.Checks.AggregatedStatus() != ConsulStatusPassing {
+					continue
+				}
 				instances = append(instances, Server{
 					Address: entry.Service.Address,
 					Port:    entry.Service.Port,
 					Meta:    entry.Service.Meta,
 				})
 			}
+
 			s.servers[service] = instances
-			Debugf("Watch receive service changes to %v, %d instances, instances: %+v", service, len(dat), instances)
+			Debugf("Watch receive service changes to %v, %d instances, %d passing instances, instances: %+v",
+				service, len(dat), len(instances), instances)
 		}
 	}
 
@@ -220,13 +225,16 @@ func fetchAndCacheServiceNodes(rail Rail, name string) error {
 	servers := make([]Server, 0, len(services))
 	for i := range services {
 		s := services[i]
+		if s.Checks.AggregatedStatus() != ConsulStatusPassing {
+			continue
+		}
 		servers = append(servers, Server{
 			Meta:    s.ServiceMeta,
 			Address: s.ServiceAddress,
 			Port:    s.ServicePort,
 		})
 	}
-	rail.Debugf("Fetched nodes for service: %v, %+v", name, servers)
+	rail.Debugf("Fetched %d (passing) instances for service: %v, %+v", len(servers), name, servers)
 	consulServerList.servers[name] = servers
 	return err
 }
@@ -372,7 +380,7 @@ func RegisterService() error {
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
-			Status:                         ConsulRegiStatusPassing, // for responsiveness
+			Status:                         ConsulStatusPassing, // for responsiveness
 		},
 		Meta: GetPropStrMap(PropConsulMetadata),
 	}

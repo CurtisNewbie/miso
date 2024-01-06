@@ -73,6 +73,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropServerEnabled                 = "server.enabled"
 	PropServerHost                    = "server.host"
 	PropServerPort                    = "server.port"
@@ -89,6 +90,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropSqliteFile = "sqlite.file"
 
 	/*
@@ -98,6 +100,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropRabbitMqEnabled     = "rabbitmq.enabled"
 	PropRabbitMqHost        = "rabbitmq.host"
 	PropRabbitMqPort        = "rabbitmq.port"
@@ -113,6 +116,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropTracingPropagationKeys = "tracing.propagation.keys"
 
 	/*
@@ -122,6 +126,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropLoggingFile                   = "logging.level"
 	PropLoggingRollingFile            = "logging.rolling.file"
 	PropLoggingRollingFileMaxAge      = "logging.file.max-age"
@@ -136,6 +141,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropTaskSchedulingEnabled = "task.scheduling.enabled"
 	ProptaskSchedulingGroup   = "task.scheduling.group"
 
@@ -146,6 +152,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropJwtPublicKey  = "jwt.key.public"
 	PropJwtPrivateKey = "jwt.key.private"
 	PropJwtIssue      = "jwt.key.issuer"
@@ -157,6 +164,7 @@ const (
 
 		------------------------------------
 	*/
+
 	PropMetricsEnabled              = "metrics.enabled"
 	PropMetricsRoute                = "metrics.route"
 	PropMetricsAuthEnabled          = "metrics.auth.enabled"
@@ -171,5 +179,6 @@ const (
 
 		------------------------------------
 	*/
+
 	PropConfigExtraFiles = "config.extra.files"
 )

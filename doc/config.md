@@ -56,9 +56,9 @@ Notice that if you have more than one configuration file to load, you can use `c
 | consul.registerAddress                  | registered service address                                                         | `${server.host}:${server.port}` |
 | consul.consulAddress                    | consul server address                                                              | `localhost:8500`                |
 | consul.healthCheckUrl                   | health check url                                                                   | `/health`                       |
-| consul.healthCheckInterval              | health check interval                                                              | 15s                             |
+| consul.healthCheckInterval              | health check interval                                                              | 5s                              |
 | consul.healthCheckTimeout               | health check timeout                                                               | 3s                              |
-| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 55s                             |
+| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 30m                             |
 | consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true                            |
 | consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                              |
 | consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false                           |
