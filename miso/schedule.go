@@ -196,7 +196,7 @@ func SchedulerBootstrap(rail Rail) error {
 
 // Runner that triggers run on every tick.
 //
-// Create TickerRunner using func NewTickerRunner(...).
+// Create TickRunner using func NewTickRunner(...).
 type TickRunner struct {
 	task   func()
 	ticker *time.Ticker
