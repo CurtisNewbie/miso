@@ -120,6 +120,13 @@ type ServerList struct {
 	serviceWatches map[string]*watch.Plan
 }
 
+func (s *ServerList) IsSubscribed(rail Rail, service string) bool {
+	consulServerList.RLock()
+	defer consulServerList.RUnlock()
+	_, ok := s.serviceWatches[service]
+	return ok
+}
+
 func (s *ServerList) Subscribe(rail Rail, service string) error {
 	consulServerList.RLock()
 	if _, ok := s.serviceWatches[service]; ok {
@@ -145,6 +152,9 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 	wp.Handler = func(idx uint64, data interface{}) {
 		switch dat := data.(type) {
 		case []*api.ServiceEntry:
+			consulServerList.Lock()
+			defer consulServerList.Unlock()
+
 			instances := make([]Server, 0, len(dat))
 			for _, entry := range dat {
 				if entry.Checks.AggregatedStatus() != ConsulStatusPassing {
@@ -163,12 +173,8 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 		}
 	}
 
-	client := GetConsulClient()
-
 	s.serviceWatches[service] = wp
-
-	go wp.RunWithClientAndHclog(client, nil)
-
+	go wp.RunWithClientAndHclog(GetConsulClient(), nil)
 	rail.Infof("Created Consul Service Watch for %v", service)
 
 	return nil
@@ -521,21 +527,29 @@ type ConsulServiceRegistry struct {
 }
 
 func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
-	// always try to create a watch for the service
-	consulServerList.Subscribe(rail, service)
 
 	// select one of the instance for this service
 	server, err := SelectServer(service, c.Rule)
+
+	// always try to create a watch for the service
+	defer consulServerList.Subscribe(rail, service)
 
 	if err != nil {
 		// it's possible that we haven't created a watch for the service
 		// and the last time we polled the service instances, there was no instance returned for it
 		// we may just try to fetch again and hope for the best
 		if errors.Is(err, ErrConsulServiceInstanceNotFound) {
+
+			// already subscribed, give up
+			if consulServerList.IsSubscribed(rail, service) {
+				return "", err
+			}
+
 			// fetch immediately
 			if err := fetchAndCacheServiceNodes(rail, service); err != nil {
 				return "", err
 			}
+
 			// select again
 			if server, err = SelectServer(service, c.Rule); err != nil {
 				// pretty sure that the service is completely down
@@ -547,9 +561,7 @@ func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUr
 		}
 	}
 
-	addr := server.BuildUrl(relativeUrl)
-
-	return addr, nil
+	return server.BuildUrl(relativeUrl), nil
 }
 
 func (c *ConsulServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
