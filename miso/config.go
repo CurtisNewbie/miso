@@ -237,7 +237,7 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 			return
 		}
 		viper.SetConfigType("yml")
-		if err = viper.ReadConfig(bufio.NewReader(f)); err != nil {
+		if err = viper.MergeConfig(bufio.NewReader(f)); err != nil {
 			eo = fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
 		}
 
