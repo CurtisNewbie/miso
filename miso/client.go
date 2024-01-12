@@ -199,8 +199,8 @@ func (t *TClient) prepReqUrl() (string, error) {
 		url = resolved
 	}
 
-	if !httpProtoRegex.MatchString(t.Url) { // missing a protocol
-		url = httpProto + t.Url
+	if !httpProtoRegex.MatchString(url) { // missing a protocol
+		url = httpProto + url
 	}
 	return concatQueryParam(url, t.QueryParam), nil
 }
