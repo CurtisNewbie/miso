@@ -47,14 +47,15 @@ func NewEventBus(name string) {
 
 // Subscribe to event bus.
 //
-// Internally, it registers a listener for the queue identified by the bus name.
+// Internally, it calls NewEventBus(...) and registers a listener for the queue identified by the bus name.
 func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t T) error) error {
 	if name == "" {
-		return errBusNameEmpty
+		panic("event bus name is empty")
 	}
 	if concurrency < 1 {
 		concurrency = 1
 	}
+	NewEventBus(name)
 	AddRabbitListener(JsonMsgListener[T]{QueueName: name, Handler: listener, NumOfRoutines: concurrency})
 	return nil
 }
