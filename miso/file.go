@@ -26,11 +26,6 @@ func OpenFile(name string, flag int) (*os.File, error) {
 	return os.OpenFile(name, flag, DefFileMode)
 }
 
-// Create writable file with 0666 permission.
-func WritableFile(name string) (*os.File, error) {
-	return OpenFile(name, os.O_CREATE|os.O_WRONLY)
-}
-
 // Create appendable file with 0666 permission.
 func AppendableFile(name string) (*os.File, error) {
 	return OpenFile(name, os.O_CREATE|os.O_APPEND)
