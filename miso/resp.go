@@ -35,6 +35,18 @@ func (r GnResp[T]) Res() (T, error) {
 	return r.Data, r.Err()
 }
 
+func (r GnResp[T]) MappedRes(mapper map[string]error) (T, error) {
+	if r.Error {
+		if mapper != nil {
+			if err, ok := mapper[r.ErrorCode]; ok && err != nil {
+				return r.Data, err
+			}
+		}
+		return r.Data, r.Err()
+	}
+	return r.Data, r.Err()
+}
+
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
