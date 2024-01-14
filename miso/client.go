@@ -58,7 +58,7 @@ func (tr *TResponse) Close() error {
 // Response is always closed automatically.
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
-func (tr *TResponse) WriterTo(writer io.Writer) (int64, error) {
+func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
 	if tr.Err != nil {
 		return 0, tr.Err
 	}
