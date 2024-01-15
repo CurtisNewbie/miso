@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	manualBootstrap = false
+	manualBootstrapProm = false
 )
 
 func init() {
@@ -106,7 +106,7 @@ func PrometheusBootstrap(rail Rail) error {
 		rail.Info("Enabled metrics authorization")
 	}
 
-	if !manualBootstrap {
+	if !manualBootstrapProm {
 		RawGet(GetPropStr(PropMetricsRoute), func(c *gin.Context, rail Rail) {
 			handler.ServeHTTP(c.Writer, c.Request)
 		}).Build()
@@ -118,7 +118,7 @@ func PrometheusBootstrap(rail Rail) error {
 //
 // This is mainly used for gateway that implements handler for all endpoints.
 func ManualBootstrapPrometheus() {
-	manualBootstrap = true
+	manualBootstrapProm = true
 }
 
 // Timer based on prometheus.HistogramVec.

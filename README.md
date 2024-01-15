@@ -91,11 +91,12 @@ go get github.com/curtisnewbie/miso@v0.0.11
 
 ## Documentations
 
-- [Configuration](./doc/config.md)
-- [Application Lifecycle](./doc/lifecycle.md)
-- [Distributed Task Scheduling](./doc/dtask.md)
-- [Validation](./doc/validate.md)
-- [Service Healthcheck](./doc/health.md)
-- [Customize Build](./doc/customize_build.md)
-- [JSON Processing](./doc/json.md)
+- [configuration](./doc/config.md)
+- [application lifecycle](./doc/lifecycle.md)
+- [distributed task scheduling](./doc/dtask.md)
+- [validation](./doc/validate.md)
+- [service healthcheck](./doc/health.md)
+- [customize build](./doc/customize_build.md)
+- [json processing](./doc/json.md)
+- [pprof](./doc/pprof.md)
 - More in the future (maybe) :D
