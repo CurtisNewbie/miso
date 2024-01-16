@@ -2,6 +2,8 @@ package miso
 
 import (
 	"errors"
+	"fmt"
+	"runtime/debug"
 	"time"
 )
 
@@ -19,13 +21,13 @@ type future[T any] struct {
 }
 
 // Get from Future indefinitively
-func (f future[T]) Get() (T, error) {
+func (f *future[T]) Get() (T, error) {
 	getResult := <-f.ch
 	return getResult()
 }
 
 // Get from Future with timeout (in milliseconds)
-func (f future[T]) TimedGet(timeout int) (T, error) {
+func (f *future[T]) TimedGet(timeout int) (T, error) {
 	select {
 	case obtainResult := <-f.ch:
 		return obtainResult()
@@ -39,11 +41,22 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 	fut := future[T]{}
 	fut.ch = make(chan func() (T, error), 1)
 	wrp := func() {
+		defer func() {
+			if v := recover(); v != nil {
+				Warnf("panic recovered, %v\n%v", v, string(debug.Stack()))
+				var t T
+				if err, ok := v.(error); ok {
+					fut.ch <- func() (T, error) { return t, err }
+				} else {
+					fut.ch <- func() (T, error) { return t, fmt.Errorf("%v", v) }
+				}
+			}
+		}()
+
 		t, err := task()
-		f := func() (T, error) { return t, err }
-		fut.ch <- f
+		fut.ch <- func() (T, error) { return t, err }
 	}
-	return fut, wrp
+	return &fut, wrp
 }
 
 // Create Future, once the future is created, it starts running on a new goroutine.
