@@ -856,6 +856,10 @@ func WebServerBootstrap(rail Rail) error {
 		engine.Use(PerfMiddleware())
 	}
 
+	for _, p := range ginPreProcessors {
+		p(rail, engine)
+	}
+
 	if GetPropBool(PropServerPprofEnabled) && !manualRegisterPprof {
 		path := "/debug/pprof"
 		BaseRoute(path).Group(
@@ -878,10 +882,6 @@ func WebServerBootstrap(rail Rail) error {
 
 	// register http routes
 	registerServerRoutes(rail, engine)
-
-	for _, p := range ginPreProcessors {
-		p(rail, engine)
-	}
 
 	// start the http server
 	server := createHttpServer(engine)
