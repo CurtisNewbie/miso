@@ -40,8 +40,9 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	routesRegiatarList []routesRegistar = []routesRegistar{}
-	serverHttpRoutes   []HttpRoute      = []HttpRoute{}
+	routeRegistars   = []routesRegistar{}
+	serverHttpRoutes = []HttpRoute{}
+	ginPreProcessors = []GinPreProcessor{}
 
 	shuttingDown   bool         = false
 	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
@@ -78,6 +79,8 @@ var (
 
 	manualRegisterPprof = false
 )
+
+type GinPreProcessor func(rail Rail, engine *gin.Engine)
 
 // Raw version of traced route handler.
 type RawTRouteHandler func(c *gin.Context, rail Rail)
@@ -338,7 +341,7 @@ func IPut[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteReg
 }
 
 func addRoutesRegistar(reg routesRegistar) {
-	routesRegiatarList = append(routesRegiatarList, reg)
+	routeRegistars = append(routeRegistars, reg)
 }
 
 // Register GIN route for consul healthcheck
@@ -569,7 +572,7 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 	})
 
 	// register custom routes
-	for _, registerRoute := range routesRegiatarList {
+	for _, registerRoute := range routeRegistars {
 		registerRoute(engine)
 	}
 
@@ -876,6 +879,10 @@ func WebServerBootstrap(rail Rail) error {
 	// register http routes
 	registerServerRoutes(rail, engine)
 
+	for _, p := range ginPreProcessors {
+		p(rail, engine)
+	}
+
 	// start the http server
 	server := createHttpServer(engine)
 	rail.Infof("Serving HTTP on %s", server.Addr)
@@ -952,4 +959,9 @@ func (s *RoutingSubPath) Group(grouped ...GroupedRouteRegistar) *RoutingSubPath 
 // Registrer pprof debug endpoint manually
 func ManualPprofRegister() {
 	manualRegisterPprof = true
+}
+
+// Process *gin.Engine before the web server starts
+func PreProcessGin(preProcessor GinPreProcessor) {
+	ginPreProcessors = append(ginPreProcessors, preProcessor)
 }
