@@ -49,7 +49,7 @@ if __name__ == '__main__':
         exit(1)
 
     target_release = parse_beta(target)
-    if target_release != target and target_release in all_tags():
+    if target_release != target and target_release in all_tags().splitlines():
         print(f"{target_release} has been released")
         exit(1)
 
