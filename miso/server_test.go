@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,4 +102,41 @@ func TestPreServerBootstrapCallback(t *testing.T) {
 	if i != 3 {
 		t.Fatalf("i is not 3, but %v", i)
 	}
+}
+
+func TestGroupingNestedRoutes(t *testing.T) {
+	Infof("routes before: %+v", serverHttpRoutes)
+	BaseRoute("/open/api").
+		With(
+			SubPath("/v1").Group(
+				Get("/order", func(c *gin.Context, rail Rail) (any, error) {
+					// do something
+					return nil, nil
+				}).Extra(StrPair{"123", 123}),
+
+				Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
+					// do something
+					return nil, nil
+				}),
+			),
+			SubPath("/v2").Group(
+				Get("/order", func(c *gin.Context, rail Rail) (any, error) {
+					// do something
+					return nil, nil
+				}).Extra(StrPair{"123", 123}).Extra(StrPair{"456", 456}),
+				Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
+					// do something
+					return nil, nil
+				}),
+				Get("/invoice", func(c *gin.Context, rail Rail) (any, error) {
+					// do something
+					return nil, nil
+				}),
+			),
+		)
+
+	for _, r := range serverHttpRoutes {
+		Infof("%+v", r)
+	}
+
 }

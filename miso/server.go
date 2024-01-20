@@ -129,8 +129,6 @@ type GroupedRouteRegistar struct {
 	Extras       []StrPair
 }
 
-type RoutingGroup struct{ Base string }
-
 func init() {
 	AddShutdownHook(MarkServerShuttingDown)
 
@@ -906,17 +904,49 @@ func NewGroupedRouteRegistar(f func(baseUrl string, extra ...StrPair)) GroupedRo
 	}
 }
 
-// Group routes together to share the same base url.
-func BaseRoute(baseUrl string) RoutingGroup {
-	return RoutingGroup{Base: baseUrl}
+type RoutingGroup struct {
+	Base string
 }
 
-// Group routes
-func (rg RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
-	for i := range grouped {
-		gi := grouped[i]
-		gi.RegisterFunc(rg.Base, gi.Extras...)
+// Group routes, routes are immediately registered
+func (rg *RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
+	for _, r := range grouped {
+		r.RegisterFunc(rg.Base, r.Extras...)
 	}
+}
+
+// Group routes under the sub paths, routes are immediately registered.
+func (rg *RoutingGroup) With(subpaths ...*RoutingSubPath) {
+	for _, s := range subpaths {
+		for _, r := range s.delayedRegisters {
+			r.RegisterFunc(rg.Base+s.path, r.Extras...)
+		}
+	}
+}
+
+// Group routes together to share the same base url.
+func BaseRoute(baseUrl string) *RoutingGroup {
+	return &RoutingGroup{Base: baseUrl}
+}
+
+// RoutingSubPath, each sub path belongs to a specific RoutingGroup (the base path)
+type RoutingSubPath struct {
+	path             string
+	delayedRegisters []GroupedRouteRegistar
+}
+
+// Create sub path for routing requests
+func SubPath(path string) *RoutingSubPath {
+	return &RoutingSubPath{
+		path:             path,
+		delayedRegisters: []GroupedRouteRegistar{},
+	}
+}
+
+// Group routes under current sub path
+func (s *RoutingSubPath) Group(grouped ...GroupedRouteRegistar) *RoutingSubPath {
+	s.delayedRegisters = append(s.delayedRegisters, grouped...)
+	return s
 }
 
 // Registrer pprof debug endpoint manually
