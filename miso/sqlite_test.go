@@ -8,6 +8,7 @@ import (
 )
 
 func TestGetSqlite(t *testing.T) {
+	SetLogLevel("debug")
 	SetProp(PropSqliteFile, "test.db")
 	tx := GetSqlite()
 	db, e := tx.DB()
@@ -32,5 +33,6 @@ func TestGetSqlite(t *testing.T) {
 	if e = os.Remove("test.db"); e != nil {
 		logrus.Infof("Failed to delete test.db, %v", e)
 	}
-
+	os.Remove("test.db-shm")
+	os.Remove("test.db-wal")
 }

@@ -92,7 +92,8 @@ const (
 		------------------------------------
 	*/
 
-	PropSqliteFile = "sqlite.file"
+	PropSqliteFile       = "sqlite.file"
+	PropSqliteWalEnabled = "sqlite.wal.enabled"
 
 	/*
 		------------------------------------

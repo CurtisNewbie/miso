@@ -17,6 +17,7 @@ var (
 )
 
 func init() {
+	SetDefProp(PropSqliteWalEnabled, true)
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap SQLite",
 		Bootstrap: SqliteBootstrap,
@@ -48,6 +49,18 @@ func initSqlite() {
 		panic(err)
 	}
 	sqliteDb = sq
+
+	// https://www.sqlite.org/pragma.html#pragma_journal_mode
+	if GetPropBool(PropSqliteWalEnabled) {
+		Debug("Enabling SQLite WAL mode")
+		var mode string
+		t := sq.Raw("PRAGMA journal_mode=WAL").Scan(&mode)
+		if err := t.Error; err != nil {
+			panic(fmt.Errorf("failed to enable WAL mode, %v", err))
+		} else {
+			Debugf("Enabled SQLite WAL mode, result: %v", mode)
+		}
+	}
 }
 
 func newSqlite(path string) (*gorm.DB, error) {
