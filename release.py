@@ -1,3 +1,4 @@
+import re
 import sys
 import re
 import subprocess
@@ -25,6 +26,13 @@ def current_tag():
     return out
 
 
+def parse_beta(tag):
+    pat = re.compile('(v.+).beta.*')
+    m = pat.match(tag)
+    if m:
+        return m[1]
+    return None
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Please specify version")
@@ -33,14 +41,15 @@ if __name__ == '__main__':
     branch = current_branch()
     # print(branch)
 
-    if branch == 'dev':
-        print("Cannot release on dev branch")
-        exit(1)
-
     release = sys.argv[1]
     latest = current_tag().strip()
     if latest == release:
         print(f"{release} has been released")
+        exit(1)
+
+    beta_ver = parse_beta(release)
+    if beta_ver and latest == beta_ver:
+        print(f"{beta_ver} has been released")
         exit(1)
 
     with open("./miso/version.go", "w") as f:
