@@ -20,6 +20,8 @@ def current_branch():
         if m:
             return m[1]
 
+def all_tags():
+    return cli_run("git tag")
 
 def current_tag():
     out = cli_run("git describe --tags --abbrev=0")
@@ -31,7 +33,7 @@ def parse_beta(tag):
     m = pat.match(tag)
     if m:
         return m[1]
-    return None
+    return tag
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -39,17 +41,16 @@ if __name__ == '__main__':
         exit(1)
 
     branch = current_branch()
-    # print(branch)
+    target = sys.argv[1]
 
-    release = sys.argv[1]
-    latest = current_tag().strip()
-    if latest == release:
-        print(f"{release} has been released")
+    latest_tag = current_tag().strip()
+    if latest_tag == target:
+        print(f"{latest_tag} has been released")
         exit(1)
 
-    beta_ver = parse_beta(release)
-    if beta_ver and latest == beta_ver:
-        print(f"{beta_ver} has been released")
+    target_release = parse_beta(target)
+    if target_release != target and target_release in all_tags():
+        print(f"{target_release} has been released")
         exit(1)
 
     with open("./miso/version.go", "w") as f:
@@ -57,13 +58,13 @@ if __name__ == '__main__':
             "package miso\n",
             "\n",
             "const (\n",
-            f"\tMisoVersion = \"{release}\"\n"
+            f"\tMisoVersion = \"{target}\"\n"
             ")\n"
             ""
         ])
 
     print(cli_run("go fmt ./..."))
-    print(cli_run(f"git commit -am \"Release {release}\""))
-    print(cli_run(f"git tag \"{release}\""))
+    print(cli_run(f"git commit -am \"Release {target}\""))
+    print(cli_run(f"git tag \"{target}\""))
     print("Done, it's time to push your tag to remote origin! :D")
-    print(f"\ngit push && git push origin {release}\n\n")
+    print(f"\ngit push && git push origin {target}\n\n")
