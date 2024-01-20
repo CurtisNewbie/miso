@@ -82,6 +82,7 @@ const (
 	PropServerRequestLogEnabled       = "server.request-log.enabled"
 	PropServerPropagateInboundTrace   = "server.trace.inbound.propagate"
 	PropServerRequestValidateEnabled  = "server.validate.request.enabled"
+	PropServerPprofEnabled            = "server.pprof.enabled"
 
 	/*
 		------------------------------------

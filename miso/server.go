@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"sort"
@@ -74,6 +75,8 @@ var (
 	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
 		DefaultHandleResult(c, rail, payload, err, defaultResultBodyBuilder)
 	}
+
+	manualRegisterPprof = false
 )
 
 // Raw version of traced route handler.
@@ -138,6 +141,7 @@ func init() {
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
+	SetDefProp(PropServerPprofEnabled, false)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -851,6 +855,18 @@ func WebServerBootstrap(rail Rail) error {
 		engine.Use(PerfMiddleware())
 	}
 
+	if GetPropBool(PropServerPprofEnabled) && !manualRegisterPprof {
+		path := "/debug/pprof"
+		BaseRoute(path).Group(
+			RawGet("", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
+			RawGet("/:name", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
+			RawGet("/cmdline", func(c *gin.Context, rail Rail) { pprof.Cmdline(c.Writer, c.Request) }),
+			RawGet("/profile", func(c *gin.Context, rail Rail) { pprof.Profile(c.Writer, c.Request) }),
+			RawGet("/symbol", func(c *gin.Context, rail Rail) { pprof.Symbol(c.Writer, c.Request) }),
+			RawGet("/trace", func(c *gin.Context, rail Rail) { pprof.Trace(c.Writer, c.Request) }),
+		)
+	}
+
 	// register customer recovery func
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
@@ -901,4 +917,9 @@ func (rg RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
 		gi := grouped[i]
 		gi.RegisterFunc(rg.Base, gi.Extras...)
 	}
+}
+
+// Registrer pprof debug endpoint manually
+func ManualPprofRegister() {
+	manualRegisterPprof = true
 }

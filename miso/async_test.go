@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -63,4 +64,34 @@ func TestRunAsyncPool(t *testing.T) {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
 	Infof("sum: %v, time: %v", sum, time.Since(start))
+}
+
+func TestRunAsyncWithPanic(t *testing.T) {
+	SetLogLevel("debug")
+
+	future := RunAsync[struct{}](panicFunc)
+	_, err := future.Get()
+	if err == nil {
+		t.Fatal("should return err")
+	}
+	t.Log(err)
+
+	predefinedErr := errors.New("predefined panic error")
+	future = RunAsync[struct{}](func() (struct{}, error) {
+		t.Log("about to panic")
+		panic(predefinedErr)
+	})
+	_, err = future.Get()
+	if err == nil {
+		t.Fatal("should return err")
+	}
+	if !errors.Is(err, predefinedErr) {
+		t.Fatalf("wrong error, %v", err)
+	}
+	t.Log(err)
+}
+
+func panicFunc() (struct{}, error) {
+	Info("about to panic")
+	panic("panic func panicked")
 }

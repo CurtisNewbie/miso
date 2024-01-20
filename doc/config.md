@@ -38,16 +38,17 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Web Server Configuration
 
-| property                        | description                                       | default value |
-| ------------------------------- | ------------------------------------------------- | ------------- |
-| server.enabled                  | enable http server                                | true          |
-| server.host                     | http server host                                  | 0.0.0.0       |
-| server.port                     | http server port                                  | 8080          |
-| server.gracefulShutdownTimeSec  | time wait (in second) before http server shutdown | 30            |
-| server.perf.enabled             | logs time duration for each inbound http request  | false         |
-| server.trace.inbound.propagate  | propagate trace info from inbound requests        | true          |
-| server.validate.request.enabled | enable inbound request parameter validation       | true          |
-| server.request-log.enabled      | enable server request log                         | false         |
+| property                        | description                                          | default value |
+| ------------------------------- | ---------------------------------------------------- | ------------- |
+| server.enabled                  | enable http server                                   | true          |
+| server.host                     | http server host                                     | 0.0.0.0       |
+| server.port                     | http server port                                     | 8080          |
+| server.gracefulShutdownTimeSec  | time wait (in second) before http server shutdown    | 30            |
+| server.perf.enabled             | logs time duration for each inbound http request     | false         |
+| server.trace.inbound.propagate  | propagate trace info from inbound requests           | true          |
+| server.validate.request.enabled | enable inbound request parameter validation          | true          |
+| server.request-log.enabled      | enable server request log                            | false         |
+| server.pprof.enabled            | enable pprof (exposed using endpoint '/debug/pprof') | false         |
 
 ## Consul Configuration
 
