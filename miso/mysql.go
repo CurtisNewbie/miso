@@ -26,6 +26,8 @@ var (
 		"writeTimeout=30s",
 		"timeout=3s",
 	}
+
+	minimumConnParam = "parseTime=True&loc=Local"
 )
 
 type mysqlHolder struct {
@@ -154,6 +156,9 @@ Init Handle to the database
 If mysql client has been initialized, current func call will be ignored.
 */
 func InitMySQL(rail Rail, p MySQLConnParam) error {
+	if p.ConnParam == "" {
+		p.ConnParam = minimumConnParam
+	}
 	mysqlp.Lock()
 	if mysqlp.conn != nil {
 		mysqlp.Unlock()
