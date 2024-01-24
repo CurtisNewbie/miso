@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -50,11 +51,17 @@ func (r GnResp[T]) MappedRes(mapper map[string]error) (T, error) {
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error, rail Rail) Resp {
 	if e != nil {
-		if me, ok := e.(*MisoErr); ok {
+		me := &MisoErr{}
+		if errors.As(e, &me) {
 			if !me.HasCode() {
 				me.Code = ErrCodeGeneric
 			}
-			rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+			if me.InternalMsg != "" {
+				rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+			} else {
+				rail.Infof("Returned error, code: '%v', msg: '%v'", me.Code, me.Msg)
+			}
+
 			return ErrorRespWCode(me.Code, me.Msg)
 		}
 
