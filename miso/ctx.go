@@ -39,11 +39,11 @@ func (r Rail) CtxValInt(key string) int {
 }
 
 func (r Rail) TraceId() string {
-	return r.CtxValStr(X_TRACEID)
+	return r.CtxValStr(XTraceId)
 }
 
 func (r Rail) SpanId() string {
-	return r.CtxValStr(X_SPANID)
+	return r.CtxValStr(XSpanId)
 }
 
 func (r Rail) Tracef(format string, args ...interface{}) {
@@ -110,7 +110,7 @@ func (r Rail) WithCtxVal(key string, val any) Rail {
 // Create a new Rail with a new SpanId
 func (r Rail) NextSpan() Rail {
 	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
-	return r.WithCtxVal(X_SPANID, RandLowerAlphaNumeric(16))
+	return r.WithCtxVal(XSpanId, RandLowerAlphaNumeric(16))
 }
 
 // Create new Rail with context's CancelFunc
@@ -145,12 +145,12 @@ func EmptyRail() Rail {
 
 // Create new Rail from context
 func NewRail(ctx context.Context) Rail {
-	if ctx.Value(X_SPANID) == nil {
-		ctx = context.WithValue(ctx, X_SPANID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
+	if ctx.Value(XSpanId) == nil {
+		ctx = context.WithValue(ctx, XSpanId, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
-	if ctx.Value(X_TRACEID) == nil {
-		ctx = context.WithValue(ctx, X_TRACEID, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
+	if ctx.Value(XTraceId) == nil {
+		ctx = context.WithValue(ctx, XTraceId, RandLowerAlphaNumeric(16)) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 
 	return Rail{Ctx: ctx, log: TraceLogger(ctx)}

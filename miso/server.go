@@ -647,7 +647,7 @@ func TraceMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// propagate tracing key/value pairs with context
 		ctx := c.Request.Context()
-		propagatedKeys := append(GetPropagationKeys(), X_SPANID, X_TRACEID)
+		propagatedKeys := GetPropagationKeys()
 
 		for _, k := range propagatedKeys {
 			if h := c.GetHeader(k); h != "" {

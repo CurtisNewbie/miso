@@ -36,8 +36,8 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	fields := entry.Data
 	if fields != nil {
-		traceId = fields[X_TRACEID]
-		spanId = fields[X_SPANID]
+		traceId = fields[XTraceId]
+		spanId = fields[XSpanId]
 	}
 	if traceId == nil {
 		traceId = ""
@@ -104,7 +104,7 @@ func PreConfiguredFormatter() logrus.Formatter {
 
 // Return logger with tracing infomation
 func TraceLogger(ctx context.Context) *logrus.Entry {
-	return logrus.WithFields(logrus.Fields{X_SPANID: ctx.Value(X_SPANID), X_TRACEID: ctx.Value(X_TRACEID)})
+	return logrus.WithFields(logrus.Fields{XSpanId: ctx.Value(XSpanId), XTraceId: ctx.Value(XTraceId)})
 }
 
 // Check whether current log level is DEBUG

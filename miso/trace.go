@@ -5,12 +5,13 @@ import (
 )
 
 const (
-	X_TRACEID = "X-B3-TraceId"
-	X_SPANID  = "X-B3-SpanId"
+	XTraceId = "X-B3-TraceId"
+	XSpanId  = "X-B3-SpanId"
 )
 
 var (
 	propagationKeys = PropagationKeys{keys: NewSet[string]()}
+	TracePrefix     = "X-"
 )
 
 type PropagationKeys struct {
@@ -19,8 +20,8 @@ type PropagationKeys struct {
 }
 
 func init() {
-	propagationKeys.keys.Add(X_TRACEID)
-	propagationKeys.keys.Add(X_SPANID)
+	propagationKeys.keys.Add(XTraceId)
+	propagationKeys.keys.Add(XSpanId)
 }
 
 // Read property and find propagation keys .
@@ -55,7 +56,7 @@ func GetPropagationKeys() []string {
 
 	keys := []string{}
 	for k := range propagationKeys.keys.Keys {
-		keys = append(keys, k)
+		keys = append(keys, TracePrefix+k)
 	}
 	return keys
 }
