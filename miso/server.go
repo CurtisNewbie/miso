@@ -34,6 +34,11 @@ const (
 	// When these components bootstrap, the server is considered truly running.
 	// For example, service registration (for service discovery), MQ broker connection and so on.
 	BootstrapOrderL4 = -5
+
+	ExtraDesc     = "miso-Desc"
+	ExtraScope    = "miso-Scope"
+	ExtraResource = "miso-Resource"
+	ScopePublic   = "PUBLIC"
 )
 
 var (
@@ -108,6 +113,9 @@ type HttpRoute struct {
 	Method      string
 	Extra       map[string]any
 	HandlerName string
+	Scope       string // access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Desc        string // description of the route (metadata).
+	Resource    string // resource that the route should be bound to (metadata)
 }
 
 type ComponentBootstrap struct {
@@ -126,11 +134,6 @@ type ResultBodyBuilder struct {
 }
 
 type ServerResultHandler func(c *gin.Context, rail Rail, payload any, err error)
-
-type GroupedRouteRegistar struct {
-	RegisterFunc func(baseUrl string, extra ...StrPair)
-	Extras       []StrPair
-}
 
 func init() {
 	AddShutdownHook(MarkServerShuttingDown)
@@ -186,12 +189,29 @@ func triggerShutdownHook() {
 
 // Record server route
 func recordHttpServerRoute(url string, method string, handlerName string, extra ...StrPair) {
-	serverHttpRoutes = append(serverHttpRoutes, HttpRoute{
+	extras := MergeStrPairs(extra...)
+	r := HttpRoute{
 		Url:         url,
 		Method:      method,
 		HandlerName: handlerName,
-		Extra:       MergeStrPairs(extra...),
-	})
+		Extra:       extras,
+	}
+	if res, ok := extras[ExtraResource]; ok {
+		if v, ok := res.(string); ok {
+			r.Resource = v
+		}
+	}
+	if scope, ok := extras[ExtraScope]; ok {
+		if v, ok := scope.(string); ok {
+			r.Scope = v
+		}
+	}
+	if desc, ok := extras[ExtraDesc]; ok {
+		if v, ok := desc.(string); ok {
+			r.Desc = v
+		}
+	}
+	serverHttpRoutes = append(serverHttpRoutes, r)
 }
 
 // Get recorded server routes (deprecated, use GetHttpRoutes() instead)
@@ -892,14 +912,34 @@ func WebServerBootstrap(rail Rail) error {
 	return nil
 }
 
+type GroupedRouteRegistar struct {
+	RegisterFunc func(baseUrl string, extra ...StrPair)
+	Extras       []StrPair
+}
+
 // Build route.
 func (g GroupedRouteRegistar) Build() {
 	g.RegisterFunc("", g.Extras...)
 }
 
+// Add route description (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) Desc(desc string) GroupedRouteRegistar {
+	return g.Extra(ExtraDesc, desc)
+}
+
+// Mark route publicly accessible (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) Public() GroupedRouteRegistar {
+	return g.Extra(ExtraScope, ScopePublic)
+}
+
+// Record the resource that the route should be bound to (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) Resource(resource string) GroupedRouteRegistar {
+	return g.Extra(ExtraResource, resource)
+}
+
 // Add extra info to route.
-func (g GroupedRouteRegistar) Extra(ex StrPair) GroupedRouteRegistar {
-	g.Extras = append(g.Extras, ex)
+func (g GroupedRouteRegistar) Extra(key string, value any) GroupedRouteRegistar {
+	g.Extras = append(g.Extras, StrPair{key, value})
 	return g
 }
 
