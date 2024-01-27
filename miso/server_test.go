@@ -112,7 +112,7 @@ func TestGroupingNestedRoutes(t *testing.T) {
 				Get("/order", func(c *gin.Context, rail Rail) (any, error) {
 					// do something
 					return nil, nil
-				}).Extra(StrPair{"123", 123}),
+				}).Extra("123", 123),
 
 				Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
 					// do something
@@ -123,7 +123,7 @@ func TestGroupingNestedRoutes(t *testing.T) {
 				Get("/order", func(c *gin.Context, rail Rail) (any, error) {
 					// do something
 					return nil, nil
-				}).Extra(StrPair{"123", 123}).Extra(StrPair{"456", 456}),
+				}).Extra("123", 123).Extra("456", 456),
 				Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
 					// do something
 					return nil, nil
