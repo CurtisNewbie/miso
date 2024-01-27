@@ -11,7 +11,6 @@ const (
 
 var (
 	propagationKeys = PropagationKeys{keys: NewSet[string]()}
-	TracePrefix     = "X-"
 )
 
 type PropagationKeys struct {
@@ -56,7 +55,7 @@ func GetPropagationKeys() []string {
 
 	keys := []string{}
 	for k := range propagationKeys.keys.Keys {
-		keys = append(keys, TracePrefix+k)
+		keys = append(keys, k)
 	}
 	return keys
 }
