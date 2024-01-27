@@ -225,3 +225,27 @@ func BenchmarkTTLCache(b *testing.B) {
 		}
 	}
 }
+
+func TestTTLCacheDel(t *testing.T) {
+	cache := NewTTLCache[string](5*time.Second, 5)
+	cache.Del("1")
+	if cache.Size() != 0 {
+		t.Fatal("size should be 0")
+	}
+	v, _ := cache.Get("1", func() (string, bool) { return "1", true })
+	if v != "1" {
+		t.Fatal("should be one")
+	}
+	if cache.Size() != 1 {
+		t.Fatal("size should be 1")
+	}
+	cache.Del("2")
+	if cache.Size() != 1 {
+		t.Fatal("size should be 1")
+	}
+
+	cache.Del("1")
+	if cache.Size() != 0 {
+		t.Fatal("size should be 0")
+	}
+}

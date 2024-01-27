@@ -31,12 +31,14 @@ func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, er
 type cacheEvictStrategy[T any] interface {
 	Evict(tc *ttlCache[T]) bool
 	OnItemAdded(key string)
+	OnItemRemoved(key string)
 }
 
 // Time-based Cache.
 type TTLCache[T any] interface {
 	Get(key string, elseGet func() (T, bool)) (T, bool)
 	Put(key string, t T)
+	Del(key string)
 	Size() int
 }
 
@@ -65,6 +67,16 @@ func (tc *ttlCache[T]) Size() int {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	return len(tc.cache)
+}
+
+func (tc *ttlCache[T]) Del(key string) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+	if _, ok := tc.cache[key]; !ok {
+		return
+	}
+	delete(tc.cache, key)
+	tc.evictStrategy.OnItemRemoved(key)
 }
 
 func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
@@ -169,4 +181,13 @@ func (p *lruCacheEvictStrategy[T]) Evict(tc *ttlCache[T]) bool {
 
 func (p *lruCacheEvictStrategy[T]) OnItemAdded(key string) {
 	p.linkedItems.PushFront(key)
+}
+
+func (p *lruCacheEvictStrategy[T]) OnItemRemoved(key string) {
+	for v := p.linkedItems.Front(); v != nil; v = v.Next() {
+		if v.Value.(string) == key {
+			p.linkedItems.Remove(v)
+			return
+		}
+	}
 }
