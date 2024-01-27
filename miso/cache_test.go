@@ -1,6 +1,8 @@
 package miso
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -50,8 +52,6 @@ func TestTTLCacheNormal(t *testing.T) {
 }
 
 func TestTTLCacheEvicted(t *testing.T) {
-	rail := EmptyRail()
-
 	type ttlDummy struct {
 		name string
 	}
@@ -61,7 +61,7 @@ func TestTTLCacheEvicted(t *testing.T) {
 	cnt := 0
 	elseGet := func() (ttlDummy, bool) {
 		cnt += 1
-		rail.Infof("elseGet %v", cnt)
+		// rail.Infof("elseGet %v", cnt)
 		return ttlDummy{
 			name: "myDummy",
 		}, true
@@ -91,6 +91,17 @@ func TestTTLCacheEvicted(t *testing.T) {
 	if cnt != 2 {
 		t.Fatalf("cnt should be 2, but %v", cnt)
 	}
+
+	for i := 0; i < 10; i++ {
+		v, ok = cache.Get(fmt.Sprintf("abc-%v", i), elseGet)
+		if !ok {
+			t.Fatal("not ok")
+		}
+	}
+	if cache.Size() > 5 {
+		t.Fatalf("size is over 5, actual: %v", cache.Size())
+	}
+	Infof("cache.size: %v", cache.Size())
 }
 
 func TestTTLCacheMaxSize(t *testing.T) {
@@ -195,58 +206,22 @@ func TestTTLCacheConcurrent(t *testing.T) {
 	}
 }
 
-func TestTinyTTLCacheMaxSize(t *testing.T) {
-	rail := EmptyRail()
-
+func BenchmarkTTLCache(b *testing.B) {
 	type ttlDummy struct {
 		name string
 	}
-
-	cache := NewTinyTTLCache[ttlDummy](1*time.Second, 10)
-
-	cnt := 0
+	cache := NewTTLCache[ttlDummy](5*time.Second, 101)
 	elseGet := func() (ttlDummy, bool) {
-		cnt += 1
-		rail.Infof("elseGet %v", cnt)
 		return ttlDummy{
 			name: "myDummy",
 		}, true
 	}
 
-	for i := 0; i < 10; i++ {
-		cache.Get(ERand(5), elseGet)
-	}
-
-	if cnt != 10 {
-		t.Fatalf("cnt should be 10, but %v", cnt)
-	}
-
-	// all the key should be evicted already
-	time.Sleep(2 * time.Second)
-
-	v, ok := cache.Get("abc", elseGet)
-	if !ok {
-		t.Fatal("not ok")
-	}
-
-	if v.name != "myDummy" {
-		t.Fatalf("name not myDummy, but %v", v.name)
-	}
-
-	if cnt != 11 {
-		t.Fatalf("cnt should be 11, but %v", cnt)
-	}
-
-	v, ok = cache.Get("abc", elseGet)
-	if !ok {
-		t.Fatal("not ok")
-	}
-
-	if v.name != "myDummy" {
-		t.Fatalf("name not myDummy, but %v", v.name)
-	}
-
-	if cnt != 11 {
-		t.Fatalf("cnt should be 11, but %v", cnt)
+	for i := 0; i < b.N; i++ {
+		n := rand.Intn(100)
+		_, ok := cache.Get(fmt.Sprintf("dummy-%v", n), elseGet)
+		if !ok {
+			b.Fatal("not ok")
+		}
 	}
 }
