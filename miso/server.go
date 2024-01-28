@@ -128,7 +128,7 @@ type ComponentBootstrap struct {
 }
 
 type ResultBodyBuilder struct {
-	ErrJsonBuilder     func(rail Rail, err error) any // wrap error in json.
+	ErrJsonBuilder     func(rail Rail, err error) any // wrap error in json, return json object that will be serialized.
 	PayloadJsonBuilder func(payload any) any          // wrap payload in json.
 	OkJsonBuilder      func() any                     // build empty ok json.
 }
@@ -821,8 +821,8 @@ func MustBind(rail Rail, c *gin.Context, ptr any) {
 }
 
 // Dispatch a json response
-func DispatchJson(c *gin.Context, body interface{}) {
-	c.Status(http.StatusOK)
+func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
+	c.Status(code)
 	c.Header("Content-Type", applicationJson)
 
 	err := jsoniter.NewEncoder(c.Writer).Encode(body)
@@ -831,24 +831,9 @@ func DispatchJson(c *gin.Context, body interface{}) {
 	}
 }
 
-// Dispatch an ok response with data in json format
-func DispatchOkWData(c *gin.Context, data interface{}) {
-	DispatchJson(c, OkRespWData(data))
-}
-
-// Dispatch error response in json format
-func DispatchErrJson(c *gin.Context, rail Rail, err error) {
-	DispatchJson(c, WrapResp(nil, err, rail))
-}
-
-// Dispatch error response in json format
-func DispatchErrMsgJson(c *gin.Context, msg string) {
-	DispatchJson(c, ErrorResp(msg))
-}
-
-// Dispatch an ok response in json format
-func DispatchOk(c *gin.Context) {
-	DispatchJson(c, OkResp())
+// Dispatch a json response
+func DispatchJson(c *gin.Context, body interface{}) {
+	DispatchJsonCode(c, http.StatusOK, body)
 }
 
 func WebServerBootstrapCondition(rail Rail) (bool, error) {

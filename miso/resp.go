@@ -48,11 +48,14 @@ func (r GnResp[T]) MappedRes(mapper map[string]error) (T, error) {
 	return r.Data, r.Err()
 }
 
-/** Wrap with a response object */
-func WrapResp(data interface{}, e error, rail Rail) Resp {
-	if e != nil {
+// Wrap result (data and err) with a common Resp object.
+//
+// If err is not nil, returns a Resp body containing the error code and message.
+// If err is nil, the data is wrapped inside a Resp object and returned with http.StatusOK.
+func WrapResp(data interface{}, err error, rail Rail) Resp {
+	if err != nil {
 		me := &MisoErr{}
-		if errors.As(e, &me) {
+		if errors.As(err, &me) {
 			if !me.HasCode() {
 				me.Code = ErrCodeGeneric
 			}
@@ -61,16 +64,16 @@ func WrapResp(data interface{}, e error, rail Rail) Resp {
 			} else {
 				rail.Infof("Returned error, code: '%v', msg: '%v'", me.Code, me.Msg)
 			}
-
 			return ErrorRespWCode(me.Code, me.Msg)
 		}
 
-		if ve, ok := e.(*ValidationError); ok {
+		ve := &ValidationError{}
+		if errors.As(err, &ve) {
 			return ErrorResp(ve.Error())
 		}
 
 		// not a MisoErr, just return some generic msg
-		rail.Errorf("Unknown error, %v", e)
+		rail.Errorf("Unknown error, %v", err)
 		return ErrorResp("Unknown system error, please try again later")
 	}
 
