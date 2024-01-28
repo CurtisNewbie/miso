@@ -831,6 +831,11 @@ func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	}
 }
 
+// Dispatch error response in json format
+func DispatchErrMsgJson(c *gin.Context, msg string) {
+	DispatchJson(c, ErrorResp(msg))
+}
+
 // Dispatch a json response
 func DispatchJson(c *gin.Context, body interface{}) {
 	DispatchJsonCode(c, http.StatusOK, body)
