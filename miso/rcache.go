@@ -3,56 +3,36 @@ package miso
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
 )
 
+// Configuration of RCache.
 type RCacheConfig struct {
 	Exp    time.Duration // exp of each entry
 	NoSync bool          // doesn't use distributed lock to synchronize access to cache
 }
 
-type GetRCacheValue func(rail Rail, key string) (string, error)
-
-// RCache, cache that is backed by Redis.
+// Redis Cache implementation.
 //
 //	Use NewRCache(...) to instantiate.
-type RCache struct {
-	rclient  *redis.Client
-	exp      time.Duration
-	supplier GetRCacheValue
-	name     string
-	sync     bool
+type RCache[T any] struct {
+	ValueSerializer Serializer              // serializer / deserializer
+	getClient       Supplier[*redis.Client] // supplier of client (using func to make it lazy)
+	exp             time.Duration           // ttl for each cache entry
+	name            string                  // name of the cache
+	sync            bool                    // synchronize operation
 }
 
-// Put value to cache
-func (r *RCache) Put(rail Rail, key string, val string) error {
+func (r *RCache[T]) Put(rail Rail, key string, t T) error {
 	cacheKey := r.cacheKey(key)
-	op := func() error {
-		err := r.rclient.Set(cacheKey, val, r.exp).Err()
-
-		// value not found
-		if err != nil && errors.Is(err, redis.Nil) {
-			return NoneErr
-		}
-
-		return err
+	val, err := r.ValueSerializer.Serialize(t)
+	if err != nil {
+		return fmt.Errorf("failed to serialze value, %w", err)
 	}
-
-	if r.sync {
-		return RLockExec(rail, r.lockKey(key), op)
-	}
-
-	return op()
-}
-
-// Delete value from cache
-func (r *RCache) Del(rail Rail, key string) error {
-	cacheKey := r.cacheKey(key)
 	op := func() error {
-		return r.rclient.Del(cacheKey).Err()
+		return r.getClient().Set(cacheKey, val, r.exp).Err()
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -60,59 +40,80 @@ func (r *RCache) Del(rail Rail, key string) error {
 	return op()
 }
 
-func (r *RCache) cacheKey(key string) string {
+func (r *RCache[T]) Del(rail Rail, key string) error {
+	cacheKey := r.cacheKey(key)
+	op := func() error {
+		return r.getClient().Del(cacheKey).Err()
+	}
+	if r.sync {
+		return RLockExec(rail, r.lockKey(key), op)
+	}
+	return op()
+}
+
+func (r *RCache[T]) cacheKey(key string) string {
 	return "rcache:" + r.name + ":" + key
 }
 
-func (r *RCache) lockKey(key string) string {
+func (r *RCache[T]) lockKey(key string) string {
 	return "lock:" + r.cacheKey(key)
 }
 
 // Get from cache else run supplier
 //
 // Return miso.NoneErr if none is found
-func (r *RCache) Get(rail Rail, key string) (string, error) {
+func (r *RCache[T]) Get(rail Rail, key string, supplier func(rail Rail, key string) (T, error)) (T, error) {
 
-	// try not to always lock the whole operation, we only lock the write part
 	cacheKey := r.cacheKey(key)
-	cmd := r.rclient.Get(cacheKey)
+	cmd := r.getClient().Get(cacheKey)
 
+	var t T
 	var err = cmd.Err()
+
 	if err == nil {
-		return cmd.Val(), nil
+		err = r.ValueSerializer.Deserialize(&t, cmd.Val())
+		if err != nil {
+			return t, fmt.Errorf("failed to deserialize value from cache, %v, %w", cmd.Val(), err)
+		}
+		return t, nil
+	} else if !errors.Is(err, redis.Nil) { // command failed
+		return t, fmt.Errorf("failed to get value from redis, unknown error, %w", err)
 	}
 
-	// command failed
-	if err != nil && !errors.Is(err, redis.Nil) {
-		return "", err
-	}
-
-	if r.supplier == nil {
-		return "", NoneErr
+	// nothing to supply, give up
+	if supplier == nil {
+		return t, NoneErr
 	}
 
 	// attempts to load the missing value for the key
-	op := func() (string, error) {
+	op := func() (T, error) {
 
-		cmd := r.rclient.Get(cacheKey)
+		cmd := r.getClient().Get(cacheKey)
 		if cmd.Err() == nil {
-			return cmd.Val(), nil
+			err = r.ValueSerializer.Deserialize(&t, cmd.Val())
+			return t, err
 		}
 
-		// cmd failed
-		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) {
-			return "", cmd.Err()
+		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
+			return t, fmt.Errorf("failed to get value from redis, unknown error, %w", cmd.Err())
 		}
 
 		// call supplier and cache the supplied value
-		supplied, err := r.supplier(rail, key)
+		supplied, err := supplier(rail, key)
 		if err != nil {
-			return "", err
+			return t, err
 		}
 
-		scmd := r.rclient.Set(cacheKey, supplied, r.exp)
+		// serialize supplied value
+		v, err := r.ValueSerializer.Serialize(supplied)
+		if err != nil {
+			return t, fmt.Errorf("failed to serialize the supplied value, %w", err)
+		}
+
+		// cache the serialized value
+		scmd := r.getClient().Set(cacheKey, v, r.exp)
 		if scmd.Err() != nil {
-			return "", scmd.Err()
+			return t, scmd.Err()
 		}
 		return supplied, nil
 	}
@@ -125,110 +126,12 @@ func (r *RCache) Get(rail Rail, key string) (string, error) {
 }
 
 // Create new RCache
-func NewRCache(name string, supplier GetRCacheValue, conf RCacheConfig) RCache {
-	return RCache{rclient: GetRedis(), exp: conf.Exp, supplier: supplier, name: name, sync: !conf.NoSync}
-}
-
-// Lazy version of RCache, only initialized internally for the first method call.
-//
-//	Use NewLazyRCache(...) to instantiate.
-type LazyRCache struct {
-	_rcacheSupplier func() RCache
-	_rcache         *RCache
-	_initRCacheOnce sync.Once
-}
-
-// Obtain the wrapped *RCache object
-func (r *LazyRCache) rcache() *RCache {
-	r._initRCacheOnce.Do(func() {
-		c := r._rcacheSupplier()
-		r._rcache = &c
-	})
-	return r._rcache
-}
-
-// Put value to cache
-func (r *LazyRCache) Put(rail Rail, key string, val string) error {
-	return r.rcache().Put(rail, key, val)
-}
-
-// Get value from cache
-func (r *LazyRCache) Get(rail Rail, key string) (val string, e error) {
-	return r.rcache().Get(rail, key)
-}
-
-// Delete value from cache
-func (r *LazyRCache) Del(rail Rail, key string) error {
-	return r.rcache().Del(rail, key)
-}
-
-// Create new lazy RCache.
-func NewLazyRCache(name string, supplier GetRCacheValue, conf RCacheConfig) LazyRCache {
-	return LazyRCache{
-		_rcacheSupplier: func() RCache { return NewRCache(name, supplier, conf) },
+func NewRCache[T any](name string, conf RCacheConfig) RCache[T] {
+	return RCache[T]{
+		getClient:       func() *redis.Client { return GetRedis() },
+		exp:             conf.Exp,
+		name:            name,
+		sync:            !conf.NoSync,
+		ValueSerializer: JsonSerializer{},
 	}
-}
-
-// Lazy object RCache.
-//
-//	Use NewLazyORCache(...) to instantiate.
-type LazyORCache[T any] struct {
-	lazyRCache *LazyRCache
-}
-
-// convert string to T.
-func fromCachedStr[T any](v string) (T, error) {
-	var t T
-	err := ParseJson([]byte(v), &t)
-	if err != nil {
-		return t, fmt.Errorf("unable to unmarshal from string, %v", err)
-	}
-	return t, err
-}
-
-// convert from T to string.
-func toCachedStr(t any) (string, error) {
-	b, err := WriteJson(t)
-	if err != nil {
-		return "", fmt.Errorf("unable to marshal value to string, %v", err)
-	}
-	return string(b), nil
-}
-
-// Delete value from cache
-func (r *LazyORCache[T]) Del(rail Rail, key string) error {
-	return r.lazyRCache.Del(rail, key)
-}
-
-// Get from cache else run the supplier provided.
-//
-// Return T or error, returns miso.NoneErr if not found.
-func (r *LazyORCache[T]) Get(rail Rail, key string) (T, error) {
-	strVal, err := r.lazyRCache.Get(rail, key)
-
-	var t T
-	if err != nil {
-		return t, err
-	}
-	return fromCachedStr[T](strVal)
-}
-
-type GetORCacheValue[T any] func(rail Rail, key string) (T, error)
-
-// Create new lazy object RCache.
-func NewLazyORCache[T any](name string, supplier GetORCacheValue[T], conf RCacheConfig) LazyORCache[T] {
-	var wrappedSupplier GetRCacheValue = nil
-
-	if supplier != nil {
-		wrappedSupplier = func(rail Rail, key string) (string, error) {
-			t, err := supplier(rail, key)
-			if err != nil {
-				return "", err
-			}
-			return toCachedStr(t)
-		}
-	}
-
-	lazyRCache := NewLazyRCache(name, wrappedSupplier, conf)
-	return LazyORCache[T]{lazyRCache: &lazyRCache}
 }

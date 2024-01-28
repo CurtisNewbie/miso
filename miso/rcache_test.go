@@ -20,7 +20,7 @@ func preRCacheTest(t *testing.T) Rail {
 	return rail
 }
 
-func TestLazyObjRcache(t *testing.T) {
+func TestRcacheWithObject(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
 	invokeCount := 0
@@ -33,10 +33,10 @@ func TestLazyObjRcache(t *testing.T) {
 		}, nil
 	}
 
-	cache := NewLazyORCache("test", supplier, RCacheConfig{Exp: exp})
+	cache := NewRCache[RCacheDummy]("test0", RCacheConfig{Exp: exp})
 	cache.Del(rail, "1")
 
-	dummy, err := cache.Get(rail, "1")
+	dummy, err := cache.Get(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -47,7 +47,7 @@ func TestLazyObjRcache(t *testing.T) {
 		t.FailNow()
 	}
 
-	dummy, err = cache.Get(rail, "1")
+	dummy, err = cache.Get(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -61,7 +61,7 @@ func TestLazyObjRcache(t *testing.T) {
 
 	cache.Del(rail, "1")
 
-	dummy, err = cache.Get(rail, "1")
+	dummy, err = cache.Get(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -77,9 +77,9 @@ func TestLazyObjRcache(t *testing.T) {
 func TestRCache(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
-	rcache := NewRCache("test", nil, RCacheConfig{Exp: exp})
+	rcache := NewRCache[string]("test2", RCacheConfig{Exp: exp})
 
-	_, e := rcache.Get(rail, "absent key")
+	_, e := rcache.Get(rail, "absent key", nil)
 	if e == nil || !IsNoneErr(e) {
 		t.Fatal(e)
 	}
@@ -90,7 +90,7 @@ func TestRCache(t *testing.T) {
 	}
 
 	var val string
-	val, e = rcache.Get(rail, "1")
+	val, e = rcache.Get(rail, "1", nil)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -103,20 +103,18 @@ func TestLazyRCache(t *testing.T) {
 	rail := preRCacheTest(t)
 
 	exp := 10 * time.Second
+	supplier := func(rail Rail, key string) (string, error) {
+		return "", NoneErr
+	}
 
-	rcache := NewLazyRCache("test",
-		func(rail Rail, key string) (string, error) {
-			return "", NoneErr
-		},
-		RCacheConfig{Exp: exp},
-	)
+	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp})
 
 	e := rcache.Put(rail, "1", "2")
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	val, e := rcache.Get(rail, "1")
+	val, e := rcache.Get(rail, "1", supplier)
 	if e != nil {
 		t.Fatal(e)
 	}
