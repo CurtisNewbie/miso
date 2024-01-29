@@ -25,4 +25,13 @@ func TestETimeScan(t *testing.T) {
 	}
 
 	t.Log(et.FormatClassicLocale())
+	t.Log(et.FormatClassic())
+}
+
+func TestFuzzParseTime(t *testing.T) {
+	tt, err := FuzzParseTime([]string{"2006-01-02 15:04:05", "2006/01/02 15:04:05"}, "2023/01/02 15:04:03.123192")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(tt.String())
 }

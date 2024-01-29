@@ -2,6 +2,7 @@ package miso
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -73,6 +74,10 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 
 // Implements sql.Scanner in database/sql.
 func (et *ETime) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
 	switch v := value.(type) {
 	case time.Time:
 		*et = ETime(v)
@@ -102,4 +107,20 @@ func (et *ETime) Scan(value interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func FuzzParseTime(formats []string, value string) (time.Time, error) {
+	if len(formats) < 1 {
+		return time.Time{}, errors.New("formats is empty")
+	}
+
+	var t time.Time
+	var err error
+	for _, f := range formats {
+		t, err = time.Parse(f, value)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return t, err
 }
