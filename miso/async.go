@@ -74,6 +74,13 @@ func RunAsyncPool[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
 }
 
 // Bounded pool of goroutines.
+//
+// Use miso.NewAsyncPool to create a new pool.
+//
+// AsyncPool internally maintains a task queue with limited size and limited number of workers. If the task queue is full,
+// the caller of *AsyncPool.Go is blocked indefinitively.
+//
+// AsyncPool automatically shrinks when workers are idle for more than 30 seconds.
 type AsyncPool struct {
 	tasks   chan func()
 	workers chan struct{}
