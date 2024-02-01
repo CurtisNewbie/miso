@@ -99,4 +99,5 @@ go get github.com/curtisnewbie/miso@v0.0.11
 - [customize build](./doc/customize_build.md)
 - [json processing](./doc/json.md)
 - [pprof](./doc/pprof.md)
+- [rabbitmq and event bus](./doc/rabbitmq.md)
 - More in the future (maybe) :D

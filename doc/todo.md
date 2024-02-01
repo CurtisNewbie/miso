@@ -8,10 +8,10 @@
 - [x] Filter consul services that are not `passing`.
 - [x] Add an *almost* complete configuration example.
 - [x] Support grouping the already grouped subpaths.
+- [x] Finish RabbitMQ Doc.
 - [ ] Provide a demo project.
 - [ ] Document service discovery and load balancing.
 - [ ] Document MySQL and Redis client.
-- [ ] Finish RabbitMQ Doc.
 - [ ] Support nacos (maybe).
 - [ ] Support named database connections (maybe).
 - [ ] Import sourcegraph/conc when it's stable.
