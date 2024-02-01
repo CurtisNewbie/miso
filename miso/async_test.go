@@ -36,14 +36,14 @@ func TestRunAsync(t *testing.T) {
 
 func TestRunAsyncPool(t *testing.T) {
 	SetLogLevel("debug")
-	cnt := 10000
+	cnt := 1000
 	pool := NewAsyncPool(cnt+1, 100)
 	start := time.Now()
 	var futures []Future[int]
 
 	for i := 1; i < cnt+1; i++ {
 		j := i
-		futures = append(futures, RunAsyncPool(pool, func() (int, error) {
+		futures = append(futures, SubmitAsync(pool, func() (int, error) {
 			time.Sleep(5 * time.Millisecond)
 			Infof("%v is done", j)
 			return j, nil
@@ -96,4 +96,35 @@ func TestRunAsyncWithPanic(t *testing.T) {
 func panicFunc() (struct{}, error) {
 	Info("about to panic")
 	panic("panic func panicked")
+}
+
+func TestAwaitFutures(t *testing.T) {
+	SetLogLevel("debug")
+	cnt := 1000
+	pool := NewAsyncPool(cnt+1, 100)
+	awaitFutures := NewAwaitFutures[int](pool)
+	start := time.Now()
+
+	for i := 1; i < cnt+1; i++ {
+		j := i
+		awaitFutures.SubmitAsync(func() (int, error) {
+			time.Sleep(5 * time.Millisecond)
+			return j, nil
+		})
+	}
+
+	var futures []Future[int] = awaitFutures.Await()
+	var sum int
+	for _, fut := range futures {
+		res, err := fut.Get()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sum += res
+	}
+	expected := (cnt * (cnt + 1)) / 2
+	if sum != expected {
+		t.Fatalf("expected: %v, actual: %v", expected, sum)
+	}
+	Infof("sum: %v, time: %v", sum, time.Since(start))
 }

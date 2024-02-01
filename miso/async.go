@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -67,10 +68,41 @@ func RunAsync[T any](task func() (T, error)) Future[T] {
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
-func RunAsyncPool[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
+func SubmitAsync[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	pool.Go(wrp)
 	return fut
+}
+
+// AwaitFutures represent multiple tasks that will be submitted to the pool asynchronously whose results will be awaited together.
+//
+// AwaitFutures should only be used once everytime it's needed.
+//
+// Use miso.NewAwaitFutures() to create one.
+type AwaitFutures[T any] struct {
+	pool    *AsyncPool
+	wg      sync.WaitGroup
+	futures []Future[T]
+}
+
+func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
+	a.wg.Add(1)
+	a.futures = append(a.futures, SubmitAsync[T](a.pool, func() (T, error) {
+		defer a.wg.Done()
+		return task()
+	}))
+}
+
+func (a *AwaitFutures[T]) Await() []Future[T] {
+	a.wg.Wait()
+	return a.futures
+}
+
+func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
+	return &AwaitFutures[T]{
+		pool:    pool,
+		futures: make([]Future[T], 0, 2),
+	}
 }
 
 // Bounded pool of goroutines.
@@ -121,11 +153,7 @@ func (p *AsyncPool) Go(f func()) {
 
 // spawn a new worker.
 func (p *AsyncPool) spawn(first func()) {
-	// Debug("Spawned Worker")
-	defer func() {
-		<-p.workers
-		// Debug("Worker exited")
-	}()
+	defer func() { <-p.workers }()
 
 	if first != nil {
 		first()
