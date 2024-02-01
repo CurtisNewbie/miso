@@ -64,6 +64,8 @@ func TestRunAsyncPool(t *testing.T) {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
 	Infof("sum: %v, time: %v", sum, time.Since(start))
+
+	time.Sleep(time.Second * 5)
 }
 
 func TestRunAsyncWithPanic(t *testing.T) {

@@ -114,15 +114,22 @@ func (p *AsyncPool) Go(f func()) {
 
 // spawn a new worker.
 func (p *AsyncPool) spawn(first func()) {
-	Debug("Spawned Worker")
-	defer func() { <-p.workers }()
+	// Debug("Spawned Worker")
+	defer func() {
+		<-p.workers
+		// Debug("Worker exited")
+	}()
 
 	if first != nil {
 		first()
 	}
 
-	for f := range p.tasks {
-		f()
+	for {
+		select {
+		case f := <-p.tasks:
+			f()
+		case <-time.After(30 * time.Second):
+			return // blocked for 30 seconds, return the worker
+		}
 	}
-	Debug("Worker exited")
 }
