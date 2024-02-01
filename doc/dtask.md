@@ -1,6 +1,6 @@
 # Distributed Task Scheduling
 
-Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling. A cluster is distinguished by a group name, each cluster of nodes can only have one master, and the master node is responsible for running all the tasks.
+Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling. A cluster is distinguished by a group name, which by default is `${app.name}`. Each cluster of nodes can only have one master, and the master node is responsible for running all the tasks. If there is any distributed task registered in an app, it will try to obtain the master lock on startup. You can think of it as a combination of cron scheduler and redis based lock.
 
 ```go
 func main() {
