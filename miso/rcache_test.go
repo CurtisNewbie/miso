@@ -99,7 +99,7 @@ func TestRCache(t *testing.T) {
 	}
 }
 
-func TestLazyRCache(t *testing.T) {
+func TestRCache2(t *testing.T) {
 	rail := preRCacheTest(t)
 
 	exp := 10 * time.Second
@@ -120,5 +120,21 @@ func TestLazyRCache(t *testing.T) {
 	}
 	if val != "2" {
 		t.Fatalf("val '%v' != \"2\"", val)
+	}
+
+	ok, err := rcache.Exists(rail, "1")
+	if err != nil {
+		t.Fatal(e)
+	}
+	if !ok {
+		t.Fatal("not ok but should be ok")
+	}
+
+	ok, err = rcache.Exists(rail, "nope")
+	if err != nil {
+		t.Fatal(e)
+	}
+	if ok {
+		t.Fatal("ok but shouldn't be")
 	}
 }

@@ -64,38 +64,24 @@ func (r *RCache[T]) lockKey(key string) string {
 // Return miso.NoneErr if none is found
 func (r *RCache[T]) Get(rail Rail, key string, supplier func(rail Rail, key string) (T, error)) (T, error) {
 
-	cacheKey := r.cacheKey(key)
-	cmd := r.getClient().Get(cacheKey)
-
-	var t T
-	var err = cmd.Err()
-
-	if err == nil {
-		err = r.ValueSerializer.Deserialize(&t, cmd.Val())
-		if err != nil {
-			return t, fmt.Errorf("failed to deserialize value from cache, %v, %w", cmd.Val(), err)
-		}
-		return t, nil
-	} else if !errors.Is(err, redis.Nil) { // command failed
-		return t, fmt.Errorf("failed to get value from redis, unknown error, %w", err)
-	}
-
-	// nothing to supply, give up
-	if supplier == nil {
-		return t, NoneErr
-	}
-
-	// attempts to load the missing value for the key
+	// the actual operation
 	op := func() (T, error) {
+
+		cacheKey := r.cacheKey(key)
+		var t T
 
 		cmd := r.getClient().Get(cacheKey)
 		if cmd.Err() == nil {
-			err = r.ValueSerializer.Deserialize(&t, cmd.Val())
-			return t, err
+			return t, r.ValueSerializer.Deserialize(&t, cmd.Val()) // key found
 		}
 
 		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
 			return t, fmt.Errorf("failed to get value from redis, unknown error, %w", cmd.Err())
+		}
+
+		// nothing to supply, give up
+		if supplier == nil {
+			return t, NoneErr
 		}
 
 		// call supplier and cache the supplied value
@@ -116,6 +102,26 @@ func (r *RCache[T]) Get(rail Rail, key string, supplier func(rail Rail, key stri
 			return t, scmd.Err()
 		}
 		return supplied, nil
+	}
+
+	if r.sync {
+		return RLockRun(rail, r.lockKey(key), op)
+	}
+
+	return op()
+}
+
+func (r *RCache[T]) Exists(rail Rail, key string) (bool, error) {
+	op := func() (bool, error) {
+		cacheKey := r.cacheKey(key)
+		cmd := r.getClient().Exists(cacheKey)
+		if cmd.Err() == nil {
+			return cmd.Val() > 0, nil
+		}
+		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
+			return false, fmt.Errorf("failed to get value from redis, unknown error, %w", cmd.Err())
+		}
+		return false, nil
 	}
 
 	if r.sync {
