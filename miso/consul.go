@@ -297,7 +297,7 @@ func ListServers(name string) []Server {
 	consulServerList.RLock()
 	defer consulServerList.RUnlock()
 	servers := consulServerList.servers[name]
-	copied := make([]Server, 0, len(servers))
+	copied := make([]Server, len(servers))
 	copy(copied, servers)
 	return copied
 }
