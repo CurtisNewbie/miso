@@ -44,7 +44,18 @@ var (
 	ConsulBasedServiceRegistry = &ConsulServiceRegistry{
 		Rule: RandomServerSelector,
 	}
+
+	serverChangeListeners = ServerChangeListenerMap{
+		Listeners: map[string][]func(){},
+		Pool:      NewAsyncPool(500, 4),
+	}
 )
+
+type ServerChangeListenerMap struct {
+	Listeners map[string][]func()
+	Pool      *AsyncPool
+	sync.RWMutex
+}
 
 type consulHolder struct {
 	consul *api.Client
@@ -153,8 +164,6 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 		switch dat := data.(type) {
 		case []*api.ServiceEntry:
 			consulServerList.Lock()
-			defer consulServerList.Unlock()
-
 			instances := make([]Server, 0, len(dat))
 			for _, entry := range dat {
 				if entry.Checks.AggregatedStatus() != ConsulStatusPassing {
@@ -166,10 +175,18 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 					Meta:    entry.Service.Meta,
 				})
 			}
-
 			s.servers[service] = instances
 			Debugf("Watch receive service changes to %v, %d instances, %d passing instances, instances: %+v",
 				service, len(dat), len(instances), instances)
+			consulServerList.Unlock()
+
+			serverChangeListeners.RLock()
+			defer serverChangeListeners.RUnlock()
+			if listeners, ok := serverChangeListeners.Listeners[service]; ok {
+				for i := range listeners {
+					serverChangeListeners.Pool.Go(listeners[i])
+				}
+			}
 		}
 	}
 
@@ -570,4 +587,24 @@ func (c *ConsulServiceRegistry) ListServers(rail Rail, service string) ([]Server
 
 func SubscribeConsulService(rail Rail, service string) error {
 	return consulServerList.Subscribe(rail, service)
+}
+
+// Subscribe to changes to service instances.
+//
+// Callback is triggered asynchronously.
+func SubscribeServerChanges(rail Rail, name string, cbk func()) error {
+	if err := SubscribeConsulService(rail, name); err != nil {
+		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
+	}
+
+	serverChangeListeners.Lock()
+	defer serverChangeListeners.Unlock()
+
+	if v, ok := serverChangeListeners.Listeners[name]; ok {
+		v = append(v, cbk)
+		serverChangeListeners.Listeners[name] = v
+	} else {
+		serverChangeListeners.Listeners[name] = []func(){cbk}
+	}
+	return nil
 }
