@@ -204,13 +204,15 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 		Headers:      headers,
 		MessageId:    GenIdP("mq_"),
 	}
-	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey, false, false, publishing)
+	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
+		false, false, publishing)
 	if err != nil {
 		return fmt.Errorf("failed to publish message, %w", err)
 	}
 
 	if !confirm.Wait() {
-		return errMsgNotPublished
+		return fmt.Errorf("failed to publish message, exchange '%v' probably doesn't exist, %w", exchange,
+			errMsgNotPublished)
 	}
 
 	c.Debugf("Published MQ to exchange '%v', '%s'", exchange, msg)

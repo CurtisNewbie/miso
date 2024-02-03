@@ -89,7 +89,7 @@ func TestPublishMessage(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		e = PublishText(rail, "yo check me out", "my-exchange-one", "myKey1")
 		if e != nil {
-			t.Error(e)
+			t.Fatal(e)
 		}
 	}
 	time.Sleep(time.Second * 3)
