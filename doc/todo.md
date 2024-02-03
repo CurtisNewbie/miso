@@ -9,11 +9,11 @@
 - [x] Add an *almost* complete configuration example.
 - [x] Support grouping the already grouped subpaths.
 - [x] Finish RabbitMQ Doc.
-- [ ] Provide a demo project.
+- [x] ~~Import sourcegraph/conc when it's stable.~~ we can just use *miso.AsyncPool and *miso.AwaitFutures for now, should be enough.
+- [x] ~~Provide a demo project.~~ Not really needed.
 - [ ] Document service discovery and load balancing.
 - [ ] Document MySQL and Redis client.
 - [ ] Support nacos (maybe).
 - [ ] Support named database connections (maybe).
-- [ ] Import sourcegraph/conc when it's stable.
 - [ ] Support etcd (maybe).
 
