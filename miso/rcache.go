@@ -8,6 +8,10 @@ import (
 	"github.com/go-redis/redis"
 )
 
+const (
+	rcacheScanLimit int64 = 100
+)
+
 // Configuration of RCache.
 type RCacheConfig struct {
 	Exp    time.Duration // exp of each entry
@@ -15,6 +19,9 @@ type RCacheConfig struct {
 }
 
 // Redis Cache implementation.
+//
+// RCache internal isn't backed by an actual redis HSet. Cache name is simply the prefix for each key,
+// and each key is stored independently.
 //
 //	Use NewRCache(...) to instantiate.
 type RCache[T any] struct {
@@ -53,6 +60,10 @@ func (r *RCache[T]) Del(rail Rail, key string) error {
 
 func (r *RCache[T]) cacheKey(key string) string {
 	return "rcache:" + r.name + ":" + key
+}
+
+func (r *RCache[T]) cacheKeyPattern() string {
+	return "rcache:" + r.name + ":*"
 }
 
 func (r *RCache[T]) lockKey(key string) string {
@@ -129,6 +140,31 @@ func (r *RCache[T]) Exists(rail Rail, key string) (bool, error) {
 	}
 
 	return op()
+}
+
+func (r *RCache[T]) DelAll(rail Rail) error {
+	pat := r.cacheKeyPattern()
+	cmd := r.getClient().Scan(0, pat, rcacheScanLimit)
+	if cmd.Err() != nil {
+		return fmt.Errorf("failed to scan redis with pattern '%v', %w", pat, cmd.Err())
+	}
+
+	iter := cmd.Iterator()
+	for iter.Next() {
+		if iter.Err() != nil {
+			return fmt.Errorf("failed to iterate using scan, pattern: '%v', %w", pat, iter.Err())
+		}
+		key := iter.Val()
+		dcmd := r.getClient().Del(key)
+		if dcmd.Err() != nil {
+			if !errors.Is(dcmd.Err(), redis.Nil) {
+				return fmt.Errorf("failed to del key %v, %w", key, dcmd.Err())
+			}
+		} else {
+			rail.Debugf("Deleted rcache key %v", key)
+		}
+	}
+	return nil
 }
 
 // Create new RCache

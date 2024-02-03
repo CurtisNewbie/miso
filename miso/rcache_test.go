@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -107,7 +108,7 @@ func TestRCache2(t *testing.T) {
 		return "", NoneErr
 	}
 
-	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp})
+	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp, NoSync: true})
 
 	e := rcache.Put(rail, "1", "2")
 	if e != nil {
@@ -132,9 +133,19 @@ func TestRCache2(t *testing.T) {
 
 	ok, err = rcache.Exists(rail, "nope")
 	if err != nil {
-		t.Fatal(e)
+		t.Fatal(err)
 	}
 	if ok {
 		t.Fatal("ok but shouldn't be")
+	}
+
+	for i := 0; i < 200; i++ {
+		if err := rcache.Put(rail, fmt.Sprintf("%d", i), "1"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := rcache.DelAll(rail); err != nil {
+		t.Fatal(err)
 	}
 }
