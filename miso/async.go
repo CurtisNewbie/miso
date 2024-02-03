@@ -111,8 +111,6 @@ func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
 //
 // AsyncPool internally maintains a task queue with limited size and limited number of workers. If the task queue is full,
 // the caller of *AsyncPool.Go is blocked indefinitively.
-//
-// AsyncPool automatically shrinks when workers are idle for more than 30 seconds.
 type AsyncPool struct {
 	tasks   chan func()
 	workers chan struct{}
@@ -159,12 +157,7 @@ func (p *AsyncPool) spawn(first func()) {
 		first()
 	}
 
-	for {
-		select {
-		case f := <-p.tasks:
-			f()
-		case <-time.After(30 * time.Second):
-			return // blocked for 30 seconds, return the worker
-		}
+	for f := range p.tasks {
+		f()
 	}
 }
