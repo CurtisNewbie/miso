@@ -117,4 +117,4 @@ The following are some projects that use miso (mine tho):
 - [hammer](https://github.com/curtisnewbie/hammer)
 - [goauth](https://github.com/curtisnewbie/goauth)
 - [logbot](https://github.com/curtisnewbie/logbot)
-- [doc-indexer](https://github.com/curtisnewbie/docindexer)
+- [doc-indexer](https://github.com/curtisnewbie/doc-indexer)
