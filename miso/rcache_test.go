@@ -25,7 +25,7 @@ func TestRcacheWithObject(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
 	invokeCount := 0
-	supplier := func(rail Rail, _ string) (RCacheDummy, error) {
+	supplier := func() (RCacheDummy, error) {
 		invokeCount++
 		rail.Infof("Called supplier, %v", invokeCount)
 		return RCacheDummy{
@@ -104,7 +104,7 @@ func TestRCache2(t *testing.T) {
 	rail := preRCacheTest(t)
 
 	exp := 10 * time.Second
-	supplier := func(rail Rail, key string) (string, error) {
+	supplier := func() (string, error) {
 		return "", NoneErr
 	}
 

@@ -73,7 +73,7 @@ func (r *RCache[T]) lockKey(key string) string {
 // Get from cache else run supplier
 //
 // Return miso.NoneErr if none is found
-func (r *RCache[T]) Get(rail Rail, key string, supplier func(rail Rail, key string) (T, error)) (T, error) {
+func (r *RCache[T]) Get(rail Rail, key string, supplier func() (T, error)) (T, error) {
 
 	// the actual operation
 	op := func() (T, error) {
@@ -96,7 +96,7 @@ func (r *RCache[T]) Get(rail Rail, key string, supplier func(rail Rail, key stri
 		}
 
 		// call supplier and cache the supplied value
-		supplied, err := supplier(rail, key)
+		supplied, err := supplier()
 		if err != nil {
 			return t, err
 		}
