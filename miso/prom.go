@@ -27,19 +27,11 @@ func init() {
 }
 
 // Default handler for prometheus metrics.
-func PrometheusHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, req *http.Request) {
-		if GetPropBool(PropMetricsAuthEnabled) {
-			authorization := req.Header.Get("Authorization")
-			secret, ok := ParseBearer(authorization)
-			if !ok || secret != GetPropStr(PropMetricsAuthBearer) {
-				Debug("metrics endpoint authorization failed")
-				writer.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-		}
-		promhttp.Handler().ServeHTTP(writer, req)
+func PrometheusHandler() http.Handler {
+	if !GetPropBool(PropMetricsAuthEnabled) {
+		return promhttp.Handler()
 	}
+	return BearerAuth(promhttp.Handler(), func() string { return GetPropStr(PropMetricsAuthBearer) })
 }
 
 // Timer based on prometheus.Histogram.

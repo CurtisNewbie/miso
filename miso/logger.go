@@ -154,6 +154,10 @@ func Errorf(format string, args ...interface{}) {
 	logrus.WithField(callerField, getCallerFn()).Errorf(format, args...)
 }
 
+func Fatalf(format string, args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Fatalf(format, args...)
+}
+
 func Debug(args ...interface{}) {
 	logrus.WithField(callerField, getCallerFn()).Debug(args...)
 }
@@ -168,6 +172,10 @@ func Warn(args ...interface{}) {
 
 func Error(args ...interface{}) {
 	logrus.WithField(callerField, getCallerFn()).Error(args...)
+}
+
+func Fatal(args ...interface{}) {
+	logrus.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
 func SetLogLevel(level string) {
