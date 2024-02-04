@@ -753,7 +753,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		}
 
 		if GetPropBool(PropServerRequestLogEnabled) || !IsProdMode() {
-			rail.Infof("Request Body: %+v", req)
+			rail.Infof("%v %v, Request Body: %+v", c.Request.Method, c.Request.RequestURI, req)
 		}
 
 		// handle the requests
