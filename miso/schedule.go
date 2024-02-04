@@ -9,11 +9,12 @@ import (
 )
 
 type Job struct {
-	Name            string           // name of the job.
-	Cron            string           // cron expr.
-	CronWithSeconds bool             // whether cron expr contains the second field.
-	Run             func(Rail) error // actual job execution logic.
-	LogJobExec      bool             // whether job execution should be logged, error msg is always logged and is not affected by this option.
+	Name                   string           // name of the job.
+	Cron                   string           // cron expr.
+	CronWithSeconds        bool             // whether cron expr contains the second field.
+	Run                    func(Rail) error // actual job execution logic.
+	LogJobExec             bool             // whether job execution should be logged, error msg is always logged and is not affected by this option.
+	TriggeredOnBoostrapped bool             // whether job should be triggered when server is fully bootstrapped
 }
 
 // Hook triggered before job's execution.
@@ -134,6 +135,10 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		}
 		return nil
 	})
+
+	if job.TriggeredOnBoostrapped {
+		PostServerBootstrapped(job.Run)
+	}
 
 	return nil
 }
