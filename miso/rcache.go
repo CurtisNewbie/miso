@@ -14,8 +14,14 @@ const (
 
 // Configuration of RCache.
 type RCacheConfig struct {
-	Exp    time.Duration // exp of each entry
-	NoSync bool          // doesn't use distributed lock to synchronize access to cache
+	//expire time for each entry
+	Exp time.Duration
+
+	// Disable use of distributed lock to synchronize access to the key in the cache.
+	//
+	// Most of the operations are atomic except Get(...) with supplier callback.
+	// If your are loading the cache manually using Put(...), then you probably don't need synchronization at all.
+	NoSync bool
 }
 
 // Redis Cache implementation.
