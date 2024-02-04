@@ -131,14 +131,18 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		}
 
 		for _, j := range taggedJobs {
-			Infof("Job '%v' next run scheduled at: %v", job.Name, j.NextRun())
+			rail.Debugf("Job '%v' next run scheduled at: %v", job.Name, j.NextRun())
+		}
+
+		if job.TriggeredOnBoostrapped {
+			if err := getScheduler().RunByTag(job.Name); err != nil {
+				rail.Errorf("Failed to triggered immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
+			} else {
+				rail.Debugf("Job %v triggered on server bootstrapped", job.Name)
+			}
 		}
 		return nil
 	})
-
-	if job.TriggeredOnBoostrapped {
-		PostServerBootstrapped(job.Run)
-	}
 
 	return nil
 }
