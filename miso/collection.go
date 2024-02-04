@@ -100,7 +100,7 @@ func (s *Set[T]) String() string {
 
 // Copy keys in set
 func (s *Set[T]) CopyKeys() []T {
-	var keys []T = []T{}
+	var keys []T = make([]T, 0, len(s.Keys))
 	for k := range s.Keys {
 		keys = append(keys, k)
 	}

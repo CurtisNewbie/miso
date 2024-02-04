@@ -42,3 +42,11 @@ func TestSet(t *testing.T) {
 
 	t.Logf("Set: %s", s.String())
 }
+
+func TestDistinct(t *testing.T) {
+	l := Distinct([]string{"a", "b", "c", "c", "d", "c"})
+	t.Log(l)
+	if len(l) != 4 {
+		t.Fatal("len should be 4")
+	}
+}
