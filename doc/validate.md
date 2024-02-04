@@ -38,7 +38,7 @@ A field can have more than one rule, these rules are sapareted using ',', and th
 
 ```go
 type ValidatedDummy struct {
-  DummyPtr *AnotherDummy `validation:"notNil,validated"`
+  DummyPtr *AnotherDummy `valid:"notNil,validated"`
 }
 ```
 
@@ -48,7 +48,7 @@ Some rules require parameters (only `maxLen` for now), these are specified in th
 
 ```go
 type ValidatedDummy struct {
-  Name string `validation:"maxLen:10,notEmpty"`
+  Name string `valid:"maxLen:10,notEmpty"`
 }
 ```
 
