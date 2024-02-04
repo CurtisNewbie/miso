@@ -105,7 +105,7 @@ func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
 	}
 }
 
-// Bounded pool of goroutines.
+// A long live, bounded pool of goroutines.
 //
 // Use miso.NewAsyncPool to create a new pool.
 //
@@ -145,6 +145,15 @@ func (p *AsyncPool) Go(f func()) {
 	case p.workers <- struct{}{}:
 		go func() { p.spawn(f) }()
 	case p.tasks <- f:
+		// channel select is completely random
+		// extra select is to make sure that we have at least one worker running
+		// or else tasks may be put straight into the task queue without any worker
+		// conc package has the same problem as well :(, but the way we use the pool is different.
+		select {
+		case p.workers <- struct{}{}:
+			go p.spawnEmpty()
+		default:
+		}
 		return
 	}
 }
@@ -156,6 +165,15 @@ func (p *AsyncPool) spawn(first func()) {
 	if first != nil {
 		first()
 	}
+
+	for f := range p.tasks {
+		f()
+	}
+}
+
+// spawn a new worker.
+func (p *AsyncPool) spawnEmpty() {
+	defer func() { <-p.workers }()
 
 	for f := range p.tasks {
 		f()
