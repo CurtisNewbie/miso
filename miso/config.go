@@ -328,11 +328,7 @@ func GetEnvElse(key string, defVal string) string {
 // if the prop value equals to true (case insensitive), then
 // true is returned else false
 func IsProdMode() bool {
-	if !ContainsProp(PropProdMode) {
-		return false
-	}
-	mode := GetPropBool(PropProdMode)
-	return mode
+	return GetPropBool(PropProdMode)
 }
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
