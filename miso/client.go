@@ -290,7 +290,7 @@ func (t *TClient) errorResponse(e error) *TResponse {
 	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail}
 }
 
-// Send POST request
+// Send POST request with reader to request body.
 func (t *TClient) Post(body io.Reader) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
@@ -302,6 +302,11 @@ func (t *TClient) Post(body io.Reader) *TResponse {
 		return t.errorResponse(e)
 	}
 	return t.send(req)
+}
+
+// Send POST request with bytes.
+func (t *TClient) PostBytes(body []byte) *TResponse {
+	return t.Post(bytes.NewReader(body))
 }
 
 // Send PUT request with JSON
@@ -326,6 +331,11 @@ func (t *TClient) Put(body io.Reader) *TResponse {
 		return t.errorResponse(e)
 	}
 	return t.send(req)
+}
+
+// Send PUT request with bytes.
+func (t *TClient) PutBytes(body []byte) *TResponse {
+	return t.Put(bytes.NewReader(body))
 }
 
 // Send DELETE request

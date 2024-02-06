@@ -17,7 +17,9 @@ func IsNoneErr(err error) bool {
 	return errors.Is(err, NoneErr)
 }
 
-// Miso Error
+// Miso Error.
+//
+//	Use NewErrf(...) to instantiate.
 type MisoErr struct {
 	Code        string // error code.
 	Msg         string // error message returned to the client requested to the endpoint.

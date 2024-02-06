@@ -1,6 +1,10 @@
 package miso
 
-import "os"
+import (
+	"fmt"
+	"io"
+	"os"
+)
 
 const (
 	// Default File Mode
@@ -19,6 +23,20 @@ func FileExists(path string) (bool, error) {
 	}
 
 	return false, e
+}
+
+// Read all content from file.
+func ReadFileAll(path string) ([]byte, error) {
+	f, err := ReadWriteFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file %v, %w", path, err)
+	}
+	defer f.Close()
+	buf, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from file %v, %w", path, err)
+	}
+	return buf, nil
 }
 
 // Open file with 0666 permission.
