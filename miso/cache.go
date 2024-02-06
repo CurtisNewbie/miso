@@ -34,14 +34,6 @@ type cacheEvictStrategy[T any] interface {
 	OnItemRemoved(key string)
 }
 
-// Time-based Cache.
-type TTLCache[T any] interface {
-	Get(key string, elseGet func() (T, bool)) (T, bool)
-	Put(key string, t T)
-	Del(key string)
-	Size() int
-}
-
 type tbucket[T any] struct {
 	ctime time.Time
 	val   T
@@ -53,6 +45,16 @@ func (t *tbucket[T]) alive(now time.Time, ttl time.Duration) bool {
 
 func newTBucket[T any](val T) tbucket[T] {
 	return tbucket[T]{val: val, ctime: time.Now()}
+}
+
+// Time-based Cache.
+type TTLCache[T any] interface {
+	Get(key string, elseGet func() (T, bool)) (T, bool)
+	Put(key string, t T)
+	Del(key string)
+	Size() int
+	Exists(key string) bool
+	PutIfAbsent(key string, t T) bool
 }
 
 type ttlCache[T any] struct {
@@ -135,6 +137,29 @@ func (tc *ttlCache[T]) Put(key string, t T) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 	tc.cache[key] = newTBucket(t)
+}
+
+func (tc *ttlCache[T]) Exists(key string) bool {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+	buk, ok := tc.cache[key]
+	if ok && buk.alive(time.Now(), tc.ttl) {
+		return true
+	}
+	return false
+}
+
+func (tc *ttlCache[T]) PutIfAbsent(key string, t T) bool {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+
+	buk, ok := tc.cache[key]
+	if ok && buk.alive(time.Now(), tc.ttl) {
+		return false
+	}
+
+	tc.cache[key] = newTBucket(t)
+	return true
 }
 
 // Create new TTLCache.

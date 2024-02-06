@@ -249,3 +249,32 @@ func TestTTLCacheDel(t *testing.T) {
 		t.Fatal("size should be 0")
 	}
 }
+
+func TestTTLCacheExist(t *testing.T) {
+	cache := NewTTLCache[string](100*time.Millisecond, 5)
+	cache.Put("k", "v")
+
+	// the key should be evicted already
+	if !cache.Exists("k") {
+		t.Fatal("should exists")
+	}
+	if cache.PutIfAbsent("k", "v2") {
+		t.Fatal("should not be put into cache until expired")
+	}
+
+	time.Sleep(150 * time.Millisecond)
+	if cache.Exists("k") {
+		t.Fatal("should have expired")
+	}
+
+	if !cache.PutIfAbsent("k", "v2") {
+		t.Fatal("should be put into cache")
+	}
+	v, ok := cache.Get("k", nil)
+	if !ok {
+		t.Fatal("should be ok")
+	}
+	if v != "v2" {
+		t.Fatal("v is not v2")
+	}
+}
