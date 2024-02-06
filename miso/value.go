@@ -3,8 +3,8 @@ package miso
 import "strings"
 
 const (
-	BOOL_STR_TRUE  = "true"
-	BOOL_STR_FALSE = "false"
+	BoolStrTrue  = "true"
+	BoolStrFalse = "false"
 )
 
 // Optional value, useful for passing zero value struct

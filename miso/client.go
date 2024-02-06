@@ -233,7 +233,7 @@ func (t *TClient) SetContentType(ct string) *TClient {
 // Append 'http://' protocol.
 //
 // If service discovery is enabled, or the url contains http protocol already, this will be skipped.
-func (t *TClient) Http(ct string) *TClient {
+func (t *TClient) Http() *TClient {
 	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
 		return t
 	}
@@ -245,7 +245,7 @@ func (t *TClient) Http(ct string) *TClient {
 // Append 'https://' protocol.
 //
 // If service discovery is enabled, or the url contains http protocol already, this will be skipped.
-func (t *TClient) Https(ct string) *TClient {
+func (t *TClient) Https() *TClient {
 	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
 		return t
 	}
@@ -472,13 +472,14 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 	return t
 }
 
-// Create new defualt TClient with service discovery and tracing enabled,
-// relUrl should be a relative url starting with '/'.
+// Create new defualt TClient with EnableServiceDiscovery(), EnableTracing(), and Require2xx() turned on.
+//
+// The provided relUrl should be a relative url starting with '/'.
 func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing()
+	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing().Require2xx()
 }
 
-// Create new TClient
+// Create new TClient.
 func NewTClient(rail Rail, url string) *TClient {
 	return &TClient{
 		Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient,
@@ -616,17 +617,6 @@ func JoinQueryParam(queryParams map[string][]string) string {
 		}
 	}
 	return strings.Join(seg, "&")
-}
-
-// Read response as GnResp[T] object.
-//
-// Response is always closed automatically.
-//
-// Should migrate to TResponse.Json(...) instead.
-func ReadGnResp[T any](tr *TResponse) (GnResp[T], error) {
-	var gr GnResp[T]
-	e := tr.Json(&gr)
-	return gr, e
 }
 
 // Disable TLS certificate check.

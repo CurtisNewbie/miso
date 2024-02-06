@@ -53,7 +53,7 @@ type PageQueryBuilder func(tx *gorm.DB) *gorm.DB
 // Create param for page query.
 type QueryPageParam[V any] struct {
 	ReqPage         Paging           // Request Paging Param.
-	AddSelectQuery  PageQueryBuilder // Add SELECT query, e.g., return tx.Select(`*`).
+	AddSelectQuery  PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
 	GetBaseQuery    PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).
 	ApplyConditions PageQueryBuilder // Where Conditions, optional, e.g., return tx.Where(`field = 'abc'`).
 	ForEach         Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.

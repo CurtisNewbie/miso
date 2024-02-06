@@ -127,10 +127,22 @@ func _getPropString(prop string) string {
 	return doWithViperReadLock(func() string { return viper.GetString(prop) })
 }
 
-// Unmarshal to object from properties
+// Unmarshal configuration.
 func UnmarshalFromProp(ptr any) {
 	doWithViperReadLock(func() any {
-		viper.Unmarshal(ptr)
+		if err := viper.Unmarshal(ptr); err != nil {
+			Warnf("failed to UnmarshalFromProp, %v", err)
+		}
+		return nil
+	})
+}
+
+// Unmarshal configuration from a speicific key.
+func UnmarshalFromPropKey(key string, ptr any) {
+	doWithViperReadLock(func() any {
+		if err := viper.UnmarshalKey(key, ptr); err != nil {
+			Warnf("failed to UnmarshalFromPropKey, %v", err)
+		}
 		return nil
 	})
 }
