@@ -78,13 +78,15 @@ var (
 		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
 		OkJsonBuilder:      func() any { return OkResp() },
 	}
-	serverResultHandler ServerResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
+
+	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
 		DefaultHandleResult(c, rail, payload, err, defaultResultBodyBuilder)
 	}
 
 	manualRegisterPprof = false
 )
 
+// Preprocessor of *gin.Engine.
 type GinPreProcessor func(rail Rail, engine *gin.Engine)
 
 // Raw version of traced route handler.
@@ -119,11 +121,13 @@ type HttpRoute struct {
 }
 
 type ComponentBootstrap struct {
-	Name      string
+	// name of the component.
+	Name string
+	// the actual bootstrap function.
 	Bootstrap func(rail Rail) error
 	// check whether component should be bootstraped
 	Condition func(rail Rail) (bool, error)
-	// order of which the components are bootstraped, natural order, it's by default 15
+	// order of which the components are bootstraped, natural order, it's by default 15.
 	Order int
 }
 
@@ -132,8 +136,6 @@ type ResultBodyBuilder struct {
 	PayloadJsonBuilder func(payload any) any          // wrap payload in json.
 	OkJsonBuilder      func() any                     // build empty ok json.
 }
-
-type ServerResultHandler func(c *gin.Context, rail Rail, payload any, err error)
 
 func init() {
 	AddShutdownHook(MarkServerShuttingDown)
@@ -160,12 +162,14 @@ func init() {
 	})
 }
 
-// Replace the default ServerResultHandler
-func SetServerResultHanlder(srh ServerResultHandler) error {
-	if srh == nil {
-		return NewErr("ServerResultHandler is nil")
+type EndpointResultHandler func(c *gin.Context, rail Rail, payload any, err error)
+
+// Replace the default EndpointResultHandler
+func SetEndpointResultHandler(erh EndpointResultHandler) error {
+	if erh == nil {
+		return NewErr("EndpointResultHandler provided is nil")
 	}
-	serverResultHandler = srh
+	endpointResultHandler = erh
 	return nil
 }
 
@@ -641,11 +645,11 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	}
 
 	if err, ok := e.(error); ok {
-		serverResultHandler(c, rail, nil, err)
+		endpointResultHandler(c, rail, nil, err)
 		return
 	}
 
-	serverResultHandler(c, rail, nil, NewErr("Unknown error, please try again later"))
+	endpointResultHandler(c, rail, nil, NewErr("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
@@ -747,7 +751,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		if GetPropBool(PropServerRequestValidateEnabled) {
 			// validate request
 			if e := Validate(req); e != nil {
-				serverResultHandler(c, rail, nil, e)
+				endpointResultHandler(c, rail, nil, e)
 				return
 			}
 		}
@@ -760,7 +764,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		res, err := handler(c, rail, req)
 
 		// wrap result and error
-		serverResultHandler(c, rail, res, err)
+		endpointResultHandler(c, rail, res, err)
 	}
 }
 
@@ -778,13 +782,13 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 		r, e := handler(c, rail)
-		serverResultHandler(c, rail, r, e)
+		endpointResultHandler(c, rail, r, e)
 	}
 }
 
-// Handle route's result
-func ServerHandleResult(c *gin.Context, rail Rail, result any, err error) {
-	serverResultHandler(c, rail, result, err)
+// Handle endpoint's result using the configured EndpointResultHandler.
+func HandlerEndpointResult(c *gin.Context, rail Rail, result any, err error) {
+	endpointResultHandler(c, rail, result, err)
 }
 
 func DefaultHandleResult(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
@@ -980,18 +984,18 @@ func SubPath(path string) *RoutingSubPath {
 	}
 }
 
-// Group routes under current sub path
+// Group routes under current sub path.
 func (s *RoutingSubPath) Group(grouped ...GroupedRouteRegistar) *RoutingSubPath {
 	s.delayedRegisters = append(s.delayedRegisters, grouped...)
 	return s
 }
 
-// Registrer pprof debug endpoint manually
+// Registrer pprof debug endpoint manually.
 func ManualPprofRegister() {
 	manualRegisterPprof = true
 }
 
-// Process *gin.Engine before the web server starts
+// Process *gin.Engine before the web server starts, particularly useful when trying to add middleware.
 func PreProcessGin(preProcessor GinPreProcessor) {
 	ginPreProcessors = append(ginPreProcessors, preProcessor)
 }
