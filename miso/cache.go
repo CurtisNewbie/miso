@@ -34,21 +34,22 @@ type cacheEvictStrategy[T any] interface {
 	OnItemRemoved(key string)
 }
 
-type tbucket[T any] struct {
+type TBucket[T any] struct {
 	ctime time.Time
 	val   T
 }
 
-func (t *tbucket[T]) alive(now time.Time, ttl time.Duration) bool {
+func (t *TBucket[T]) alive(now time.Time, ttl time.Duration) bool {
 	return now.Sub(t.ctime) < ttl
 }
 
-func newTBucket[T any](val T) tbucket[T] {
-	return tbucket[T]{val: val, ctime: time.Now()}
+func NewTBucket[T any](val T) TBucket[T] {
+	return TBucket[T]{val: val, ctime: time.Now()}
 }
 
 // Time-based Cache.
 type TTLCache[T any] interface {
+	TryGet(key string) (T, bool)
 	Get(key string, elseGet func() (T, bool)) (T, bool)
 	Put(key string, t T)
 	Del(key string)
@@ -58,7 +59,7 @@ type TTLCache[T any] interface {
 }
 
 type ttlCache[T any] struct {
-	cache         map[string]tbucket[T]
+	cache         map[string]TBucket[T]
 	mu            sync.RWMutex
 	ttl           time.Duration
 	maxSize       int
@@ -79,6 +80,10 @@ func (tc *ttlCache[T]) Del(key string) {
 	}
 	delete(tc.cache, key)
 	tc.evictStrategy.OnItemRemoved(key)
+}
+
+func (tc *ttlCache[T]) TryGet(key string) (T, bool) {
+	return tc.Get(key, nil)
 }
 
 func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
@@ -112,14 +117,14 @@ func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
 
 			// max size not exceeded yet
 			if tc.maxSize < 1 || len(tc.cache) < tc.maxSize-1 {
-				tc.cache[key] = newTBucket(v)
+				tc.cache[key] = NewTBucket(v)
 				tc.evictStrategy.OnItemAdded(key)
 				return v, true
 			}
 
 			// max size exceeded, evict some items
 			if tc.evictStrategy.Evict(tc) {
-				tc.cache[key] = newTBucket(v)
+				tc.cache[key] = NewTBucket(v)
 				tc.evictStrategy.OnItemAdded(key)
 			}
 
@@ -138,7 +143,7 @@ func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
 func (tc *ttlCache[T]) Put(key string, t T) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.cache[key] = newTBucket(t)
+	tc.cache[key] = NewTBucket(t)
 }
 
 func (tc *ttlCache[T]) Exists(key string) bool {
@@ -160,7 +165,7 @@ func (tc *ttlCache[T]) PutIfAbsent(key string, t T) bool {
 		return false
 	}
 
-	tc.cache[key] = newTBucket(t)
+	tc.cache[key] = NewTBucket(t)
 	return true
 }
 
@@ -180,7 +185,7 @@ func NewTTLCache[T any](ttl time.Duration, maxSize int) TTLCache[T] {
 		maxSize = 0
 	}
 	return &ttlCache[T]{
-		cache:   map[string]tbucket[T]{},
+		cache:   map[string]TBucket[T]{},
 		ttl:     ttl,
 		maxSize: maxSize,
 		evictStrategy: &lruCacheEvictStrategy[T]{
