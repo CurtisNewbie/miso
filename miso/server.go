@@ -2,6 +2,7 @@ package miso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -167,7 +168,7 @@ type EndpointResultHandler func(c *gin.Context, rail Rail, payload any, err erro
 // Replace the default EndpointResultHandler
 func SetEndpointResultHandler(erh EndpointResultHandler) error {
 	if erh == nil {
-		return NewErr("EndpointResultHandler provided is nil")
+		return errors.New("EndpointResultHandler provided is nil")
 	}
 	endpointResultHandler = erh
 	return nil
@@ -649,7 +650,7 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 		return
 	}
 
-	endpointResultHandler(c, rail, nil, NewErr("Unknown error, please try again later"))
+	endpointResultHandler(c, rail, nil, NewErrf("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
