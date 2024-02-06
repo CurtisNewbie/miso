@@ -106,23 +106,25 @@ func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
 	}
 	evictable := ok // if ok, then v must be evictable
 
-	v, ok = elseGet()
-	if ok {
+	if elseGet != nil {
+		v, ok = elseGet()
+		if ok {
 
-		// max size not exceeded yet
-		if tc.maxSize < 1 || len(tc.cache) < tc.maxSize-1 {
-			tc.cache[key] = newTBucket(v)
-			tc.evictStrategy.OnItemAdded(key)
+			// max size not exceeded yet
+			if tc.maxSize < 1 || len(tc.cache) < tc.maxSize-1 {
+				tc.cache[key] = newTBucket(v)
+				tc.evictStrategy.OnItemAdded(key)
+				return v, true
+			}
+
+			// max size exceeded, evict some items
+			if tc.evictStrategy.Evict(tc) {
+				tc.cache[key] = newTBucket(v)
+				tc.evictStrategy.OnItemAdded(key)
+			}
+
 			return v, true
 		}
-
-		// max size exceeded, evict some items
-		if tc.evictStrategy.Evict(tc) {
-			tc.cache[key] = newTBucket(v)
-			tc.evictStrategy.OnItemAdded(key)
-		}
-
-		return v, true
 	}
 
 	// elseGet() doesn't get the value, the evictable bucket is still there
