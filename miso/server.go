@@ -47,10 +47,16 @@ const (
 	ExtraJsonResponse = "miso-JsonResponse"
 	ScopePublic       = "PUBLIC"
 
-	ApiDocTag = "doc"
+	TagApiDoc = "doc"
 )
 
 var (
+	apiDocTypeAlias = map[string]string{
+		"ETime":       "int64",
+		"*ETime":      "int64",
+		"*miso.ETime": "int64",
+	}
+
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
@@ -1034,31 +1040,27 @@ func buildJsonPayloadDoc(b *strings.Builder, t reflect.Type, indent int) {
 		} else {
 			name = LowercaseNamingStrategy(f.Name)
 		}
-		b.WriteRune('\n')
-		b.WriteString(Spaces(indent + 2))
-		b.WriteString("- \"")
-		b.WriteString(name)
-		b.WriteString("\"")
 
-		// if f.Type.Kind() != reflect.Struct {
-		b.WriteString(": (")
+		var typeName string
 		if f.Type.Name() != "" {
-			b.WriteString(f.Type.Name())
+			typeName = f.Type.Name()
 		} else {
-			b.WriteString(f.Type.String())
+			typeName = f.Type.String()
 		}
-		b.WriteString(") ")
-		// } else {
-		// 	b.WriteString(": ")
-		// }
-		v := f.Tag.Get(ApiDocTag)
-		b.WriteString(v)
-		if f.Type.Kind() == reflect.Struct {
-			buildJsonPayloadDoc(b, f.Type, indent+2)
-		} else if f.Type.Kind() == reflect.Slice {
-			et := f.Type.Elem()
-			if et.Kind() == reflect.Struct {
-				buildJsonPayloadDoc(b, et, indent+2)
+		typeAlias, typeAliasMatched := apiDocTypeAlias[typeName]
+		if typeAliasMatched {
+			typeName = typeAlias
+		}
+		b.WriteString(fmt.Sprintf("\n%s-\"%s\": (%s) %s", Spaces(indent+2), name, typeName, f.Tag.Get(TagApiDoc)))
+
+		if !typeAliasMatched {
+			if f.Type.Kind() == reflect.Struct {
+				buildJsonPayloadDoc(b, f.Type, indent+2)
+			} else if f.Type.Kind() == reflect.Slice {
+				et := f.Type.Elem()
+				if et.Kind() == reflect.Struct {
+					buildJsonPayloadDoc(b, et, indent+2)
+				}
 			}
 		}
 	}
