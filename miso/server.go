@@ -166,6 +166,7 @@ func init() {
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
+	SetDefProp(PropServerGenerateEndpointDocEnabled, false)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -944,7 +945,7 @@ func WebServerBootstrap(rail Rail) error {
 	rail.Infof("Serving HTTP on %s", server.Addr)
 	go startHttpServer(rail, server)
 
-	if !IsProdMode() && !GetPropBool(PropServerGenerateEndpointDocDisabled) {
+	if GetPropBool(PropServerGenerateEndpointDocEnabled) {
 		genEndpointDoc(rail)
 	}
 

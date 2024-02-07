@@ -74,16 +74,16 @@ const (
 		------------------------------------
 	*/
 
-	PropServerEnabled                     = "server.enabled"
-	PropServerHost                        = "server.host"
-	PropServerPort                        = "server.port"
-	PropServerGracefulShutdownTimeSec     = "server.gracefulShutdownTimeSec"
-	PropServerPerfEnabled                 = "server.perf.enabled"
-	PropServerRequestLogEnabled           = "server.request-log.enabled"
-	PropServerPropagateInboundTrace       = "server.trace.inbound.propagate"
-	PropServerRequestValidateEnabled      = "server.validate.request.enabled"
-	PropServerPprofEnabled                = "server.pprof.enabled"
-	PropServerGenerateEndpointDocDisabled = "server.endpoint.generate-document.disabled"
+	PropServerEnabled                    = "server.enabled"
+	PropServerHost                       = "server.host"
+	PropServerPort                       = "server.port"
+	PropServerGracefulShutdownTimeSec    = "server.gracefulShutdownTimeSec"
+	PropServerPerfEnabled                = "server.perf.enabled"
+	PropServerRequestLogEnabled          = "server.request-log.enabled"
+	PropServerPropagateInboundTrace      = "server.trace.inbound.propagate"
+	PropServerRequestValidateEnabled     = "server.validate.request.enabled"
+	PropServerPprofEnabled               = "server.pprof.enabled"
+	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
 
 	/*
 		------------------------------------
