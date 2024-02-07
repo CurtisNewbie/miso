@@ -9,6 +9,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -37,12 +38,16 @@ const (
 	// For example, service registration (for service discovery), MQ broker connection and so on.
 	BootstrapOrderL4 = -5
 
-	ExtraDesc        = "miso-Desc"
-	ExtraScope       = "miso-Scope"
-	ExtraResource    = "miso-Resource"
-	ExtraQueryParam  = "miso-QueryParam"
-	ExtraHeaderParam = "miso-HeaderParam"
-	ScopePublic      = "PUBLIC"
+	ExtraDesc         = "miso-Desc"
+	ExtraScope        = "miso-Scope"
+	ExtraResource     = "miso-Resource"
+	ExtraQueryParam   = "miso-QueryParam"
+	ExtraHeaderParam  = "miso-HeaderParam"
+	ExtraJsonRequest  = "miso-JsonRequest"
+	ExtraJsonResponse = "miso-JsonResponse"
+	ScopePublic       = "PUBLIC"
+
+	ApiDocTag = "doc"
 )
 
 var (
@@ -115,15 +120,17 @@ type MappedTRouteHandler[Req any] func(c *gin.Context, rail Rail, req Req) (any,
 type routesRegistar func(*gin.Engine)
 
 type HttpRoute struct {
-	Url         string
-	Method      string
-	Extra       map[string][]any
-	HandlerName string
-	Desc        string     // description of the route (metadata).
-	Scope       string     // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource    string     // the documented resource that the route should be bound to (metadata).
-	Headers     []ParamDoc // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams []ParamDoc // the documented query parameters taht will used by the endpoint (metadata).
+	Url              string
+	Method           string
+	Extra            map[string][]any
+	HandlerName      string
+	Desc             string        // description of the route (metadata).
+	Scope            string        // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource         string        // the documented resource that the route should be bound to (metadata).
+	Headers          []ParamDoc    // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams      []ParamDoc    // the documented query parameters that will used by the endpoint (metadata).
+	JsonRequestType  *reflect.Type // the documented json request type that is expected by the endpoint (metadata).
+	JsonResponseType *reflect.Type // the documented json response type that will be returned by the endpoint (metadata).
 }
 
 type ParamDoc struct {
@@ -238,6 +245,16 @@ func recordHttpServerRoute(url string, method string, handlerName string, extra 
 			if v, ok := p.(ParamDoc); ok {
 				r.Headers = append(r.Headers, v)
 			}
+		}
+	}
+	if l, ok := extras[ExtraJsonRequest]; ok && len(l) > 0 {
+		if v, ok := l[0].(*reflect.Type); ok {
+			r.JsonRequestType = v
+		}
+	}
+	if l, ok := extras[ExtraJsonResponse]; ok && len(l) > 0 {
+		if v, ok := l[0].(*reflect.Type); ok {
+			r.JsonResponseType = v
 		}
 	}
 	serverHttpRoutes = append(serverHttpRoutes, r)
@@ -928,14 +945,14 @@ func WebServerBootstrap(rail Rail) error {
 	go startHttpServer(rail, server)
 
 	if !IsProdMode() && !GetPropBool(PropServerGenerateEndpointDocDisabled) {
-		logServerRoutes(rail)
+		genEndpointDoc(rail)
 	}
 
 	AddShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
 }
 
-func logServerRoutes(rail Rail) {
+func genEndpointDoc(rail Rail) {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints: \n")
 
@@ -988,8 +1005,62 @@ func logServerRoutes(rail Rail) {
 				b.WriteString(q.Desc)
 			}
 		}
+		if r.JsonRequestType != nil {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- JSON Request: ")
+			buildJsonPayloadDoc(&b, *r.JsonRequestType, 2)
+		}
+		if r.JsonResponseType != nil {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- JSON Response: ")
+			buildJsonPayloadDoc(&b, *r.JsonResponseType, 2)
+		}
 	}
 	rail.Infof("Generated API Endpoints Documentation:\n\n%s\n", b.String())
+}
+
+func buildJsonPayloadDoc(b *strings.Builder, t reflect.Type, indent int) {
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if IsVoid(f.Type) {
+			continue
+		}
+		var name string
+		if v := f.Tag.Get("json"); v != "" {
+			name = v
+		} else {
+			name = LowercaseNamingStrategy(f.Name)
+		}
+		b.WriteRune('\n')
+		b.WriteString(Spaces(indent + 2))
+		b.WriteString("- \"")
+		b.WriteString(name)
+		b.WriteString("\"")
+
+		// if f.Type.Kind() != reflect.Struct {
+		b.WriteString(": (")
+		if f.Type.Name() != "" {
+			b.WriteString(f.Type.Name())
+		} else {
+			b.WriteString(f.Type.String())
+		}
+		b.WriteString(") ")
+		// } else {
+		// 	b.WriteString(": ")
+		// }
+		v := f.Tag.Get(ApiDocTag)
+		b.WriteString(v)
+		if f.Type.Kind() == reflect.Struct {
+			buildJsonPayloadDoc(b, f.Type, indent+2)
+		} else if f.Type.Kind() == reflect.Slice {
+			et := f.Type.Elem()
+			if et.Kind() == reflect.Struct {
+				buildJsonPayloadDoc(b, et, indent+2)
+			}
+		}
+	}
 }
 
 type GroupedRouteRegistar struct {
@@ -1024,13 +1095,23 @@ func (g GroupedRouteRegistar) Extra(key string, value any) GroupedRouteRegistar 
 }
 
 // Document query parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) QueryParam(queryName string, desc string) GroupedRouteRegistar {
+func (g GroupedRouteRegistar) DocQueryParam(queryName string, desc string) GroupedRouteRegistar {
 	return g.Extra(ExtraQueryParam, ParamDoc{queryName, desc})
 }
 
 // Document header parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) HeaderParam(headerName string, desc string) GroupedRouteRegistar {
+func (g GroupedRouteRegistar) DocHeader(headerName string, desc string) GroupedRouteRegistar {
 	return g.Extra(ExtraHeaderParam, ParamDoc{headerName, desc})
+}
+
+// Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) DocJsonReq(t reflect.Type) GroupedRouteRegistar {
+	return g.Extra(ExtraJsonRequest, &t)
+}
+
+// Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) DocJsonResp(t reflect.Type) GroupedRouteRegistar {
+	return g.Extra(ExtraJsonResponse, &t)
 }
 
 // Create new GroupedRouteRegistar.

@@ -3,11 +3,20 @@ package miso
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"sync"
+)
+
+var (
+	voidType = reflect.TypeOf(Void{})
 )
 
 // Empty Struct
 type Void struct{}
+
+func IsVoid(t reflect.Type) bool {
+	return t == voidType
+}
 
 // Pair data structure
 type Pair struct {

@@ -11,18 +11,18 @@ const (
 
 // Web Endpoint's Resp
 type Resp struct {
-	ErrorCode string      `json:"errorCode"`
-	Msg       string      `json:"msg"`
-	Error     bool        `json:"error"`
-	Data      interface{} `json:"data"`
+	ErrorCode string      `json:"errorCode" doc:"error code"`
+	Msg       string      `json:"msg" doc:"message"`
+	Error     bool        `json:"error" doc:"whether the request was successful"`
+	Data      interface{} `json:"data" doc:"response data"`
 }
 
 // Generic version of Resp
 type GnResp[T any] struct {
-	ErrorCode string `json:"errorCode"`
-	Msg       string `json:"msg"`
-	Error     bool   `json:"error"`
-	Data      T      `json:"data"`
+	ErrorCode string `json:"errorCode" doc:"error code"`
+	Msg       string `json:"msg" doc:"message"`
+	Error     bool   `json:"error" doc:"whether the request was successful"`
+	Data      T      `json:"data" doc:"response data"`
 }
 
 func (r GnResp[T]) Err() error {

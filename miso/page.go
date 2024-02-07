@@ -7,14 +7,14 @@ const (
 )
 
 type Paging struct {
-	Limit int `json:"limit"`
-	Page  int `json:"page"`
-	Total int `json:"total"`
+	Limit int `json:"limit" doc:"page limit"`
+	Page  int `json:"page" doc:"page number, 1-based"`
+	Total int `json:"total" doc:"total count"`
 }
 
 type PageRes[T any] struct {
-	Page    Paging `json:"pagingVo"`
-	Payload []T    `json:"payload"`
+	Page    Paging `json:"pagingVo" doc:"pagination parameters"`
+	Payload []T    `json:"payload" doc:"payload values in current page"`
 }
 
 func (p Paging) GetPage() int {
