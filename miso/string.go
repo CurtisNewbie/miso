@@ -98,3 +98,7 @@ func ToStr(v any) string {
 	}
 	return fmt.Sprintf("%v", v)
 }
+
+func Spaces(count int) string {
+	return strings.Repeat(" ", count)
+}

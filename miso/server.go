@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -36,10 +37,12 @@ const (
 	// For example, service registration (for service discovery), MQ broker connection and so on.
 	BootstrapOrderL4 = -5
 
-	ExtraDesc     = "miso-Desc"
-	ExtraScope    = "miso-Scope"
-	ExtraResource = "miso-Resource"
-	ScopePublic   = "PUBLIC"
+	ExtraDesc        = "miso-Desc"
+	ExtraScope       = "miso-Scope"
+	ExtraResource    = "miso-Resource"
+	ExtraQueryParam  = "miso-QueryParam"
+	ExtraHeaderParam = "miso-HeaderParam"
+	ScopePublic      = "PUBLIC"
 )
 
 var (
@@ -114,11 +117,18 @@ type routesRegistar func(*gin.Engine)
 type HttpRoute struct {
 	Url         string
 	Method      string
-	Extra       map[string]any
+	Extra       map[string][]any
 	HandlerName string
-	Scope       string // access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Desc        string // description of the route (metadata).
-	Resource    string // resource that the route should be bound to (metadata)
+	Desc        string     // description of the route (metadata).
+	Scope       string     // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource    string     // the documented resource that the route should be bound to (metadata).
+	Headers     []ParamDoc // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams []ParamDoc // the documented query parameters taht will used by the endpoint (metadata).
+}
+
+type ParamDoc struct {
+	Name string
+	Desc string
 }
 
 type ComponentBootstrap struct {
@@ -201,19 +211,33 @@ func recordHttpServerRoute(url string, method string, handlerName string, extra 
 		HandlerName: handlerName,
 		Extra:       extras,
 	}
-	if res, ok := extras[ExtraResource]; ok {
-		if v, ok := res.(string); ok {
+	if l, ok := extras[ExtraResource]; ok && len(l) > 0 {
+		if v, ok := l[0].(string); ok {
 			r.Resource = v
 		}
 	}
-	if scope, ok := extras[ExtraScope]; ok {
-		if v, ok := scope.(string); ok {
+	if l, ok := extras[ExtraScope]; ok && len(l) > 0 {
+		if v, ok := l[0].(string); ok {
 			r.Scope = v
 		}
 	}
-	if desc, ok := extras[ExtraDesc]; ok {
-		if v, ok := desc.(string); ok {
+	if l, ok := extras[ExtraDesc]; ok && len(l) > 0 {
+		if v, ok := l[0].(string); ok {
 			r.Desc = v
+		}
+	}
+	if l, ok := extras[ExtraQueryParam]; ok && len(l) > 0 {
+		for _, p := range l {
+			if v, ok := p.(ParamDoc); ok {
+				r.QueryParams = append(r.QueryParams, v)
+			}
+		}
+	}
+	if l, ok := extras[ExtraHeaderParam]; ok && len(l) > 0 {
+		for _, p := range l {
+			if v, ok := p.(ParamDoc); ok {
+				r.Headers = append(r.Headers, v)
+			}
 		}
 	}
 	serverHttpRoutes = append(serverHttpRoutes, r)
@@ -903,8 +927,69 @@ func WebServerBootstrap(rail Rail) error {
 	rail.Infof("Serving HTTP on %s", server.Addr)
 	go startHttpServer(rail, server)
 
+	if !IsProdMode() && !GetPropBool(PropServerGenerateEndpointDocDisabled) {
+		logServerRoutes(rail)
+	}
+
 	AddShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
+}
+
+func logServerRoutes(rail Rail) {
+	b := strings.Builder{}
+	b.WriteString("# API Endpoints: \n")
+
+	hr := GetHttpRoutes()
+	for _, r := range hr {
+		b.WriteString("\n- ")
+		b.WriteString(r.Method)
+		b.WriteString(" ")
+		b.WriteString(r.Url)
+		if r.Desc != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Description: ")
+			b.WriteString(r.Desc)
+		}
+		if r.Scope != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Access Scope: ")
+			b.WriteString(r.Scope)
+		}
+		if r.Resource != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Resource: \"")
+			b.WriteString(r.Resource)
+			b.WriteRune('"')
+		}
+		if len(r.Headers) > 0 {
+			for _, h := range r.Headers {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- Header Parameter: \"")
+				b.WriteString(h.Name)
+				b.WriteString("\"\n")
+				b.WriteString(Spaces(4))
+				b.WriteString("- Description: ")
+				b.WriteString(h.Desc)
+			}
+		}
+		if len(r.QueryParams) > 0 {
+			for _, q := range r.QueryParams {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- Query Parameter: \"")
+				b.WriteString(q.Name)
+				b.WriteString("\"\n")
+				b.WriteString(Spaces(4))
+				b.WriteString("- Description: ")
+				b.WriteString(q.Desc)
+			}
+		}
+	}
+	rail.Infof("Generated API Endpoints Documentation:\n\n%s\n", b.String())
 }
 
 type GroupedRouteRegistar struct {
@@ -912,30 +997,40 @@ type GroupedRouteRegistar struct {
 	Extras       []StrPair
 }
 
-// Build route.
+// Build endpoint.
 func (g GroupedRouteRegistar) Build() {
 	g.RegisterFunc("", g.Extras...)
 }
 
-// Add route description (only serves as metadata that maybe used by some plugins).
+// Add endpoint description (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Desc(desc string) GroupedRouteRegistar {
 	return g.Extra(ExtraDesc, desc)
 }
 
-// Mark route publicly accessible (only serves as metadata that maybe used by some plugins).
+// Mark endpoint publicly accessible (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Public() GroupedRouteRegistar {
 	return g.Extra(ExtraScope, ScopePublic)
 }
 
-// Record the resource that the route should be bound to (only serves as metadata that maybe used by some plugins).
+// Record the resource that the endppoint should be bound to (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Resource(resource string) GroupedRouteRegistar {
 	return g.Extra(ExtraResource, resource)
 }
 
-// Add extra info to route.
+// Add extra info to endpoint's metadata.
 func (g GroupedRouteRegistar) Extra(key string, value any) GroupedRouteRegistar {
 	g.Extras = append(g.Extras, StrPair{key, value})
 	return g
+}
+
+// Document query parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) QueryParam(queryName string, desc string) GroupedRouteRegistar {
+	return g.Extra(ExtraQueryParam, ParamDoc{queryName, desc})
+}
+
+// Document header parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) HeaderParam(headerName string, desc string) GroupedRouteRegistar {
+	return g.Extra(ExtraHeaderParam, ParamDoc{headerName, desc})
 }
 
 // Create new GroupedRouteRegistar.

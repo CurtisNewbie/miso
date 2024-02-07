@@ -22,10 +22,14 @@ type StrPair struct {
 }
 
 // Merge StrPair into a map
-func MergeStrPairs(p ...StrPair) map[string]any {
-	merged := map[string]any{}
+func MergeStrPairs(p ...StrPair) map[string][]any {
+	merged := map[string][]any{}
 	for _, v := range p {
-		merged[v.Left] = v.Right
+		if s, ok := merged[v.Left]; ok {
+			merged[v.Left] = append(s, v.Right)
+		} else {
+			merged[v.Left] = []any{v.Right}
+		}
 	}
 	return merged
 }
