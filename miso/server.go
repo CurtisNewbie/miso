@@ -975,19 +975,19 @@ func genEndpointDoc(rail Rail) {
 			b.WriteString("- Description: ")
 			b.WriteString(r.Desc)
 		}
-		if r.Scope != "" {
-			b.WriteRune('\n')
-			b.WriteString(Spaces(2))
-			b.WriteString("- Access Scope: ")
-			b.WriteString(r.Scope)
-		}
-		if r.Resource != "" {
-			b.WriteRune('\n')
-			b.WriteString(Spaces(2))
-			b.WriteString("- Resource: \"")
-			b.WriteString(r.Resource)
-			b.WriteRune('"')
-		}
+		// if r.Scope != "" {
+		// 	b.WriteRune('\n')
+		// 	b.WriteString(Spaces(2))
+		// 	b.WriteString("- Access Scope: ")
+		// 	b.WriteString(r.Scope)
+		// }
+		// if r.Resource != "" {
+		// 	b.WriteRune('\n')
+		// 	b.WriteString(Spaces(2))
+		// 	b.WriteString("- Resource: \"")
+		// 	b.WriteString(r.Resource)
+		// 	b.WriteRune('"')
+		// }
 		if len(r.Headers) > 0 {
 			for _, h := range r.Headers {
 				b.WriteRune('\n')
@@ -1051,7 +1051,7 @@ func buildJsonPayloadDoc(b *strings.Builder, t reflect.Type, indent int) {
 		if typeAliasMatched {
 			typeName = typeAlias
 		}
-		b.WriteString(fmt.Sprintf("\n%s-\"%s\": (%s) %s", Spaces(indent+2), name, typeName, f.Tag.Get(TagApiDoc)))
+		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", Spaces(indent+2), name, typeName, f.Tag.Get(TagApiDoc)))
 
 		if !typeAliasMatched {
 			if f.Type.Kind() == reflect.Struct {
