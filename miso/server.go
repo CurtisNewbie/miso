@@ -47,11 +47,11 @@ const (
 	ExtraJsonResponse = "miso-JsonResponse"
 	ScopePublic       = "PUBLIC"
 
-	TagApiDoc = "doc"
+	TagApiDocDesc = "desc"
 )
 
 var (
-	apiDocTypeAlias = map[string]string{
+	ApiDocTypeAlias = map[string]string{
 		"ETime":       "int64",
 		"*ETime":      "int64",
 		"*miso.ETime": "int64",
@@ -961,7 +961,7 @@ func WebServerBootstrap(rail Rail) error {
 
 func genEndpointDoc(rail Rail) {
 	b := strings.Builder{}
-	b.WriteString("# API Endpoints: \n")
+	b.WriteString("# API Endpoints\n")
 
 	hr := GetHttpRoutes()
 	for _, r := range hr {
@@ -1047,11 +1047,11 @@ func buildJsonPayloadDoc(b *strings.Builder, t reflect.Type, indent int) {
 		} else {
 			typeName = f.Type.String()
 		}
-		typeAlias, typeAliasMatched := apiDocTypeAlias[typeName]
+		typeAlias, typeAliasMatched := ApiDocTypeAlias[typeName]
 		if typeAliasMatched {
 			typeName = typeAlias
 		}
-		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", Spaces(indent+2), name, typeName, f.Tag.Get(TagApiDoc)))
+		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", Spaces(indent+2), name, typeName, f.Tag.Get(TagApiDocDesc)))
 
 		if !typeAliasMatched {
 			if f.Type.Kind() == reflect.Struct {
