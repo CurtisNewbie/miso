@@ -96,7 +96,7 @@ var (
 	}
 
 	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
-		DefaultHandleResult(c, rail, payload, err, defaultResultBodyBuilder)
+		BuildEndpointResultHandler(c, rail, payload, err, defaultResultBodyBuilder)
 	}
 
 	manualRegisterPprof = false
@@ -837,11 +837,11 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 }
 
 // Handle endpoint's result using the configured EndpointResultHandler.
-func HandlerEndpointResult(c *gin.Context, rail Rail, result any, err error) {
+func HandleEndpointResult(c *gin.Context, rail Rail, result any, err error) {
 	endpointResultHandler(c, rail, result, err)
 }
 
-func DefaultHandleResult(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
+func BuildEndpointResultHandler(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
 	if err != nil {
 		DispatchJson(c, builder.ErrJsonBuilder(rail, err))
 		return
