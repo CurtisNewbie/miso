@@ -579,7 +579,7 @@ func BootstrapServer(args []string) {
 	}
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
-	rail.Infof("Miso Version: %s", MisoVersion)
+	rail.Infof("Miso Version: %s", Version)
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(rail); e != nil {
