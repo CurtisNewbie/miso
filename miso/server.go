@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -1078,7 +1079,7 @@ func (g GroupedRouteRegistar) Build() {
 
 // Add endpoint description (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Desc(desc string) GroupedRouteRegistar {
-	return g.Extra(ExtraDesc, desc)
+	return g.Extra(ExtraDesc, strings.TrimSpace(regexp.MustCompile(`[\n\t ]+`).ReplaceAllString(desc, " ")))
 }
 
 // Mark endpoint publicly accessible (only serves as metadata that maybe used by some plugins).
@@ -1088,7 +1089,7 @@ func (g GroupedRouteRegistar) Public() GroupedRouteRegistar {
 
 // Record the resource that the endppoint should be bound to (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Resource(resource string) GroupedRouteRegistar {
-	return g.Extra(ExtraResource, resource)
+	return g.Extra(ExtraResource, strings.TrimSpace(resource))
 }
 
 // Add extra info to endpoint's metadata.
