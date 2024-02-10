@@ -131,14 +131,14 @@ type ServerList struct {
 	serviceWatches map[string]*watch.Plan
 }
 
-func (s *ServerList) IsSubscribed(rail Rail, service string) bool {
+func (s *ServerList) IsSubscribed(service string) bool {
 	consulServerList.RLock()
 	defer consulServerList.RUnlock()
 	_, ok := s.serviceWatches[service]
 	return ok
 }
 
-func (s *ServerList) Subscribe(rail Rail, service string) error {
+func (s *ServerList) Subscribe(service string) error {
 	consulServerList.RLock()
 	if _, ok := s.serviceWatches[service]; ok {
 		consulServerList.RUnlock()
@@ -192,7 +192,7 @@ func (s *ServerList) Subscribe(rail Rail, service string) error {
 
 	s.serviceWatches[service] = wp
 	go wp.RunWithClientAndHclog(GetConsulClient(), nil)
-	rail.Infof("Created Consul Service Watch for %v", service)
+	Infof("Created Consul Service Watch for %v", service)
 
 	return nil
 }
@@ -294,7 +294,17 @@ func ConsulResolveServiceAddr(name string) (string, error) {
 // Select one Server based on the provided selector.
 //
 // If none is matched, ErrConsulServiceInstanceNotFound is returned.
+func SelectAnyServer(name string) (Server, error) {
+	return SelectServer(name, RandomServerSelector)
+}
+
+// Select one Server based on the provided selector.
+//
+// If none is matched, ErrConsulServiceInstanceNotFound is returned.
 func SelectServer(name string, selector func(servers []Server) int) (Server, error) {
+	// always try to create a watch for the service
+	consulServerList.Subscribe(name)
+
 	consulServerList.RLock()
 	defer consulServerList.RUnlock()
 	servers := consulServerList.servers[name]
@@ -548,9 +558,6 @@ func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUr
 	// select one of the instance for this service
 	server, err := SelectServer(service, c.Rule)
 
-	// always try to create a watch for the service
-	defer consulServerList.Subscribe(rail, service)
-
 	if err != nil {
 		// it's possible that we haven't created a watch for the service
 		// and the last time we polled the service instances, there was no instance returned for it
@@ -558,7 +565,7 @@ func (c *ConsulServiceRegistry) ResolveUrl(rail Rail, service string, relativeUr
 		if errors.Is(err, ErrConsulServiceInstanceNotFound) {
 
 			// already subscribed, give up
-			if consulServerList.IsSubscribed(rail, service) {
+			if consulServerList.IsSubscribed(service) {
 				return "", err
 			}
 
@@ -585,15 +592,15 @@ func (c *ConsulServiceRegistry) ListServers(rail Rail, service string) ([]Server
 	return ListServers(service), nil
 }
 
-func SubscribeConsulService(rail Rail, service string) error {
-	return consulServerList.Subscribe(rail, service)
+func SubscribeConsulService(service string) error {
+	return consulServerList.Subscribe(service)
 }
 
 // Subscribe to changes to service instances.
 //
 // Callback is triggered asynchronously.
 func SubscribeServerChanges(rail Rail, name string, cbk func()) error {
-	if err := SubscribeConsulService(rail, name); err != nil {
+	if err := SubscribeConsulService(name); err != nil {
 		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
 	}
 
