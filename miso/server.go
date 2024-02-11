@@ -46,7 +46,9 @@ const (
 	ExtraHeaderParam  = "miso-HeaderParam"
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
-	ScopePublic       = "PUBLIC"
+
+	ScopePublic    = "PUBLIC"
+	ScopeProtected = "PROTECTED"
 
 	TagApiDocDesc = "desc"
 )
@@ -1085,6 +1087,11 @@ func (g GroupedRouteRegistar) Desc(desc string) GroupedRouteRegistar {
 // Mark endpoint publicly accessible (only serves as metadata that maybe used by some plugins).
 func (g GroupedRouteRegistar) Public() GroupedRouteRegistar {
 	return g.Extra(ExtraScope, ScopePublic)
+}
+
+// Documents that the endpoint requires protection (only serves as metadata that maybe used by some plugins).
+func (g GroupedRouteRegistar) Protected() GroupedRouteRegistar {
+	return g.Extra(ExtraScope, ScopeProtected)
 }
 
 // Record the resource that the endppoint should be bound to (only serves as metadata that maybe used by some plugins).
