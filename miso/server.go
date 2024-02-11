@@ -51,6 +51,8 @@ const (
 	ScopeProtected = "PROTECTED"
 
 	TagApiDocDesc = "desc"
+
+	defShutdownOrder = 5
 )
 
 var (
@@ -70,7 +72,7 @@ var (
 	shuttingDown   bool         = false
 	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
 
-	shutdownHook []func()
+	shutdownHook []OrderedShutdownHook
 	shmu         sync.Mutex // mutex for shutdownHook
 
 	// server component bootstrap callbacks
@@ -111,6 +113,11 @@ var (
 
 	manualRegisterPprof = false
 )
+
+type OrderedShutdownHook struct {
+	Hook  func()
+	Order int
+}
 
 // Preprocessor of *gin.Engine.
 type GinPreProcessor func(rail Rail, engine *gin.Engine)
@@ -178,8 +185,6 @@ type ResultBodyBuilder struct {
 }
 
 func init() {
-	AddShutdownHook(MarkServerShuttingDown)
-
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "0.0.0.0")
 	SetDefProp(PropServerPort, 8080)
@@ -216,9 +221,16 @@ func SetEndpointResultHandler(erh EndpointResultHandler) error {
 
 // Register shutdown hook, hook should never panic
 func AddShutdownHook(hook func()) {
+	addOrderedShutdownHook(defShutdownOrder, hook)
+}
+
+func addOrderedShutdownHook(order int, hook func()) {
 	shmu.Lock()
 	defer shmu.Unlock()
-	shutdownHook = append(shutdownHook, hook)
+	shutdownHook = append(shutdownHook, OrderedShutdownHook{
+		Order: order,
+		Hook:  hook,
+	})
 }
 
 // Trigger shutdown hook
@@ -226,9 +238,12 @@ func triggerShutdownHook() {
 	shmu.Lock()
 	defer shmu.Unlock()
 
+	sort.Slice(shutdownHook, func(i, j int) bool { return shutdownHook[i].Order < shutdownHook[j].Order })
 	Info("Triggering shutdown hook")
+
+	Debugf("Triggering shutdown hook, %+v", shutdownHook)
 	for _, hook := range shutdownHook {
-		hook()
+		hook.Hook()
 	}
 }
 
@@ -571,6 +586,7 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
+	addOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
 	var rail Rail = EmptyRail()
 
 	start := time.Now().UnixMilli()

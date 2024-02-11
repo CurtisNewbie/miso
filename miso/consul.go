@@ -492,6 +492,7 @@ func ConsulBootstrap(rail Rail) error {
 		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
 		if !IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
+
 			Get(deregisterUrl, func(c *gin.Context, rail Rail) (any, error) {
 				if !IsConsulServiceRegistered() {
 					rail.Info("Current instance is not registered on consul")
@@ -515,10 +516,10 @@ func ConsulBootstrap(rail Rail) error {
 		return fmt.Errorf("failed to create Consul client, %w", err)
 	}
 
-	// deregister on shutdown
-	AddShutdownHook(func() {
+	// deregister on shutdown, we specify the order explicitly to make sure the service
+	// is deregistered before shutting down the web server
+	addOrderedShutdownHook(defShutdownOrder-1, func() {
 
-		// deregister current instnace
 		if IsConsulServiceRegistered() {
 			if e := DeregisterService(); e != nil {
 				rail.Errorf("Failed to deregister on Consul, %v", e)
