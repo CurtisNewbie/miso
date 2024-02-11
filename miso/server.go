@@ -1109,12 +1109,14 @@ func (g GroupedRouteRegistar) DocHeader(headerName string, desc string) GroupedR
 }
 
 // Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocJsonReq(t reflect.Type) GroupedRouteRegistar {
+func (g GroupedRouteRegistar) DocJsonReq(v any) GroupedRouteRegistar {
+	t := reflect.TypeOf(v)
 	return g.Extra(ExtraJsonRequest, &t)
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocJsonResp(t reflect.Type) GroupedRouteRegistar {
+func (g GroupedRouteRegistar) DocJsonResp(v any) GroupedRouteRegistar {
+	t := reflect.TypeOf(v)
 	return g.Extra(ExtraJsonResponse, &t)
 }
 
