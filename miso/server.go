@@ -239,9 +239,6 @@ func triggerShutdownHook() {
 	defer shmu.Unlock()
 
 	sort.Slice(shutdownHook, func(i, j int) bool { return shutdownHook[i].Order < shutdownHook[j].Order })
-	Info("Triggering shutdown hook")
-
-	Debugf("Triggering shutdown hook, %+v", shutdownHook)
 	for _, hook := range shutdownHook {
 		hook.Hook()
 	}
