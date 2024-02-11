@@ -92,13 +92,13 @@ var (
 	manualSigQuit = make(chan int, 1)
 
 	defaultResultBodyBuilder = ResultBodyBuilder{
-		ErrJsonBuilder:     func(rail Rail, err error) any { return WrapResp(nil, err, rail) },
+		ErrJsonBuilder:     func(rail Rail, url string, err error) any { return WrapResp(rail, nil, err, url) },
 		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
 		OkJsonBuilder:      func() any { return OkResp() },
 	}
 
 	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
-		BuildEndpointResultHandler(c, rail, payload, err, defaultResultBodyBuilder)
+		DefaultCallResultBodyBuilder(c, rail, payload, err, defaultResultBodyBuilder)
 	}
 
 	manualRegisterPprof = false
@@ -159,9 +159,14 @@ type ComponentBootstrap struct {
 }
 
 type ResultBodyBuilder struct {
-	ErrJsonBuilder     func(rail Rail, err error) any // wrap error in json, return json object that will be serialized.
-	PayloadJsonBuilder func(payload any) any          // wrap payload in json.
-	OkJsonBuilder      func() any                     // build empty ok json.
+	// wrap error in json, the returned object will be serialized to json.
+	ErrJsonBuilder func(rail Rail, url string, err error) any
+
+	// wrap payload object, the returned object will be serialized to json.
+	PayloadJsonBuilder func(payload any) any
+
+	// build empty ok response object, the returned object will be serialized to json.
+	OkJsonBuilder func() any
 }
 
 func init() {
@@ -843,9 +848,9 @@ func HandleEndpointResult(c *gin.Context, rail Rail, result any, err error) {
 	endpointResultHandler(c, rail, result, err)
 }
 
-func BuildEndpointResultHandler(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
+func DefaultCallResultBodyBuilder(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
 	if err != nil {
-		DispatchJson(c, builder.ErrJsonBuilder(rail, err))
+		DispatchJson(c, builder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
 		return
 	}
 	if payload != nil {

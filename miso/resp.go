@@ -52,7 +52,7 @@ func (r GnResp[T]) MappedRes(mapper map[string]error) (T, error) {
 //
 // If err is not nil, returns a Resp body containing the error code and message.
 // If err is nil, the data is wrapped inside a Resp object and returned with http.StatusOK.
-func WrapResp(data interface{}, err error, rail Rail) Resp {
+func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 	if err != nil {
 		me := &MisoErr{}
 		if errors.As(err, &me) {
@@ -60,16 +60,18 @@ func WrapResp(data interface{}, err error, rail Rail) Resp {
 				me.Code = ErrCodeGeneric
 			}
 			if me.InternalMsg != "" {
-				rail.Infof("Returned error, code: '%v', msg: '%v', internalMsg: '%v'", me.Code, me.Msg, me.InternalMsg)
+				rail.Infof("'%s' returned error, code: '%v', msg: '%v', internalMsg: '%v'", url, me.Code, me.Msg, me.InternalMsg)
 			} else {
-				rail.Infof("Returned error, code: '%v', msg: '%v'", me.Code, me.Msg)
+				rail.Infof("'%s' returned error, code: '%v', msg: '%v'", url, me.Code, me.Msg)
 			}
 			return ErrorRespWCode(me.Code, me.Msg)
 		}
 
 		ve := &ValidationError{}
 		if errors.As(err, &ve) {
-			return ErrorResp(ve.Error())
+			msg := ve.Error()
+			rail.Infof("'%s' returned error, request invalid, msg: '%v'", url, msg)
+			return ErrorResp(msg)
 		}
 
 		// not a MisoErr, just return some generic msg
