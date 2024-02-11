@@ -99,9 +99,13 @@ func PrometheusBootstrap(rail Rail) error {
 	}
 
 	if !manualBootstrapProm {
-		RawGet(GetPropStr(PropMetricsRoute), func(c *gin.Context, rail Rail) {
-			handler.ServeHTTP(c.Writer, c.Request)
-		}).Build()
+		RawGet(GetPropStr(PropMetricsRoute),
+			func(c *gin.Context, rail Rail) {
+				handler.ServeHTTP(c.Writer, c.Request)
+			}).
+			Desc("Collect prometheus metrics information").
+			DocHeader("Authorization", "Basic authorization if enabled").
+			Build()
 	}
 	return nil
 }
