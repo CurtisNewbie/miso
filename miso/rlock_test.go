@@ -141,3 +141,22 @@ func TestRLockCount(t *testing.T) {
 		t.Fatalf("incorrect count, actual: %v", actual)
 	}
 }
+
+func TestCancelRefresher(t *testing.T) {
+	rail := EmptyRail()
+	LoadConfigFromFile("../conf_dev.yml", rail)
+	if _, e := InitRedisFromProp(rail); e != nil {
+		t.Fatal(e)
+	}
+	SetLogLevel("trace")
+
+	lock := NewRLock(rail, "mylock")
+	if err := lock.Lock(); err != nil {
+		t.Fatal(err)
+	}
+
+	// need to change lockRefreshTime and lockLeaseTime beforehand
+	time.Sleep(10 * time.Second)
+	lock.Unlock()
+	time.Sleep(5 * time.Second)
+}

@@ -242,4 +242,5 @@ func (t *TickRunner) Stop() {
 		return
 	}
 	t.ticker.Stop()
+	t.ticker = nil
 }

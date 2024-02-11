@@ -1,8 +1,8 @@
 package miso
 
 import (
+	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/bsm/redislock"
@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	lock_lease_time = time.Duration(30_000) * time.Millisecond
-	refresh_time    = time.Duration(10_000) * time.Millisecond
+	lockLeaseTime   = time.Duration(30_000) * time.Millisecond
+	lockRefreshTime = time.Duration(10_000) * time.Millisecond
 )
 
 // Check whether the error is 'redislock.ErrNotObtained'
@@ -68,7 +68,6 @@ type RLock struct {
 	rail            Rail
 	key             string
 	cancelRefresher func()
-	_isLocked       int32
 	lock            *redislock.Lock
 	backoffWindow   time.Duration
 	backoffSteps    int
@@ -100,7 +99,6 @@ func NewCustomRLock(rail Rail, key string, config RLockConfig) *RLock {
 	r := RLock{
 		rail:            rail,
 		key:             key,
-		_isLocked:       0,
 		cancelRefresher: nil,
 		lock:            nil,
 		backoffWindow:   5 * time.Millisecond,
@@ -118,55 +116,44 @@ func NewCustomRLock(rail Rail, key string, config RLockConfig) *RLock {
 	return &r
 }
 
-func (r *RLock) isLocked() bool {
-	if r.lock == nil {
-		return false
-	}
-	return atomic.LoadInt32(&r._isLocked) == 1
-}
-
-func (r *RLock) setLocked() {
-	atomic.StoreInt32(&r._isLocked, 1)
-}
-
-func (r *RLock) setUnlocked() {
-	atomic.StoreInt32(&r._isLocked, 0)
-}
-
 // Acquire lock.
 func (r *RLock) Lock() error {
 	rlocker := ObtainRLocker()
-	lock, err := rlocker.Obtain(r.key, lock_lease_time, &redislock.Options{
+	lock, err := rlocker.Obtain(r.key, lockLeaseTime, &redislock.Options{
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to obtain lock, key: %v, %w", r.key, err)
 	}
+	r.lock = lock
 	r.rail.Tracef("Obtained lock for key '%s'", r.key)
 
-	r.setLocked()
-	r.lock = lock
+	cancelChan := make(chan struct{}, 1)
+	r.cancelRefresher = func() {
+		cancelChan <- struct{}{}
+	}
 
-	subrail, cancel := r.rail.WithCancel()
-	r.cancelRefresher = cancel
+	go func(rail Rail) {
+		ticker := time.NewTicker(lockRefreshTime)
+		defer ticker.Stop()
 
-	go func(subrail Rail) {
-		ticker := time.NewTicker(refresh_time)
 		for {
 			select {
 			case <-ticker.C:
-				if err := lock.Refresh(lock_lease_time, nil); err != nil {
-					subrail.Warnf("Failed to refresh RLock for '%v'", r.key)
+				if err := lock.Refresh(lockLeaseTime, nil); err != nil {
+					rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
+					if errors.Is(err, redislock.ErrNotObtained) {
+						return
+					}
 				} else {
-					subrail.Tracef("Refreshed rlock for '%v'", r.key)
+					rail.Infof("Refreshed rlock for '%v'", r.key)
 				}
-			case <-subrail.Ctx.Done():
-				subrail.Tracef("RLock Refresher cancelled for '%v'", r.key)
+			case <-cancelChan:
+				rail.Tracef("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
-	}(subrail)
+	}(r.rail.NextSpan())
 
 	return nil
 }
@@ -175,10 +162,6 @@ func (r *RLock) Lock() error {
 //
 // If the lock is not obtained, method call will be ignored.
 func (r *RLock) Unlock() error {
-	if !r.isLocked() {
-		return nil
-	}
-
 	if r.cancelRefresher != nil {
 		r.cancelRefresher()
 	}
@@ -191,8 +174,8 @@ func (r *RLock) Unlock() error {
 		} else {
 			r.rail.Tracef("Released lock for key '%s'", r.key)
 		}
+		r.lock = nil
 	}
-	r.setUnlocked()
-	r.lock = nil
+
 	return nil
 }
