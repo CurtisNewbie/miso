@@ -98,7 +98,15 @@ var (
 	}
 
 	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
-		DefaultCallResultBodyBuilder(c, rail, payload, err, defaultResultBodyBuilder)
+		if err != nil {
+			DispatchJson(c, defaultResultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
+			return
+		}
+		if payload != nil {
+			DispatchJson(c, defaultResultBodyBuilder.PayloadJsonBuilder(payload))
+			return
+		}
+		DispatchJson(c, defaultResultBodyBuilder.OkJsonBuilder())
 	}
 
 	manualRegisterPprof = false
@@ -702,11 +710,11 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	}
 
 	if err, ok := e.(error); ok {
-		endpointResultHandler(c, rail, nil, err)
+		HandleEndpointResult(c, rail, nil, err)
 		return
 	}
 
-	endpointResultHandler(c, rail, nil, NewErrf("Unknown error, please try again later"))
+	HandleEndpointResult(c, rail, nil, NewErrf("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
@@ -808,7 +816,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		if GetPropBool(PropServerRequestValidateEnabled) {
 			// validate request
 			if e := Validate(req); e != nil {
-				endpointResultHandler(c, rail, nil, e)
+				HandleEndpointResult(c, rail, nil, e)
 				return
 			}
 		}
@@ -821,7 +829,7 @@ func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *g
 		res, err := handler(c, rail, req)
 
 		// wrap result and error
-		endpointResultHandler(c, rail, res, err)
+		HandleEndpointResult(c, rail, res, err)
 	}
 }
 
@@ -839,25 +847,13 @@ func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 		r, e := handler(c, rail)
-		endpointResultHandler(c, rail, r, e)
+		HandleEndpointResult(c, rail, r, e)
 	}
 }
 
 // Handle endpoint's result using the configured EndpointResultHandler.
 func HandleEndpointResult(c *gin.Context, rail Rail, result any, err error) {
 	endpointResultHandler(c, rail, result, err)
-}
-
-func DefaultCallResultBodyBuilder(c *gin.Context, rail Rail, payload any, err error, builder ResultBodyBuilder) {
-	if err != nil {
-		DispatchJson(c, builder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
-		return
-	}
-	if payload != nil {
-		DispatchJson(c, builder.PayloadJsonBuilder(payload))
-		return
-	}
-	DispatchJson(c, builder.OkJsonBuilder())
 }
 
 // Must bind request payload to the given pointer, else panic
