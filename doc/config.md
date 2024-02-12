@@ -64,6 +64,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.validate.request.enabled      | enable inbound request parameter validation          | true          |
 | server.request-log.enabled           | enable server request log                            | false         |
 | server.pprof.enabled                 | enable pprof (exposed using endpoint '/debug/pprof') | false         |
+| server.generate-endpoint-doc.enabled | generate endpoint documentation in logs              | true          |
 
 ## Consul Configuration
 

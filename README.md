@@ -100,13 +100,13 @@ go get github.com/curtisnewbie/miso@v0.0.19
 - [Configuration](./doc/config.md)
 - [Application Lifecycle](./doc/lifecycle.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
-- [API Documentation Generation](./doc/api_doc_gen.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
 - [Customize Build](./doc/customize_build.md)
 - [Json Processing Behaviour](./doc/json.md)
 - [pprof](./doc/pprof.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
+- [API Documentation Generation](./doc/api_doc_gen.md)
 - More in the future (maybe) :D
 
 ## Projects that use miso

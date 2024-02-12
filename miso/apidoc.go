@@ -24,6 +24,10 @@ var (
 	buildApiDocTmplOnce sync.Once
 )
 
+func init() {
+	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
+}
+
 type HttpRouteDoc struct {
 	Url              string
 	Method           string

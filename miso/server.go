@@ -951,7 +951,7 @@ func WebServerBootstrap(rail Rail) error {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
-	if !IsProdMode() {
+	if !IsProdMode() && GetPropBool(PropServerGenerateEndpointDocEnabled) {
 		desc := buildHttpRouteDoc(rail, GetHttpRoutes())
 		markdown := genMarkDownDoc(desc)
 		if err := serveApiDocTmpl(rail, desc, markdown); err != nil {
