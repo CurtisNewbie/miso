@@ -185,7 +185,6 @@ func init() {
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
-	SetDefProp(PropServerGenerateEndpointDocEnabled, false)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -952,6 +951,14 @@ func WebServerBootstrap(rail Rail) error {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
+	if !IsProdMode() {
+		desc := buildHttpRouteDoc(rail, GetHttpRoutes())
+		markdown := genMarkDownDoc(desc)
+		if err := serveApiDocTmpl(rail, desc, markdown); err != nil {
+			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
+		}
+	}
+
 	// register http routes
 	registerServerRoutes(rail, engine)
 
@@ -959,10 +966,6 @@ func WebServerBootstrap(rail Rail) error {
 	server := createHttpServer(engine)
 	rail.Infof("Serving HTTP on %s", server.Addr)
 	go startHttpServer(rail, server)
-
-	if GetPropBool(PropServerGenerateEndpointDocEnabled) {
-		genEndpointDoc(rail)
-	}
 
 	AddShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
