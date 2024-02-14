@@ -541,6 +541,7 @@ func BootstrapServer(args []string) {
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 	rail.Infof("Miso Version: %s", Version)
+	rail.Infof("Production Mode: %v", GetPropBool(PropProdMode))
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := callPreServerBootstrapListeners(rail); e != nil {
@@ -881,7 +882,7 @@ func WebServerBootstrap(rail Rail) error {
 	}
 	ginPreProcessors = nil
 
-	if GetPropBool(PropServerPprofEnabled) && !manualRegisterPprof {
+	if !manualRegisterPprof && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
 			RawGet("", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
 			RawGet("/:name", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),

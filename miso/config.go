@@ -335,10 +335,6 @@ func GetEnvElse(key string, defVal string) string {
 }
 
 // Check whether we are running in production mode
-//
-// This func looks for prop: PROP_PRODUCTION_MODE,
-// if the prop value equals to true (case insensitive), then
-// true is returned else false
 func IsProdMode() bool {
 	return GetPropBool(PropProdMode)
 }

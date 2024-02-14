@@ -1,6 +1,6 @@
 # pprof
 
-If configured, miso exposes pprof http endpoints for debugging performance. Http endpoints for pprof are by default disabled. You can enable it as follows:
+If configured, miso exposes pprof http endpoints for debugging performance. The http endpoints for pprof are only enabled on non-prod mode. You can enable it in production mode as follows:
 
 ```yaml
 server:
