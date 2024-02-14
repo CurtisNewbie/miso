@@ -882,8 +882,7 @@ func WebServerBootstrap(rail Rail) error {
 	ginPreProcessors = nil
 
 	if GetPropBool(PropServerPprofEnabled) && !manualRegisterPprof {
-		path := "/debug/pprof"
-		BaseRoute(path).Group(
+		GroupRoute("/debug/pprof",
 			RawGet("", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
 			RawGet("/:name", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
 			RawGet("/cmdline", func(c *gin.Context, rail Rail) { pprof.Cmdline(c.Writer, c.Request) }),
@@ -1023,6 +1022,11 @@ func (rg *RoutingGroup) Prepend(baseUrl string) {
 	for _, r := range rg.Paths {
 		r.Prepend(baseUrl)
 	}
+}
+
+// Group routes together to share the same base url.
+func GroupRoute(baseUrl string, grouped ...TreePath) *RoutingGroup {
+	return BaseRoute(baseUrl).Group(grouped...)
 }
 
 // Group routes together to share the same base url.
