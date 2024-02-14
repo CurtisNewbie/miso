@@ -13,20 +13,17 @@ miso.RawGet("/file/raw", TempKeyDownloadFileEp).
         authorization, since a temporary file_key is generated and used.
     `).
     Public().
-    DocQueryParam("key", "temporary file key").
-    Build()
+    DocQueryParam("key", "temporary file key")
 
 miso.Put("/file", UploadFileEp).
     Desc("Fstore file upload. A temporary file_id is returned, which should be used to exchange the real file_id").
     Resource(ResCodeFstoreUpload).
     DocHeader("filename", "name of the uploaded file").
-    DocJsonResp(miso.GnResp[string]{}).
-    Build()
+    DocJsonResp(miso.GnResp[string]{})
 
 miso.IGet("/file/info", GetFileInfoEp).
     Desc("Fetch file info").
     DocQueryParam("uploadFileId", "temporary file_id returned for the newly uploaded file").
     DocQueryParam("fileId", "actual file_id of the file record").
-    DocJsonResp(miso.GnResp[api.FstoreFile]{}).
-    Build()
+    DocJsonResp(miso.GnResp[api.FstoreFile]{})
 ```

@@ -49,7 +49,7 @@ func main() {
 			Name string
 			Age int
 		}
-		miso.IPost[MyReq]("/open/api/demo/post", doSomethingEndpoint).Build()
+		miso.IPost[MyReq]("/open/api/demo/post", doSomethingEndpoint)
 
 		// register grouped routes that share the same base url
 		miso.BaseRoute("/open/api/demo/grouped").
