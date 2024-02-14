@@ -325,7 +325,7 @@ func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
 
 // Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, NewRawTRouteHandler(handler))
+	return NewLazyRouteDecl(url, http.MethodDelete, NewRawTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for GET request.
