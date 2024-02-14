@@ -906,16 +906,14 @@ func WebServerBootstrap(rail Rail) error {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
-	// register http routes
-	registerServerRoutes(rail, engine)
-
 	if !IsProdMode() && GetPropBool(PropServerGenerateEndpointDocEnabled) {
-		desc := buildHttpRouteDoc(rail, GetHttpRoutes())
-		markdown := genMarkDownDoc(desc)
-		if err := serveApiDocTmpl(rail, desc, markdown); err != nil {
+		if err := serveApiDocTmpl(rail); err != nil {
 			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
 		}
 	}
+
+	// register http routes
+	registerServerRoutes(rail, engine)
 
 	// start the http server
 	server := createHttpServer(engine)

@@ -121,13 +121,13 @@ func genMarkDownDoc(hr []HttpRouteDoc) string {
 		if len(r.JsonRequestDesc) > 0 {
 			b.WriteRune('\n')
 			b.WriteString(Spaces(2))
-			b.WriteString("- JSON Request: ")
+			b.WriteString("- JSON Request:")
 			appendJsonPayloadDoc(&b, r.JsonRequestDesc, 2)
 		}
 		if len(r.JsonResponseDesc) > 0 {
 			b.WriteRune('\n')
 			b.WriteString(Spaces(2))
-			b.WriteString("- JSON Response: ")
+			b.WriteString("- JSON Response:")
 			appendJsonPayloadDoc(&b, r.JsonResponseDesc, 2)
 		}
 	}
@@ -198,7 +198,7 @@ type jsonDesc struct {
 	Fields   []jsonDesc
 }
 
-func serveApiDocTmpl(rail Rail, routeDoc []HttpRouteDoc, markdown string) error {
+func serveApiDocTmpl(rail Rail) error {
 	var err error
 	buildApiDocTmplOnce.Do(func() {
 		t, er := template.New("").Parse(`
@@ -285,6 +285,9 @@ func serveApiDocTmpl(rail Rail, routeDoc []HttpRouteDoc, markdown string) error 
 
 	RawGet("/doc/api",
 		func(c *gin.Context, rail Rail) {
+			routeDoc := buildHttpRouteDoc(rail, GetHttpRoutes())
+			markdown := genMarkDownDoc(routeDoc)
+
 			if err := apiDocTmpl.ExecuteTemplate(c.Writer, "apiDocTempl",
 				struct {
 					App      string
