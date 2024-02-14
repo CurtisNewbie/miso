@@ -114,7 +114,7 @@ func TestGroupingNestedRoutes(t *testing.T) {
 			return nil, nil
 		}).Extra("123", 123),
 
-		SubPath("/v1").Group(
+		BaseRoute("/v1").Group(
 			Get("/order", func(c *gin.Context, rail Rail) (any, error) {
 				// do something
 				return nil, nil
@@ -126,7 +126,7 @@ func TestGroupingNestedRoutes(t *testing.T) {
 			}),
 		),
 
-		SubPath("/v2").Group(
+		BaseRoute("/v2").Group(
 			Get("/order", func(c *gin.Context, rail Rail) (any, error) {
 				// do something
 				return nil, nil

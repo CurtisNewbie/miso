@@ -924,8 +924,8 @@ func WebServerBootstrap(rail Rail) error {
 	return nil
 }
 
-type NestedPath interface {
-	Append(baseUrl string)
+type TreePath interface {
+	Prepend(baseUrl string)
 }
 
 // Lazy route declaration
@@ -944,7 +944,7 @@ func (g *LazyRouteDecl) build(engine *gin.Engine) {
 	engine.Handle(g.Method, g.Url, g.Handler)
 }
 
-func (g *LazyRouteDecl) Append(baseUrl string) {
+func (g *LazyRouteDecl) Prepend(baseUrl string) {
 	g.Url = baseUrl + g.Url
 }
 
@@ -1008,48 +1008,31 @@ func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *
 }
 
 type RoutingGroup struct {
-	Base string
+	Base  string
+	Paths []TreePath
 }
 
 // Group routes, routes are immediately registered
-func (rg *RoutingGroup) Group(grouped ...NestedPath) {
+func (rg *RoutingGroup) Group(grouped ...TreePath) *RoutingGroup {
+	if rg.Paths == nil {
+		rg.Paths = make([]TreePath, 0, len(grouped))
+	}
 	for _, r := range grouped {
-		r.Append(rg.Base)
+		rg.Paths = append(rg.Paths, r)
+		r.Prepend(rg.Base)
+	}
+	return rg
+}
+
+func (rg *RoutingGroup) Prepend(baseUrl string) {
+	for _, r := range rg.Paths {
+		r.Prepend(baseUrl)
 	}
 }
 
 // Group routes together to share the same base url.
 func BaseRoute(baseUrl string) *RoutingGroup {
 	return &RoutingGroup{Base: baseUrl}
-}
-
-// RoutingSubPath, each sub path belongs to a specific RoutingGroup (the base path)
-type RoutingSubPath struct {
-	path             string
-	delayedRegisters []*LazyRouteDecl
-}
-
-// Create sub path for routing requests
-func SubPath(path string) *RoutingSubPath {
-	return &RoutingSubPath{
-		path:             path,
-		delayedRegisters: []*LazyRouteDecl{},
-	}
-}
-
-func (s *RoutingSubPath) Append(baseUrl string) {
-	for _, lrd := range s.delayedRegisters {
-		lrd.Url = baseUrl + lrd.Url
-	}
-}
-
-// Group routes under current sub path.
-func (s *RoutingSubPath) Group(grouped ...*LazyRouteDecl) *RoutingSubPath {
-	s.delayedRegisters = append(s.delayedRegisters, grouped...)
-	for _, lrd := range grouped {
-		lrd.Url = s.path + lrd.Url
-	}
-	return s
 }
 
 // Registrer pprof debug endpoint manually.
