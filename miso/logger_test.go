@@ -15,3 +15,9 @@ func TestGetCallerFn(t *testing.T) {
 
 	EmptyRail().Info("oops")
 }
+
+func BenchmarkDebugf(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Debugf("abc, %v", 1)
+	}
+}

@@ -12,5 +12,5 @@ The pprof is exposed at endpoint '/debug/pprof', it's not customizable at the mo
 Once the server is up and running, use pprof tool to connect to the exposed endpoint:
 
 ```sh
-go tool pprof -http=:8081 http://localhost:8080/debug/pprof/heap
+go tool pprof -http=: http://localhost:8080/debug/pprof/heap
 ```

@@ -139,42 +139,72 @@ func Tracef(format string, args ...interface{}) {
 }
 
 func Debugf(format string, args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }
 
 func Infof(format string, args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Infof(format, args...)
 }
 
 func Warnf(format string, args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Warnf(format, args...)
 }
 
 func Errorf(format string, args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Errorf(format, args...)
 }
 
 func Fatalf(format string, args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Fatalf(format, args...)
 }
 
 func Debug(args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Debug(args...)
 }
 
 func Info(args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Info(args...)
 }
 
 func Warn(args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Warn(args...)
 }
 
 func Error(args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Error(args...)
 }
 
 func Fatal(args ...interface{}) {
+	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+		return
+	}
 	logrus.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
