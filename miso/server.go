@@ -57,11 +57,11 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	lazyRouteRegistars = []*LazyRouteDecl{}
-	routeRegistars     = []routesRegistar{}
+	lazyRouteRegistars []*LazyRouteDecl
+	routeRegistars     []routesRegistar
 
-	serverHttpRoutes = []HttpRoute{}
-	ginPreProcessors = []GinPreProcessor{}
+	serverHttpRoutes []HttpRoute
+	ginPreProcessors []GinPreProcessor
 
 	shuttingDown   bool         = false
 	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
@@ -69,13 +69,9 @@ var (
 	shutdownHook []OrderedShutdownHook
 	shmu         sync.Mutex // mutex for shutdownHook
 
-	// server component bootstrap callbacks
-	serverBootrapCallbacks []ComponentBootstrap = []ComponentBootstrap{}
-
-	// listener for events trigger before server components being bootstrapped
-	preServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
-	// listener for events trigger after server components bootstrapped
-	postServerBootstrapListener []func(r Rail) error = []func(r Rail) error{}
+	serverBootrapCallbacks      []ComponentBootstrap
+	preServerBootstrapListener  []func(r Rail) error
+	postServerBootstrapListener []func(r Rail) error
 
 	// all http methods
 	anyHttpMethods = []string{
@@ -105,6 +101,7 @@ var (
 		DispatchJson(c, defaultResultBodyBuilder.OkJsonBuilder())
 	}
 
+	// enable pprof manually
 	manualRegisterPprof = false
 )
 
@@ -286,15 +283,6 @@ func recordHttpServerRoute(url string, method string, extra ...StrPair) {
 	serverHttpRoutes = append(serverHttpRoutes, r)
 }
 
-// Get recorded server routes (deprecated, use GetHttpRoutes() instead)
-func GetRecordedHttpServerRoutes() []string {
-	urls := make([]string, len(serverHttpRoutes))
-	for _, r := range serverHttpRoutes {
-		urls = append(urls, r.Url)
-	}
-	return urls
-}
-
 // Get recorded http server routes
 func GetHttpRoutes() []HttpRoute {
 	return serverHttpRoutes
@@ -454,6 +442,7 @@ func callPostServerBootstrapListeners(rail Rail) error {
 		}
 		i++
 	}
+	postServerBootstrapListener = nil
 	return nil
 }
 
@@ -489,6 +478,7 @@ func callPreServerBootstrapListeners(rail Rail) error {
 		}
 		i++
 	}
+	preServerBootstrapListener = nil
 	return nil
 }
 
@@ -580,6 +570,7 @@ func BootstrapServer(args []string) {
 		}
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, time.Since(start))
 	}
+	serverBootrapCallbacks = nil
 
 	end := time.Now().UnixMilli()
 	rail.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
@@ -620,9 +611,12 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 	for _, registerRoute := range routeRegistars {
 		registerRoute(engine)
 	}
+	routeRegistars = nil
+
 	for _, lrr := range lazyRouteRegistars {
 		lrr.build(engine)
 	}
+	lazyRouteRegistars = nil
 
 	for _, r := range GetHttpRoutes() {
 		c.Debugf("%-6s %s", r.Method, r.Url)
@@ -885,6 +879,7 @@ func WebServerBootstrap(rail Rail) error {
 	for _, p := range ginPreProcessors {
 		p(rail, engine)
 	}
+	ginPreProcessors = nil
 
 	if GetPropBool(PropServerPprofEnabled) && !manualRegisterPprof {
 		path := "/debug/pprof"
