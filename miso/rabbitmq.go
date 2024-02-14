@@ -324,7 +324,7 @@ func StartRabbitMqClient(rail Rail) error {
 
 	go func(notifyCloseChan chan *amqp.Error) {
 		isInitial := true
-		doneCh := rail.Ctx.Done()
+		doneCh := rail.Context().Done()
 
 		for {
 			if isInitial {

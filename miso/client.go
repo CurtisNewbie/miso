@@ -388,7 +388,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	AddHeaders(req, t.Headers)
 
-	if t.Rail.IsDebugLogEnabled() {
+	if IsDebugLevel() {
 		loggedBody := "***"
 		if req.Body != nil && req.GetBody != nil {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
@@ -482,7 +482,7 @@ func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
 // Create new TClient.
 func NewTClient(rail Rail, url string) *TClient {
 	return &TClient{
-		Url: url, Headers: map[string][]string{}, Ctx: rail.Ctx, client: MisoDefaultClient,
+		Url: url, Headers: map[string][]string{}, Ctx: rail.Context(), client: MisoDefaultClient,
 		Rail: rail, QueryParam: map[string][]string{},
 	}
 }
