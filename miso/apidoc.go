@@ -32,7 +32,6 @@ type HttpRouteDoc struct {
 	Url              string
 	Method           string
 	Extra            map[string][]any
-	HandlerName      string
 	Desc             string     // description of the route (metadata).
 	Scope            string     // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
 	Resource         string     // the documented resource that the route should be bound to (metadata).
@@ -50,7 +49,6 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 			Url:         r.Url,
 			Method:      r.Method,
 			Extra:       r.Extra,
-			HandlerName: r.HandlerName,
 			Desc:        r.Desc,
 			Scope:       r.Scope,
 			Resource:    r.Resource,
@@ -301,8 +299,7 @@ func serveApiDocTmpl(rail Rail, routeDoc []HttpRouteDoc, markdown string) error 
 			}
 		}).
 		Desc("Serve the generated API documentation webpage").
-		Public().
-		Build()
+		Public()
 
 	rail.Info("Exposing API Documentation on /doc/api")
 	return nil

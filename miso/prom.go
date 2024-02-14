@@ -104,8 +104,7 @@ func PrometheusBootstrap(rail Rail) error {
 				handler.ServeHTTP(c.Writer, c.Request)
 			}).
 			Desc("Collect prometheus metrics information").
-			DocHeader("Authorization", "Basic authorization if enabled").
-			Build()
+			DocHeader("Authorization", "Basic authorization if enabled")
 	}
 	return nil
 }

@@ -57,7 +57,9 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	routeRegistars   = []routesRegistar{}
+	lazyRouteRegistars = []*LazyRouteDecl{}
+	routeRegistars     = []routesRegistar{}
+
 	serverHttpRoutes = []HttpRoute{}
 	ginPreProcessors = []GinPreProcessor{}
 
@@ -139,7 +141,6 @@ type HttpRoute struct {
 	Url              string
 	Method           string
 	Extra            map[string][]any
-	HandlerName      string
 	Desc             string        // description of the route (metadata).
 	Scope            string        // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
 	Resource         string        // the documented resource that the route should be bound to (metadata).
@@ -236,13 +237,12 @@ func triggerShutdownHook() {
 }
 
 // Record server route
-func recordHttpServerRoute(url string, method string, handlerName string, extra ...StrPair) {
+func recordHttpServerRoute(url string, method string, extra ...StrPair) {
 	extras := MergeStrPairs(extra...)
 	r := HttpRoute{
-		Url:         url,
-		Method:      method,
-		HandlerName: handlerName,
-		Extra:       extras,
+		Url:    url,
+		Method: method,
+		Extra:  extras,
 	}
 	if l, ok := extras[ExtraResource]; ok && len(l) > 0 {
 		if v, ok := l[0].(string); ok {
@@ -303,133 +303,85 @@ func GetHttpRoutes() []HttpRoute {
 // Register ANY request route (raw version
 func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
 	for i := range anyHttpMethods {
-		recordHttpServerRoute(url, anyHttpMethods[i], FuncName(handler), extra...)
+		recordHttpServerRoute(url, anyHttpMethods[i], extra...)
 	}
 	addRoutesRegistar(func(e *gin.Engine) { e.Any(url, NewRawTRouteHandler(handler)) })
 }
 
 // Register GET request route (raw version)
-func RawGet(url string, handler RawTRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewRawTRouteHandler(handler)) })
-	})
+func RawGet(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodGet, NewRawTRouteHandler(handler))
 }
 
 // Register POST request route (raw version)
-func RawPost(url string, handler RawTRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewRawTRouteHandler(handler)) })
-	})
+func RawPost(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPost, NewRawTRouteHandler(handler))
 }
 
 // Register PUT request route (raw version)
-func RawPut(url string, handler RawTRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewRawTRouteHandler(handler)) })
-	})
+func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPut, NewRawTRouteHandler(handler))
 }
 
 // Register DELETE request route (raw version)
-func RawDelete(url string, handler RawTRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewRawTRouteHandler(handler)) })
-	})
+func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodGet, NewRawTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for GET request.
 //
 // The result or error is wrapped in Resp automatically.
-func Get(url string, handler TRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewTRouteHandler(handler)) })
-	})
+func Get(url string, handler TRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for POST request.
 //
 // The result or error is wrapped in Resp automatically.
-func Post(url string, handler TRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewTRouteHandler(handler)) })
-	})
+func Post(url string, handler TRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func Put(url string, handler TRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewTRouteHandler(handler)) })
-	})
+func Put(url string, handler TRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for DELETE request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func Delete(url string, handler TRouteHandler) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewTRouteHandler(handler)) })
-	})
+func Delete(url string, handler TRouteHandler) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
 // The result or error is wrapped in Resp automatically.
-func IPost[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPost, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.POST(url, NewMappedTRouteHandler(handler)) })
-	})
+func IPost[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IGet[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodGet, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.GET(url, NewMappedTRouteHandler(handler)) })
-	})
+func IGet[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
-func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodDelete, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.DELETE(url, NewMappedTRouteHandler(handler)) })
-	})
+func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler))
 }
 
 // Add RoutesRegistar for PUT request.
 //
 // The result and error are wrapped in Resp automatically as json.
-func IPut[Req any](url string, handler MappedTRouteHandler[Req]) GroupedRouteRegistar {
-	return NewGroupedRouteRegistar(func(baseUrl string, extra ...StrPair) {
-		url := baseUrl + url
-		recordHttpServerRoute(url, http.MethodPut, FuncName(handler), extra...)
-		addRoutesRegistar(func(e *gin.Engine) { e.PUT(url, NewMappedTRouteHandler(handler)) })
-	})
+func IPut[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler))
 }
 
 func addRoutesRegistar(reg routesRegistar) {
@@ -667,6 +619,9 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 	// register custom routes
 	for _, registerRoute := range routeRegistars {
 		registerRoute(engine)
+	}
+	for _, lrr := range lazyRouteRegistars {
+		lrr.build(engine)
 	}
 
 	for _, r := range GetHttpRoutes() {
@@ -951,6 +906,9 @@ func WebServerBootstrap(rail Rail) error {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
+	// register http routes
+	registerServerRoutes(rail, engine)
+
 	if !IsProdMode() && GetPropBool(PropServerGenerateEndpointDocEnabled) {
 		desc := buildHttpRouteDoc(rail, GetHttpRoutes())
 		markdown := genMarkDownDoc(desc)
@@ -958,9 +916,6 @@ func WebServerBootstrap(rail Rail) error {
 			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
 		}
 	}
-
-	// register http routes
-	registerServerRoutes(rail, engine)
 
 	// start the http server
 	server := createHttpServer(engine)
@@ -971,70 +926,87 @@ func WebServerBootstrap(rail Rail) error {
 	return nil
 }
 
-type GroupedRouteRegistar struct {
-	RegisterFunc func(baseUrl string, extra ...StrPair)
+type NestedPath interface {
+	Append(baseUrl string)
+}
+
+// Lazy route declaration
+type LazyRouteDecl struct {
+	Url     string
+	Method  string
+	Handler func(c *gin.Context)
+
+	RegisterFunc func(extra ...StrPair)
 	Extras       []StrPair
 }
 
 // Build endpoint.
-func (g GroupedRouteRegistar) Build() {
-	g.RegisterFunc("", g.Extras...)
+func (g *LazyRouteDecl) build(engine *gin.Engine) {
+	recordHttpServerRoute(g.Url, g.Method, g.Extras...)
+	engine.Handle(g.Method, g.Url, g.Handler)
+}
+
+func (g *LazyRouteDecl) Append(baseUrl string) {
+	g.Url = baseUrl + g.Url
 }
 
 // Add endpoint description (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) Desc(desc string) GroupedRouteRegistar {
+func (g *LazyRouteDecl) Desc(desc string) *LazyRouteDecl {
 	return g.Extra(ExtraDesc, strings.TrimSpace(regexp.MustCompile(`[\n\t ]+`).ReplaceAllString(desc, " ")))
 }
 
 // Mark endpoint publicly accessible (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) Public() GroupedRouteRegistar {
+func (g *LazyRouteDecl) Public() *LazyRouteDecl {
 	return g.Extra(ExtraScope, ScopePublic)
 }
 
 // Documents that the endpoint requires protection (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) Protected() GroupedRouteRegistar {
+func (g *LazyRouteDecl) Protected() *LazyRouteDecl {
 	return g.Extra(ExtraScope, ScopeProtected)
 }
 
 // Record the resource that the endppoint should be bound to (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) Resource(resource string) GroupedRouteRegistar {
+func (g *LazyRouteDecl) Resource(resource string) *LazyRouteDecl {
 	return g.Extra(ExtraResource, strings.TrimSpace(resource))
 }
 
 // Add extra info to endpoint's metadata.
-func (g GroupedRouteRegistar) Extra(key string, value any) GroupedRouteRegistar {
+func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
 	g.Extras = append(g.Extras, StrPair{key, value})
 	return g
 }
 
 // Document query parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocQueryParam(queryName string, desc string) GroupedRouteRegistar {
+func (g *LazyRouteDecl) DocQueryParam(queryName string, desc string) *LazyRouteDecl {
 	return g.Extra(ExtraQueryParam, ParamDoc{queryName, desc})
 }
 
 // Document header parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocHeader(headerName string, desc string) GroupedRouteRegistar {
+func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl {
 	return g.Extra(ExtraHeaderParam, ParamDoc{headerName, desc})
 }
 
 // Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocJsonReq(v any) GroupedRouteRegistar {
+func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
 	return g.Extra(ExtraJsonRequest, &t)
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
-func (g GroupedRouteRegistar) DocJsonResp(v any) GroupedRouteRegistar {
+func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
 	return g.Extra(ExtraJsonResponse, &t)
 }
 
-// Create new GroupedRouteRegistar.
-func NewGroupedRouteRegistar(f func(baseUrl string, extra ...StrPair)) GroupedRouteRegistar {
-	return GroupedRouteRegistar{
-		RegisterFunc: f,
-		Extras:       []StrPair{},
+func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {
+	dec := &LazyRouteDecl{
+		Url:     url,
+		Method:  method,
+		Handler: handler,
+		Extras:  []StrPair{},
 	}
+	lazyRouteRegistars = append(lazyRouteRegistars, dec)
+	return dec
 }
 
 type RoutingGroup struct {
@@ -1042,18 +1014,9 @@ type RoutingGroup struct {
 }
 
 // Group routes, routes are immediately registered
-func (rg *RoutingGroup) Group(grouped ...GroupedRouteRegistar) {
+func (rg *RoutingGroup) Group(grouped ...NestedPath) {
 	for _, r := range grouped {
-		r.RegisterFunc(rg.Base, r.Extras...)
-	}
-}
-
-// Group routes under the sub paths, routes are immediately registered.
-func (rg *RoutingGroup) With(subpaths ...*RoutingSubPath) {
-	for _, s := range subpaths {
-		for _, r := range s.delayedRegisters {
-			r.RegisterFunc(rg.Base+s.path, r.Extras...)
-		}
+		r.Append(rg.Base)
 	}
 }
 
@@ -1065,20 +1028,29 @@ func BaseRoute(baseUrl string) *RoutingGroup {
 // RoutingSubPath, each sub path belongs to a specific RoutingGroup (the base path)
 type RoutingSubPath struct {
 	path             string
-	delayedRegisters []GroupedRouteRegistar
+	delayedRegisters []*LazyRouteDecl
 }
 
 // Create sub path for routing requests
 func SubPath(path string) *RoutingSubPath {
 	return &RoutingSubPath{
 		path:             path,
-		delayedRegisters: []GroupedRouteRegistar{},
+		delayedRegisters: []*LazyRouteDecl{},
+	}
+}
+
+func (s *RoutingSubPath) Append(baseUrl string) {
+	for _, lrd := range s.delayedRegisters {
+		lrd.Url = baseUrl + lrd.Url
 	}
 }
 
 // Group routes under current sub path.
-func (s *RoutingSubPath) Group(grouped ...GroupedRouteRegistar) *RoutingSubPath {
+func (s *RoutingSubPath) Group(grouped ...*LazyRouteDecl) *RoutingSubPath {
 	s.delayedRegisters = append(s.delayedRegisters, grouped...)
+	for _, lrd := range grouped {
+		lrd.Url = s.path + lrd.Url
+	}
 	return s
 }
 

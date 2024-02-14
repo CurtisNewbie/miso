@@ -509,8 +509,7 @@ func ConsulBootstrap(rail Rail) error {
 					}
 					return nil, nil
 				}).
-				Desc("Endpoint used to trigger Consul service deregistration").
-				Build()
+				Desc("Endpoint used to trigger Consul service deregistration")
 		}
 	}
 
