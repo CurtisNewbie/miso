@@ -81,16 +81,16 @@ func genMarkDownDoc(hr []HttpRouteDoc) string {
 			b.WriteString("- Description: ")
 			b.WriteString(r.Desc)
 		}
-		// if r.Scope != "" {
-		// 	b.WriteRune('\n')
-		// 	b.WriteString(Spaces(2))
-		// 	b.WriteString("- Access Scope: ")
-		// 	b.WriteString(r.Scope)
-		// }
+		if r.Scope != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Expected Access Scope: ")
+			b.WriteString(r.Scope)
+		}
 		// if r.Resource != "" {
 		// 	b.WriteRune('\n')
 		// 	b.WriteString(Spaces(2))
-		// 	b.WriteString("- Resource: \"")
+		// 	b.WriteString("- Bound to Resource: \"")
 		// 	b.WriteString(r.Resource)
 		// 	b.WriteRune('"')
 		// }
@@ -227,6 +227,12 @@ func serveApiDocTmpl(rail Rail) error {
 					{{if .Desc }}
 						<p>
 						<b><i>Description:</i></b> {{.Desc}}
+						</p>
+					{{end}}
+
+					{{if .Scope }}
+						<p>
+						<b><i>Expected Access Scope:</i></b> {{.Scope}}
 						</p>
 					{{end}}
 
