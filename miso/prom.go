@@ -44,6 +44,10 @@ type HistTimer struct {
 	begin time.Time
 }
 
+func (t *HistTimer) Reset() {
+	t.begin = time.Now()
+}
+
 func (t *HistTimer) ObserveDuration() time.Duration {
 	d := time.Since(t.begin)
 	t.hist.Observe(float64(d.Milliseconds()))
