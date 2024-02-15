@@ -126,6 +126,10 @@ type VecTimer struct {
 	begin   time.Time
 }
 
+func (t *VecTimer) Reset() {
+	t.begin = time.Now()
+}
+
 func (t *VecTimer) ObserveDuration(labels ...string) time.Duration {
 	d := time.Since(t.begin)
 	t.histVec.WithLabelValues(labels...).Observe(float64(d.Milliseconds()))
