@@ -28,9 +28,17 @@ func TestERand(t *testing.T) {
 }
 
 var v string
+var v2 string
 
 func BenchmarkRandLowerAlphaNumeric(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		v = RandLowerAlphaNumeric(15)
-	}
+	b.Run("fast", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v = RandLowerAlphaNumeric16()
+		}
+	})
+	b.Run("slow", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v2 = RandLowerAlphaNumeric(16)
+		}
+	})
 }

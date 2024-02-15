@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,13 @@ var (
 	lowerAlpha = ShuffleStr("abcdefghijklmnopqrstuvwxyz", 3)
 
 	lowerAlphaDigitsRune = []rune(lowerAlpha + digits)
+
+	rune16Pool = sync.Pool{
+		New: func() any {
+			v := make([]rune, 16)
+			return &v
+		},
+	}
 )
 
 func init() {
@@ -93,7 +101,23 @@ func RandLowerAlphaNumeric(n int) string {
 	return doRand(n, lowerAlphaDigitsRune)
 }
 
-// generate randon str based on given length and charset
+// Same as RandLowerAlphaNumeric(16) but with less allocation.
+func RandLowerAlphaNumeric16() string {
+	return doRand16(lowerAlphaDigitsRune)
+}
+
+// generate randon str based on fixed length 16 and the given charset
+func doRand16(set []rune) string {
+	b := rune16Pool.Get().(*[]rune)
+	for i := 0; i < 16; i++ {
+		(*b)[i] = set[rand.Intn(16)]
+	}
+	s := string(*b)
+	rune16Pool.Put(b)
+	return s
+}
+
+// generate randon str based on given length and given charset
 func doRand(n int, set []rune) string {
 	b := make([]rune, n)
 	for i := range b {
