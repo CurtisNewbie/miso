@@ -12,6 +12,8 @@ var (
 	digits     = ShuffleStr("0123456789", 3)
 	upperAlpha = ShuffleStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 3)
 	lowerAlpha = ShuffleStr("abcdefghijklmnopqrstuvwxyz", 3)
+
+	lowerAlphaDigitsRune = []rune(lowerAlpha + digits)
 )
 
 func init() {
@@ -88,7 +90,7 @@ func RandUpperAlphaNumeric(n int) string {
 //
 // the generated string will contains [a-z0-9]
 func RandLowerAlphaNumeric(n int) string {
-	return doRand(n, []rune(lowerAlpha+digits))
+	return doRand(n, lowerAlphaDigitsRune)
 }
 
 // generate randon str based on given length and charset

@@ -26,3 +26,11 @@ func TestERand(t *testing.T) {
 	}
 	t.Log(s)
 }
+
+var v string
+
+func BenchmarkRandLowerAlphaNumeric(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		v = RandLowerAlphaNumeric(15)
+	}
+}
