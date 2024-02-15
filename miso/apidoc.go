@@ -151,6 +151,10 @@ func buildJsonDesc(t reflect.Type) []jsonDesc {
 		if IsVoid(f.Type) {
 			continue
 		}
+		if v := f.Tag.Get("form"); v != "" {
+			continue
+		}
+
 		var name string
 		if v := f.Tag.Get("json"); v != "" {
 			name = v

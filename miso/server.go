@@ -125,7 +125,6 @@ Traced and parameters mapped route handler.
 T should be a struct, where all fields are automatically mapped from the request using different tags.
 
   - json
-  - xml
   - form (supports: form-data, query param)
 
 For binding, go read https://gin-gonic.com/docs/
@@ -348,7 +347,8 @@ func Delete(url string, handler TRouteHandler) *LazyRouteDecl {
 //
 // The result or error is wrapped in Resp automatically.
 func IPost[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler))
+	var r Req
+	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).DocJsonReq(r)
 }
 
 // Add RoutesRegistar for GET request with automatic payload binding.
@@ -369,7 +369,8 @@ func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDe
 //
 // The result and error are wrapped in Resp automatically as json.
 func IPut[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler))
+	var r Req
+	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).DocJsonReq(r)
 }
 
 func addRoutesRegistar(reg routesRegistar) {
