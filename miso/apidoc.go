@@ -207,9 +207,7 @@ func serveApiDocTmpl(rail Rail) error {
 			{{range . }}
 				<li>"{{.Name}}": <i>({{.TypeName}})</i> {{.Desc}}
 					{{if .Fields}}
-						{{range .Fields}}
-							{{template "unpackJsonDesc" .Fields}}
-						{{end}}
+						{{template "unpackJsonDesc" .Fields}}
 					{{end}}
 				</li>
 			{{end}}
