@@ -88,7 +88,7 @@ var (
 
 	defaultResultBodyBuilder = ResultBodyBuilder{
 		ErrJsonBuilder:     func(rail Rail, url string, err error) any { return WrapResp(rail, nil, err, url) },
-		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
+		PayloadJsonBuilder: func(payload any) any { return payload },
 		OkJsonBuilder:      func() any { return OkResp() },
 	}
 
@@ -120,17 +120,16 @@ type GinPreProcessor func(rail Rail, engine *gin.Engine)
 type RawTRouteHandler func(c *gin.Context, rail Rail)
 
 // Traced route handler.
+//
+// Res should be a struct, that will be serialized in json format. By default, if error is not nil, error object is wrapped inside miso.Resp, serialized to json and returned to client. However, this global behaviour can be modified using mios.SetEndpointResultHandler func.
 type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
 
 /*
 Traced and parameters mapped route handler.
 
-T should be a struct, where all fields are automatically mapped from the request using different tags.
+Req should be a struct, where all fields are automatically mapped from the request using json tag or form (for form-data, query param) tag.
 
-  - json
-  - form (supports: form-data, query param)
-
-For binding, go read https://gin-gonic.com/docs/
+Res should also be a struct, that will be serialized in json format. By default, if error is not nil, error object is wrapped inside miso.Resp, serialized to json and returned to client. However, this global behaviour can be modified using mios.SetEndpointResultHandler func.
 */
 type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
 
