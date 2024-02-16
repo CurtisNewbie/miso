@@ -153,18 +153,26 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []jsonDesc, indent int) {
 }
 
 func buildJsonDesc(t reflect.Type) []jsonDesc {
+	if t == nil {
+		return []jsonDesc{}
+	}
+
 	jds := make([]jsonDesc, 0, 5)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		if IsVoid(f.Type) {
 			continue
 		}
+
 		if v := f.Tag.Get("form"); v != "" {
 			continue
 		}
 
 		var name string
 		if v := f.Tag.Get("json"); v != "" {
+			if v == "-" {
+				continue
+			}
 			name = v
 		} else {
 			name = LowercaseNamingStrategy(f.Name)
@@ -325,6 +333,9 @@ func serveApiDocTmpl(rail Rail) error {
 }
 
 func parseQueryDoc(t reflect.Type) []ParamDoc {
+	if t == nil {
+		return []ParamDoc{}
+	}
 	pds := []ParamDoc{}
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)

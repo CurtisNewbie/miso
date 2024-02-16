@@ -9,6 +9,10 @@ const (
 	ErrCodeGeneric = "XXXX"
 )
 
+type RespUnwrapper interface {
+	Unwrap() Resp
+}
+
 // Web Endpoint's Resp
 type Resp struct {
 	ErrorCode string      `json:"errorCode" desc:"error code"`
@@ -23,6 +27,15 @@ type GnResp[T any] struct {
 	Msg       string `json:"msg" desc:"message"`
 	Error     bool   `json:"error" desc:"whether the request was successful"`
 	Data      T      `json:"data" desc:"response data"`
+}
+
+func (r GnResp[T]) Unwrap() Resp {
+	return Resp{
+		ErrorCode: r.ErrorCode,
+		Msg:       r.Msg,
+		Error:     r.Error,
+		Data:      r.Data,
+	}
 }
 
 func (r GnResp[T]) Err() error {
@@ -46,6 +59,24 @@ func (r GnResp[T]) MappedRes(mapper map[string]error) (T, error) {
 		return r.Data, r.Err()
 	}
 	return r.Data, r.Err()
+}
+
+func OkGnResp[T any](data T) GnResp[T] {
+	return GnResp[T]{
+		Data:  data,
+		Error: false,
+	}
+}
+
+func VoidGnResp() GnResp[Void] {
+	return GnResp[Void]{}
+}
+
+func WrapGnResp[T any](data T, err error) (GnResp[T], error) {
+	if err != nil {
+		return GnResp[T]{}, err
+	}
+	return OkGnResp(data), nil
 }
 
 // Wrap result (data and err) with a common Resp object.
@@ -77,10 +108,6 @@ func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 		// not a MisoErr, just return some generic msg
 		rail.Errorf("Unknown error, %v", err)
 		return ErrorResp("Unknown system error, please try again later")
-	}
-
-	if v, ok := data.(Resp); ok {
-		return v
 	}
 
 	return OkRespWData(data)
@@ -115,6 +142,14 @@ func OkResp() Resp {
 func OkRespWData(data interface{}) Resp {
 	if data == nil {
 		return OkResp()
+	}
+
+	if v, ok := data.(Resp); ok {
+		return v
+	}
+
+	if v, ok := data.(RespUnwrapper); ok {
+		return v.Unwrap()
 	}
 
 	return Resp{

@@ -120,7 +120,7 @@ type GinPreProcessor func(rail Rail, engine *gin.Engine)
 type RawTRouteHandler func(c *gin.Context, rail Rail)
 
 // Traced route handler.
-type TRouteHandler func(c *gin.Context, rail Rail) (any, error)
+type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
 
 /*
 Traced and parameters mapped route handler.
@@ -132,7 +132,7 @@ T should be a struct, where all fields are automatically mapped from the request
 
 For binding, go read https://gin-gonic.com/docs/
 */
-type MappedTRouteHandler[Req any] func(c *gin.Context, rail Rail, req Req) (any, error)
+type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
 
 type routesRegistar func(*gin.Engine)
 
@@ -291,7 +291,7 @@ func GetHttpRoutes() []HttpRoute {
 	return serverHttpRoutes
 }
 
-// Register ANY request route (raw version
+// Register ANY request route (raw version)
 func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
 	for i := range anyHttpMethods {
 		recordHttpServerRoute(url, anyHttpMethods[i], extra...)
@@ -321,62 +321,75 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 
 // Add RoutesRegistar for GET request.
 //
-// The result or error is wrapped in Resp automatically.
-func Get(url string, handler TRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler))
+// The result and error are automatically wrapped and serialized as json.
+func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler)).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for POST request.
 //
-// The result or error is wrapped in Resp automatically.
-func Post(url string, handler TRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler))
+// The result and error are automatically wrapped and serialized as json.
+func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler)).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for PUT request.
 //
-// The result and error are wrapped in Resp automatically as json.
-func Put(url string, handler TRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler))
+// The result and error are automatically wrapped and serialized as json.
+func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler)).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for DELETE request.
 //
-// The result and error are wrapped in Resp automatically as json.
-func Delete(url string, handler TRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler))
+// The result and error are automatically wrapped and serialized as json.
+func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler)).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for POST request with automatic payload binding.
 //
-// The result or error is wrapped in Resp automatically.
-func IPost[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
-	var r Req
-	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).DocJsonReq(r)
+// The result and error are automatically wrapped and serialized as json.
+func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
+	var req Req
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).
+		DocJsonReq(req).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for GET request with automatic payload binding.
 //
-// The result and error are wrapped in Resp automatically as json.
-func IGet[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+// The result and error are automatically wrapped and serialized as json.
+func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var req Req
-	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).DocQueryReq(req)
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).
+		DocQueryReq(req).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
-// The result and error are wrapped in Resp automatically as json
-func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+// The result and error are automatically wrapped and serialized as json.
+func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var req Req
-	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).DocQueryReq(req)
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).
+		DocQueryReq(req).DocJsonResp(res)
 }
 
 // Add RoutesRegistar for PUT request.
 //
-// The result and error are wrapped in Resp automatically as json.
-func IPut[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
+// The result and error are automatically wrapped and serialized as json.
+func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var r Req
-	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).DocJsonReq(r)
+	var res Res
+	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).
+		DocJsonReq(r).
+		DocJsonResp(res)
 }
 
 func addRoutesRegistar(reg routesRegistar) {
@@ -766,7 +779,7 @@ func BuildRail(c *gin.Context) Rail {
 // Build route handler with the mapped payload object, context, and logger.
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewMappedTRouteHandler[Req any](handler MappedTRouteHandler[Req]) func(c *gin.Context) {
+func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 
@@ -804,7 +817,7 @@ func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 // Build route handler with context, and logger
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewTRouteHandler(handler TRouteHandler) func(c *gin.Context) {
+func NewTRouteHandler[Res any](handler TRouteHandler[Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 		r, e := handler(c, rail)
