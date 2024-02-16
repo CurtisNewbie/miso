@@ -46,11 +46,14 @@ const (
 	ExtraHeaderParam  = "miso-HeaderParam"
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
+	ExtraQueryRequest = "miso-QueryParamRequest"
 
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
 
 	defShutdownOrder = 5
+
+	TagQueryParam = "form"
 )
 
 var (
@@ -142,13 +145,9 @@ type HttpRoute struct {
 	Resource         string        // the documented resource that the route should be bound to (metadata).
 	Headers          []ParamDoc    // the documented header parameters that will be used by the endpoint (metadata).
 	QueryParams      []ParamDoc    // the documented query parameters that will used by the endpoint (metadata).
+	QueryRequestType *reflect.Type // the documented query parameters request type that is expected by the endpoint (metadata).
 	JsonRequestType  *reflect.Type // the documented json request type that is expected by the endpoint (metadata).
 	JsonResponseType *reflect.Type // the documented json response type that will be returned by the endpoint (metadata).
-}
-
-type ParamDoc struct {
-	Name string
-	Desc string
 }
 
 type ComponentBootstrap struct {
@@ -262,6 +261,11 @@ func recordHttpServerRoute(url string, method string, extra ...StrPair) {
 			}
 		}
 	}
+	if l, ok := extras[ExtraQueryRequest]; ok && len(l) > 0 {
+		if v, ok := l[0].(*reflect.Type); ok {
+			r.QueryRequestType = v
+		}
+	}
 	if l, ok := extras[ExtraHeaderParam]; ok && len(l) > 0 {
 		for _, p := range l {
 			if v, ok := p.(ParamDoc); ok {
@@ -355,14 +359,16 @@ func IPost[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl
 //
 // The result and error are wrapped in Resp automatically as json.
 func IGet[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler))
+	var req Req
+	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).DocQueryReq(req)
 }
 
 // Add RoutesRegistar for DELETE request with automatic payload binding.
 //
 // The result and error are wrapped in Resp automatically as json
 func IDelete[Req any](url string, handler MappedTRouteHandler[Req]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler))
+	var req Req
+	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).DocQueryReq(req)
 }
 
 // Add RoutesRegistar for PUT request.
@@ -984,6 +990,12 @@ func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl
 func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
 	return g.Extra(ExtraJsonRequest, &t)
+}
+
+// Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
+func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
+	t := reflect.TypeOf(v)
+	return g.Extra(ExtraQueryRequest, &t)
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).

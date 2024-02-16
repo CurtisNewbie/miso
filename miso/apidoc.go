@@ -28,6 +28,11 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 }
 
+type ParamDoc struct {
+	Name string
+	Desc string
+}
+
 type HttpRouteDoc struct {
 	Url              string
 	Method           string
@@ -60,6 +65,9 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 		}
 		if r.JsonResponseType != nil {
 			d.JsonResponseDesc = buildJsonDesc(*r.JsonResponseType)
+		}
+		if r.QueryRequestType != nil {
+			d.QueryParams = append(d.QueryParams, parseQueryDoc(*r.QueryRequestType)...)
 		}
 		docs = append(docs, d)
 	}
@@ -314,4 +322,25 @@ func serveApiDocTmpl(rail Rail) error {
 
 	rail.Info("Exposing API Documentation on /doc/api")
 	return nil
+}
+
+func parseQueryDoc(t reflect.Type) []ParamDoc {
+	pds := []ParamDoc{}
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if IsVoid(f.Type) {
+			continue
+		}
+
+		query := f.Tag.Get(TagQueryParam)
+		if query == "" {
+			continue
+		}
+		desc := f.Tag.Get(TagApiDocDesc)
+		pds = append(pds, ParamDoc{
+			Name: query,
+			Desc: desc,
+		})
+	}
+	return pds
 }
