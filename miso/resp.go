@@ -68,7 +68,7 @@ func OkGnResp[T any](data T) GnResp[T] {
 	}
 }
 
-func VoidGnResp() GnResp[Void] {
+func VoidResp() GnResp[Void] {
 	return GnResp[Void]{}
 }
 
