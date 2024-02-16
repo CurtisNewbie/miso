@@ -59,3 +59,12 @@ func GetPropagationKeys() []string {
 	}
 	return keys
 }
+
+func UsePropagationKeys(forEach func(key string)) {
+	propagationKeys.rwmu.RLock()
+	defer propagationKeys.rwmu.RUnlock()
+
+	for k := range propagationKeys.keys.Keys {
+		forEach(k)
+	}
+}

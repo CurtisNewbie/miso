@@ -691,13 +691,12 @@ func TraceMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// propagate tracing key/value pairs with context
 		ctx := c.Request.Context()
-		propagatedKeys := GetPropagationKeys()
 
-		for _, k := range propagatedKeys {
+		UsePropagationKeys(func(k string) {
 			if h := c.GetHeader(k); h != "" {
 				ctx = context.WithValue(ctx, k, h) //lint:ignore SA1029 keys must be exposed to retrieve the values
 			}
-		}
+		})
 
 		// replace the context
 		c.Request = c.Request.WithContext(ctx)
@@ -716,7 +715,7 @@ func TraceMiddleware() gin.HandlerFunc {
 // In most cases, we should only call BuildRail for once.
 //
 // However, if the Rail has attempted to overwrite it's spanId (i.e., creating new span), this newly created spanId will not
-// be reflected on the Rail created here. But this should be find, because new span is usually created for async operation.
+// be reflected on the Rail created here. But this should be fine, because new span is usually created for async operation.
 func BuildRail(c *gin.Context) Rail {
 	if !GetPropBool(PropServerPropagateInboundTrace) {
 		return EmptyRail()
@@ -726,32 +725,33 @@ func BuildRail(c *gin.Context) Rail {
 		c.Keys = map[string]any{}
 	}
 
-	tracked := GetPropagationKeys()
 	ctx := c.Request.Context()
 
-	// it's possible that the spanId and traceId have been set to the context
-	// if we calling BuildRail() for the second time, we should read from the context
+	// it's possible that the spanId and traceId have been created already
+	// if we call BuildRail() for the second time, we should read from the *gin.Context
 	// instead of creating new ones.
 	// for the most of the time, we are using one single Rail throughout the method calls
 	contextModified := false
-	for i := range tracked {
-		t := tracked[i]
-		if v, ok := c.Keys[t]; ok && v != "" {
-			ctx = context.WithValue(ctx, t, v) //lint:ignore SA1029 keys must be exposed for client to use
-			contextModified = true
+	UsePropagationKeys(func(k string) {
+		if v, ok := c.Keys[k]; ok && v != "" {
+			// c.Keys -> c.Request.Context()
+			ctx = context.WithValue(ctx, k, v) //lint:ignore SA1029 keys must be exposed for client to use
+			contextModified = true             // the trace is not newly created, we are loading it from *gin.Context
 		}
-	}
+	})
 
 	// create a new Rail
 	rail := NewRail(ctx)
 
+	// this is mainly used for panic recovery
 	if !contextModified {
-		for i := range tracked { // copy the newly created keys back to the gin.Context
-			t := tracked[i]
-			if v, ok := c.Keys[t]; !ok || v == "" {
-				c.Keys[t] = rail.CtxValue(t)
+		UsePropagationKeys(func(k string) {
+			// c.Request.Context() -> c.Keys
+			// copy the newly created keys back to the gin.Context
+			if v, ok := c.Keys[k]; !ok || v == "" {
+				c.Keys[k] = rail.CtxValue(k)
 			}
-		}
+		})
 	}
 
 	return rail

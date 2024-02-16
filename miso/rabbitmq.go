@@ -190,11 +190,9 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 	// propogate trace through headers
 	if headers == nil {
 		headers = map[string]any{}
-		propagated := GetPropagationKeys()
-		for i := range propagated {
-			k := propagated[i]
-			headers[k] = c.CtxValue(k)
-		}
+		UsePropagationKeys(func(key string) {
+			headers[key] = c.CtxValue(key)
+		})
 	}
 
 	publishing := amqp.Publishing{
@@ -516,13 +514,11 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			// read trace from headers
 			rail := EmptyRail()
 			if msg.Headers != nil {
-				keys := GetPropagationKeys()
-				for i := range keys {
-					k := keys[i]
+				UsePropagationKeys(func(k string) {
 					if hv, ok := msg.Headers[k]; ok {
 						rail = rail.WithCtxVal(k, fmt.Sprintf("%v", hv))
 					}
-				}
+				})
 			}
 
 			// message body, we only support text

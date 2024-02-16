@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/spf13/cast"
 )
 
 const (
@@ -591,16 +593,15 @@ func TraceRequest(ctx context.Context, req *http.Request) *http.Request {
 		return req
 	}
 
-	for _, key := range GetPropagationKeys() {
+	UsePropagationKeys(func(key string) {
 		v := ctx.Value(key)
 		if v != nil {
-			if vstr, ok := v.(string); ok {
-				req.Header.Set(key, vstr)
-			} else {
-				req.Header.Set(key, fmt.Sprintf("%v", v))
+			if sv := cast.ToString(v); sv != "" {
+				req.Header.Set(key, sv)
 			}
 		}
-	}
+	})
+
 	return req
 }
 
