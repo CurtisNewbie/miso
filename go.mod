@@ -1,6 +1,6 @@
 module github.com/curtisnewbie/miso
 
-go 1.18
+go 1.20
 
 require (
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
@@ -14,6 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.4.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/sirupsen/logrus v1.9.0
+	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.14.0
 	gorm.io/driver/mysql v1.3.6
 	gorm.io/driver/sqlite v1.2.6
@@ -62,7 +63,6 @@ require (
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
-	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
