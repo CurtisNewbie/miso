@@ -12,7 +12,7 @@ type Runnable func() error
 type LRunnable[T any] func() (T, error)
 
 const (
-	defaultBackoffSteps = 200 // default backoff steps, 200 (5ms) = 1s
+	defaultBackoffSteps = 1000 // default backoff steps, 1000 (5ms) = 5s
 )
 
 var (
@@ -84,12 +84,12 @@ type RLockConfig struct {
 	BackoffDuration time.Duration
 }
 
-// Create new RLock with default backoff configuration (5ms backoff window, 200 attempts, i.e., retry for 1s).
+// Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
 func NewRLock(rail Rail, key string) *RLock {
 	return NewCustomRLock(rail, key, RLockConfig{})
 }
 
-// Create new RLock with default backoff configuration (5ms backoff window, 200 attempts, i.e., retry for 1s).
+// Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
 func NewRLockf(rail Rail, keyPattern string, args ...any) *RLock {
 	return NewCustomRLock(rail, fmt.Sprintf(keyPattern, args...), RLockConfig{})
 }
