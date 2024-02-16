@@ -132,7 +132,7 @@ T should be a struct, where all fields are automatically mapped from the request
 
 For binding, go read https://gin-gonic.com/docs/
 */
-type MappedTRouteHandler[Req any, Res any] func(rail Rail, req Req) (Res, error)
+type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
 
 type routesRegistar func(*gin.Engine)
 
@@ -800,7 +800,7 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		}
 
 		// handle the requests
-		res, err := handler(rail, req)
+		res, err := handler(c, rail, req)
 
 		// wrap result and error
 		HandleEndpointResult(c, rail, res, err)
