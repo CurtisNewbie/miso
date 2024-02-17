@@ -1010,7 +1010,22 @@ func (g *LazyRouteDecl) Resource(resource string) *LazyRouteDecl {
 
 // Add extra info to endpoint's metadata.
 func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
-	g.Extras = append(g.Extras, StrPair{key, value})
+	return g.extra(key, value, false)
+}
+
+func (g *LazyRouteDecl) extra(key string, value any, overwrite bool) *LazyRouteDecl {
+	if !overwrite {
+		g.Extras = append(g.Extras, StrPair{key, value})
+	} else {
+		for i, ex := range g.Extras {
+			if ex.Left == key {
+				ex.Right = value
+				g.Extras[i] = ex
+				return g
+			}
+		}
+		g.Extras = append(g.Extras, StrPair{key, value})
+	}
 	return g
 }
 
@@ -1032,12 +1047,12 @@ func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
 
 // Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
-	return g.Extra(ExtraJsonRequest, v)
+	return g.extra(ExtraJsonRequest, v, true)
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
-	return g.Extra(ExtraJsonResponse, v)
+	return g.extra(ExtraJsonResponse, v, true)
 }
 
 func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {
