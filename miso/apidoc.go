@@ -203,6 +203,7 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 
 		appendable := true
 
+		// refactor this messy code :D
 		if f.Type.Kind() == reflect.Struct {
 			jd.Fields = append(jd.Fields, buildJsonDesc(fv)...)
 		} else if f.Type.Kind() == reflect.Slice {
@@ -211,8 +212,12 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 				ev := reflect.New(et).Elem()
 				jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
 			}
+		} else if f.Type.Kind() == reflect.Pointer {
+			ev := reflect.New(f.Type.Elem()).Elem()
+			if ev.Kind() == reflect.Struct {
+				jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
+			}
 		} else if f.Type.Kind() == reflect.Interface {
-
 			if !fv.IsZero() && !fv.IsNil() {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
@@ -229,6 +234,9 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 							ev := reflect.New(et).Elem()
 							jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
 						}
+					} else if et.Kind() == reflect.Pointer {
+						ev := reflect.New(et.Elem()).Elem()
+						jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
 					}
 				}
 			} else {
