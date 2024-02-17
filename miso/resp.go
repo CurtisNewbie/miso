@@ -68,10 +68,6 @@ func OkGnResp[T any](data T) GnResp[T] {
 	}
 }
 
-func VoidResp() GnResp[Void] {
-	return GnResp[Void]{}
-}
-
 func WrapGnResp[T any](data T, err error) (GnResp[T], error) {
 	if err != nil {
 		return GnResp[T]{}, err

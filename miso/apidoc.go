@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -60,11 +61,11 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 			Headers:     r.Headers,
 			QueryParams: r.QueryParams,
 		}
-		if r.JsonRequestType != nil {
-			d.JsonRequestDesc = buildJsonDesc(*r.JsonRequestType)
+		if r.JsonRequestVal != nil {
+			d.JsonRequestDesc = buildJsonDesc(reflect.ValueOf(r.JsonRequestVal))
 		}
-		if r.JsonResponseType != nil {
-			d.JsonResponseDesc = buildJsonDesc(*r.JsonResponseType)
+		if r.JsonResponseVal != nil {
+			d.JsonResponseDesc = buildJsonDesc(reflect.ValueOf(r.JsonResponseVal))
 		}
 		if r.QueryRequestType != nil {
 			d.QueryParams = append(d.QueryParams, parseQueryDoc(*r.QueryRequestType)...)
@@ -152,11 +153,8 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []jsonDesc, indent int) {
 	}
 }
 
-func buildJsonDesc(t reflect.Type) []jsonDesc {
-	if t == nil {
-		return []jsonDesc{}
-	}
-
+func buildJsonDesc(v reflect.Value) []jsonDesc {
+	t := v.Type()
 	jds := make([]jsonDesc, 0, 5)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -167,6 +165,8 @@ func buildJsonDesc(t reflect.Type) []jsonDesc {
 		if v := f.Tag.Get("form"); v != "" {
 			continue
 		}
+
+		fv := v.Field(i)
 
 		var name string
 		if v := f.Tag.Get("json"); v != "" {
@@ -196,17 +196,50 @@ func buildJsonDesc(t reflect.Type) []jsonDesc {
 			Fields:   []jsonDesc{},
 		}
 
-		if !typeAliasMatched {
-			if f.Type.Kind() == reflect.Struct {
-				jd.Fields = append(jd.Fields, buildJsonDesc(f.Type)...)
-			} else if f.Type.Kind() == reflect.Slice {
-				et := f.Type.Elem()
-				if et.Kind() == reflect.Struct {
-					jd.Fields = append(jd.Fields, buildJsonDesc(et)...)
+		if typeAliasMatched {
+			jds = append(jds, jd)
+			continue
+		}
+
+		appendable := true
+
+		if f.Type.Kind() == reflect.Struct {
+			jd.Fields = append(jd.Fields, buildJsonDesc(fv)...)
+		} else if f.Type.Kind() == reflect.Slice {
+			et := f.Type.Elem()
+			if et.Kind() == reflect.Struct {
+				ev := reflect.New(et).Elem()
+				jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
+			}
+		} else if f.Type.Kind() == reflect.Interface {
+
+			if !fv.IsZero() && !fv.IsNil() {
+				if ele := fv.Elem(); ele.IsValid() {
+					et := ele.Type()
+					if et.Name() != "" {
+						jd.TypeName = et.Name()
+					} else {
+						jd.TypeName = et.String()
+					}
+					if et.Kind() == reflect.Struct {
+						jd.Fields = append(jd.Fields, buildJsonDesc(ele)...)
+					} else if et.Kind() == reflect.Slice {
+						et := et.Elem()
+						if et.Kind() == reflect.Struct {
+							ev := reflect.New(et).Elem()
+							jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
+						}
+					}
 				}
+			} else {
+				appendable = false // e.g., the any field in GnResp[any]{}
+				Debugf("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
 			}
 		}
-		jds = append(jds, jd)
+
+		if appendable {
+			jds = append(jds, jd)
+		}
 	}
 	return jds
 }
@@ -309,6 +342,8 @@ func serveApiDocTmpl(rail Rail) error {
 
 	RawGet("/doc/api",
 		func(c *gin.Context, rail Rail) {
+			defer DebugTimeOp(rail, time.Now(), "gen api doc")
+
 			routeDoc := buildHttpRouteDoc(rail, GetHttpRoutes())
 			markdown := genMarkDownDoc(routeDoc)
 

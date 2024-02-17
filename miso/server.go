@@ -2,7 +2,6 @@ package miso
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -86,7 +85,7 @@ var (
 	// channel for signaling server shutdown
 	manualSigQuit = make(chan int, 1)
 
-	defaultResultBodyBuilder = ResultBodyBuilder{
+	resultBodyBuilder = ResultBodyBuilder{
 		ErrJsonBuilder:     func(rail Rail, url string, err error) any { return WrapResp(rail, nil, err, url) },
 		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
 		OkJsonBuilder:      func() any { return OkResp() },
@@ -94,14 +93,14 @@ var (
 
 	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
 		if err != nil {
-			DispatchJson(c, defaultResultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
+			DispatchJson(c, resultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
 			return
 		}
 		if payload != nil {
-			DispatchJson(c, defaultResultBodyBuilder.PayloadJsonBuilder(payload))
+			DispatchJson(c, resultBodyBuilder.PayloadJsonBuilder(payload))
 			return
 		}
-		DispatchJson(c, defaultResultBodyBuilder.OkJsonBuilder())
+		DispatchJson(c, resultBodyBuilder.OkJsonBuilder())
 	}
 
 	// enable pprof manually
@@ -121,16 +120,23 @@ type RawTRouteHandler func(c *gin.Context, rail Rail)
 
 // Traced route handler.
 //
-// Res should be a struct, that will be serialized in json format. By default, if error is not nil, error object is wrapped inside miso.Resp, serialized to json and returned to client. However, this global behaviour can be modified using mios.SetEndpointResultHandler func.
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With Res type declared, miso will automatically parse the Res type using reflect and generate an API documentation
+// describing the endpoint.
 type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
 
-/*
-Traced and parameters mapped route handler.
-
-Req should be a struct, where all fields are automatically mapped from the request using json tag or form (for form-data, query param) tag.
-
-Res should also be a struct, that will be serialized in json format. By default, if error is not nil, error object is wrapped inside miso.Resp, serialized to json and returned to client. However, this global behaviour can be modified using mios.SetEndpointResultHandler func.
-*/
+// Traced and parameters mapped route handler.
+//
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'json' tag or 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
 
 type routesRegistar func(*gin.Engine)
@@ -145,8 +151,8 @@ type HttpRoute struct {
 	Headers          []ParamDoc    // the documented header parameters that will be used by the endpoint (metadata).
 	QueryParams      []ParamDoc    // the documented query parameters that will used by the endpoint (metadata).
 	QueryRequestType *reflect.Type // the documented query parameters request type that is expected by the endpoint (metadata).
-	JsonRequestType  *reflect.Type // the documented json request type that is expected by the endpoint (metadata).
-	JsonResponseType *reflect.Type // the documented json response type that will be returned by the endpoint (metadata).
+	JsonRequestVal   any           // the documented json request value that is expected by the endpoint (metadata).
+	JsonResponseVal  any           // the documented json response value that will be returned by the endpoint (metadata).
 }
 
 type ComponentBootstrap struct {
@@ -196,12 +202,9 @@ func init() {
 
 type EndpointResultHandler func(c *gin.Context, rail Rail, payload any, err error)
 
-// Replace the default EndpointResultHandler
-func SetEndpointResultHandler(erh EndpointResultHandler) error {
-	if erh == nil {
-		return errors.New("EndpointResultHandler provided is nil")
-	}
-	endpointResultHandler = erh
+// Replace the default ResultBodyBuilder
+func SetResultBodyBuilder(rbb ResultBodyBuilder) error {
+	resultBodyBuilder = rbb
 	return nil
 }
 
@@ -273,14 +276,10 @@ func recordHttpServerRoute(url string, method string, extra ...StrPair) {
 		}
 	}
 	if l, ok := extras[ExtraJsonRequest]; ok && len(l) > 0 {
-		if v, ok := l[0].(*reflect.Type); ok {
-			r.JsonRequestType = v
-		}
+		r.JsonRequestVal = l[0]
 	}
 	if l, ok := extras[ExtraJsonResponse]; ok && len(l) > 0 {
-		if v, ok := l[0].(*reflect.Type); ok {
-			r.JsonResponseType = v
-		}
+		r.JsonResponseVal = l[0]
 	}
 	serverHttpRoutes = append(serverHttpRoutes, r)
 }
@@ -318,77 +317,104 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodDelete, NewRawTRouteHandler(handler))
 }
 
-// Add RoutesRegistar for GET request.
+// Register GET request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
+// and serialized to json.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	var res Res
-	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler)).DocJsonResp(res)
+	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler)).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for POST request.
+// Register POST request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
+// and serialized to json.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	var res Res
-	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler)).DocJsonResp(res)
+	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler)).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for PUT request.
+// Register PUT request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
+// and serialized to json.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	var res Res
-	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler)).DocJsonResp(res)
+	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler)).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for DELETE request.
+// Register DELETE request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
+// and serialized to json.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	var res Res
-	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler)).DocJsonResp(res)
+	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler)).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for POST request with automatic payload binding.
+// Register POST request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'json' tag or 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	var req Req
-	var res Res
 	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).
-		DocJsonReq(req).DocJsonResp(res)
+		DocJsonReq(New[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for GET request with automatic payload binding.
+// Register GET request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	var req Req
-	var res Res
 	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).
-		DocQueryReq(req).DocJsonResp(res)
+		DocQueryReq(New[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for DELETE request with automatic payload binding.
+// Register DELETE request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'json' tag or 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	var req Req
-	var res Res
 	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).
-		DocQueryReq(req).DocJsonResp(res)
+		DocQueryReq(New[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
-// Add RoutesRegistar for PUT request.
+// Register PUT request.
 //
-// The result and error are automatically wrapped and serialized as json.
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'json' tag or 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	var r Req
-	var res Res
 	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).
-		DocJsonReq(r).
-		DocJsonResp(res)
+		DocJsonReq(New[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
 }
 
 func addRoutesRegistar(reg routesRegistar) {
@@ -998,22 +1024,20 @@ func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl
 	return g.Extra(ExtraHeaderParam, ParamDoc{headerName, desc})
 }
 
-// Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
-func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	return g.Extra(ExtraJsonRequest, &t)
-}
-
 // Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
 	return g.Extra(ExtraQueryRequest, &t)
 }
 
+// Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
+func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
+	return g.Extra(ExtraJsonRequest, v)
+}
+
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	return g.Extra(ExtraJsonResponse, &t)
+	return g.Extra(ExtraJsonResponse, v)
 }
 
 func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {

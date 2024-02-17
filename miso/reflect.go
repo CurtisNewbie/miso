@@ -117,3 +117,8 @@ func IsFieldExposed(fieldName string) bool {
 func FuncName(f any) string {
 	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
+
+func New[T any]() T {
+	var t T
+	return t
+}
