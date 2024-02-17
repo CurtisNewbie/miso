@@ -88,7 +88,7 @@ var (
 
 	defaultResultBodyBuilder = ResultBodyBuilder{
 		ErrJsonBuilder:     func(rail Rail, url string, err error) any { return WrapResp(rail, nil, err, url) },
-		PayloadJsonBuilder: func(payload any) any { return payload },
+		PayloadJsonBuilder: func(payload any) any { return OkRespWData(payload) },
 		OkJsonBuilder:      func() any { return OkResp() },
 	}
 
