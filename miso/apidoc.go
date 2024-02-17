@@ -104,26 +104,28 @@ func genMarkDownDoc(hr []HttpRouteDoc) string {
 		// 	b.WriteRune('"')
 		// }
 		if len(r.Headers) > 0 {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Header Parameter:")
 			for _, h := range r.Headers {
 				b.WriteRune('\n')
-				b.WriteString(Spaces(2))
-				b.WriteString("- Header Parameter: \"")
-				b.WriteString(h.Name)
-				b.WriteString("\"\n")
 				b.WriteString(Spaces(4))
-				b.WriteString("- Description: ")
+				b.WriteString("- \"")
+				b.WriteString(h.Name)
+				b.WriteString("\": ")
 				b.WriteString(h.Desc)
 			}
 		}
 		if len(r.QueryParams) > 0 {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Query Parameter:")
 			for _, q := range r.QueryParams {
 				b.WriteRune('\n')
-				b.WriteString(Spaces(2))
-				b.WriteString("- Query Parameter: \"")
-				b.WriteString(q.Name)
-				b.WriteString("\"\n")
 				b.WriteString(Spaces(4))
-				b.WriteString("- Description: ")
+				b.WriteString("- \"")
+				b.WriteString(q.Name)
+				b.WriteString("\": ")
 				b.WriteString(q.Desc)
 			}
 		}
