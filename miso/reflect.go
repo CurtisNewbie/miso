@@ -122,3 +122,11 @@ func New[T any]() T {
 	var t T
 	return t
 }
+
+func TypeName(t reflect.Type) string {
+	if t.Name() != "" {
+		return t.Name()
+	} else {
+		return t.String()
+	}
+}

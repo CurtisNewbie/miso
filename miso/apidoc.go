@@ -178,12 +178,7 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 			name = LowercaseNamingStrategy(f.Name)
 		}
 
-		var typeName string
-		if f.Type.Name() != "" {
-			typeName = f.Type.Name()
-		} else {
-			typeName = f.Type.String()
-		}
+		typeName := TypeName(f.Type)
 		typeAlias, typeAliasMatched := ApiDocTypeAlias[typeName]
 		if typeAliasMatched {
 			typeName = typeAlias
@@ -203,46 +198,19 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 
 		appendable := true
 
-		// refactor this messy code :D
-		if f.Type.Kind() == reflect.Struct {
-			jd.Fields = append(jd.Fields, buildJsonDesc(fv)...)
-		} else if f.Type.Kind() == reflect.Slice {
-			et := f.Type.Elem()
-			if et.Kind() == reflect.Struct {
-				ev := reflect.New(et).Elem()
-				jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
-			}
-		} else if f.Type.Kind() == reflect.Pointer {
-			ev := reflect.New(f.Type.Elem()).Elem()
-			if ev.Kind() == reflect.Struct {
-				jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
-			}
-		} else if f.Type.Kind() == reflect.Interface {
+		if f.Type.Kind() == reflect.Interface {
 			if !fv.IsZero() && !fv.IsNil() {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
-					if et.Name() != "" {
-						jd.TypeName = et.Name()
-					} else {
-						jd.TypeName = et.String()
-					}
-					if et.Kind() == reflect.Struct {
-						jd.Fields = append(jd.Fields, buildJsonDesc(ele)...)
-					} else if et.Kind() == reflect.Slice {
-						et := et.Elem()
-						if et.Kind() == reflect.Struct {
-							ev := reflect.New(et).Elem()
-							jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
-						}
-					} else if et.Kind() == reflect.Pointer {
-						ev := reflect.New(et.Elem()).Elem()
-						jd.Fields = append(jd.Fields, buildJsonDesc(ev)...)
-					}
+					jd.TypeName = TypeName(et)
+					jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields)
 				}
 			} else {
 				appendable = false // e.g., the any field in GnResp[any]{}
 				Debugf("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
 			}
+		} else {
+			jd.Fields = reflectAppendJsonDesc(f.Type, fv, jd.Fields)
 		}
 
 		if appendable {
@@ -250,6 +218,31 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 		}
 	}
 	return jds
+}
+
+func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []jsonDesc) []jsonDesc {
+	if t.Kind() == reflect.Struct {
+		fields = append(fields, buildJsonDesc(v)...)
+	} else if t.Kind() == reflect.Slice {
+		et := t.Elem()
+		if et.Kind() == reflect.Struct {
+			ev := reflect.New(et).Elem()
+			fields = append(fields, buildJsonDesc(ev)...)
+		}
+	} else if t.Kind() == reflect.Pointer {
+		ev := reflect.New(t.Elem()).Elem()
+		if ev.Kind() == reflect.Struct {
+			fields = append(fields, buildJsonDesc(ev)...)
+		}
+	} else if t.Kind() == reflect.Interface {
+		if !v.IsZero() && !v.IsNil() {
+			if ele := v.Elem(); ele.IsValid() {
+				et := ele.Type()
+				fields = reflectAppendJsonDesc(et, ele, fields)
+			}
+		}
+	}
+	return fields
 }
 
 type jsonDesc struct {
