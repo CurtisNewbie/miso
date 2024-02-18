@@ -261,7 +261,7 @@ func serveApiDocTmpl(rail Rail) error {
 		{{define "unpackJsonDesc"}}
 			<ul>
 			{{range . }}
-				<li>"{{.Name}}": <i>({{.TypeName}})</i> {{.Desc}}
+				<li>'{{.Name}}': <i>({{.TypeName}})</i> {{.Desc}}
 					{{if .Fields}}
 						{{template "unpackJsonDesc" .Fields}}
 					{{end}}
@@ -280,56 +280,86 @@ func serveApiDocTmpl(rail Rail) error {
 					<h3>{{.Method}} {{.Url}}</h3>
 					{{if .Desc }}
 						<p>
-						<b><i>Description:</i></b> {{.Desc}}
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>Description:</i></b>
+							</div>
 						</p>
+						<p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Desc}}</p>
 					{{end}}
 
 					{{if .Scope }}
 						<p>
-						<b><i>Expected Access Scope:</i></b> {{.Scope}}
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>Expected Access Scope:</i></b>
+							</div>
 						</p>
+						<p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Scope}}</p>
 					{{end}}
 
 					{{if .Headers}}
 						<p>
-						<b><i>Header Parameters:</i></b>
-						<ul>
-						{{range .Headers}}
-							<li>'{{.Name}}': {{.Desc}}</li>
-						{{end}}
-						</ul>
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>Header Parameters:</i></b>
+							</div>
+							<ul>
+							{{range .Headers}}
+								<li>'{{.Name}}': {{.Desc}}</li>
+							{{end}}
+							</ul>
 						</p>
 					{{end}}
 
 					{{if .QueryParams}}
 						<p>
-						<b><i>Query Parameters:</i></b>
-						<ul>
-						{{range .QueryParams}}
-							<li>'{{.Name}}': {{.Desc}}</li>
-						{{end}}
-						</ul>
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>Query Parameters:</i></b>
+							</div>
+							<ul>
+								{{range .QueryParams}}
+									<li>'{{.Name}}': {{.Desc}}</li>
+								{{end}}
+							</ul>
 						</p>
 					{{end}}
 
 					{{if .JsonRequestDesc}}
 						<p>
-						<b><i>JSON Request:</i></b>
-						{{template "unpackJsonDesc" .JsonRequestDesc}}
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>JSON Request:</i></b>
+							</div>
+							{{template "unpackJsonDesc" .JsonRequestDesc}}
 						</p>
 					{{end}}
 
 					{{if .JsonResponseDesc}}
 						<p>
-						<b><i>JSON Response:</i></b>
-						{{template "unpackJsonDesc" .JsonResponseDesc}}
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>JSON Response:</i></b>
+							</div>
+							{{template "unpackJsonDesc" .JsonResponseDesc}}
 						</p>
 					{{end}}
 					</div>
 				{{end}}
 
 				<h2>2. Markdown API Doc:</h2>
-				<pre style="white-space: pre-wrap; background-color:DBD5D4; padding:30px; border-radius: 30px;">{{.Markdown}}</pre>
+
+				<div style="text-align: right;">
+					<button style="padding:10px; box-shadow: 3px 3px 10px lightgrey;" onclick="copyMarkdown()">Copy Generated Markdown</button>
+				</div>
+				<pre id="markdownPre" style="white-space: pre-wrap; background-color:DBD5D4; padding:30px; border-radius: 30px;">{{.Markdown}}</pre>
+
+				<script>
+					function copyMarkdown() {
+						var preContent = document.getElementById("markdownPre").textContent;
+						const textArea = document.createElement('textarea');
+						textArea.textContent = preContent;
+						document.body.append(textArea);
+						textArea.select();
+						document.execCommand("copy");
+						textArea.remove();
+					}
+				</script>
 			</div>
 		{{end}}
 		`)
