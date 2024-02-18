@@ -34,7 +34,7 @@ func init() {
 	SetDefProp(PropProdMode, true)
 }
 
-// Set default value for the prop
+// Set value for the prop
 func SetProp(prop string, val any) {
 	doWithViperWriteLock(func() {
 		cleanFastBoolCache(prop)
