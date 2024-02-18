@@ -39,13 +39,37 @@ func (e *MisoErr) WithCode(code string) *MisoErr {
 	return e
 }
 
-func (e *MisoErr) WithInternalMsg(msg string, args ...any) *MisoErr {
-	if len(args) > 0 {
-		e.InternalMsg = fmt.Sprintf(msg, args...)
-	} else {
-		e.InternalMsg = msg
+// Implements *MisoErr Is check.
+//
+// Returns true, if both are *MisoErr and the code matches.
+//
+// WithInternalMsg always create new error, so we can basically
+// reuse the same error created using 'miso.NewErrf(...).WithCode(...)'
+//
+//	var ErrIllegalArgument = miso.NewErrf(...).WithCode(...)
+//
+//	var e1 = ErrIllegalArgument.WithInternalMsg(...)
+//	var e2 = ErrIllegalArgument.WithInternalMsg(...)
+//
+//	errors.Is(e1, ErrIllegalArgument)
+//	errors.Is(e2, ErrIllegalArgument)
+func (e *MisoErr) Is(target error) bool {
+	if tme, ok := target.(*MisoErr); ok && e.Code != "" && e.Code == tme.Code {
+		return true
 	}
-	return e
+	return false
+}
+
+func (e *MisoErr) WithInternalMsg(msg string, args ...any) *MisoErr {
+	ne := new(MisoErr)
+	ne.Code = e.Code
+	ne.Msg = e.Msg
+	if len(args) > 0 {
+		ne.InternalMsg = fmt.Sprintf(msg, args...)
+	} else {
+		ne.InternalMsg = msg
+	}
+	return ne
 }
 
 // Create new MisoErr with message.
