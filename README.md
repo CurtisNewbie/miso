@@ -139,6 +139,7 @@ The following are some projects that use miso (mine tho):
 
 - [gatekeeper](https://github.com/curtisnewbie/gatekeeper)
 - [event-pump](https://github.com/curtisnewbie/event-pump)
+- [mini-fstore](https://github.com/curtisnewbie/mini-fstore)
 - [vfm](https://github.com/curtisnewbie/vfm)
 - [user-vault](https://github.com/curtisnewbie/user-vault)
 - [hammer](https://github.com/curtisnewbie/hammer)
