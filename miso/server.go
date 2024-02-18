@@ -45,7 +45,6 @@ const (
 	ExtraHeaderParam  = "miso-HeaderParam"
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
-	ExtraQueryRequest = "miso-QueryParamRequest"
 
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
@@ -142,17 +141,16 @@ type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req R
 type routesRegistar func(*gin.Engine)
 
 type HttpRoute struct {
-	Url              string
-	Method           string
-	Extra            map[string][]any
-	Desc             string        // description of the route (metadata).
-	Scope            string        // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource         string        // the documented resource that the route should be bound to (metadata).
-	Headers          []ParamDoc    // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams      []ParamDoc    // the documented query parameters that will used by the endpoint (metadata).
-	QueryRequestType *reflect.Type // the documented query parameters request type that is expected by the endpoint (metadata).
-	JsonRequestVal   any           // the documented json request value that is expected by the endpoint (metadata).
-	JsonResponseVal  any           // the documented json response value that will be returned by the endpoint (metadata).
+	Url             string
+	Method          string
+	Extra           map[string][]any
+	Desc            string     // description of the route (metadata).
+	Scope           string     // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource        string     // the documented resource that the route should be bound to (metadata).
+	Headers         []ParamDoc // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams     []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
+	JsonRequestVal  any        // the documented json request value that is expected by the endpoint (metadata).
+	JsonResponseVal any        // the documented json response value that will be returned by the endpoint (metadata).
 }
 
 type ComponentBootstrap struct {
@@ -261,11 +259,6 @@ func recordHttpServerRoute(url string, method string, extra ...StrPair) {
 			if v, ok := p.(ParamDoc); ok {
 				r.QueryParams = append(r.QueryParams, v)
 			}
-		}
-	}
-	if l, ok := extras[ExtraQueryRequest]; ok && len(l) > 0 {
-		if v, ok := l[0].(*reflect.Type); ok {
-			r.QueryRequestType = v
 		}
 	}
 	if l, ok := extras[ExtraHeaderParam]; ok && len(l) > 0 {
@@ -1010,17 +1003,24 @@ func (g *LazyRouteDecl) Resource(resource string) *LazyRouteDecl {
 
 // Add extra info to endpoint's metadata.
 func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
-	return g.extra(key, value, false)
+	return g.extra(key, value, nil)
 }
 
-func (g *LazyRouteDecl) extra(key string, value any, overwrite bool) *LazyRouteDecl {
-	if !overwrite {
+type extraMatchCond = func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool)
+
+func (g *LazyRouteDecl) extra(key string, value any, cond extraMatchCond) *LazyRouteDecl {
+	if cond == nil {
 		g.Extras = append(g.Extras, StrPair{key, value})
 	} else {
 		for i, ex := range g.Extras {
-			if ex.Left == key {
+			overwrite, breakLoop := cond(key, value, ex)
+
+			if overwrite {
 				ex.Right = value
 				g.Extras[i] = ex
+			}
+
+			if breakLoop {
 				return g
 			}
 		}
@@ -1031,28 +1031,60 @@ func (g *LazyRouteDecl) extra(key string, value any, overwrite bool) *LazyRouteD
 
 // Document query parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryParam(queryName string, desc string) *LazyRouteDecl {
-	return g.Extra(ExtraQueryParam, ParamDoc{queryName, desc})
+	return g.extra(ExtraQueryParam, ParamDoc{queryName, desc}, extraFilterOneParamDocByName())
 }
 
 // Document header parameter that the endpoint will use (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl {
-	return g.Extra(ExtraHeaderParam, ParamDoc{headerName, desc})
+	return g.extra(ExtraHeaderParam, ParamDoc{headerName, desc}, extraFilterOneParamDocByName())
 }
 
 // Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
-	return g.Extra(ExtraQueryRequest, &t)
+	for _, pd := range parseQueryDoc(t) {
+		g.extra(ExtraQueryParam, pd, extraFilterOneParamDocByName())
+	}
+	return g
 }
 
 // Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
-	return g.extra(ExtraJsonRequest, v, true)
+	return g.extra(ExtraJsonRequest, v, extraFilterOneByKey())
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
-	return g.extra(ExtraJsonResponse, v, true)
+	return g.extra(ExtraJsonResponse, v, extraFilterOneByKey())
+}
+
+func extraFilterOneByKey() extraMatchCond {
+	return func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool) {
+		if key == ex.Left {
+			return true, true
+		}
+		return false, false
+	}
+}
+
+func extraFilterOneParamDocByName() extraMatchCond {
+	return func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool) {
+		vd := val.(ParamDoc)
+
+		if key != ex.Left {
+			return false, false
+		}
+
+		// unique ParamDoc.Name
+		if pd, ok := ex.Right.(ParamDoc); ok && pd.Name == vd.Name {
+			if vd.Name != "" {
+				return true, true
+			}
+			return false, true
+		}
+
+		return false, false
+	}
 }
 
 func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {

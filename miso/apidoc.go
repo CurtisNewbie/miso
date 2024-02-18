@@ -67,9 +67,6 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 		if r.JsonResponseVal != nil {
 			d.JsonResponseDesc = buildJsonDesc(reflect.ValueOf(r.JsonResponseVal))
 		}
-		if r.QueryRequestType != nil {
-			d.QueryParams = append(d.QueryParams, parseQueryDoc(*r.QueryRequestType)...)
-		}
 		docs = append(docs, d)
 	}
 	return docs
