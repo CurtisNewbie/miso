@@ -1077,7 +1077,7 @@ func extraFilterOneParamDocByName() extraMatchCond {
 
 		// unique ParamDoc.Name
 		if pd, ok := ex.Right.(ParamDoc); ok && pd.Name == vd.Name {
-			if vd.Name != "" {
+			if vd.Desc != "" { // always pick the one with desc
 				return true, true
 			}
 			return false, true
