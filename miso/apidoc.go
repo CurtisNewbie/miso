@@ -393,7 +393,7 @@ func serveApiDocTmpl(rail Rail) error {
 		Desc("Serve the generated API documentation webpage").
 		Public()
 
-	rail.Info("Exposing API Documentation on /doc/api")
+	rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", GetPropInt(PropServerPort))
 	return nil
 }
 
