@@ -1,6 +1,6 @@
 # miso
 
-Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to explore various ideas that come across my mind. It's just very fun to implement stuff and realize that things can be very easy and straight-forward. This project is open sourced for love, but contribution is not really expected :D
+Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to explore various ideas that come across my mind. It's just very fun to reinvent the wheel. This project is open sourced for love, but contribution is not really expected :D
 
 Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application.
 
@@ -10,90 +10,84 @@ The overall target is to make it as small and simple as possible, backward compa
 
 ```go
 func main() {
+   // register callbacks that are invoked after configuration loaded, before server bootstrap
+   miso.PreServerBootstrap(PrepareServer)
 
-	// after configuration loaded, before server bootstrap
-	miso.PreServerBootstrap(func(rail miso.Rail) error {
+   // register callbacks that are invoked after server fully bootstrapped
+   miso.PostServerBootstrapped(TriggerWorkflowOnBootstrapped)
 
-		// declare event bus (for mq)
-		miso.NewEventBus(demoEventBusName)
+   // start the bootstrap process
+   miso.BootstrapServer(os.Args)
+}
 
-		// register some distributed tasks
-		err := miso.ScheduleDistributedTask(miso.Job{
-			Cron:                   "*/15 * * * *",
-			CronWithSeconds:        false,
-			Name:                   "MyDistributedTask",
-			LogJobExec:             true,
-			TriggeredOnBoostrapped: false,
-			Run: func(miso miso.Rail) error {
-				rail.Infof("MyDistributedTask running, now: %v", time.Now())
-				return nil
-			},
-		})
-		if err != nil {
-			panic(err) // for demo only
-		}
+func PrepareServer(rail miso.Rail) error {
 
-		type MyReq struct {
-			Name string
-			Age  int
-		}
-		type MyRes struct {
-			ResultId string
-		}
-		// register endpoints, api-doc are automatically  generated based on MyReq/MyRes
-		miso.IPost("/open/api/demo/post",
-			func(c *gin.Context, rail miso.Rail, req MyReq) (MyRes, error) {
-				rail.Infof("Received request: %#v", req)
-				return MyRes{ResultId: "1234"}, nil // serialized to json
-			}).
-			Desc("Post demo stuff").                           // add description to api-doc
-			DocHeader("Authorization", "Bearer Authorization") // document header param in api-doc
+   // declare event bus (for mq)
+   miso.NewEventBus(demoEventBusName)
 
-		// group routes based on shared url path
-		miso.BaseRoute("/open/api/demo/grouped").Group(
+   // register some distributed tasks
+   err := miso.ScheduleDistributedTask(miso.Job{
+      Cron:                   "*/15 * * * *",
+      CronWithSeconds:        false,
+      Name:                   "MyDistributedTask",
+      LogJobExec:             true,
+      TriggeredOnBoostrapped: false,
+      Run: func(miso miso.Rail) error {
+         rail.Infof("MyDistributedTask running, now: %v", time.Now())
+         return nil
+      },
+   })
+   if err != nil {
+      panic(err) // for demo only
+   }
 
-			// /open/api/demo/grouped/post1
-			miso.IPost("/post1", doSomethingEndpoint),
+   // register endpoints, api-doc are automatically generated
+   // routes can also be grouped based on shared url path
+   miso.BaseRoute("/open/api/demo/grouped").Group(
 
-			miso.BaseRoute("/subgroup").Group(
+      // /open/api/demo/grouped/post
+      miso.IPost("/open/api/demo/post",
+         func(c *gin.Context, rail miso.Rail, req PostReq) (PostRes, error) {
+            rail.Infof("Received request: %#v", req)
 
-				// /open/api/demo/grouped/subgroup/post2
-				miso.IPost("/post2", doSomethingEndpoint),
-			),
-		)
+            // e.g., read some table
+            var res PostRes
+            err := miso.GetMySQL().
+               Raw(`SELECT result_id FROM post_result WHERE request_id = ?`,
+                  req.RequestId).
+               Scan(&res).Error
+            if err != nil {
+               return PostRes{}, err
+            }
 
-		return nil
-	})
+            return res, nil // serialized to json
+         }).
+         Desc("Post demo stuff").                            // describe endpoint in api-doc
+         DocHeader("Authorization", "Bearer Authorization"), // document request header
 
-	// after server fully bootstrapped, do some stuff
-	miso.PostServerBootstrapped(func(rail miso.Rail) error {
+      miso.BaseRoute("/subgroup").Group(
 
-		type GetUserInfoReq struct {
-			UserNo string
-		}
-		type GetUserInfoRes struct {
-			Username     string
-			RegisteredAt miso.ETime
-		}
+         // /open/api/demo/grouped/subgroup/post
+         miso.IPost("/post1", doSomethingEndpoint),
+      ),
+   )
+   return nil
+}
 
-		// maybe send some requests to other backend services
-		// (using consul-based service discovery)
-		var res GetUserInfoRes
-		err := miso.NewDynTClient(rail, "/open/api/user", "user-vault").
-			PostJson(GetUserInfoReq{UserNo: "123"}).
-			Json(&res)
+func TriggerWorkflowOnBootstrapped(rail miso.Rail) error {
+   // maybe send some requests to other backend services
+   // (using consul-based service discovery)
+   var res TriggerResult
+   err := miso.NewDynTClient(rail, "/open/api/engine", "workflow-engine" /* service name */).
+      PostJson(TriggerWorkFlow{WorkFlowId: "123"}).
+      Json(&res)
 
-		if err != nil {
-			rail.Errorf("request failed, %v", err)
-		} else {
-			rail.Infof("request succeded, %#v", res)
-		}
-
-		return nil
-	})
-
-	// bootstrap server
-	miso.BootstrapServer(os.Args)
+   if err != nil {
+      rail.Errorf("request failed, %v", err)
+   } else {
+      rail.Infof("request succeded, %#v", res)
+   }
+   return nil
 }
 ```
 
