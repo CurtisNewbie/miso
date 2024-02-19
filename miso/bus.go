@@ -58,3 +58,29 @@ func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t
 	NewEventBus(name)
 	AddRabbitListener(JsonMsgListener[T]{QueueName: name, Handler: listener, NumOfRoutines: concurrency})
 }
+
+// EventPipeline is a thin wrapper of NewEventBus, SubEventBus and PubEventBus.
+// It's used to make things easier and more consistent.
+//
+// Use NewEventPipeline to instantiate.
+type EventPipeline[T any] struct {
+	name string
+}
+
+// Call PubEventBus.
+func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
+	return PubEventBus(rail, event, ep.name)
+}
+
+// Call SubEventBus.
+func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T) error) {
+	SubEventBus[T](ep.name, concurrency, listener)
+}
+
+// Create new EventPipeline. NewEventBus is internally called as well.
+func NewEventPipeline[T any](name string) EventPipeline[T] {
+	NewEventBus(name)
+	return EventPipeline[T]{
+		name: name,
+	}
+}
