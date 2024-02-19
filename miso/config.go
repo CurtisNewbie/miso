@@ -198,16 +198,10 @@ func DefaultReadConfig(args []string, rail Rail) {
 
 	// overwrite loaded configuration with environment variables
 	env := os.Environ()
-	kv := ArgKeyVal(env)
-	for k, v := range kv {
-		SetProp(k, v)
-	}
+	overwriteConf(ArgKeyVal(env))
 
 	// overwrite the loaded configuration with cli arguments
-	kv = ArgKeyVal(args)
-	for k, v := range kv {
-		SetProp(k, v)
-	}
+	overwriteConf(ArgKeyVal(args))
 
 	// try again, one may specify the extra files through cli args or environment variables
 	extraFiles = GetPropStrSlice(PropConfigExtraFiles)
@@ -297,11 +291,19 @@ func ExtractArgValue(args []string, predicate Predicate[string]) string {
 	return ""
 }
 
-/*
-Parse CLI args to key-value map
-*/
-func ArgKeyVal(args []string) map[string]string {
-	m := map[string]string{}
+func overwriteConf(kvs map[string][]string) {
+	for k, v := range kvs {
+		if len(v) == 1 {
+			SetProp(k, v[0])
+		} else {
+			SetProp(k, v)
+		}
+	}
+}
+
+// Parse CLI args to key-value map
+func ArgKeyVal(args []string) map[string][]string {
+	m := map[string][]string{}
 	for _, s := range args {
 		var eq int = strings.Index(s, "=")
 		if eq == -1 {
@@ -310,7 +312,11 @@ func ArgKeyVal(args []string) map[string]string {
 
 		key := strings.TrimSpace(s[:eq])
 		val := strings.TrimSpace(s[eq+1:])
-		m[key] = val
+		if prev, ok := m[key]; ok {
+			m[key] = append(prev, val)
+		} else {
+			m[key] = []string{val}
+		}
 	}
 	return m
 }

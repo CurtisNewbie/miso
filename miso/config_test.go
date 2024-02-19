@@ -223,13 +223,19 @@ func TestResolveArg(t *testing.T) {
 }
 
 func TestArgKeyVal(t *testing.T) {
-	kv := ArgKeyVal([]string{"fruit=apple", "content=juice"})
+	kv := ArgKeyVal([]string{"fruit=apple", "content=juice", "content=jay"})
 	v, ok := kv["fruit"]
 	if !ok {
 		t.Fatal("kv doesn't contain fruit")
 	}
-	if v != "apple" {
+	if len(v) < 1 || v[0] != "apple" {
 		t.Fatal("value should be apple")
+	}
+	t.Logf("%+v", v)
+
+	v, ok = kv["content"]
+	if !ok || len(v) < 2 || v[0] != "juice" || v[1] != "jay" {
+		t.Fatalf("value should be juice, jay, but: %v", v)
 	}
 	t.Logf("%+v", v)
 }
