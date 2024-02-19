@@ -316,7 +316,7 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 // and serialized to json.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register POST request.
@@ -325,7 +325,7 @@ func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register PUT request.
@@ -334,7 +334,7 @@ func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register DELETE request.
@@ -343,7 +343,7 @@ func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register POST request.
@@ -358,8 +358,8 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and generate an API documentation describing the endpoint.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).
-		DocJsonReq(New[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonReq(NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register GET request.
@@ -374,8 +374,8 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // and generate an API documentation describing the endpoint.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).
-		DocQueryReq(New[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocQueryReq(NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register DELETE request.
@@ -390,8 +390,8 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // and generate an API documentation describing the endpoint.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).
-		DocQueryReq(New[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocQueryReq(NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 // Register PUT request.
@@ -406,8 +406,8 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // and generate an API documentation describing the endpoint.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).
-		DocJsonReq(New[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(New[Res]()))
+		DocJsonReq(NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
 func addRoutesRegistar(reg routesRegistar) {
