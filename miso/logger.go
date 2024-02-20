@@ -1,9 +1,10 @@
 package miso
 
 import (
+	"bytes"
 	"context"
-	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -23,31 +24,85 @@ func init() {
 	logrus.SetFormatter(CustomFormatter())
 }
 
-func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	var fn string = ""
+const (
+	traceSpanIdWidth = 17
+	fnWidth          = 30
+	levelWidth       = 5
+)
 
+var (
+	logBufPool = sync.Pool{
+		New: func() any {
+			return &bytes.Buffer{}
+		},
+	}
+)
+
+func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	var fn string
 	caller, ok := entry.Data[callerField]
 	if ok {
 		fn = " " + caller.(string)
 	}
 
-	var traceId any
-	var spanId any
-
+	var traceId string
+	var spanId string
 	fields := entry.Data
 	if fields != nil {
-		traceId = fields[XTraceId]
-		spanId = fields[XSpanId]
-	}
-	if traceId == nil {
-		traceId = ""
-	}
-	if spanId == nil {
-		spanId = ""
+		if v, ok := fields[XTraceId].(string); ok {
+			traceId = v
+		}
+		if v, ok := fields[XSpanId].(string); ok {
+			spanId = v
+		}
 	}
 
-	s := fmt.Sprintf("%s %-5s [%-16v,%-16v]%-30s : %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, fn, entry.Message)
-	return UnsafeStr2Byt(s), nil
+	levelstr := toLevelStr(entry.Level)
+
+	// s := fmt.Sprintf("%s %-5s [%-16v,%-16v]%-30s : %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), levelstr, traceId, spanId, fn, entry.Message)
+	// return UnsafeStr2Byt(s), nil
+
+	b := logBufPool.Get().(*bytes.Buffer)
+	defer putLogBuf(b)
+
+	b.WriteString(entry.Time.Format("2006-01-02 15:04:05.000"))
+	b.WriteByte(' ')
+	b.WriteString(levelstr)
+
+	if len(levelstr) < levelWidth {
+		b.WriteString(Spaces(levelWidth - len(levelstr)))
+	}
+
+	b.WriteString(" [")
+	b.WriteString(traceId)
+
+	if len(traceId) < traceSpanIdWidth {
+		b.WriteString(Spaces(traceSpanIdWidth - len(traceId)))
+	}
+
+	b.WriteByte(',')
+	b.WriteString(spanId)
+
+	if len(spanId) < traceSpanIdWidth {
+		b.WriteString(Spaces(traceSpanIdWidth - len(spanId)))
+	}
+
+	b.WriteString("] ")
+	b.WriteString(fn)
+
+	if len(fn) < fnWidth {
+		b.WriteString(Spaces(fnWidth - len(fn)))
+	}
+
+	b.WriteString(" : ")
+	b.WriteString(entry.Message)
+	b.WriteByte('\n')
+	return b.Bytes(), nil
+}
+
+func putLogBuf(b *bytes.Buffer) {
+	b.Reset()
+	logBufPool.Put(b)
 }
 
 type NewRollingLogFileParam struct {
@@ -86,7 +141,6 @@ func toLevelStr(level logrus.Level) string {
 	case logrus.PanicLevel:
 		return "PANIC"
 	}
-
 	return "UNKNOWN"
 }
 
