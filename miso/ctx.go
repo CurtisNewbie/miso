@@ -3,9 +3,7 @@ package miso
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -148,25 +146,6 @@ func (r Rail) NextSpan() Rail {
 func (r Rail) WithCancel() (Rail, context.CancelFunc) {
 	cc, cancel := context.WithCancel(r.ctx)
 	return NewRail(cc), cancel
-}
-
-func getCaller(level int) *runtime.Frame {
-	pcs := make([]uintptr, level+1) // we only need the first frame
-	depth := runtime.Callers(level, pcs)
-	frames := runtime.CallersFrames(pcs[:depth])
-
-	for f, next := frames.Next(); next; {
-		return &f //nolint:scopelint
-	}
-	return nil
-}
-
-func getShortFnName(fn string) string {
-	j := strings.LastIndex(fn, "/")
-	if j < 0 {
-		return fn
-	}
-	return string([]rune(fn)[j+1:])
 }
 
 // Create empty Rail.

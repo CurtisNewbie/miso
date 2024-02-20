@@ -3,6 +3,7 @@ package miso
 import (
 	"bytes"
 	"context"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -270,10 +271,58 @@ func SetLogLevel(level string) {
 	logrus.SetLevel(ll)
 }
 
+// reduce alloc, logger calls getCallerFn very frequently, we have to optimize it as much as possible.
+var callerUintptrPool = sync.Pool{
+	New: func() any {
+		p := make([]uintptr, 4)
+		return &p
+	},
+}
+
 func getCallerFn() string {
-	clr := getCaller(4)
-	if clr == nil {
-		return ""
+	pcs := callerUintptrPool.Get().(*[]uintptr)
+	defer putCallerUintptrPool(pcs)
+
+	depth := runtime.Callers(3, *pcs)
+	frames := runtime.CallersFrames((*pcs)[:depth])
+
+	// we only need the first frame
+	for f, next := frames.Next(); next; {
+		return unsafeGetShortFnName(f.Function)
 	}
-	return getShortFnName(clr.Function)
+	return ""
+}
+
+func putCallerUintptrPool(pcs *[]uintptr) {
+	for i := range *pcs {
+		(*pcs)[i] = 0 // zero the values, just in case
+	}
+	callerUintptrPool.Put(pcs)
+}
+
+// func getCaller(level int) *runtime.Frame {
+// 	pcs := make([]uintptr, level+1) // we only need the first frame
+// 	depth := runtime.Callers(level, pcs)
+// 	frames := runtime.CallersFrames(pcs[:depth])
+
+// 	for f, next := frames.Next(); next; {
+// 		return &f //nolint:scopelint
+// 	}
+// 	return nil
+// }
+
+func getShortFnName(fn string) string {
+	j := strings.LastIndex(fn, "/")
+	if j < 0 {
+		return fn
+	}
+	return string([]rune(fn)[j+1:])
+}
+
+func unsafeGetShortFnName(fn string) string {
+	j := strings.LastIndexByte(fn, '/')
+	if j < 0 {
+		return fn
+	}
+	return UnsafeByt2Str(UnsafeStr2Byt(fn)[j+1:])
 }

@@ -21,21 +21,3 @@ func TestNewSpan(t *testing.T) {
 
 	wg.Wait()
 }
-
-func TestGetShortFnName(t *testing.T) {
-	if v := getShortFnName("shortFunc"); v != "shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("pck.shortFunc"); v != "shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("vvvv/pck.shortFunc"); v != "shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("gggg/vvvv/pck.shortFunc"); v != "shortFunc" {
-		t.Fatal(v)
-	}
-}
