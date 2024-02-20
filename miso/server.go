@@ -560,9 +560,6 @@ func BootstrapServer(args []string) {
 	start := time.Now().UnixMilli()
 	defer triggerShutdownHook()
 
-	rail, cancel := rail.WithCancel()
-	AddShutdownHook(cancel)
-
 	// default way to load configuration
 	DefaultReadConfig(args, rail)
 
