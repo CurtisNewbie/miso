@@ -20,7 +20,7 @@ func (j JsonSerializer) Serialize(t any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}
-	return string(b), nil
+	return UnsafeByt2Str(b), nil
 }
 
 func (j JsonSerializer) Deserialize(ptr any, v string) error {
@@ -29,7 +29,7 @@ func (j JsonSerializer) Deserialize(ptr any, v string) error {
 		return nil
 	}
 
-	err := ParseJson([]byte(v), ptr)
+	err := ParseJson(UnsafeStr2Byt(v), ptr)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal from string, %v", err)
 	}

@@ -47,7 +47,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	s := fmt.Sprintf("%s %-5s [%-16v,%-16v]%-30s : %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), toLevelStr(entry.Level), traceId, spanId, fn, entry.Message)
-	return []byte(s), nil
+	return UnsafeStr2Byt(s), nil
 }
 
 type NewRollingLogFileParam struct {

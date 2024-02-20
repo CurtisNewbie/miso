@@ -28,7 +28,7 @@ func Now() ETime {
 
 func (t ETime) MarshalJSON() ([]byte, error) {
 	tt := time.Time(t)
-	return []byte(fmt.Sprintf("%d", tt.UnixMilli())), nil
+	return UnsafeStr2Byt(fmt.Sprintf("%d", tt.UnixMilli())), nil
 }
 
 func (t ETime) String() string {

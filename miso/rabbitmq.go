@@ -117,7 +117,7 @@ func (m JsonMsgListener[T]) Queue() string {
 
 func (m JsonMsgListener[T]) Handle(rail Rail, payload string) error {
 	var t T
-	if e := ParseJson([]byte(payload), &t); e != nil {
+	if e := ParseJson(UnsafeStr2Byt(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -173,7 +173,7 @@ func PublishJson(c Rail, obj any, exchange string, routingKey string) error {
 
 // Publish plain text message with confirmation
 func PublishText(c Rail, msg string, exchange string, routingKey string) error {
-	return PublishMsg(c, []byte(msg), exchange, routingKey, "text/plain", nil)
+	return PublishMsg(c, UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
 }
 
 // Publish message with confirmation
@@ -522,7 +522,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			}
 
 			// message body, we only support text
-			payload := string(msg.Body)
+			payload := UnsafeByt2Str(msg.Body)
 
 			// listener handling the message payload
 			e := listener.Handle(rail, payload)

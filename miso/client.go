@@ -107,7 +107,7 @@ func (tr *TResponse) Str() (string, error) {
 	if e != nil {
 		return "", e
 	}
-	return string(b), nil
+	return UnsafeByt2Str(b), nil
 }
 
 // Read response as JSON object.
@@ -130,7 +130,7 @@ func (tr *TResponse) Json(ptr any) error {
 	}
 
 	if e = ParseJson(body, ptr); e != nil {
-		s := string(body)
+		s := UnsafeByt2Str(body)
 		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
 		tr.Rail.Error(errMsg)
 		return fmt.Errorf(errMsg)
@@ -149,7 +149,7 @@ func (tr *TResponse) Require2xx() error {
 		var body string
 		byt, err := tr.Bytes()
 		if err == nil {
-			body = string(byt)
+			body = UnsafeByt2Str(byt)
 		}
 		return fmt.Errorf("unknown error, status code: %v, body: %v", tr.StatusCode, body)
 	}
@@ -396,7 +396,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
 				if copy, err := req.GetBody(); err == nil && copy != nil {
 					if buf, e := io.ReadAll(copy); e == nil {
-						loggedBody = string(buf)
+						loggedBody = UnsafeByt2Str(buf)
 					}
 				}
 			}
@@ -520,7 +520,7 @@ func AddHeaders(req *http.Request, headers map[string][]string) {
 
 // Send POST request
 func PostJson(url string, json string) (*http.Response, error) {
-	body := bytes.NewBuffer([]byte(json))
+	body := bytes.NewBuffer(UnsafeStr2Byt(json))
 	return SendPost(url, body)
 }
 

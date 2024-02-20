@@ -44,7 +44,7 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 	wrp := func() {
 		defer func() {
 			if v := recover(); v != nil {
-				Warnf("panic recovered, %v\n%v", v, string(debug.Stack()))
+				Warnf("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 				var t T
 				if err, ok := v.(error); ok {
 					fut.ch <- func() (T, error) { return t, err }
