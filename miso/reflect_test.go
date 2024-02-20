@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -71,4 +72,62 @@ func TestCollectFields(t *testing.T) {
 	}
 
 	t.Log(fields)
+}
+
+func TestWalkTagShallow(t *testing.T) {
+	type dummy struct {
+		Name string `alias:"dummyName"`
+		Desc string `alias:"dummyDesc"`
+	}
+	d := dummy{Name: "name 1", Desc: "desc 2"}
+	err := WalkTagShallow(&d, WalkTagCallback{
+		Tag: "alias",
+		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
+			fieldVal.SetString("yo")
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	Infof("%#v", d)
+}
+
+func TestWalkTagShallowFalseCase(t *testing.T) {
+	d := 0
+	err := WalkTagShallow(&d, WalkTagCallback{
+		Tag: "alias",
+		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
+			fieldVal.SetString("yo")
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(d)
+}
+
+func BenchmarkWalkTagShallow(b *testing.B) {
+	type dummy struct {
+		Name string `alias:"dummyName"`
+		Desc string `alias:"dummyDesc"`
+	}
+	d := dummy{Name: "name 1", Desc: "desc 2"}
+	callback := WalkTagCallback{
+		Tag: "alias",
+		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
+			fieldVal.SetString("yo")
+			return nil
+		},
+	}
+	b.ResetTimer()
+
+	var err error
+	for i := 0; i < b.N; i++ {
+		err = WalkTagShallow(&d, callback)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
 }

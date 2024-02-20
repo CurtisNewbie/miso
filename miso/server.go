@@ -51,7 +51,8 @@ const (
 
 	defShutdownOrder = 5
 
-	TagQueryParam = "form"
+	TagQueryParam  = "form"
+	TagHeaderParam = "header"
 )
 
 var (
@@ -318,7 +319,7 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // Register POST request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -334,7 +335,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // Register GET request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'form' tag (for form-data, query param).
+// using 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -350,7 +351,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // Register DELETE request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -366,7 +367,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // Register PUT request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -765,7 +766,7 @@ func BuildRail(c *gin.Context) Rail {
 // Traced and parameters mapped route handler.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -784,6 +785,11 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		// bind to payload boject
 		var req Req
 		MustBind(rail, c, &req)
+
+		// TODO: validate using WalkTag* as well, but not the shallow one
+		if err := ReflectSetHeader(&req, c); err != nil {
+			rail.Errorf("failed to ReflectSetHeader, %v", err)
+		}
 
 		if GetPropBool(PropServerRequestValidateEnabled) {
 			// validate request
@@ -1134,4 +1140,32 @@ type GinPreProcessor func(rail Rail, engine *gin.Engine)
 // Process *gin.Engine before the web server starts, particularly useful when trying to add middleware.
 func PreProcessGin(preProcessor GinPreProcessor) {
 	ginPreProcessors = append(ginPreProcessors, preProcessor)
+}
+
+func ReflectSetHeader(ptr any, c *gin.Context) error {
+	return WalkTagShallow(ptr, walkHeaderTagCallback(func(k string) string {
+		return c.GetHeader(k)
+	}))
+}
+
+func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
+	return WalkTagCallback{
+		Tag: TagHeaderParam,
+		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
+			hv := getHeader(tagVal)
+			if hv == "" {
+				return nil
+			}
+			switch fieldType.Type.Kind() {
+			case reflect.String:
+				fieldVal.SetString(hv)
+			case reflect.Pointer:
+				ptrType := fieldType.Type.Elem()
+				if ptrType.Kind() == reflect.String {
+					fieldVal.Set(reflect.ValueOf(&hv))
+				}
+			}
+			return nil
+		},
+	}
 }

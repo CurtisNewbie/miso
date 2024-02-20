@@ -130,3 +130,42 @@ func TypeName(t reflect.Type) string {
 		return t.String()
 	}
 }
+
+type WalkTagCallback struct {
+	Tag      string
+	OnWalked func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error
+}
+
+func WalkTagShallow(ptr any, callbacks ...WalkTagCallback) error {
+	if len(callbacks) < 1 {
+		return nil
+	}
+
+	v := reflect.ValueOf(ptr)
+	if v.Kind() != reflect.Pointer {
+		return nil
+	}
+	idr := reflect.Indirect(v)
+	if idr.Kind() != reflect.Struct {
+		return nil
+	}
+
+	t := reflect.TypeOf(ptr).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		fv := idr.Field(i)
+		if !fv.CanSet() {
+			continue
+		}
+		for _, cb := range callbacks {
+			tagVal := f.Tag.Get(cb.Tag)
+			if tagVal == "" {
+				continue
+			}
+			if err := cb.OnWalked(tagVal, fv, f); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
