@@ -25,7 +25,7 @@ func init() {
 }
 
 const (
-	traceSpanIdWidth = 17
+	traceSpanIdWidth = 16
 	fnWidth          = 30
 	levelWidth       = 5
 )
