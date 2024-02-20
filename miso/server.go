@@ -90,7 +90,7 @@ var (
 		OkJsonBuilder:      func() any { return OkResp() },
 	}
 
-	endpointResultHandler EndpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
+	endpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
 		if err != nil {
 			DispatchJson(c, resultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
 			return
@@ -105,40 +105,6 @@ var (
 	// enable pprof manually
 	manualRegisterPprof = false
 )
-
-type OrderedShutdownHook struct {
-	Hook  func()
-	Order int
-}
-
-// Preprocessor of *gin.Engine.
-type GinPreProcessor func(rail Rail, engine *gin.Engine)
-
-// Raw version of traced route handler.
-type RawTRouteHandler func(c *gin.Context, rail Rail)
-
-// Traced route handler.
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With Res type declared, miso will automatically parse the Res type using reflect and generate an API documentation
-// describing the endpoint.
-type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
-
-// Traced and parameters mapped route handler.
-//
-// Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param).
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With both Req and Res type declared, miso will automatically parse these two types using reflect
-// and generate an API documentation describing the endpoint.
-type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
-
-type routesRegistar func(*gin.Engine)
 
 type HttpRoute struct {
 	Url             string
@@ -164,17 +130,6 @@ type ComponentBootstrap struct {
 	Order int
 }
 
-type ResultBodyBuilder struct {
-	// wrap error in json, the returned object will be serialized to json.
-	ErrJsonBuilder func(rail Rail, url string, err error) any
-
-	// wrap payload object, the returned object will be serialized to json.
-	PayloadJsonBuilder func(payload any) any
-
-	// build empty ok response object, the returned object will be serialized to json.
-	OkJsonBuilder func() any
-}
-
 func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "0.0.0.0")
@@ -198,7 +153,16 @@ func init() {
 	})
 }
 
-type EndpointResultHandler func(c *gin.Context, rail Rail, payload any, err error)
+type ResultBodyBuilder struct {
+	// wrap error in json, the returned object will be serialized to json.
+	ErrJsonBuilder func(rail Rail, url string, err error) any
+
+	// wrap payload object, the returned object will be serialized to json.
+	PayloadJsonBuilder func(payload any) any
+
+	// build empty ok response object, the returned object will be serialized to json.
+	OkJsonBuilder func() any
+}
 
 // Replace the default ResultBodyBuilder
 func SetResultBodyBuilder(rbb ResultBodyBuilder) error {
@@ -209,6 +173,11 @@ func SetResultBodyBuilder(rbb ResultBodyBuilder) error {
 // Register shutdown hook, hook should never panic
 func AddShutdownHook(hook func()) {
 	addOrderedShutdownHook(defShutdownOrder, hook)
+}
+
+type OrderedShutdownHook struct {
+	Hook  func()
+	Order int
 }
 
 func addOrderedShutdownHook(order int, hook func()) {
@@ -409,6 +378,8 @@ func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 		DocJsonReq(NewVar[Req]()).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
+
+type routesRegistar func(*gin.Engine)
 
 func addRoutesRegistar(reg routesRegistar) {
 	routeRegistars = append(routeRegistars, reg)
@@ -791,6 +762,18 @@ func BuildRail(c *gin.Context) Rail {
 	return rail
 }
 
+// Traced and parameters mapped route handler.
+//
+// Req type should be a struct, where all fields are automatically mapped from the request
+// using 'json' tag or 'form' tag (for form-data, query param).
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
+type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
+
 // Build route handler with the mapped payload object, context, and logger.
 //
 // value and error returned by handler are automically wrapped in a Resp object
@@ -822,12 +805,24 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 	}
 }
 
+// Raw version of traced route handler.
+type RawTRouteHandler func(c *gin.Context, rail Rail)
+
 // Build route handler with context, and logger
 func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		handler(c, BuildRail(c))
 	}
 }
+
+// Traced route handler.
+//
+// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
+// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
+//
+// With Res type declared, miso will automatically parse the Res type using reflect and generate an API documentation
+// describing the endpoint.
+type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
 
 // Build route handler with context, and logger
 //
@@ -1132,6 +1127,9 @@ func BaseRoute(baseUrl string) *RoutingGroup {
 func ManualPprofRegister() {
 	manualRegisterPprof = true
 }
+
+// Preprocessor of *gin.Engine.
+type GinPreProcessor func(rail Rail, engine *gin.Engine)
 
 // Process *gin.Engine before the web server starts, particularly useful when trying to add middleware.
 func PreProcessGin(preProcessor GinPreProcessor) {
