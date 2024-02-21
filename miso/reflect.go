@@ -136,6 +136,7 @@ type WalkTagCallback struct {
 	OnWalked func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error
 }
 
+// Walk fields of *struct, won't go deeper even if the field is a struct.
 func WalkTagShallow(ptr any, callbacks ...WalkTagCallback) error {
 	if len(callbacks) < 1 {
 		return nil

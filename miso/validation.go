@@ -9,36 +9,44 @@ import (
 )
 
 const (
-	TAG_VALIDATION_V1 = "validation" // name of validation tag
-	TAG_VALIDATION_V2 = "valid"      // name of validation tag (v2)
+	TagValidationV1 = "validation" // name of validation tag
+	TagValidationV2 = "valid"      // name of validation tag (v2)
 
-	MAX_LEN = "maxLen" // max length of a string, array, slice (e.g., 'maxLen:10')
+	ValidMaxLen = "maxLen" // max length of a string, array, slice (e.g., 'maxLen:10')
 
-	NOT_EMPTY = "notEmpty" // not empty, supports string, array, slice, map
-	NOT_NIL   = "notNil"   // not nil, only validates slice, map, pointer, func
+	ValidNotEmpty = "notEmpty" // not empty, supports string, array, slice, map
+	ValidNotNil   = "notNil"   // not nil, only validates slice, map, pointer, func
 
-	POSITIVE         = "positive"       // greater than 0, only supports int... or string type
-	POSITIVE_OR_ZERO = "positiveOrZero" // greater than or equal to 0, only supports int... or string type
-	NEGATIVE         = "negative"       // less than 0, only supports int... or string type
-	NEGATIVE_OR_ZERO = "negativeOrZero" // less than or equal to 0, only supports int... or string type
-	NOT_ZERO         = "notZero"        // not zero, only supports int... or string type
-	VALIDATED        = "validated"      // mark a nested struct or pointer validated, nil pointer is ignored, one may combine "notNil,validated"
+	ValidPositive       = "positive"       // greater than 0, only supports int... or string type
+	ValidPositiveOrZero = "positiveOrZero" // greater than or equal to 0, only supports int... or string type
+	ValidNegative       = "negative"       // less than 0, only supports int... or string type
+	ValidNegativeOrZero = "negativeOrZero" // less than or equal to 0, only supports int... or string type
+	ValidNotZero        = "notZero"        // not zero, only supports int... or string type
+	Validated           = "validated"      // mark a nested struct or pointer validated, nil pointer is ignored, one may combine "notNil,validated"
 )
 
 var (
-	rules = NewSet[string]()
+	rules                             = NewSet[string]()
+	ValidateWalkTagCallbackDeprecated = WalkTagCallback{
+		Tag:      TagValidationV1,
+		OnWalked: validateOnWalked,
+	}
+	ValidateWalkTagCallback = WalkTagCallback{
+		Tag:      TagValidationV2,
+		OnWalked: validateOnWalked,
+	}
 )
 
 func init() {
-	rules.AddThen(MAX_LEN).
-		AddThen(NOT_EMPTY).
-		AddThen(NOT_NIL).
-		AddThen(POSITIVE).
-		AddThen(POSITIVE_OR_ZERO).
-		AddThen(NEGATIVE).
-		AddThen(NEGATIVE_OR_ZERO).
-		AddThen(NOT_ZERO).
-		Add(VALIDATED)
+	rules.AddThen(ValidMaxLen).
+		AddThen(ValidNotEmpty).
+		AddThen(ValidNotNil).
+		AddThen(ValidPositive).
+		AddThen(ValidPositiveOrZero).
+		AddThen(ValidNegative).
+		AddThen(ValidNegativeOrZero).
+		AddThen(ValidNotZero).
+		Add(Validated)
 }
 
 // Validation Error
@@ -84,10 +92,10 @@ func Validate(target any) error {
 	var verr error
 
 	forEach := func(i int, field reflect.StructField) (breakIteration bool) {
-		vtag := field.Tag.Get(TAG_VALIDATION_V2) // new tag
+		vtag := field.Tag.Get(TagValidationV2) // new tag
 
 		if vtag == "" {
-			vtag = field.Tag.Get(TAG_VALIDATION_V1) // old tag
+			vtag = field.Tag.Get(TagValidationV1) // old tag
 		}
 
 		if vtag == "" { // no tag found
@@ -137,7 +145,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 	// Infof("Validating '%s' with value '%v' against rule '%s'", fname, value, rule)
 
 	switch rule {
-	case MAX_LEN:
+	case ValidMaxLen:
 		maxLen, e := strconv.Atoi(ruleParam)
 		if e == nil && maxLen > -1 {
 			switch value.Kind() {
@@ -153,7 +161,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 				}
 			}
 		}
-	case NOT_EMPTY:
+	case ValidNotEmpty:
 		switch value.Kind() {
 		case reflect.String:
 			sval := value.String()
@@ -165,14 +173,14 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
 			}
 		}
-	case NOT_NIL:
+	case ValidNotNil:
 		switch value.Kind() {
 		case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Func:
 			if value.IsNil() {
 				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "cannot be nil"}
 			}
 		}
-	case POSITIVE, POSITIVE_OR_ZERO, NEGATIVE, NEGATIVE_OR_ZERO, NOT_ZERO:
+	case ValidPositive, ValidPositiveOrZero, ValidNegative, ValidNegativeOrZero, ValidNotZero:
 		switch value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			return ValidateIntRule(value.Int(), rule, fname, ruleParam)
@@ -183,7 +191,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 			}
 			return ValidateIntRule(int64(ival), rule, fname, ruleParam)
 		}
-	case VALIDATED:
+	case Validated:
 		switch value.Kind() {
 		case reflect.Struct:
 			// nested struct, validate recursively
@@ -200,25 +208,54 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 
 func ValidateIntRule(ival int64, rule string, fname string, param string) error {
 	switch rule {
-	case POSITIVE:
+	case ValidPositive:
 		if ival <= 0 {
 			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be greater than zero"}
 		}
-	case POSITIVE_OR_ZERO:
+	case ValidPositiveOrZero:
 		if ival < 0 {
 			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be grater than or equal to zero"}
 		}
-	case NEGATIVE:
+	case ValidNegative:
 		if ival >= 0 {
 			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be less than zero"}
 		}
-	case NEGATIVE_OR_ZERO:
+	case ValidNegativeOrZero:
 		if ival > 0 {
 			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must be less than or equal to zero"}
 		}
-	case NOT_ZERO:
+	case ValidNotZero:
 		if ival == 0 {
 			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be zero"}
+		}
+	}
+	return nil
+}
+
+func validateOnWalked(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
+	taggedRules := strings.Split(tagVal, ",")
+
+	// for each rule
+	for _, rul := range taggedRules {
+		rul = strings.TrimSpace(rul)
+
+		// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
+		splited := strings.Split(rul, ":")
+		for i := range splited {
+			splited[i] = strings.TrimSpace(splited[i])
+		}
+
+		rul = splited[0] // rule is the one before ':'
+		param := ""      // param is those joined after the first ':'
+
+		if len(splited) > 1 { // contains extra parameters
+			param = strings.Join(splited[1:], ":")
+		}
+
+		if rules.Has(rul) { // is a valid rule
+			if err := ValidateRule(fieldType, fieldVal, rul, param); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

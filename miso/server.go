@@ -140,6 +140,7 @@ func init() {
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
+	SetDefProp(PropServerRequestAutoMapHeader, true)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -786,15 +787,28 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		var req Req
 		MustBind(rail, c, &req)
 
-		// TODO: validate using WalkTag* as well, but not the shallow one
-		if err := ReflectSetHeader(&req, c); err != nil {
-			rail.Errorf("failed to ReflectSetHeader, %v", err)
-		}
-
+		wtcbCnt := 0
 		if GetPropBool(PropServerRequestValidateEnabled) {
+			wtcbCnt += 2
+		}
+		if GetPropBool(PropServerRequestAutoMapHeader) {
+			wtcbCnt += 1
+		}
+		if wtcbCnt > 0 {
+			wtcb := make([]WalkTagCallback, 0, wtcbCnt)
+
 			// validate request
-			if e := Validate(req); e != nil {
-				HandleEndpointResult(c, rail, nil, e)
+			if GetPropBool(PropServerRequestValidateEnabled) {
+				wtcb = append(wtcb, ValidateWalkTagCallback, ValidateWalkTagCallbackDeprecated)
+			}
+
+			// for setting headers
+			if GetPropBool(PropServerRequestAutoMapHeader) {
+				wtcb = append(wtcb, reflectSetHeaderCallback(c))
+			}
+
+			if err := WalkTagShallow(&req, wtcb...); err != nil {
+				HandleEndpointResult(c, rail, nil, err)
 				return
 			}
 		}
@@ -1142,10 +1156,8 @@ func PreProcessGin(preProcessor GinPreProcessor) {
 	ginPreProcessors = append(ginPreProcessors, preProcessor)
 }
 
-func ReflectSetHeader(ptr any, c *gin.Context) error {
-	return WalkTagShallow(ptr, walkHeaderTagCallback(func(k string) string {
-		return c.GetHeader(k)
-	}))
+func reflectSetHeaderCallback(c *gin.Context) WalkTagCallback {
+	return walkHeaderTagCallback(func(k string) string { return c.GetHeader(k) })
 }
 
 func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
