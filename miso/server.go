@@ -141,6 +141,7 @@ func init() {
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
+	SetDefProp(PropServerGinValidationDisabled, true)
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
@@ -914,6 +915,10 @@ func WebServerBootstrap(rail Rail) error {
 
 	// always set to releaseMode
 	gin.SetMode(gin.ReleaseMode)
+	if GetPropBool(PropServerGinValidationDisabled) {
+		rail.Info("Disabled Gin's builtin validation")
+		gin.DisableBindValidation()
+	}
 
 	// gin engine
 	engine := gin.New()

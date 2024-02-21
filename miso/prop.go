@@ -85,6 +85,7 @@ const (
 	PropServerPprofEnabled               = "server.pprof.enabled"
 	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
 	PropServerRequestAutoMapHeader       = "server.request.mapping.header"
+	PropServerGinValidationDisabled      = "server.gin.validation.disabled"
 
 	/*
 		------------------------------------

@@ -46,7 +46,7 @@ The tables shown below list all configuration that you can tune. You can also re
 ## Common Configuration
 
 | property           | description                              | default value |
-| ------------------ | ---------------------------------------- | ------------- |
+|--------------------|------------------------------------------|---------------|
 | app.name           | name of the application                  |               |
 | mode.production    | whether production mode is turned on     | true          |
 | config.extra.files | extra config files that should be loaded |               |
@@ -54,7 +54,7 @@ The tables shown below list all configuration that you can tune. You can also re
 ## Web Server Configuration
 
 | property                             | description                                                                                 | default value |
-| ------------------------------------ | ------------------------------------------------------------------------------------------- | ------------- |
+|--------------------------------------|---------------------------------------------------------------------------------------------|---------------|
 | server.enabled                       | enable http server                                                                          | true          |
 | server.host                          | http server host                                                                            | 0.0.0.0       |
 | server.port                          | http server port                                                                            | 8080          |
@@ -66,11 +66,12 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.pprof.enabled                 | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false         |
 | server.generate-endpoint-doc.enabled | generate endpoint documentation in logs                                                     | true          |
 | server.request.mapping.header        | automatically map header values to request struct                                           | true          |
+| server.gin.validation.disabled       | disable gin's builtin validation                                                            | true          |
 
 ## Consul Configuration
 
 | property                                | description                                                                        | default value                   |
-| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+|-----------------------------------------|------------------------------------------------------------------------------------|---------------------------------|
 | consul.enabled                          | enable Consul client, service registration and service discovery                   | false                           |
 | consul.registerName                     | registered service name                                                            | `${app.name}`                   |
 | consul.registerAddress                  | registered service address                                                         | `${server.host}:${server.port}` |
@@ -89,7 +90,7 @@ The tables shown below list all configuration that you can tune. You can also re
 ## MySQL Configuration
 
 | property                    | description                               | default value                                                                                                   |
-| --------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+|-----------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
 | mysql.enabled               | enable MySQL client                       | false                                                                                                           |
 | mysql.user                  | username                                  | root                                                                                                            |
 | mysql.password              | password                                  |                                                                                                                 |
@@ -106,7 +107,7 @@ The tables shown below list all configuration that you can tune. You can also re
 ## Redis Configuration
 
 | property       | description         | default value |
-| -------------- | ------------------- | ------------- |
+|----------------|---------------------|---------------|
 | redis.enabled  | enable Redis client | false         |
 | redis.address  | Redis server host   | `localhost`   |
 | redis.port     | Redis server port   | 6379          |
@@ -117,7 +118,7 @@ The tables shown below list all configuration that you can tune. You can also re
 ## RabbitMQ Configuration
 
 | property              | description                        | default value |
-| --------------------- | ---------------------------------- | ------------- |
+|-----------------------|------------------------------------|---------------|
 | rabbitmq.enabled      | enable RabbitMQ client             | false         |
 | rabbitmq.host         | RabbitMQ server host               | `localhost`   |
 | rabbitmq.port         | RabbitMQ server port               | 5672          |
@@ -131,7 +132,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## SQLite Configuration
 
 | property           | description                  | default value |
-| ------------------ | ---------------------------- | ------------- |
+|--------------------|------------------------------|---------------|
 | sqlite.file        | path to SQLite database file |               |
 | sqlite.wal.enabled | enable WAL mode              | true          |
 
@@ -139,7 +140,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## Logging Configuration
 
 | property                  | description                                | default value                  |
-| ------------------------- | ------------------------------------------ | ------------------------------ |
+|---------------------------|--------------------------------------------|--------------------------------|
 | logging.level             | log level                                  | info                           |
 | logging.rolling.file      | path to rolling log file                   |                                |
 | logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
@@ -150,14 +151,14 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## Distributed Task Scheduling Configuration
 
 | property                | description                                                    | default value |
-| ----------------------- | -------------------------------------------------------------- | ------------- |
+|-------------------------|----------------------------------------------------------------|---------------|
 | task.scheduling.enabled | enable distributed task scheduling                             | true          |
 | task.scheduling.group   | name of the cluster, if absent, `${app.name}` is used instead. |               |
 
 ## Client Package Configuration
 
 | property                         | description         | default value |
-| -------------------------------- | ------------------- | ------------- |
+|----------------------------------|---------------------|---------------|
 | client.addr.${SERVICE_NAME}.host | client service host |               |
 | client.addr.${SERVICE_NAME}.port | client service port |               |
 
@@ -165,7 +166,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## JWT Configuration
 
 | property        | description                            | default value |
-| --------------- | -------------------------------------- | ------------- |
+|-----------------|----------------------------------------|---------------|
 | jwt.key.public  | public key for verifying the JWT token |               |
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
@@ -174,7 +175,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 ## Metrics Configuration
 
 | property                        | description                                                              | default value   |
-| ------------------------------- | ------------------------------------------------------------------------ | --------------- |
+|---------------------------------|--------------------------------------------------------------------------|-----------------|
 | metrics.enabled                 | enable metrics collection using prometheus                               | true            |
 | metrics.route                   | route used to expose collected metrics                                   | /metrics        |
 | metrics.auth.enabled            | enable authorization for metrics endpoint                                | false           |
