@@ -12,10 +12,14 @@ const (
 	TagValidationV1 = "validation" // name of validation tag
 	TagValidationV2 = "valid"      // name of validation tag (v2)
 
-	ValidMaxLen = "maxLen" // max length of a string, array, slice (e.g., 'maxLen:10')
+	ValidMaxLen = "maxLen" // max length of a string, array, slice, e.g., `valid:"maxLen:10"`
 
 	ValidNotEmpty = "notEmpty" // not empty, supports string, array, slice, map
 	ValidNotNil   = "notNil"   // not nil, only validates slice, map, pointer, func
+
+	// must be one of the values listed, e.g., 'valid:"member:PUBLIC|PROTECTED"', means that the tag value must be either PUBLIC or PROTECTED.
+	// only string type is supported.
+	ValidMember = "member"
 
 	ValidPositive       = "positive"       // greater than 0, only supports int... or string type
 	ValidPositiveOrZero = "positiveOrZero" // greater than or equal to 0, only supports int... or string type
@@ -41,6 +45,7 @@ func init() {
 	rules.AddThen(ValidMaxLen).
 		AddThen(ValidNotEmpty).
 		AddThen(ValidNotNil).
+		AddThen(ValidMember).
 		AddThen(ValidPositive).
 		AddThen(ValidPositiveOrZero).
 		AddThen(ValidNegative).
@@ -179,6 +184,23 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 			if value.IsNil() {
 				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "cannot be nil"}
 			}
+		}
+	case ValidMember:
+		Info("members ", ruleParam)
+		members := strings.Split(ruleParam, "|")
+		if len(members) < 1 {
+			return nil
+		}
+		switch value.Kind() {
+		case reflect.String:
+			sval := value.String()
+			trimed := strings.TrimSpace(sval)
+			for _, v := range members {
+				if v == trimed {
+					return nil
+				}
+			}
+			return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("must be one of %v", members)}
 		}
 	case ValidPositive, ValidPositiveOrZero, ValidNegative, ValidNegativeOrZero, ValidNotZero:
 		switch value.Kind() {

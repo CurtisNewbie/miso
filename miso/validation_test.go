@@ -5,16 +5,17 @@ import (
 )
 
 type ValidatedDummy struct {
-	Name       string        `json:"name" validation:"maxLen  : 10 , notEmpty"`
-	StrNum     string        `validation:"positive"`
-	PosNum     int           `validation:"positive"`
-	PosZeroNum int           `validation:"positiveOrZero"`
-	NegZeroNum int           `validation:"negativeOrZero"`
-	NegNum     int           `validation:"negative"`
-	Friends    []string      `validation:"notEmpty"`
-	secret     string        `validation:"notEmpty"` //lint:ignore U1000 for testing
-	Another    AnotherDummy  `validation:"validated"`
-	DummyPtr   *AnotherDummy `validation:"notNil,validated"`
+	Name       string        `json:"name" valid:"maxLen  : 10 , notEmpty"`
+	StrNum     string        `valid:"positive"`
+	PosNum     int           `valid:"positive"`
+	PosZeroNum int           `valid:"positiveOrZero"`
+	NegZeroNum int           `valid:"negativeOrZero"`
+	NegNum     int           `valid:"negative"`
+	Friends    []string      `valid:"notEmpty"`
+	Type       string        `valid:"member:PUBLIC|PROTECTED"`
+	secret     string        `valid:"notEmpty"` //lint:ignore U1000 for testing
+	Another    AnotherDummy  `valid:"validated"`
+	DummyPtr   *AnotherDummy `valid:"notNil,validated"`
 }
 
 type AnotherDummy struct {
@@ -22,7 +23,15 @@ type AnotherDummy struct {
 }
 
 func validDummy() ValidatedDummy {
-	return ValidatedDummy{Name: "abc", StrNum: "1", PosNum: 1, NegNum: -1, Friends: []string{"nobody"}, Another: AnotherDummy{Favourite: "apple"}, DummyPtr: &AnotherDummy{Favourite: "juice"}}
+	return ValidatedDummy{Name: "abc",
+		StrNum:   "1",
+		PosNum:   1,
+		NegNum:   -1,
+		Friends:  []string{"nobody"},
+		Another:  AnotherDummy{Favourite: "apple"},
+		DummyPtr: &AnotherDummy{Favourite: "juice"},
+		Type:     "PUBLIC",
+	}
 }
 
 func TestValidate(t *testing.T) {
@@ -192,4 +201,14 @@ func TestValidate(t *testing.T) {
 	if ve, _ := e.(*ValidationError); ve.Field != "DummyPtr.Favourite" || ve.Rule != "notEmpty" {
 		t.Fatalf("Validation should fail because of DummyPtr.Favourite/notEmpty")
 	}
+
+	v = validDummy()
+	v.Type = "wrong type"
+	e = Validate(v)
+	if e == nil {
+		t.Fatalf("Type validation should fail, %v", v.Type)
+	} else {
+		t.Log(e)
+	}
+
 }

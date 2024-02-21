@@ -33,6 +33,7 @@ The rules available are (see constants and documentation in `validation.go`):
 - negativeOrZero
 - notZero
 - validated
+- member
 
 A field can have more than one rule, these rules are sapareted using ',', and the rules are validated in the order in which they are declared, for example:
 
