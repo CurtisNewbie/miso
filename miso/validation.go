@@ -186,7 +186,6 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 			}
 		}
 	case ValidMember:
-		Info("members ", ruleParam)
 		members := strings.Split(ruleParam, "|")
 		if len(members) < 1 {
 			return nil
