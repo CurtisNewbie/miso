@@ -52,29 +52,29 @@ type PageQueryBuilder func(tx *gorm.DB) *gorm.DB
 
 // Create param for page query.
 type QueryPageParam[V any] struct {
-	ReqPage     Paging           // Request Paging Param.
-	SelectQuery PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
-	BaseQuery   PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).Where(...)
-	DoForEach   Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
+	reqPage     Paging           // Request Paging Param.
+	selectQuery PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
+	baseQuery   PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).Where(...)
+	forEach     Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
 func (q *QueryPageParam[V]) WithPage(p Paging) *QueryPageParam[V] {
-	q.ReqPage = p
+	q.reqPage = p
 	return q
 }
 
 func (q *QueryPageParam[V]) WithSelectQuery(qry PageQueryBuilder) *QueryPageParam[V] {
-	q.SelectQuery = qry
+	q.selectQuery = qry
 	return q
 }
 
 func (q *QueryPageParam[V]) WithBaseQuery(qry PageQueryBuilder) *QueryPageParam[V] {
-	q.BaseQuery = qry
+	q.baseQuery = qry
 	return q
 }
 
 func (q *QueryPageParam[V]) ForEach(t Transform[V]) *QueryPageParam[V] {
-	q.DoForEach = t
+	q.forEach = t
 	return q
 }
 
@@ -91,7 +91,7 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 	var total int
 
 	newQuery := func() *gorm.DB {
-		return p.BaseQuery(tx)
+		return p.baseQuery(tx)
 	}
 
 	// count
@@ -105,22 +105,22 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 
 	// the actual page
 	if total > 0 {
-		t = p.SelectQuery(newQuery()).
-			Offset(p.ReqPage.GetOffset()).
-			Limit(p.ReqPage.GetLimit()).
+		t = p.selectQuery(newQuery()).
+			Offset(p.reqPage.GetOffset()).
+			Limit(p.reqPage.GetLimit()).
 			Scan(&payload)
 		if t.Error != nil {
 			return res, t.Error
 		}
 
-		if p.DoForEach != nil {
+		if p.forEach != nil {
 			for i := range payload {
-				payload[i] = p.DoForEach(payload[i])
+				payload[i] = p.forEach(payload[i])
 			}
 		}
 	}
 
-	return PageRes[Res]{Payload: payload, Page: RespPage(p.ReqPage, total)}, nil
+	return PageRes[Res]{Payload: payload, Page: RespPage(p.reqPage, total)}, nil
 }
 
 func NewPageQuery[Res any]() *QueryPageParam[Res] {
