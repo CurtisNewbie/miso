@@ -345,8 +345,10 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
+	var r Req
 	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).
-		DocQueryReq(NewVar[Req]()).
+		DocQueryReq(r).
+		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -361,8 +363,10 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
+	var r Req
 	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).
-		DocQueryReq(NewVar[Req]()).
+		DocQueryReq(r).
+		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -1056,6 +1060,15 @@ func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl
 	return g.extra(ExtraHeaderParam, ParamDoc{headerName, desc}, extraFilterOneParamDocByName())
 }
 
+// Document header parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
+func (g *LazyRouteDecl) DocHeaderReq(v any) *LazyRouteDecl {
+	t := reflect.TypeOf(v)
+	for _, pd := range parseHeaderDoc(t) {
+		g.extra(ExtraHeaderParam, pd, extraFilterOneParamDocByName())
+	}
+	return g
+}
+
 // Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
 	t := reflect.TypeOf(v)
@@ -1067,7 +1080,8 @@ func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
 
 // Document json request that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocJsonReq(v any) *LazyRouteDecl {
-	return g.extra(ExtraJsonRequest, v, extraFilterOneByKey())
+	// json request could contain fields that are mapped using header or query param
+	return g.DocQueryReq(v).DocHeaderReq(v).extra(ExtraJsonRequest, v, extraFilterOneByKey())
 }
 
 // Document json response that the endpoint returns (only serves as metadata that maybe used by some plugins).

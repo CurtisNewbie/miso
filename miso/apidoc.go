@@ -21,8 +21,10 @@ var (
 		"*ETime":      "int64",
 		"*miso.ETime": "int64",
 	}
+
 	apiDocTmpl          *template.Template
 	buildApiDocTmplOnce sync.Once
+	ignoredJsonDocTag   = []string{"form", "header"}
 )
 
 func init() {
@@ -161,11 +163,16 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 			continue
 		}
 
-		if v := f.Tag.Get("form"); v != "" {
+		skipped := false
+		for _, it := range ignoredJsonDocTag {
+			if v := f.Tag.Get(it); v != "" {
+				skipped = true
+				break
+			}
+		}
+		if skipped {
 			continue
 		}
-
-		fv := v.Field(i)
 
 		var name string
 		if v := f.Tag.Get("json"); v != "" {
@@ -195,8 +202,8 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 			continue
 		}
 
+		fv := v.Field(i)
 		appendable := true
-
 		if f.Type.Kind() == reflect.Interface {
 			if !fv.IsZero() && !fv.IsNil() {
 				if ele := fv.Elem(); ele.IsValid() {
@@ -399,7 +406,7 @@ func serveApiDocTmpl(rail Rail) error {
 
 func parseQueryDoc(t reflect.Type) []ParamDoc {
 	if t == nil {
-		return []ParamDoc{}
+		return nil
 	}
 	pds := []ParamDoc{}
 	for i := 0; i < t.NumField(); i++ {
@@ -415,6 +422,31 @@ func parseQueryDoc(t reflect.Type) []ParamDoc {
 		desc := f.Tag.Get(TagApiDocDesc)
 		pds = append(pds, ParamDoc{
 			Name: query,
+			Desc: desc,
+		})
+	}
+	return pds
+}
+
+func parseHeaderDoc(t reflect.Type) []ParamDoc {
+	if t == nil {
+		return nil
+	}
+	pds := []ParamDoc{}
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if IsVoid(f.Type) {
+			continue
+		}
+
+		header := f.Tag.Get(TagHeaderParam)
+		if header == "" {
+			continue
+		}
+		header = strings.ToLower(header)
+		desc := f.Tag.Get(TagApiDocDesc)
+		pds = append(pds, ParamDoc{
+			Name: header,
 			Desc: desc,
 		})
 	}
