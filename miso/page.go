@@ -13,7 +13,7 @@ type Paging struct {
 }
 
 type PageRes[T any] struct {
-	Page    Paging `json:"pagingVo" desc:"pagination parameters"`
+	Page    Paging `json:"paging" desc:"pagination parameters"`
 	Payload []T    `json:"payload" desc:"payload values in current page"`
 }
 
@@ -85,7 +85,8 @@ func (q *QueryPageParam[V]) Exec(rail Rail, tx *gorm.DB) (PageRes[V], error) {
 
 // Execute paged query.
 //
-// COUNT query is called first, if none is found (i.e., COUNT(...) == 0), this method will not call the actual SELECT query to avoid unnecessary performance lost.
+// COUNT query is called first, if none is found (i.e., COUNT(...) == 0), this method
+// will not call the actual SELECT query to avoid unnecessary performance lost.
 func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
 	var res PageRes[Res]
 	var total int
