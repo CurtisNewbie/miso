@@ -52,18 +52,35 @@ type PageQueryBuilder func(tx *gorm.DB) *gorm.DB
 
 // Create param for page query.
 type QueryPageParam[V any] struct {
-	ReqPage         Paging           // Request Paging Param.
-	AddSelectQuery  PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
-	GetBaseQuery    PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).
-	ApplyConditions PageQueryBuilder // Where Conditions, optional, e.g., return tx.Where(`field = 'abc'`).
-	ForEach         Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
+	ReqPage     Paging           // Request Paging Param.
+	SelectQuery PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
+	BaseQuery   PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).Where(...)
+	DoForEach   Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
-// Execute paged query
-//
-//	This internally calls QueryPage(...).
-func (q QueryPageParam[V]) ExecPageQuery(rail Rail, tx *gorm.DB) (PageRes[V], error) {
-	return QueryPage(rail, tx, q)
+func (q *QueryPageParam[V]) WithPage(p Paging) *QueryPageParam[V] {
+	q.ReqPage = p
+	return q
+}
+
+func (q *QueryPageParam[V]) WithSelectQuery(qry PageQueryBuilder) *QueryPageParam[V] {
+	q.SelectQuery = qry
+	return q
+}
+
+func (q *QueryPageParam[V]) WithBaseQuery(qry PageQueryBuilder) *QueryPageParam[V] {
+	q.BaseQuery = qry
+	return q
+}
+
+func (q *QueryPageParam[V]) ForEach(t Transform[V]) *QueryPageParam[V] {
+	q.DoForEach = t
+	return q
+}
+
+// Execute paging query
+func (q *QueryPageParam[V]) Exec(rail Rail, tx *gorm.DB) (PageRes[V], error) {
+	return QueryPage(rail, tx, *q)
 }
 
 // Execute paged query.
@@ -74,11 +91,7 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 	var total int
 
 	newQuery := func() *gorm.DB {
-		t := p.GetBaseQuery(tx)
-		if p.ApplyConditions != nil {
-			t = p.ApplyConditions(t)
-		}
-		return t
+		return p.BaseQuery(tx)
 	}
 
 	// count
@@ -92,7 +105,7 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 
 	// the actual page
 	if total > 0 {
-		t = p.AddSelectQuery(newQuery()).
+		t = p.SelectQuery(newQuery()).
 			Offset(p.ReqPage.GetOffset()).
 			Limit(p.ReqPage.GetLimit()).
 			Scan(&payload)
@@ -100,12 +113,16 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 			return res, t.Error
 		}
 
-		if p.ForEach != nil {
+		if p.DoForEach != nil {
 			for i := range payload {
-				payload[i] = p.ForEach(payload[i])
+				payload[i] = p.DoForEach(payload[i])
 			}
 		}
 	}
 
 	return PageRes[Res]{Payload: payload, Page: RespPage(p.ReqPage, total)}, nil
+}
+
+func NewPageQuery[Res any]() *QueryPageParam[Res] {
+	return new(QueryPageParam[Res])
 }
