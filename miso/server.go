@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/pprof"
+	"net/url"
 	"os"
 	"os/signal"
 	"reflect"
@@ -1214,10 +1215,11 @@ func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
 // Use miso.Rail for tracing (not just logs), pass it around your application code and the code
 // calling miso's methods course.
 type Inbound struct {
-	rail   Rail
-	engine any
-	w      http.ResponseWriter
-	r      *http.Request
+	rail    Rail
+	engine  any
+	w       http.ResponseWriter
+	r       *http.Request
+	queries url.Values
 }
 
 func newInbound(c *gin.Context) *Inbound {
@@ -1264,4 +1266,28 @@ E.g.,
 */
 func (i *Inbound) HandleResult(result any, err error) {
 	HandleEndpointResult(*i, i.rail, result, err)
+}
+
+func (i *Inbound) Status(status int) {
+	i.w.WriteHeader(status)
+}
+
+func (i *Inbound) Query(k string) string {
+	if i.queries != nil {
+		return i.queries.Get(k)
+	}
+	i.queries = i.r.URL.Query()
+	return i.queries.Get(k)
+}
+
+func (i *Inbound) Header(k string) string {
+	return i.r.Header.Get(k)
+}
+
+func (i *Inbound) SetHeader(k string, v string) {
+	i.r.Header.Set(k, v)
+}
+
+func (i *Inbound) AddHeader(k string, v string) {
+	i.r.Header.Add(k, v)
 }
