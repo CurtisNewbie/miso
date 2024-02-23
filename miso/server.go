@@ -1229,3 +1229,28 @@ func (i *Inbound) Unwrap() (http.ResponseWriter, *http.Request) {
 func (i *Inbound) Rail() Rail {
 	return i.rail
 }
+
+/*
+Handle the result using universally configured handler.
+
+The result or error is written back to the client. In most cases, caller must exit the handler
+after calling this method. Theoritically, this method is only useful for RawGet, RawPut, RawPost, RawDelete.
+Other methods, such as IGet, IPost, Post, Put or Delete, handle the results automatically in exactly the same way.
+
+E.g.,
+
+	miso.RawGet("/dir/info", func(inb *miso.Inbound) {
+		// ... do something
+
+		if err != nil {
+			inb.HandleResult(nil, err) // something goes wrong
+			return
+		}
+
+		// return result back to the client
+		inb.HandleResult(result, err)
+	})
+*/
+func (i *Inbound) HandleResult(result any, err error) {
+	HandleEndpointResult(*i, i.rail, result, err)
+}
