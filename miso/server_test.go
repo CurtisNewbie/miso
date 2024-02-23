@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -109,33 +108,33 @@ func TestGroupingNestedRoutes(t *testing.T) {
 	Infof("routes before: %+v", serverHttpRoutes)
 	BaseRoute("/open/api").Group(
 
-		Get("/special/order", func(c *gin.Context, rail Rail) (any, error) {
+		Get("/special/order", func(inb *Inbound) (any, error) {
 			// do something
 			return nil, nil
 		}).Extra("123", 123),
 
 		BaseRoute("/v1").Group(
-			Get("/order", func(c *gin.Context, rail Rail) (any, error) {
+			Get("/order", func(inb *Inbound) (any, error) {
 				// do something
 				return nil, nil
 			}).Extra("123", 123),
 
-			Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
+			Get("/shipment", func(inb *Inbound) (any, error) {
 				// do something
 				return nil, nil
 			}),
 		),
 
 		BaseRoute("/v2").Group(
-			Get("/order", func(c *gin.Context, rail Rail) (any, error) {
+			Get("/order", func(inb *Inbound) (any, error) {
 				// do something
 				return nil, nil
 			}).Extra("123", 123).Extra("456", 456),
-			Get("/shipment", func(c *gin.Context, rail Rail) (any, error) {
+			Get("/shipment", func(inb *Inbound) (any, error) {
 				// do something
 				return nil, nil
 			}),
-			Get("/invoice", func(c *gin.Context, rail Rail) (any, error) {
+			Get("/invoice", func(inb *Inbound) (any, error) {
 				// do something
 				return nil, nil
 			}),

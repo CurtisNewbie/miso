@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -55,7 +54,8 @@ func PrepareServer(rail miso.Rail) error {
 
 		// /open/api/demo/grouped/post
 		miso.IPost("/open/api/demo/post",
-			func(c *gin.Context, rail miso.Rail, req PostReq) (PostRes, error) {
+			func(inb *miso.Inbound, req PostReq) (PostRes, error) {
+				rail := inb.Rail()
 				rail.Infof("Received request: %#v", req)
 
 				// e.g., read some table
@@ -114,7 +114,8 @@ type PostRes struct {
 	ResultId string
 }
 
-func doSomethingEndpoint(c *gin.Context, rail miso.Rail, req PostReq) (PostRes, error) {
+func doSomethingEndpoint(inb *miso.Inbound, req PostReq) (PostRes, error) {
+	rail := inb.Rail()
 	rail.Infof("Received request: %#v", req)
 	return PostRes{ResultId: "1234"}, nil
 }

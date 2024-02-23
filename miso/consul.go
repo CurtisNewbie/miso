@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 )
@@ -494,7 +493,7 @@ func ConsulBootstrap(rail Rail) error {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
 			Get(deregisterUrl,
-				func(c *gin.Context, rail Rail) (any, error) {
+				func(inb *Inbound) (any, error) {
 					if !IsConsulServiceRegistered() {
 						rail.Info("Current instance is not registered on consul")
 						return nil, nil

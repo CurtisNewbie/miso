@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -378,13 +376,14 @@ func serveApiDocTmpl(rail Rail) error {
 	}
 
 	RawGet("/doc/api",
-		func(c *gin.Context, rail Rail) {
+		func(inb *Inbound) {
 			defer DebugTimeOp(rail, time.Now(), "gen api doc")
 
 			routeDoc := buildHttpRouteDoc(rail, GetHttpRoutes())
 			markdown := genMarkDownDoc(routeDoc)
 
-			if err := apiDocTmpl.ExecuteTemplate(c.Writer, "apiDocTempl",
+			w, _ := inb.Unwrap()
+			if err := apiDocTmpl.ExecuteTemplate(w, "apiDocTempl",
 				struct {
 					App      string
 					Doc      []HttpRouteDoc

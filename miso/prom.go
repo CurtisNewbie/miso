@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -104,9 +103,7 @@ func PrometheusBootstrap(rail Rail) error {
 
 	if !manualBootstrapProm {
 		RawGet(GetPropStr(PropMetricsRoute),
-			func(c *gin.Context, rail Rail) {
-				handler.ServeHTTP(c.Writer, c.Request)
-			}).
+			func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) }).
 			Desc("Collect prometheus metrics information").
 			DocHeader("Authorization", "Basic authorization if enabled")
 	}

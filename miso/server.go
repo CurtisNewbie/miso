@@ -259,27 +259,27 @@ func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
 	for i := range anyHttpMethods {
 		recordHttpServerRoute(url, anyHttpMethods[i], extra...)
 	}
-	addRoutesRegistar(func(e *gin.Engine) { e.Any(url, NewRawTRouteHandler(handler)) })
+	addRoutesRegistar(func(e *gin.Engine) { e.Any(url, newRawTRouteHandler(handler)) })
 }
 
 // Register GET request route (raw version)
 func RawGet(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, NewRawTRouteHandler(handler))
+	return NewLazyRouteDecl(url, http.MethodGet, newRawTRouteHandler(handler))
 }
 
 // Register POST request route (raw version)
 func RawPost(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, NewRawTRouteHandler(handler))
+	return NewLazyRouteDecl(url, http.MethodPost, newRawTRouteHandler(handler))
 }
 
 // Register PUT request route (raw version)
 func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, NewRawTRouteHandler(handler))
+	return NewLazyRouteDecl(url, http.MethodPut, newRawTRouteHandler(handler))
 }
 
 // Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, NewRawTRouteHandler(handler))
+	return NewLazyRouteDecl(url, http.MethodDelete, newRawTRouteHandler(handler))
 }
 
 // Register GET request.
@@ -287,7 +287,7 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, NewTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodGet, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -296,7 +296,7 @@ func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, NewTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodPost, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -305,7 +305,7 @@ func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, NewTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodPut, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -314,7 +314,7 @@ func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, NewTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodDelete, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
 
@@ -329,7 +329,7 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, NewMappedTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodPost, newMappedTRouteHandler(handler)).
 		DocJsonReq(NewVar[Req]()).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
@@ -346,7 +346,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // and generate an API documentation describing the endpoint.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var r Req
-	return NewLazyRouteDecl(url, http.MethodGet, NewMappedTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodGet, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
@@ -364,7 +364,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // and generate an API documentation describing the endpoint.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var r Req
-	return NewLazyRouteDecl(url, http.MethodDelete, NewMappedTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodDelete, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
@@ -381,7 +381,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, NewMappedTRouteHandler(handler)).
+	return NewLazyRouteDecl(url, http.MethodPut, newMappedTRouteHandler(handler)).
 		DocJsonReq(NewVar[Req]()).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
 }
@@ -677,11 +677,11 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	}
 
 	if err, ok := e.(error); ok {
-		HandleEndpointResult(c, rail, nil, err)
+		endpointResultHandler(c, rail, nil, err)
 		return
 	}
 
-	HandleEndpointResult(c, rail, nil, NewErrf("Unknown error, please try again later"))
+	endpointResultHandler(c, rail, nil, NewErrf("Unknown error, please try again later"))
 }
 
 // check if the server is shutting down
@@ -779,12 +779,12 @@ func BuildRail(c *gin.Context) Rail {
 //
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
-type MappedTRouteHandler[Req any, Res any] func(c *gin.Context, rail Rail, req Req) (Res, error)
+type MappedTRouteHandler[Req any, Res any] func(inb *Inbound, req Req) (Res, error)
 
 // Build route handler with the mapped payload object, context, and logger.
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
+func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
 
@@ -813,7 +813,7 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 			}
 
 			if err := WalkTagShallow(&req, wtcb...); err != nil {
-				HandleEndpointResult(c, rail, nil, err)
+				endpointResultHandler(c, rail, nil, err)
 				return
 			}
 		}
@@ -823,20 +823,20 @@ func NewMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		}
 
 		// handle the requests
-		res, err := handler(c, rail, req)
+		res, err := handler(newInbound(c), req)
 
 		// wrap result and error
-		HandleEndpointResult(c, rail, res, err)
+		endpointResultHandler(c, rail, res, err)
 	}
 }
 
 // Raw version of traced route handler.
-type RawTRouteHandler func(c *gin.Context, rail Rail)
+type RawTRouteHandler func(inb *Inbound)
 
 // Build route handler with context, and logger
-func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
+func newRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		handler(c, BuildRail(c))
+		handler(newInbound(c))
 	}
 }
 
@@ -847,21 +847,22 @@ func NewRawTRouteHandler(handler RawTRouteHandler) func(c *gin.Context) {
 //
 // With Res type declared, miso will automatically parse the Res type using reflect and generate an API documentation
 // describing the endpoint.
-type TRouteHandler[Res any] func(c *gin.Context, rail Rail) (Res, error)
+type TRouteHandler[Res any] func(inb *Inbound) (Res, error)
 
 // Build route handler with context, and logger
 //
 // value and error returned by handler are automically wrapped in a Resp object
-func NewTRouteHandler[Res any](handler TRouteHandler[Res]) func(c *gin.Context) {
+func newTRouteHandler[Res any](handler TRouteHandler[Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		rail := BuildRail(c)
-		r, e := handler(c, rail)
-		HandleEndpointResult(c, rail, r, e)
+		r, e := handler(newInbound(c))
+		endpointResultHandler(c, rail, r, e)
 	}
 }
 
 // Handle endpoint's result using the configured EndpointResultHandler.
-func HandleEndpointResult(c *gin.Context, rail Rail, result any, err error) {
+func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
+	c := inb.Engine().(*gin.Context)
 	endpointResultHandler(c, rail, result, err)
 }
 
@@ -943,12 +944,12 @@ func WebServerBootstrap(rail Rail) error {
 
 	if !manualRegisterPprof && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
-			RawGet("", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
-			RawGet("/:name", func(c *gin.Context, rail Rail) { pprof.Index(c.Writer, c.Request) }),
-			RawGet("/cmdline", func(c *gin.Context, rail Rail) { pprof.Cmdline(c.Writer, c.Request) }),
-			RawGet("/profile", func(c *gin.Context, rail Rail) { pprof.Profile(c.Writer, c.Request) }),
-			RawGet("/symbol", func(c *gin.Context, rail Rail) { pprof.Symbol(c.Writer, c.Request) }),
-			RawGet("/trace", func(c *gin.Context, rail Rail) { pprof.Trace(c.Writer, c.Request) }),
+			RawGet("", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
+			RawGet("/:name", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
+			RawGet("/cmdline", func(inb *Inbound) { pprof.Cmdline(inb.Unwrap()) }),
+			RawGet("/profile", func(inb *Inbound) { pprof.Profile(inb.Unwrap()) }),
+			RawGet("/symbol", func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) }),
+			RawGet("/trace", func(inb *Inbound) { pprof.Trace(inb.Unwrap()) }),
 		)
 	}
 
@@ -1199,4 +1200,32 @@ func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
 			return nil
 		},
 	}
+}
+
+type Inbound struct {
+	rail   Rail
+	engine any
+	w      http.ResponseWriter
+	r      *http.Request
+}
+
+func newInbound(c *gin.Context) *Inbound {
+	return &Inbound{
+		rail:   BuildRail(c),
+		engine: c,
+		w:      c.Writer,
+		r:      c.Request,
+	}
+}
+
+func (i *Inbound) Engine() any {
+	return i.engine
+}
+
+func (i *Inbound) Unwrap() (http.ResponseWriter, *http.Request) {
+	return i.w, i.r
+}
+
+func (i *Inbound) Rail() Rail {
+	return i.rail
 }
