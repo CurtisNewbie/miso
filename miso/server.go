@@ -1202,6 +1202,17 @@ func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
 	}
 }
 
+// Inbound request context.
+//
+// Inbound hides the underlying engine (e.g., *gin.Context) using .Engine() method.
+// In most cases, you should not attempt to cast the engine explictly, it's possible that
+// miso will replace the engine in future release.
+//
+// However, you should be able to satisfy most of your need by calling .Unwrap(),
+// that returns the underlying http.ResponseWriter, *http.Request.
+//
+// Use miso.Rail for tracing (not just logs), pass it around your application code and the code
+// calling miso's methods course.
 type Inbound struct {
 	rail   Rail
 	engine any
