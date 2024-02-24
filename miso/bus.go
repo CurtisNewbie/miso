@@ -67,6 +67,10 @@ type EventPipeline[T any] struct {
 	name string
 }
 
+func (ep *EventPipeline[T]) Name() string {
+	return ep.name
+}
+
 // Call PubEventBus.
 func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
 	return PubEventBus(rail, event, ep.name)
