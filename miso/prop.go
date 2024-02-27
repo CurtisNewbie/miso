@@ -148,7 +148,7 @@ const (
 	*/
 
 	PropTaskSchedulingEnabled = "task.scheduling.enabled"
-	ProptaskSchedulingGroup   = "task.scheduling.group"
+	PropTaskSchedulingGroup   = "task.scheduling.group"
 
 	/*
 		------------------------------------

@@ -31,7 +31,7 @@ const (
 
 func init() {
 	SetDefProp(PropTaskSchedulingEnabled, true)
-	SetDefProp(ProptaskSchedulingGroup, "${app.name}")
+	SetDefProp(PropTaskSchedulingGroup, "${app.name}")
 
 	// run before SchedulerBootstrap
 	RegisterBootstrapCallback(ComponentBootstrap{
@@ -65,7 +65,7 @@ func prepareTaskScheduling(rail Rail, tasks []Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
-	proposedGroup := GetPropStr(ProptaskSchedulingGroup)
+	proposedGroup := GetPropStr(PropTaskSchedulingGroup)
 	if proposedGroup != "" {
 		group = proposedGroup
 	}
