@@ -33,14 +33,14 @@ func NilUser() User {
 
 // Get User from Rail (trace).
 func GetUser(rail miso.Rail) User {
-	idv := rail.CtxValInt(UserNoTraceKey)
-	if idv <= 0 {
+	userNo := rail.CtxValStr(UserNoTraceKey)
+	if userNo == "" {
 		return NilUser()
 	}
 
 	return User{
 		Username: rail.CtxValStr(UsernameTraceKey),
-		UserNo:   rail.CtxValStr(UserNoTraceKey),
+		UserNo:   userNo,
 		RoleNo:   rail.CtxValStr(RoleNoTraceKey),
 		IsNil:    false,
 	}
