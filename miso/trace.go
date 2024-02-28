@@ -41,6 +41,13 @@ func LoadPropagationKeys(r Rail) {
 }
 
 // Add propagation key for tracing
+func AddPropagationKeys(keys ...string) {
+	propagationKeys.rwmu.Lock()
+	defer propagationKeys.rwmu.Unlock()
+	propagationKeys.keys.AddAll(keys)
+}
+
+// Add propagation key for tracing
 func AddPropagationKey(key string) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()
