@@ -26,6 +26,7 @@ var (
 )
 
 type configVarHolder struct {
+	sync.RWMutex
 	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
 	fastBoolCache map[string]bool
 }
@@ -93,12 +94,18 @@ func GetPropDur(prop string, unit time.Duration) time.Duration {
 // Get prop as bool
 func GetPropBool(prop string) bool {
 	return doWithViperReadLock(func() bool {
+		configVar.RLock()
 		v, ok := configVar.fastBoolCache[prop]
 		if ok {
+			configVar.RUnlock()
 			return v
 		}
+		configVar.RUnlock()
 
 		v = viper.GetBool(prop)
+
+		configVar.Lock()
+		defer configVar.Unlock()
 		configVar.fastBoolCache[prop] = v
 		return v
 	})
@@ -106,6 +113,8 @@ func GetPropBool(prop string) bool {
 
 // clean the fast bool cache
 func cleanFastBoolCache(prop string) {
+	configVar.Lock()
+	defer configVar.Unlock()
 	delete(configVar.fastBoolCache, prop)
 }
 
@@ -250,6 +259,8 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 		r.Debugf("Loaded config file: '%v'", configFile)
 
 		// reset the whole fastBoolCache
+		configVar.Lock()
+		defer configVar.Unlock()
 		if len(configVar.fastBoolCache) > 0 {
 			configVar.fastBoolCache = make(map[string]bool)
 		}
