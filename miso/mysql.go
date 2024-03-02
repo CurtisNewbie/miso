@@ -28,6 +28,8 @@ var (
 	}
 
 	minimumConnParam = "parseTime=True&loc=Local"
+
+	mysqlBootstrapCallbacks = []MySQLBootstrapCallback{}
 )
 
 type mysqlHolder struct {
@@ -206,6 +208,15 @@ func MySQLBootstrap(rail Rail) error {
 		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
 	}
 
+	if len(mysqlBootstrapCallbacks) > 0 {
+		db := GetMySQL()
+		for _, cbk := range mysqlBootstrapCallbacks {
+			if err := cbk(rail, db); err != nil {
+				return fmt.Errorf("failed to execute MySQLBootstrapCallback, %w", err)
+			}
+		}
+	}
+
 	AddHealthIndicator(HealthIndicator{
 		Name: "MySQL Component",
 		CheckHealth: func(rail Rail) bool {
@@ -228,4 +239,10 @@ func MySQLBootstrap(rail Rail) error {
 
 func MySQLBootstrapCondition(rail Rail) (bool, error) {
 	return IsMySqlEnabled(), nil
+}
+
+type MySQLBootstrapCallback func(rail Rail, db *gorm.DB) error
+
+func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
+	mysqlBootstrapCallbacks = append(mysqlBootstrapCallbacks, cbk)
 }

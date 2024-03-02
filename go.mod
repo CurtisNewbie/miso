@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
+	github.com/curtisnewbie/svc v0.0.2
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -14,7 +15,7 @@ require (
 	github.com/prometheus/client_golang v1.4.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cast v1.5.0
+	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.14.0
 	gorm.io/driver/mysql v1.3.6
 	gorm.io/driver/sqlite v1.2.6
@@ -43,7 +44,6 @@ require (
 	github.com/hashicorp/serf v0.9.8 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
