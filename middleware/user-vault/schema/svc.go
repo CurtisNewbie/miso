@@ -16,7 +16,7 @@ import (
 //	var schemaFs embed.FS
 //
 // SQL files should start with 'v' using a name that clearly indicates which version it belongs to, E.g., 'schema/managed/v0.0.1.sql'.
-func EnableAutoMigrateSchema(fs embed.FS, baseDir string, startVersion string) {
+func EnableSchemaMigrate(fs embed.FS, baseDir string, startVersion string) {
 	miso.AddMySQLBootstrapCallback(func(rail miso.Rail, db *gorm.DB) error {
 		conf := svc.MigrateConfig{
 			App:             miso.GetPropStr(miso.PropAppName),
@@ -25,5 +25,15 @@ func EnableAutoMigrateSchema(fs embed.FS, baseDir string, startVersion string) {
 			StartingVersion: startVersion,
 		}
 		return svc.MigrateSchema(db, rail, conf)
+	})
+}
+
+// Enable auto schema migration on production mode.
+func EnableSchemaMigrateOnProd(fs embed.FS, baseDir string, startVersion string) {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
+		if miso.IsProdMode() {
+			EnableSchemaMigrate(fs, baseDir, startVersion)
+		}
+		return nil
 	})
 }
