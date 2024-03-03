@@ -37,3 +37,7 @@ func EnableSchemaMigrateOnProd(fs embed.FS, baseDir string, startVersion string)
 		return nil
 	})
 }
+
+func ExcludeSchemaFile(name string) {
+	svc.ExcludeFile(name)
+}
