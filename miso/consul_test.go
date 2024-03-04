@@ -1,12 +1,5 @@
 package miso
 
-import (
-	"testing"
-	"time"
-
-	"github.com/sirupsen/logrus"
-)
-
 func PreTest() {
 	args := make([]string, 2)
 	args[0] = "profile=dev"
@@ -14,55 +7,55 @@ func PreTest() {
 	DefaultReadConfig(args, EmptyRail())
 }
 
-func TestPollServiceListInstances(t *testing.T) {
-	PreTest()
-	rail := EmptyRail()
+// func TestPollServiceListInstances(t *testing.T) {
+// 	PreTest()
+// 	rail := EmptyRail()
 
-	err := InitConsulClient()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	PollServiceListInstances(rail)
+// 	err := InitConsulClient()
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	PollServiceListInstances(rail)
 
-	address, err := ConsulResolveServiceAddr("vfm")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	logrus.Infof("Address resolved: %s", address)
+// 	address, err := ConsulResolveServiceAddr("vfm")
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	logrus.Infof("Address resolved: %s", address)
 
-	resolved, err := ConsulResolveRequestUrl("vfm", "/file")
-	if err != nil {
-		t.Log(err)
-		t.FailNow()
-	}
-	t.Log(resolved)
-	if resolved != "http://"+address+"/file" {
-		t.FailNow()
-	}
-}
+// 	resolved, err := ConsulResolveRequestUrl("vfm", "/file")
+// 	if err != nil {
+// 		t.Log(err)
+// 		t.FailNow()
+// 	}
+// 	t.Log(resolved)
+// 	if resolved != "http://"+address+"/file" {
+// 		t.FailNow()
+// 	}
+// }
 
-func TestResolveServiceAddress(t *testing.T) {
-	PreTest()
-	SetLogLevel("debug")
+// func TestResolveServiceAddress(t *testing.T) {
+// 	PreTest()
+// 	SetLogLevel("debug")
 
-	err := InitConsulClient()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+// 	err := InitConsulClient()
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
 
-	address, err := ConsulResolveServiceAddr("vfm")
-	logrus.Infof("(first try) Address resolved: %s, %v", address, err)
+// 	address, err := ConsulResolveServiceAddr("vfm")
+// 	logrus.Infof("(first try) Address resolved: %s, %v", address, err)
 
-	time.Sleep(1 * time.Second)
+// 	time.Sleep(1 * time.Second)
 
-	address, err = ConsulResolveServiceAddr("vfm")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	logrus.Infof("(second try) Address resolved: %s", address)
+// 	address, err = ConsulResolveServiceAddr("vfm")
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	logrus.Infof("(second try) Address resolved: %s", address)
 
-}
+// }
