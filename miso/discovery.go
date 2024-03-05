@@ -42,9 +42,10 @@ var (
 type ServerList interface {
 	PollInstances(rail Rail) error
 	PollInstance(rail Rail, name string) error
-	ListServers(name string) []Server
-	IsSubscribed(service string) bool
-	Subscribe(service string) error
+	ListServers(rail Rail, name string) []Server
+	IsSubscribed(rail Rail, service string) bool
+	Subscribe(rail Rail, service string) error
+	Unsubscribe(rail Rail, service string) error
 	UnsubscribeAll(rail Rail) error
 }
 
@@ -177,10 +178,10 @@ func SelectServer(rail Rail, name string, selector func(servers []Server) int) (
 	if serverList == nil {
 		return Server{}, ErrServerListNotFound
 	}
-	servers := serverList.ListServers(name)
+	servers := serverList.ListServers(rail, name)
 	if len(servers) < 1 {
-		if !serverList.IsSubscribed(name) {
-			if err := serverList.Subscribe(name); err != nil {
+		if !serverList.IsSubscribed(rail, name) {
+			if err := serverList.Subscribe(rail, name); err != nil {
 				return Server{}, fmt.Errorf("failed to subscribe service, service not avaliable, %w", err)
 			}
 			if err := serverList.PollInstance(rail, name); err != nil {
@@ -222,7 +223,7 @@ func (c ServerListServiceRegistry) ListServers(rail Rail, service string) ([]Ser
 	if sl == nil {
 		return nil, ErrServerListNotFound
 	}
-	return sl.ListServers(service), nil
+	return sl.ListServers(rail, service), nil
 }
 
 // Subscribe to changes to service instances.
@@ -233,7 +234,7 @@ func SubscribeServerChanges(rail Rail, name string, cbk func()) error {
 	if sl == nil {
 		return ErrServerListNotFound
 	}
-	if err := sl.Subscribe(name); err != nil {
+	if err := sl.Subscribe(rail, name); err != nil {
 		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
 	}
 	serverChangeListeners.SubscribeChange(name, cbk)

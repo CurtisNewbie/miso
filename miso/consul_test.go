@@ -1,61 +1,106 @@
 package miso
 
-func PreTest() {
-	args := make([]string, 2)
-	args[0] = "profile=dev"
-	args[1] = "configFile=../conf_dev.yml"
-	DefaultReadConfig(args, EmptyRail())
+import (
+	"testing"
+	"time"
+)
+
+func PreTest(t *testing.T) Rail {
+	rail := EmptyRail()
+	err := LoadConfigFromFile("../testdata/conf_dev.yml", rail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	SetLogLevel("debug")
+	err = InitConsulClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rail
 }
 
-// func TestPollServiceListInstances(t *testing.T) {
-// 	PreTest()
-// 	rail := EmptyRail()
+func TestPollInstances(t *testing.T) {
+	rail := PreTest(t)
+	sl := GetServerList()
+	if sl == nil {
+		t.Fatal("sl is nil")
+	}
+	if err := sl.PollInstances(rail); err != nil {
+		t.Fatal(err)
+	}
 
-// 	err := InitConsulClient()
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	PollServiceListInstances(rail)
+	servers := sl.ListServers(rail, "vfm")
+	if len(servers) < 1 {
+		t.Fatal("servers is empty")
+	}
+	t.Logf("%#v", servers)
+}
 
-// 	address, err := ConsulResolveServiceAddr("vfm")
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	logrus.Infof("Address resolved: %s", address)
+func TestPollInstance(t *testing.T) {
+	rail := PreTest(t)
+	sl := GetServerList()
+	if sl == nil {
+		t.Fatal("sl is nil")
+	}
+	if err := sl.PollInstance(rail, "vfm"); err != nil {
+		t.Fatal(err)
+	}
 
-// 	resolved, err := ConsulResolveRequestUrl("vfm", "/file")
-// 	if err != nil {
-// 		t.Log(err)
-// 		t.FailNow()
-// 	}
-// 	t.Log(resolved)
-// 	if resolved != "http://"+address+"/file" {
-// 		t.FailNow()
-// 	}
-// }
+	servers := sl.ListServers(rail, "vfm")
+	if len(servers) < 1 {
+		t.Fatal("servers is empty")
+	}
+	t.Logf("%#v", servers)
+}
 
-// func TestResolveServiceAddress(t *testing.T) {
-// 	PreTest()
-// 	SetLogLevel("debug")
+func TestSubscribe(t *testing.T) {
+	rail := PreTest(t)
+	sl := GetServerList()
+	if sl == nil {
+		t.Fatal("sl is nil")
+	}
+	if err := sl.Subscribe(rail, "vfm"); err != nil {
+		t.Fatal(err)
+	}
+	if !sl.IsSubscribed(rail, "vfm") {
+		t.Fatal("vfm not subscribed")
+	}
 
-// 	err := InitConsulClient()
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
+	time.Sleep(time.Second * 1)
 
-// 	address, err := ConsulResolveServiceAddr("vfm")
-// 	logrus.Infof("(first try) Address resolved: %s, %v", address, err)
+	servers := sl.ListServers(rail, "vfm")
+	if len(servers) < 1 {
+		t.Fatal("servers is empty")
+	}
+	t.Logf("%#v", servers)
+}
 
-// 	time.Sleep(1 * time.Second)
+func TestUnsubscribeAll(t *testing.T) {
+	rail := PreTest(t)
+	sl := GetServerList()
+	if sl == nil {
+		t.Fatal("sl is nil")
+	}
+	if err := sl.Subscribe(rail, "vfm"); err != nil {
+		t.Fatal(err)
+	}
 
-// 	address, err = ConsulResolveServiceAddr("vfm")
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	logrus.Infof("(second try) Address resolved: %s", address)
+	if err := sl.UnsubscribeAll(rail); err != nil {
+		t.Fatal(err)
+	}
+}
 
-// }
+func TestUnsubscribe(t *testing.T) {
+	rail := PreTest(t)
+	sl := GetServerList()
+	if sl == nil {
+		t.Fatal("sl is nil")
+	}
+	if err := sl.Subscribe(rail, "vfm"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := sl.Unsubscribe(rail, "vfm"); err != nil {
+		t.Fatal(err)
+	}
+}

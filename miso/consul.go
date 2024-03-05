@@ -124,7 +124,7 @@ func (s *ConsulServerList) PollInstances(rail Rail) error {
 	}
 
 	for name := range names {
-		if name == "consul" || name == consulRegistration.serviceName {
+		if name == "consul" {
 			continue
 		}
 		err := s.PollInstance(rail, name)
@@ -135,7 +135,7 @@ func (s *ConsulServerList) PollInstances(rail Rail) error {
 	return nil
 }
 
-func (s *ConsulServerList) ListServers(name string) []Server {
+func (s *ConsulServerList) ListServers(rail Rail, name string) []Server {
 	s.RLock()
 	defer s.RUnlock()
 	servers := s.servers[name]
@@ -144,14 +144,14 @@ func (s *ConsulServerList) ListServers(name string) []Server {
 	return copied
 }
 
-func (s *ConsulServerList) IsSubscribed(service string) bool {
+func (s *ConsulServerList) IsSubscribed(rail Rail, service string) bool {
 	s.RLock()
 	defer s.RUnlock()
 	_, ok := s.serviceWatches[service]
 	return ok
 }
 
-func (s *ConsulServerList) Subscribe(service string) error {
+func (s *ConsulServerList) Subscribe(rail Rail, service string) error {
 	s.RLock()
 	if _, ok := s.serviceWatches[service]; ok {
 		s.RUnlock()
@@ -211,6 +211,18 @@ func (s *ConsulServerList) UnsubscribeAll(rail Rail) error {
 		v.Stop()
 	}
 	rail.Debugf("Stopped all service watches, in total %d watches", len(s.serviceWatches))
+	return nil
+}
+
+func (s *ConsulServerList) Unsubscribe(rail Rail, service string) error {
+	s.Lock()
+	defer s.Unlock()
+	if v, ok := s.serviceWatches[service]; ok {
+		v.Stop()
+		rail.Debugf("Stopped service watch for %v", service)
+	} else {
+		rail.Debugf("Service watch for %v is not found", service)
+	}
 	return nil
 }
 
@@ -434,6 +446,7 @@ func ConsulBootstrap(rail Rail) error {
 	// deregister on shutdown, we specify the order explicitly to make sure the service
 	// is deregistered before shutting down the web server
 	addOrderedShutdownHook(defShutdownOrder-1, func() {
+		rail := EmptyRail()
 
 		if IsConsulServiceRegistered() {
 			if e := DeregisterConsulService(); e != nil {
@@ -447,7 +460,9 @@ func ConsulBootstrap(rail Rail) error {
 		}
 
 		// stop service watches
-		consulServerList.UnsubscribeAll(rail)
+		if err := consulServerList.UnsubscribeAll(rail); err != nil {
+			rail.Warnf("failed to UnsubscribeAll all, %v", err)
+		}
 	})
 
 	if e := RegisterConsulService(); e != nil {
