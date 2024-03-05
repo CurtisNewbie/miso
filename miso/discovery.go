@@ -24,6 +24,7 @@ var (
 
 	ErrMissingServiceName      = errors.New("service name is required")
 	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
+	ErrServerListNotFound      = errors.New("fail to find ServerList implemnetation")
 
 	// ServiceRegistry that is currently in use.
 	clientServiceRegistry ServiceRegistry = nil
@@ -168,11 +169,14 @@ func (s *ServerChangeListenerMap) SubscribeChange(name string, cbk func()) {
 //
 // GetServerList() is internally called to obtain current ServerList implementation.
 //
-// If none is found and the service is not subscribed yet in the ServerList, this func subscribes to the service, attempts to poll the service instances immediately.
+// If none is found and the service is not subscribed yet in the ServerList, this func subscribes to the service and polls the service instances immediately.
 //
-// If ServerList indeed doesn't find any available instance for the service, ErrConsulServiceInstanceNotFound is returned.
+// If ServerList indeed doesn't find any available instance for the service, ErrServiceInstanceNotFound is returned.
 func SelectServer(rail Rail, name string, selector func(servers []Server) int) (Server, error) {
 	serverList := GetServerList()
+	if serverList == nil {
+		return Server{}, ErrServerListNotFound
+	}
 	servers := serverList.ListServers(name)
 	if len(servers) < 1 {
 		if !serverList.IsSubscribed(name) {
@@ -214,14 +218,22 @@ func (c ServerListServiceRegistry) ResolveUrl(rail Rail, service string, relativ
 }
 
 func (c ServerListServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
-	return GetServerList().ListServers(service), nil
+	sl := GetServerList()
+	if sl == nil {
+		return nil, ErrServerListNotFound
+	}
+	return sl.ListServers(service), nil
 }
 
 // Subscribe to changes to service instances.
 //
 // Callback is triggered asynchronously.
 func SubscribeServerChanges(rail Rail, name string, cbk func()) error {
-	if err := GetServerList().Subscribe(name); err != nil {
+	sl := GetServerList()
+	if sl == nil {
+		return ErrServerListNotFound
+	}
+	if err := sl.Subscribe(name); err != nil {
 		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
 	}
 	serverChangeListeners.SubscribeChange(name, cbk)
