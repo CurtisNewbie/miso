@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"sort"
 	"sync"
 )
 
@@ -172,6 +173,20 @@ func Distinct(l []string) []string {
 		s.Add(v)
 	}
 	return SetToSlice(s)
+}
+
+// Filter duplicate values, faster but values are sorted
+func FastDistinct(l []string) []string {
+	sort.Strings(l)
+	j := 0
+	for i := 1; i < len(l); i++ {
+		if l[j] == l[i] {
+			continue
+		}
+		j++
+		l[j] = l[i]
+	}
+	return l[:j+1]
 }
 
 // Build a map with string type key and any type of value

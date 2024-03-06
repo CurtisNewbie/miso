@@ -58,3 +58,37 @@ func TestFilter(t *testing.T) {
 		t.Fatal("len should be 3")
 	}
 }
+
+func TestFastDistinct(t *testing.T) {
+	l := FastDistinct([]string{"a", "b", "c", "c", "d", "c"})
+	t.Log(l)
+	if len(l) != 4 {
+		t.Fatal("len should be 4")
+	}
+}
+
+func BenchmarkDistinct(b *testing.B) {
+	sample := []string{"a", "b", "c", "c", "d", "c"}
+	b.Run("old", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			cp := make([]string, len(sample))
+			copy(cp, sample)
+
+			cp = Distinct(cp)
+			if len(cp) != 4 {
+				b.Fatal("len should be 4")
+			}
+		}
+	})
+
+	b.Run("new", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			cp := make([]string, len(sample))
+			copy(cp, sample)
+			cp = FastDistinct(cp)
+			if len(cp) != 4 {
+				b.Fatal("len should be 4")
+			}
+		}
+	})
+}
