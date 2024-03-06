@@ -50,3 +50,11 @@ func TestDistinct(t *testing.T) {
 		t.Fatal("len should be 4")
 	}
 }
+
+func TestFilter(t *testing.T) {
+	l := Filter([]string{"a", "b", "c", "c", "d", "c"}, func(v string) bool { return v != "c" })
+	t.Log(l)
+	if len(l) != 3 {
+		t.Fatal("len should be 3")
+	}
+}

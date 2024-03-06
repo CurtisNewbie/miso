@@ -222,3 +222,18 @@ func (r *RWMap[V]) Get(k string) V {
 	r.storage[k] = newItem
 	return newItem
 }
+
+// Filter slice values in place.
+// Be cautious that both slices are backed by the same array.
+func Filter[T any](l []T, f func(T) bool) []T {
+	cp := l[:0]
+	for _, x := range l {
+		if f(x) {
+			cp = append(cp, x)
+		}
+	}
+	for i := len(cp); i < len(l); i++ {
+		l[i] = NewVar[T]()
+	}
+	return cp
+}
