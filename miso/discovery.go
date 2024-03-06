@@ -39,6 +39,21 @@ var (
 	GetServerList func() ServerList
 )
 
+func init() {
+	PostServerBootstrapped(func(rail Rail) error {
+		sl := GetServerList()
+		if sl == nil {
+			return nil
+		}
+		for _, s := range GetPropStrSlice(PropSDSubscrbe) {
+			if err := sl.Subscribe(rail, s); err != nil {
+				rail.Warnf("Failed to subscrbe %v, %v", s, err)
+			}
+		}
+		return nil
+	})
+}
+
 type ServerList interface {
 	PollInstances(rail Rail) error
 	PollInstance(rail Rail, name string) error

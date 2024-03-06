@@ -37,6 +37,15 @@ const (
 	/*
 		------------------------------------
 
+		Prop for ServiceDiscovery
+
+		------------------------------------
+	*/
+	PropSDSubscrbe = "service-discovery.subscribe"
+
+	/*
+		------------------------------------
+
 		Prop for Redis
 
 		------------------------------------
