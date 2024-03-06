@@ -129,9 +129,10 @@ go get github.com/curtisnewbie/miso@v0.0.19
 - [Service Healthcheck](./doc/health.md)
 - [Customize Build](./doc/customize_build.md)
 - [Json Processing Behaviour](./doc/json.md)
-- [pprof](./doc/pprof.md)
+- [Using pprof](./doc/pprof.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
 - [API Documentation Generation](./doc/api_doc_gen.md)
+- [Tracing](./doc/trace.md)
 - More in the future (maybe) :D
 
 ## Projects that use miso
