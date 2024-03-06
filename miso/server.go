@@ -533,6 +533,9 @@ It's also possible to register callbacks that are triggered before/after server 
 	server.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
+	osSigQuit := make(chan os.Signal, 2)
+	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
+
 	addOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
 	var rail Rail = EmptyRail()
 
@@ -597,9 +600,6 @@ func BootstrapServer(args []string) {
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
-	osSigQuit := make(chan os.Signal, 2)
-	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case sig := <-osSigQuit:
 		rail.Infof("Received OS signal: %v, exiting", sig)
