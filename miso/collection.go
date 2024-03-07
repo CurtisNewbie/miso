@@ -175,7 +175,7 @@ func Distinct(l []string) []string {
 	return SetToSlice(s)
 }
 
-// Filter duplicate values, faster but values are sorted
+// Filter duplicate values, faster but values are sorted, and the slice values are filtered in place.
 func FastDistinct(l []string) []string {
 	sort.Strings(l)
 	j := 0
