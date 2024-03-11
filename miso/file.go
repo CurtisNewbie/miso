@@ -46,7 +46,7 @@ func OpenFile(name string, flag int) (*os.File, error) {
 
 // Create appendable file with 0666 permission.
 func AppendableFile(name string) (*os.File, error) {
-	return OpenFile(name, os.O_APPEND|os.O_WRONLY)
+	return OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY)
 }
 
 // Create readable & writable file with 0666 permission.
