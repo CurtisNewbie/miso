@@ -1291,3 +1291,14 @@ func (i *Inbound) SetHeader(k string, v string) {
 func (i *Inbound) AddHeader(k string, v string) {
 	i.r.Header.Add(k, v)
 }
+
+// Convenient way to bootstrap server.
+//
+// Equavalient to the following:
+//
+//	PreServerBootstrap(preServerBoostrap)
+//	BootstrapServer(os.Args)
+func AppStart(preServerBoostrap func(rail Rail) error) {
+	PreServerBootstrap(preServerBoostrap)
+	BootstrapServer(os.Args)
+}
