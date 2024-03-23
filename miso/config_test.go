@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -284,4 +285,21 @@ func BenchmarkGetProbool(b *testing.B) {
 			slowGetPropBool("incorrect_type_2")
 		}
 	})
+}
+
+func TestLoadConfigFromReader(t *testing.T) {
+	SetDefProp("switch", false)
+	b := bytes.NewReader([]byte(`
+switch: "true"
+test: "TestLoadConfigFromReader"
+`))
+	if err := LoadConfigFromReader(b, EmptyRail()); err != nil {
+		t.Fatal(err)
+	}
+	if !GetPropBool("switch") {
+		t.Fatal("should be true")
+	}
+	if GetPropStr("test") != "TestLoadConfigFromReader" {
+		t.Fatal("incorrect test value")
+	}
 }

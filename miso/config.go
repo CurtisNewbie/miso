@@ -1,8 +1,8 @@
 package miso
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -229,6 +229,33 @@ func DefaultReadConfig(args []string, rail Rail) {
 }
 
 /*
+Load config from reader.
+
+It's the caller's responsibility to close the provided reader.
+
+Repetitively calling this method overides previously loaded config.
+*/
+func LoadConfigFromReader(reader io.Reader, r Rail) error {
+	var eo error
+
+	doWithViperWriteLock(func() {
+		viper.SetConfigType("yml")
+		if err := viper.MergeConfig(reader); err != nil {
+			eo = fmt.Errorf("failed to load config from reader: %v", err)
+		}
+
+		// reset the whole fastBoolCache
+		configVar.Lock()
+		defer configVar.Unlock()
+		if len(configVar.fastBoolCache) > 0 {
+			configVar.fastBoolCache = make(map[string]bool)
+		}
+	})
+
+	return eo
+}
+
+/*
 Load config from file
 
 Repetitively calling this method overides previously loaded config.
@@ -251,8 +278,10 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 			eo = fmt.Errorf("failed to open config file: '%s', %v", configFile, err)
 			return
 		}
+		defer f.Close()
+
 		viper.SetConfigType("yml")
-		if err = viper.MergeConfig(bufio.NewReader(f)); err != nil {
+		if err = viper.MergeConfig(f); err != nil {
 			eo = fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
 		}
 
