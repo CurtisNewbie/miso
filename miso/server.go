@@ -922,7 +922,7 @@ func WebServerBootstrap(rail Rail) error {
 	// always set to releaseMode
 	gin.SetMode(gin.ReleaseMode)
 	if GetPropBool(PropServerGinValidationDisabled) {
-		rail.Info("Disabled Gin's builtin validation")
+		rail.Debug("Disabled Gin's builtin validation")
 		gin.DisableBindValidation()
 	}
 
