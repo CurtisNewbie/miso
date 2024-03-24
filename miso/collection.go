@@ -242,13 +242,31 @@ func (r *RWMap[V]) Get(k string) V {
 // Be cautious that both slices are backed by the same array.
 func Filter[T any](l []T, f func(T) bool) []T {
 	cp := l[:0]
-	for _, x := range l {
+	for i := range l {
+		x := l[i]
 		if f(x) {
 			cp = append(cp, x)
 		}
 	}
 	for i := len(cp); i < len(l); i++ {
 		l[i] = NewVar[T]()
+	}
+	return cp
+}
+
+// Filter slice value, the original slice is copied before filtering.
+func CopyFilter[T any](l []T, f func(T) bool) []T {
+	initLen := len(l)
+	if initLen > 2 {
+		initLen = initLen / 2
+	}
+
+	cp := make([]T, 0, initLen)
+	for i := range l {
+		x := l[i]
+		if f(x) {
+			cp = append(cp, x)
+		}
 	}
 	return cp
 }

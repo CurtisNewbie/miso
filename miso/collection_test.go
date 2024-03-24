@@ -59,6 +59,14 @@ func TestFilter(t *testing.T) {
 	}
 }
 
+func TestCopyFilter(t *testing.T) {
+	l := CopyFilter([]string{"a", "b", "c", "c", "d", "c"}, func(v string) bool { return v != "c" })
+	t.Log(l)
+	if len(l) != 3 {
+		t.Fatal("len should be 3")
+	}
+}
+
 func TestFastDistinct(t *testing.T) {
 	l := FastDistinct([]string{"a", "b", "c", "c", "d", "c"})
 	t.Log(l)
