@@ -665,7 +665,7 @@ func shutdownHttpServer(server *http.Server) {
 // Default Recovery func
 func DefaultRecovery(c *gin.Context, e interface{}) {
 	rail := BuildRail(c)
-	rail.Errorf("Recovered from panic, %v", e)
+	rail.Errorf("%v '%v' Recovered from panic, %v", c.Request.Method, c.Request.RequestURI, e)
 
 	// response already written, avoid writting it again.
 	if c.Writer.Written() {
