@@ -23,6 +23,18 @@ func WriteJson(body any) ([]byte, error) {
 	return jsoniter.Marshal(body)
 }
 
+// Write JSON as string using jsoniter.
+func SWriteJson(body any) (string, error) {
+	if v, ok := body.(string); ok {
+		return v, nil
+	}
+	buf, err := WriteJson(body)
+	if err != nil {
+		return "", err
+	}
+	return UnsafeByt2Str(buf), nil
+}
+
 // Decode JSON using jsoniter.
 func DecodeJson(reader io.Reader, ptr any) error {
 	return jsoniter.NewDecoder(reader).Decode(ptr)
