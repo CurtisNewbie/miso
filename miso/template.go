@@ -3,6 +3,7 @@ package miso
 import (
 	"embed"
 	"html/template"
+	"io"
 	"sync"
 )
 
@@ -15,6 +16,17 @@ var (
 func ServeTempl(inb *Inbound, fs embed.FS, tmplName string, data any) {
 	w, _ := inb.Unwrap()
 	MustCompile(fs, tmplName).Execute(w, data)
+}
+
+func ServeStatic(inb *Inbound, fs embed.FS, file string) {
+	w, _ := inb.Unwrap()
+	f, err := fs.Open(file)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := io.Copy(w, f); err != nil {
+		panic(err)
+	}
 }
 
 func MustCompile(fs embed.FS, s string) *template.Template {
