@@ -106,6 +106,9 @@ var (
 
 	// enable pprof manually
 	manualRegisterPprof = false
+	noRouteHandler      = func(ctx *gin.Context, rail Rail) {
+		ctx.AbortWithStatus(404)
+	}
 )
 
 type HttpRoute struct {
@@ -617,9 +620,9 @@ func Shutdown() {
 func registerServerRoutes(c Rail, engine *gin.Engine) {
 	// no route
 	engine.NoRoute(func(ctx *gin.Context) {
-		c := BuildRail(ctx)
-		c.Warnf("NoRoute for %s '%s', returning 404", ctx.Request.Method, ctx.Request.RequestURI)
-		ctx.AbortWithStatus(404)
+		rail := BuildRail(ctx)
+		rail.Warnf("NoRoute for %s '%s'", ctx.Request.Method, ctx.Request.RequestURI)
+		noRouteHandler(ctx, rail)
 	})
 
 	// register custom routes
@@ -1290,4 +1293,8 @@ func (i *Inbound) SetHeader(k string, v string) {
 
 func (i *Inbound) AddHeader(k string, v string) {
 	i.r.Header.Add(k, v)
+}
+
+func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
+	noRouteHandler = f
 }
