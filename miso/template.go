@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -35,11 +36,16 @@ func ServeStatic(inb *Inbound, fs embed.FS, file string) {
 
 // Prepare to serve static files in embedded fs.
 //
-// Static files are served by paths that prefixes '/static'.
+// Static files are all served by paths with prefix '/static'.
 //
 // Notice that index.html must be renamed to index.htm or else it won't work.
+//
+// If you are using Angular framework, you may add extra build param as follows. The idea is still the same for other frameworks.
+//
+//	ng build --baseHref=/static/
 func PrepareWebStaticFs(fs embed.FS, dir string) {
 	serveStaticFile := func(c *gin.Context, fp string) {
+		Debugf("Serving static file: %v", fp)
 		c.FileFromFS(path.Join(dir, fp), http.FS(fs))
 	}
 
@@ -50,7 +56,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string) {
 		// https://cs.opensource.google/go/go/+/refs/tags/go1.21.5:src/net/http/fs.go;l=604
 		// https://github.com/gin-contrib/static/issues/19
 		if ctx.Request.Method == "GET" {
-			if ctx.Request.RequestURI == "/" || ctx.Request.RequestURI == "/static/" || ctx.Request.RequestURI == "/static/index.html" {
+			if ctx.Request.RequestURI == "/" || strings.HasPrefix(ctx.Request.RequestURI, "/static") {
 				ctx.Redirect(http.StatusTemporaryRedirect, "/static/index.htm")
 				return
 			}
@@ -60,7 +66,11 @@ func PrepareWebStaticFs(fs embed.FS, dir string) {
 
 	PreProcessGin(func(rail Rail, g *gin.Engine) {
 		g.GET("/static/*filepath", func(c *gin.Context) {
-			serveStaticFile(c, c.Param("filepath"))
+			cp := c.Param("filepath")
+			if cp == "" || cp == "/static/" {
+				cp = "index.htm"
+			}
+			serveStaticFile(c, cp)
 		})
 	})
 }
