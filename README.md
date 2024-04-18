@@ -1,6 +1,8 @@
 # miso
 
-Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to explore various ideas that come across my mind. It's just very fun to reinvent the wheel. This project is open sourced for love, but contribution is not really expected :D
+> ***main branch is unstable, install miso with tags instead***
+
+Miso, yet another simple application framework. It's mainly a <i>learn-by-doing</i> project for me to explore various ideas that come across my mind. This project is open sourced for love, but contribution is not really expected :D
 
 Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application.
 
@@ -108,16 +110,10 @@ mysql:
 
 ## Include miso in your project
 
-Get the latest release of miso:
+Install a specific release of miso:
 
 ```
-go get -u github.com/curtisnewbie/miso
-```
-
-Or get the specific release of miso:
-
-```
-go get github.com/curtisnewbie/miso@v0.0.19
+go get github.com/curtisnewbie/miso@v0.0.29
 ```
 
 ## Documentations
