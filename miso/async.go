@@ -105,6 +105,26 @@ func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
 	}
 }
 
+// FutureAsyncPool is a wrapper of AsyncPool that adds support to Future[T].
+//
+// Use miso.NewFutureAsyncPool to create one or alloc one and specify the *AsyncPool instance yourself.
+type FutureAsyncPool[T any] struct {
+	asyncPool *AsyncPool
+}
+
+func (f *FutureAsyncPool[T]) SetAsyncPool(ap *AsyncPool) *FutureAsyncPool[T] {
+	f.asyncPool = ap
+	return f
+}
+
+func (f *FutureAsyncPool[T]) SubmitAsync(task func() (T, error)) Future[T] {
+	return SubmitAsync(f.asyncPool, task)
+}
+
+func NewFutureAsyncPool[T any](maxTask int, maxWorkers int) *FutureAsyncPool[T] {
+	return new(FutureAsyncPool[T]).SetAsyncPool(NewAsyncPool(maxTask, maxWorkers))
+}
+
 // A long live, bounded pool of goroutines.
 //
 // Use miso.NewAsyncPool to create a new pool.
