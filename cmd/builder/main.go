@@ -90,12 +90,12 @@ func main() {
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropServerPort))
 
 		writef(0, "")
-		writef(0, "consul: ")
+		writef(0, "consul:")
 		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropConsulEnabled))
 		writef(1, "consulAddress: \"%s\"", miso.GetPropStr(miso.PropConsulAddress))
 
 		writef(0, "")
-		writef(0, "redis: ")
+		writef(0, "redis:")
 		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropRedisEnabled))
 		writef(1, "address: \"%s\"", miso.GetPropStr(miso.PropRedisAddress))
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropRedisPort))
@@ -104,7 +104,7 @@ func main() {
 		writef(1, "database: \"%s\"", miso.GetPropStr(miso.PropRedisDatabase))
 
 		writef(0, "")
-		writef(0, "mysql: ")
+		writef(0, "mysql:")
 		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropMySQLEnabled))
 		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropMySQLHost))
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropMySQLPort))
@@ -113,11 +113,11 @@ func main() {
 		writef(1, "database: \"%s\"", miso.GetPropStr(miso.PropMySQLSchema))
 
 		writef(0, "")
-		writef(0, "sqlite: ")
+		writef(0, "sqlite:")
 		writef(1, "file: \"%s\"", miso.GetPropStr(miso.PropSqliteFile))
 
 		writef(0, "")
-		writef(0, "rabbitmq: ")
+		writef(0, "rabbitmq:")
 		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropRabbitMqEnabled))
 		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropRabbitMqHost))
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropRabbitMqPort))
@@ -126,7 +126,7 @@ func main() {
 		writef(1, "vhost: \"%s\"", miso.GetPropStr(miso.PropRabbitMqVhost))
 
 		writef(0, "")
-		writef(0, "logging: ")
+		writef(0, "logging:")
 		writef(1, "level: \"%s\"", "info")
 		writef(1, "# rolling:")
 		writef(2, "# file: \"logs/%s.log\"", modName)
