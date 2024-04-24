@@ -54,8 +54,8 @@ func init() {
 	SetDefProp(PropRabbitMqEnabled, false)
 	SetDefProp(PropRabbitMqHost, "localhost")
 	SetDefProp(PropRabbitMqPort, 5672)
-	SetDefProp(PropRabbitMqUsername, "")
-	SetDefProp(PropRabbitMqPassword, "")
+	SetDefProp(PropRabbitMqUsername, "guest")
+	SetDefProp(PropRabbitMqPassword, "guest")
 	SetDefProp(PropRabbitMqVhost, "")
 	SetDefProp(PropRabbitMqConsumerQos, DEFAULT_QOS)
 

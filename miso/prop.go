@@ -55,7 +55,7 @@ const (
 	PropRedisPort     = "redis.port"
 	PropRedisUsername = "redis.username"
 	PropRedisPassword = "redis.password"
-	PropRedisDatabas  = "redis.database"
+	PropRedisDatabase = "redis.database"
 
 	/*
 		------------------------------------
@@ -141,7 +141,7 @@ const (
 		------------------------------------
 	*/
 
-	PropLoggingFile                   = "logging.level"
+	PropLoggingLevel                  = "logging.level"
 	PropLoggingRollingFile            = "logging.rolling.file"
 	PropLoggingRollingFileMaxAge      = "logging.file.max-age"
 	PropLoggingRollingFileMaxSize     = "logging.file.max-size"

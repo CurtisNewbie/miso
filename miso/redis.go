@@ -24,7 +24,7 @@ func init() {
 	SetDefProp(PropRedisPort, 6379)
 	SetDefProp(PropRedisUsername, "")
 	SetDefProp(PropRedisPassword, "")
-	SetDefProp(PropRedisDatabas, 0)
+	SetDefProp(PropRedisDatabase, 0)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Redis",
@@ -94,7 +94,7 @@ func InitRedisFromProp(rail Rail) (*redis.Client, error) {
 			Port:     GetPropStr(PropRedisPort),
 			Username: GetPropStr(PropRedisUsername),
 			Password: GetPropStr(PropRedisPassword),
-			Db:       GetPropInt(PropRedisDatabas),
+			Db:       GetPropInt(PropRedisDatabase),
 		})
 }
 

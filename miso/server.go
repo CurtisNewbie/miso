@@ -446,8 +446,8 @@ func ConfigureLogging(rail Rail) error {
 
 	logrus.SetOutput(loggerOut)
 
-	if HasProp(PropLoggingFile) {
-		if level, ok := ParseLogLevel(GetPropStr(PropLoggingFile)); ok {
+	if HasProp(PropLoggingLevel) {
+		if level, ok := ParseLogLevel(GetPropStr(PropLoggingLevel)); ok {
 			logrus.SetLevel(level)
 		}
 	}
