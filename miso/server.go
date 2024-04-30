@@ -1206,6 +1206,9 @@ func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
 	}
 }
 
+// type alias of Rail, just to avoid name conflict, *Inbound has Rail(), I don't want to break the code :(
+type erail = Rail
+
 // Inbound request context.
 //
 // Inbound hides the underlying engine (e.g., *gin.Context) using .Engine() method.
@@ -1218,7 +1221,7 @@ func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
 // Use miso.Rail for tracing (not just logs), pass it around your application code and the code
 // calling miso's methods course.
 type Inbound struct {
-	rail    Rail
+	erail
 	engine  any
 	w       http.ResponseWriter
 	r       *http.Request
@@ -1227,7 +1230,7 @@ type Inbound struct {
 
 func newInbound(c *gin.Context) *Inbound {
 	return &Inbound{
-		rail:   BuildRail(c),
+		erail:  BuildRail(c),
 		engine: c,
 		w:      c.Writer,
 		r:      c.Request,
@@ -1243,7 +1246,7 @@ func (i *Inbound) Unwrap() (http.ResponseWriter, *http.Request) {
 }
 
 func (i *Inbound) Rail() Rail {
-	return i.rail
+	return i.erail
 }
 
 /*
@@ -1268,7 +1271,7 @@ E.g.,
 	})
 */
 func (i *Inbound) HandleResult(result any, err error) {
-	HandleEndpointResult(*i, i.rail, result, err)
+	HandleEndpointResult(*i, i.Rail(), result, err)
 }
 
 func (i *Inbound) Status(status int) {
