@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -15,12 +16,30 @@ const (
 )
 
 func main() {
+	fmt.Printf("misogen, current miso version: %s\n\n", miso.Version)
+
+	var initName string
+	args := os.Args
+	if len(args) > 1 {
+		initName = strings.TrimSpace(args[1])
+	}
+
 	if ok, err := miso.FileExists(ModFile); err != nil || !ok {
 		if err != nil {
 			panic(err)
 		}
 		if !ok {
-			panic(fmt.Sprintf("File %s not found", ModFile))
+			if initName == "" {
+				fmt.Printf("File %s not found\n\n", ModFile)
+				fmt.Println("Create new module yourself (go mod init), or run misogen with your module name\ne.g.,\n\tmisogen github.com/curtisnewbie/applejuice")
+				return
+			}
+			out, err := exec.Command("go", "mod", "init", initName).CombinedOutput()
+			if err != nil {
+				fmt.Println(miso.UnsafeByt2Str(out))
+				panic(err)
+			}
+			fmt.Printf("Initialized module '%s'\n", initName)
 		}
 	}
 
@@ -44,7 +63,7 @@ func main() {
 					modName = strings.TrimSpace(n)
 					k := strings.LastIndexByte(modName, '/')
 					if k > 0 {
-						modName = modName[k:]
+						modName = modName[k+1:]
 					}
 					break
 				}
@@ -81,7 +100,7 @@ func main() {
 		}
 
 		writef(0, "mode.production: \"%s\"", miso.GetPropStr(miso.PropProdMode))
-		writef(0, "app.name: \"%s\" # TODO extracted from module name, change this if necessary", modName)
+		writef(0, "app.name: \"%s\"", modName)
 
 		writef(0, "")
 		writef(0, "server: # http server")
