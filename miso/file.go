@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -52,4 +53,18 @@ func AppendableFile(name string) (*os.File, error) {
 // Create readable & writable file with 0666 permission.
 func ReadWriteFile(name string) (*os.File, error) {
 	return OpenFile(name, os.O_CREATE|os.O_RDWR)
+}
+
+// MkdirAll with 0755 perm.
+func MkdirAll(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+// MkdirAll but only for the parent directory of the path, perm 0755 is used.
+//
+// The path should always point to a specific file under some directories,
+// as this method always attempts to extract parent dir of the file.
+// It the path fails to fulfill this requirement, the output might be unexpected.
+func MkdirParentAll(path string) error {
+	return MkdirAll(filepath.Dir(path))
 }

@@ -1,6 +1,9 @@
 package miso
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestFileExists(t *testing.T) {
 	ok, e := FileExists("file.go")
@@ -20,4 +23,14 @@ func TestFileExists(t *testing.T) {
 	if ok {
 		t.FailNow()
 	}
+}
+
+func TestMkdirParentAll(t *testing.T) {
+	f := "test/abc/yo"
+	p := "test"
+	err := MkdirParentAll(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.RemoveAll(p)
 }

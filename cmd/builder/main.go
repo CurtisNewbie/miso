@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/curtisnewbie/miso/miso"
@@ -15,7 +16,14 @@ const (
 	MainFile = "main.go"
 )
 
+var (
+	SchemaDir         = filepath.Join("internal", "schema", "scripts")
+	SchemaFile        = filepath.Join(SchemaDir, "schema.sql")
+	SchemaMigrateFile = filepath.Join("internal", "schema", "migrate.go")
+)
+
 func main() {
+
 	fmt.Printf("misogen, current miso version: %s\n\n", miso.Version)
 
 	var initName string
@@ -72,13 +80,13 @@ func main() {
 		}
 	}
 
-	pkg := "github.com/curtisnewbie/miso/miso@latest"
+	pkg := fmt.Sprintf("github.com/curtisnewbie/miso/miso@%s", miso.Version)
 	fmt.Printf("Installing dependency: %s\n", pkg)
 
 	out, err := exec.Command("go", "get", "-x", pkg).CombinedOutput()
 	if err != nil {
 		fmt.Println(miso.UnsafeByt2Str(out))
-		panic(err)
+		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 
 	// os.MkdirAll("cmd", 0755)
@@ -94,10 +102,7 @@ func main() {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		sb := strings.Builder{}
-		writef := func(idt int, pat string, args ...any) {
-			sb.WriteString(strings.Repeat("  ", idt) + fmt.Sprintf(pat+"\n", args...))
-		}
+		sb, writef := NewWritef("  ")
 
 		writef(0, "mode.production: \"%s\"", miso.GetPropStr(miso.PropProdMode))
 		writef(0, "app.name: \"%s\"", modName)
@@ -169,10 +174,7 @@ func main() {
 		panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 	}
 
-	sb := strings.Builder{}
-	writef := func(idt int, pat string, args ...any) {
-		sb.WriteString(strings.Repeat("\t", idt) + fmt.Sprintf(pat+"\n", args...))
-	}
+	sb, writef := NewWritef("\t")
 
 	writef(0, "package main")
 	writef(0, "")
@@ -199,7 +201,60 @@ func main() {
 		panic(err)
 	}
 
+	// for svc
+	{
+		fmt.Printf("Initializing %s\n", SchemaFile)
+		miso.MkdirAll(SchemaDir)
+		sf, err := miso.ReadWriteFile(SchemaFile)
+		if err != nil {
+			panic(err)
+		}
+		sf.WriteString("-- Initialize schema")
+		sf.Close()
+
+		fmt.Printf("Initializing %s\n", SchemaMigrateFile)
+		mf, err := miso.ReadWriteFile(SchemaMigrateFile)
+		if err != nil {
+			panic(err)
+		}
+
+		sb, writef := NewWritef("\t")
+		writef(0, "// This is for automated MySQL schema migration.")
+		writef(0, "//")
+		writef(0, "// See https://github.com/CurtisNewbie/svc for more information.")
+		writef(0, "package schema")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"embed\"")
+		writef(1, "")
+		writef(1, "\"github.com/curtisnewbie/miso/middleware/svc/migrate\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "//go:embed scripts/*.sql")
+		writef(0, "var schemaFs embed.FS")
+		writef(0, "")
+		writef(0, "const (")
+		writef(1, "BaseDir = \"scripts\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "// Use miso svc middleware to handle schema migration, only executed on production mode.")
+		writef(0, "//")
+		writef(0, "// Script files should follow the classic semver, e.g., v0.0.1.sql, v0.0.2.sql, etc.")
+		writef(0, "func EnableSchemaMigrateOnProd() {")
+		writef(1, "migrate.EnableSchemaMigrateOnProd(schemaFs, BaseDir, \"\")")
+		writef(0, "}")
+		mf.WriteString(sb.String())
+		mf.Close()
+	}
+
 	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
 		panic(err)
+	}
+}
+
+func NewWritef(indentc string) (*strings.Builder, func(idt int, pat string, args ...any)) {
+	sb := strings.Builder{}
+	return &sb, func(idt int, pat string, args ...any) {
+		sb.WriteString(strings.Repeat(indentc, idt) + fmt.Sprintf(pat+"\n", args...))
 	}
 }
