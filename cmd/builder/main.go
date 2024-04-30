@@ -51,6 +51,7 @@ func main() {
 		}
 	}
 
+	cpltModName := ""
 	modName := ""
 	modfCtn, err := miso.ReadFileAll(ModFile)
 	if err != nil {
@@ -69,6 +70,7 @@ func main() {
 				line = strings.TrimSpace(line)
 				if n, ok := strings.CutPrefix(line, "module"); ok {
 					modName = strings.TrimSpace(n)
+					cpltModName = modName
 					k := strings.LastIndexByte(modName, '/')
 					if k > 0 {
 						modName = modName[k+1:]
@@ -181,10 +183,19 @@ func main() {
 	writef(0, "import (")
 	writef(1, "\"os\"")
 	writef(1, "")
+	writef(1, "\"%s/internal/schema\"", cpltModName)
 	writef(1, "\"github.com/curtisnewbie/miso/miso\"")
 	writef(0, ")")
 	writef(0, "")
 	writef(0, "func main() {")
+	writef(1, "BootstrapServer()")
+	writef(0, "}")
+	writef(0, "")
+	writef(0, "func BootstrapServer() {")
+	writef(1, "")
+	writef(1, "// automatic MySQL schema migration using svc")
+	writef(1, "schema.EnableSchemaMigrateOnProd()")
+	writef(1, "")
 	writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
 	writef(2, "// TODO: declare http endpoints, jobs/tasks, and other components here")
 	writef(2, "return nil")
