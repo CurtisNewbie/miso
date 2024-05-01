@@ -106,7 +106,7 @@ func main() {
 
 		sb, writef := NewWritef("  ")
 
-		writef(0, "mode.production: \"%s\"", miso.GetPropStr(miso.PropProdMode))
+		writef(0, "mode.production: \"%s\"", "false")
 		writef(0, "app.name: \"%s\"", modName)
 
 		writef(0, "")

@@ -32,7 +32,7 @@ type configVarHolder struct {
 }
 
 func init() {
-	SetDefProp(PropProdMode, false)
+	SetDefProp(PropProdMode, true)
 }
 
 // Set value for the prop

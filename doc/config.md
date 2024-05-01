@@ -48,7 +48,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | property           | description                              | default value |
 | ------------------ | ---------------------------------------- | ------------- |
 | app.name           | name of the application                  |               |
-| mode.production    | whether production mode is turned on     | false         |
+| mode.production    | whether production mode is turned on     | true          |
 | config.extra.files | extra config files that should be loaded |               |
 
 ## Web Server Configuration
