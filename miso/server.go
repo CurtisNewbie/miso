@@ -1301,3 +1301,21 @@ func (i *Inbound) AddHeader(k string, v string) {
 func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
 	noRouteHandler = f
 }
+
+// Enable Basic authorization globally for all registered endpoints.
+func EnableBasicAuth(f func(username string, password string, url string, method string) bool) {
+	PreProcessGin(func(rail Rail, engine *gin.Engine) {
+		engine.Use(func(ctx *gin.Context) {
+			url := ctx.Request.RequestURI
+			method := ctx.Request.Method
+			u, p, _ := ctx.Request.BasicAuth()
+			if f(u, p, url, method) {
+				ctx.Next()
+			} else {
+				rail.Warnf("Rejected request '%s %s' from %v (remote_addr), basic auth invalid", method, url, ctx.Request.RemoteAddr)
+				ctx.Writer.Header().Add("WWW-Authenticate", "Basic realm=\"Username and Password\"")
+				ctx.AbortWithStatus(http.StatusUnauthorized)
+			}
+		})
+	})
+}
