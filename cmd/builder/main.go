@@ -137,7 +137,7 @@ func main() {
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropMySQLPort))
 		writef(1, "user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
 		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
-		writef(1, "database: \"%s\"", miso.GetPropStr(miso.PropMySQLSchema))
+		writef(1, "database: \"%s\"", guessSchemaName(modName))
 
 		writef(0, "")
 		writef(0, "sqlite:")
@@ -195,21 +195,22 @@ func main() {
 		writef(0, ")")
 		writef(0, "")
 		writef(0, "func BootstrapServer() {")
-		writef(1, "")
 		writef(1, "// automatic MySQL schema migration using svc")
 		writef(1, "schema.EnableSchemaMigrateOnProd()")
 		writef(1, "")
-		writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
-		writef(2, "// TODO: declare http endpoints, jobs/tasks, and other components here")
-		writef(2, "return nil")
-		writef(1, "})")
-		writef(1, "")
-		writef(1, "miso.PostServerBootstrapped(func(rail miso.Rail) error {")
-		writef(2, "// TODO: do stuff right after server being fully bootstrapped")
-		writef(2, "return nil")
-		writef(1, "})")
-		writef(1, "")
+		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
+		writef(1, "miso.PostServerBootstrapped(PostServerBootstrap)")
 		writef(1, "miso.BootstrapServer(os.Args)")
+		writef(0, "}")
+		writef(0, "")
+		writef(0, "func PreServerBootstrap(rail miso.Rail) error {")
+		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
+		writef(1, "return nil")
+		writef(0, "}")
+		writef(0, "")
+		writef(0, "func PostServerBootstrap(rail miso.Rail) error {")
+		writef(1, "// do stuff right after server being fully bootstrapped")
+		writef(1, "return nil")
 		writef(0, "}")
 		if _, err := serverf.WriteString(sb.String()); err != nil {
 			panic(err)
@@ -278,6 +279,7 @@ func main() {
 		writef(0, "//")
 		writef(0, "// Script files should follow the classic semver, e.g., v0.0.1.sql, v0.0.2.sql, etc.")
 		writef(0, "func EnableSchemaMigrateOnProd() {")
+		writef(1, "migrate.ExcludeSchemaFile(\"schema.sql\")")
 		writef(1, "migrate.EnableSchemaMigrateOnProd(schemaFs, BaseDir, \"\")")
 		writef(0, "}")
 		mf.WriteString(sb.String())
@@ -294,4 +296,11 @@ func NewWritef(indentc string) (*strings.Builder, func(idt int, pat string, args
 	return &sb, func(idt int, pat string, args ...any) {
 		sb.WriteString(strings.Repeat(indentc, idt) + fmt.Sprintf(pat+"\n", args...))
 	}
+}
+
+func guessSchemaName(name string) string {
+	name = strings.TrimSpace(name)
+	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ToLower(name)
+	return name
 }
