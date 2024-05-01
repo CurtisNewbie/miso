@@ -20,6 +20,7 @@ var (
 	SchemaDir         = filepath.Join("internal", "schema", "scripts")
 	SchemaFile        = filepath.Join(SchemaDir, "schema.sql")
 	SchemaMigrateFile = filepath.Join("internal", "schema", "migrate.go")
+	ServerFile        = filepath.Join("internal", "server", "server.go")
 )
 
 func main() {
@@ -171,45 +172,70 @@ func main() {
 		panic(fmt.Sprintf("%s already exists", MainFile))
 	}
 
-	mainf, err := miso.ReadWriteFile(MainFile)
-	if err != nil {
-		panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
+	// server.go
+	{
+		if err := miso.MkdirParentAll(ServerFile); err != nil {
+			if err != nil {
+				panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
+			}
+		}
+		serverf, err := miso.ReadWriteFile(ServerFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
+		}
+
+		sb, writef := NewWritef("\t")
+		writef(0, "package server")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"os\"")
+		writef(1, "")
+		writef(1, "\"%s/internal/schema\"", cpltModName)
+		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "func BootstrapServer() {")
+		writef(1, "")
+		writef(1, "// automatic MySQL schema migration using svc")
+		writef(1, "schema.EnableSchemaMigrateOnProd()")
+		writef(1, "")
+		writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
+		writef(2, "// TODO: declare http endpoints, jobs/tasks, and other components here")
+		writef(2, "return nil")
+		writef(1, "})")
+		writef(1, "")
+		writef(1, "miso.PostServerBootstrapped(func(rail miso.Rail) error {")
+		writef(2, "// TODO: do stuff right after server being fully bootstrapped")
+		writef(2, "return nil")
+		writef(1, "})")
+		writef(1, "")
+		writef(1, "miso.BootstrapServer(os.Args)")
+		writef(0, "}")
+		if _, err := serverf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
 	}
 
-	sb, writef := NewWritef("\t")
+	// main.go
+	{
+		mainf, err := miso.ReadWriteFile(MainFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
+		}
 
-	writef(0, "package main")
-	writef(0, "")
-	writef(0, "import (")
-	writef(1, "\"os\"")
-	writef(1, "")
-	writef(1, "\"%s/internal/schema\"", cpltModName)
-	writef(1, "\"github.com/curtisnewbie/miso/miso\"")
-	writef(0, ")")
-	writef(0, "")
-	writef(0, "func main() {")
-	writef(1, "BootstrapServer()")
-	writef(0, "}")
-	writef(0, "")
-	writef(0, "func BootstrapServer() {")
-	writef(1, "")
-	writef(1, "// automatic MySQL schema migration using svc")
-	writef(1, "schema.EnableSchemaMigrateOnProd()")
-	writef(1, "")
-	writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
-	writef(2, "// TODO: declare http endpoints, jobs/tasks, and other components here")
-	writef(2, "return nil")
-	writef(1, "})")
-	writef(1, "")
-	writef(1, "miso.PostServerBootstrapped(func(rail miso.Rail) error {")
-	writef(2, "// TODO: do stuff right after server being fully bootstrapped")
-	writef(2, "return nil")
-	writef(1, "})")
-	writef(1, "")
-	writef(1, "miso.BootstrapServer(os.Args)")
-	writef(0, "}")
-	if _, err := mainf.WriteString(sb.String()); err != nil {
-		panic(err)
+		sb, writef := NewWritef("\t")
+		writef(0, "package main")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"%s/internal/server\"", cpltModName)
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "func main() {")
+		writef(1, "server.BootstrapServer()")
+		writef(0, "}")
+		if _, err := mainf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
 	}
 
 	// for svc
