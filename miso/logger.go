@@ -3,6 +3,7 @@ package miso
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"runtime"
 	"strings"
 	"sync"
@@ -325,4 +326,8 @@ func unsafeGetShortFnName(fn string) string {
 		return fn
 	}
 	return UnsafeByt2Str(UnsafeStr2Byt(fn)[j+1:])
+}
+
+func Printlnf(pat string, args ...any) {
+	fmt.Printf(pat+"\n", args...)
 }
