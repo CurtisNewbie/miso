@@ -106,8 +106,11 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 
 	// the actual page
 	if total > 0 {
-		t = p.selectQuery(newQuery()).
-			Offset(p.reqPage.GetOffset()).
+		t = newQuery()
+		if p.selectQuery != nil {
+			t = p.selectQuery(t)
+		}
+		t = t.Offset(p.reqPage.GetOffset()).
 			Limit(p.reqPage.GetLimit()).
 			Scan(&payload)
 		if t.Error != nil {
