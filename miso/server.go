@@ -874,7 +874,7 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 func MustBind(rail Rail, c *gin.Context, ptr any) {
 	onFailed := func(err error) {
 		rail.Errorf("Bind payload failed, %v", err)
-		panic("Illegal Arguments")
+		panic(NewErrf("Illegal Arguments"))
 	}
 
 	// we now use jsoniter
