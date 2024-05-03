@@ -4,12 +4,12 @@ In non-prod mode (`mode.production: false`), an API documentation is automatical
 
 There are two types of documentation generated, one is simply a webpage rendered by browser, another one is the markdown version that can be copied and saved to some README.md files.
 
-Without providing extra information, the generated documentation may not be very helpful. One may describe the endpoint as follows by providing extra metadata:
+miso tries its best to guess all the required parameters from your endpoints, it generates doc about your request/reponse in JSON format, and even creates a demo curl script. But of course, you may provide extra information to describe the endpoints:
 
 ```go
 miso.RawGet("/file/raw", TempKeyDownloadFileEp).
     Desc(`
-        File download using temporary file key. This endpoint is expected to be accessible publicly without 
+        File download using temporary file key. This endpoint is expected to be accessible publicly without
         authorization, since a temporary file_key is generated and used.
     `).
     Public().
