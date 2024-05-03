@@ -102,3 +102,19 @@ func ToStr(v any) string {
 func Spaces(count int) string {
 	return strings.Repeat(" ", count)
 }
+
+type SLPinter struct {
+	*strings.Builder
+	LineSuffix string
+	LinePrefix string
+}
+
+func (s *SLPinter) Printlnf(st string, args ...any) {
+	if s.Builder == nil {
+		s.Builder = &strings.Builder{}
+	}
+	if s.Builder.Len() > 0 {
+		s.Builder.WriteString(s.LineSuffix + "\n")
+	}
+	s.Builder.WriteString(s.LinePrefix + fmt.Sprintf(st, args...))
+}

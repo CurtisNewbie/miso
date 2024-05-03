@@ -45,6 +45,7 @@ type HttpRouteDoc struct {
 	QueryParams      []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
 	JsonRequestDesc  []jsonDesc // the documented json request type that is expected by the endpoint (metadata).
 	JsonResponseDesc []jsonDesc // the documented json response type that will be returned by the endpoint (metadata).
+	Curl             string
 }
 
 func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
@@ -67,6 +68,7 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 		if r.JsonResponseVal != nil {
 			d.JsonResponseDesc = buildJsonDesc(reflect.ValueOf(r.JsonResponseVal))
 		}
+		d.Curl = genRouteCurl(d)
 		docs = append(docs, d)
 	}
 	return docs
@@ -341,6 +343,16 @@ func serveApiDocTmpl(rail Rail) error {
 							{{template "unpackJsonDesc" .JsonResponseDesc}}
 						</p>
 					{{end}}
+
+					{{if .Curl}}
+						<p>
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>cURL:</i></b>
+							</div>
+							<p><pre>{{.Curl}}</pre></p>
+						</p>
+					{{end}}
+
 					</div>
 				{{end}}
 
@@ -450,4 +462,66 @@ func parseHeaderDoc(t reflect.Type) []ParamDoc {
 		})
 	}
 	return pds
+}
+
+func genRouteCurl(d HttpRouteDoc) string {
+	sl := new(SLPinter)
+	sl.LineSuffix = " \\"
+	var qp string
+	for i, q := range d.QueryParams {
+		if qp == "" {
+			qp = "?"
+		}
+		qp += fmt.Sprintf("%s=%s", q.Name, "apple")
+		if i < len(d.QueryParams)-1 {
+			qp += "&"
+		}
+	}
+	sl.Printlnf("curl -X %s 'http://localhost:%s%s%s'", d.Method, GetPropStr(PropServerPort), d.Url, qp)
+	sl.LinePrefix = "  "
+
+	for _, h := range d.Headers {
+		sl.Printlnf("-H '%s: apple'", h.Name)
+	}
+
+	if len(d.JsonRequestDesc) > 0 {
+		sl.Printlnf("-H 'Content-Type: application/json'")
+
+		jm := map[string]any{}
+		genJsonReqDemo(jm, d.JsonRequestDesc)
+		sj, err := SWriteJson(jm)
+		if err == nil {
+			sl.Printlnf("-d '%s'", sj)
+		}
+		// sl.Printlnf("-d '{  }'")
+	}
+	return sl.String()
+}
+
+func genJsonReqDemo(jm map[string]any, descs []jsonDesc) {
+	for _, d := range descs {
+		if len(d.Fields) > 0 {
+			t := map[string]any{}
+			genJsonReqDemo(t, d.Fields)
+			jm[d.Name] = t
+		} else {
+			var v any
+			switch d.TypeName {
+			case "string", "*string":
+				v = ""
+			case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
+				"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
+				v = 0
+			case "float32", "float64", "*float32", "*float64":
+				v = 0.0
+			case "bool", "*bool":
+				v = false
+			default:
+				if strings.HasPrefix(d.TypeName, "[]") {
+					v = make([]any, 0)
+				}
+			}
+			jm[d.Name] = v
+		}
+	}
 }
