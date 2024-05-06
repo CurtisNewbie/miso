@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	ModFile  = "go.mod"
-	ConfFile = "conf.yml"
-	MainFile = "main.go"
+	ModFile      = "go.mod"
+	ConfFile     = "conf.yml"
+	MainFile     = "main.go"
+	ConfigDocUrl = "https://github.com/CurtisNewbie/miso/blob/main/doc/config.md"
 )
 
 var (
@@ -107,6 +108,7 @@ func main() {
 
 		sb, writef := NewWritef("  ")
 
+		writef(0, "# %s", ConfigDocUrl)
 		writef(0, "mode.production: \"%s\"", "false")
 		writef(0, "app.name: \"%s\"", modName)
 
@@ -138,6 +140,18 @@ func main() {
 		writef(1, "user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
 		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
 		writef(1, "database: \"%s\"", guessSchemaName(modName))
+		writef(1, "connection:")
+		writef(2, "parameters:")
+		for _, s := range []string{
+			"charset=utf8mb4",
+			"parseTime=True",
+			"loc=Local",
+			"readTimeout=30s",
+			"writeTimeout=30s",
+			"timeout=3s",
+		} {
+			writef(3, "- \"%s\"", s)
+		}
 
 		writef(0, "")
 		writef(0, "sqlite:")
