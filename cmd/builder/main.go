@@ -22,9 +22,9 @@ var (
 	SchemaFile              = filepath.Join(SchemaDir, "schema.sql")
 	SchemaMigrateFile       = filepath.Join("internal", "schema", "migrate.go")
 	ServerFile              = filepath.Join("internal", "server", "server.go")
-	StaticFsFile            = filepath.Join("internal", "server", "static.go")
-	StaticFsDir             = filepath.Join("internal", "server", "static")
-	StaticFsPlaceholderFile = filepath.Join("internal", "server", "static", "miso.html")
+	StaticFsFile            = filepath.Join("internal", "static", "static.go")
+	StaticFsDir             = filepath.Join("internal", "static", "static")
+	StaticFsPlaceholderFile = filepath.Join("internal", "static", "static", "miso.html")
 )
 
 var (
@@ -122,6 +122,7 @@ func main() {
 		sb, writef := NewWritef("  ")
 
 		writef(0, "# %s", ConfigDocUrl)
+		writef(0, "")
 		writef(0, "mode.production: \"%s\"", "false")
 		writef(0, "app.name: \"%s\"", modName)
 
@@ -247,7 +248,7 @@ func main() {
 		}
 
 		sb, writef := NewWritef("\t")
-		writef(0, "package server")
+		writef(0, "package static")
 		writef(0, "")
 		writef(0, "import (")
 		writef(1, "\"embed\"")
@@ -296,6 +297,7 @@ func main() {
 		writef(0, "import (")
 		writef(1, "\"os\"")
 		writef(1, "")
+		writef(1, "\"%s/internal/static\"", cpltModName)
 		writef(1, "\"%s/internal/schema\"", cpltModName)
 		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
 		writef(0, ")")
@@ -307,7 +309,7 @@ func main() {
 			writef(1, "")
 			writef(1, "// host static files, try 'http://%s:%s/static/miso.html'",
 				miso.GetPropStr(miso.PropServerHost), miso.GetPropStr(miso.PropServerPort))
-			writef(1, "PrepareWebStaticFs()")
+			writef(1, "static.PrepareWebStaticFs()")
 		}
 		writef(1, "")
 		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
