@@ -45,7 +45,9 @@ type HttpRouteDoc struct {
 	QueryParams      []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
 	JsonRequestDesc  []jsonDesc // the documented json request type that is expected by the endpoint (metadata).
 	JsonResponseDesc []jsonDesc // the documented json response type that will be returned by the endpoint (metadata).
-	Curl             string
+	Curl             string     // curl demo
+	JsonReqTsDef     string     // json request type def in ts
+	JsonRespTsDef    string     // json response type def in ts
 }
 
 func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
@@ -63,10 +65,14 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 			QueryParams: r.QueryParams,
 		}
 		if r.JsonRequestVal != nil {
-			d.JsonRequestDesc = buildJsonDesc(reflect.ValueOf(r.JsonRequestVal))
+			rv := reflect.ValueOf(r.JsonRequestVal)
+			d.JsonRequestDesc = buildJsonDesc(rv)
+			d.JsonReqTsDef = genJsonTsDef(rv.Type().Name(), d.JsonRequestDesc)
 		}
 		if r.JsonResponseVal != nil {
-			d.JsonResponseDesc = buildJsonDesc(reflect.ValueOf(r.JsonResponseVal))
+			rv := reflect.ValueOf(r.JsonResponseVal)
+			d.JsonResponseDesc = buildJsonDesc(rv)
+			d.JsonRespTsDef = genJsonTsDef(rv.Type().Name(), d.JsonResponseDesc)
 		}
 		d.Curl = genRouteCurl(d)
 		docs = append(docs, d)
@@ -353,6 +359,24 @@ func serveApiDocTmpl(rail Rail) error {
 						</p>
 					{{end}}
 
+					{{if .JsonReqTsDef}}
+						<p>
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>JSON Request In TypeScript:</i></b>
+							</div>
+							<p><pre>{{.JsonReqTsDef}}</pre></p>
+						</p>
+					{{end}}
+
+					{{if .JsonRespTsDef}}
+						<p>
+							<div style="text-indent:8px;border-left: 4px solid #757575;">
+								<b><i>JSON Response In TypeScript:</i></b>
+							</div>
+							<p><pre>{{.JsonRespTsDef}}</pre></p>
+						</p>
+					{{end}}
+
 					</div>
 				{{end}}
 
@@ -488,7 +512,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 		sl.Printlnf("-H 'Content-Type: application/json'")
 
 		jm := map[string]any{}
-		genJsonReqDemo(jm, d.JsonRequestDesc)
+		genJsonReqMap(jm, d.JsonRequestDesc)
 		sj, err := SWriteJson(jm)
 		if err == nil {
 			sl.Printlnf("-d '%s'", sj)
@@ -497,11 +521,11 @@ func genRouteCurl(d HttpRouteDoc) string {
 	return sl.String()
 }
 
-func genJsonReqDemo(jm map[string]any, descs []jsonDesc) {
+func genJsonReqMap(jm map[string]any, descs []jsonDesc) {
 	for _, d := range descs {
 		if len(d.Fields) > 0 {
 			t := map[string]any{}
-			genJsonReqDemo(t, d.Fields)
+			genJsonReqMap(t, d.Fields)
 			jm[d.Name] = t
 		} else {
 			var v any
@@ -523,4 +547,59 @@ func genJsonReqDemo(jm map[string]any, descs []jsonDesc) {
 			jm[d.Name] = v
 		}
 	}
+}
+
+func genJsonTsDef(typeName string, descs []jsonDesc) string {
+	if len(descs) < 1 {
+		return ""
+	}
+	sb, writef := NewIndentWritef("  ")
+	writef(0, "export interface %s {", typeName)
+	genJsonTsDefRecur(1, writef, descs)
+	writef(0, "}")
+	return sb.String()
+}
+
+func genJsonTsDefRecur(indentc int, writef IndentWritef, descs []jsonDesc) {
+	for _, d := range descs {
+		if len(d.Fields) > 0 {
+			writef(indentc, "%s?: {", d.Name)
+			genJsonTsDefRecur(indentc+1, writef, d.Fields)
+			if strings.HasPrefix(d.TypeName, "[]") {
+				writef(indentc, "}[]")
+			} else {
+				writef(indentc, "}")
+			}
+		} else {
+			var tname string = guessTsTypeName(d.TypeName)
+			var comment string
+			if d.Desc != "" {
+				comment = " // " + d.Desc
+			}
+			writef(indentc, "%s?: %s%s", d.Name, tname, comment)
+		}
+	}
+}
+
+// try to convert golang type name to typescript type name
+func guessTsTypeName(typeName string) string {
+	var tname string
+	switch typeName {
+	case "string", "*string":
+		tname = "string"
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
+		"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
+		tname = "number"
+	case "float32", "float64", "*float32", "*float64":
+		tname = "number"
+	case "bool", "*bool":
+		tname = "boolean"
+	default:
+		if v, ok := strings.CutPrefix(typeName, "[]"); ok {
+			tname = guessTsTypeName(v) + "[]"
+		} else {
+			tname = "any"
+		}
+	}
+	return tname
 }

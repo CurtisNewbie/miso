@@ -119,7 +119,7 @@ func main() {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		sb, writef := NewWritef("  ")
+		sb, writef := miso.NewIndentWritef("  ")
 
 		writef(0, "# %s", ConfigDocUrl)
 		writef(0, "")
@@ -208,7 +208,7 @@ func main() {
 			panic(err)
 		}
 
-		sb, writef := NewWritef("\t")
+		sb, writef := miso.NewIndentWritef("\t")
 		writef(0, "// This is for automated MySQL schema migration.")
 		writef(0, "//")
 		writef(0, "// See https://github.com/CurtisNewbie/svc for more information.")
@@ -247,7 +247,7 @@ func main() {
 			panic(err)
 		}
 
-		sb, writef := NewWritef("\t")
+		sb, writef := miso.NewIndentWritef("\t")
 		writef(0, "package static")
 		writef(0, "")
 		writef(0, "import (")
@@ -291,7 +291,7 @@ func main() {
 			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
 		}
 
-		sb, writef := NewWritef("\t")
+		sb, writef := miso.NewIndentWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "import (")
@@ -339,7 +339,7 @@ func main() {
 			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 		}
 
-		sb, writef := NewWritef("\t")
+		sb, writef := miso.NewIndentWritef("\t")
 		writef(0, "package main")
 		writef(0, "")
 		writef(0, "import (")
@@ -356,13 +356,6 @@ func main() {
 
 	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
 		panic(err)
-	}
-}
-
-func NewWritef(indentc string) (*strings.Builder, func(idt int, pat string, args ...any)) {
-	sb := strings.Builder{}
-	return &sb, func(idt int, pat string, args ...any) {
-		sb.WriteString(strings.Repeat(indentc, idt) + fmt.Sprintf(pat+"\n", args...))
 	}
 }
 

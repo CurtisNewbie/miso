@@ -2,9 +2,11 @@
 
 In non-prod mode (`mode.production: false`), an API documentation is automatically generated and exposed on `/doc/api` endpoint. If `server.port` is 8080, then the generated documentation is accessible through: `http://localhost:8080/doc/api`.
 
-There are two types of documentation generated, one is simply a webpage rendered by browser, another one is the markdown version that can be copied and saved to some README.md files.
+There are two types of documentation generated, one is simply a static webpage rendered, another one is the markdown version that can be copied and pasted to some README.md files.
 
-miso tries its best to guess all the required parameters from your endpoints, it generates doc about your request/reponse in JSON format, and even creates a demo curl script. But of course, you may provide extra information to describe the endpoints:
+miso tries its best to guess all the required parameters from your endpoints, it generates doc about your request/reponse in JSON format, including query parameters, headers and so on. As it continually improves, miso now can even create a demo curl script, as well as typescript object definitions for you. But of course, you may provide extra information to describe the endpoints:
+
+e.g.,
 
 ```go
 miso.RawGet("/file/raw", TempKeyDownloadFileEp).
@@ -24,10 +26,6 @@ miso.Put("/file", UploadFileEp).
 With generics, the generated api doc is actually quite good, the following is a demonstration:
 
 ```go
-// endpoint
-miso.IGet("/file/info", GetFileInfoEp).
-    Desc("Fetch file info")
-
 // the request object
 type FileInfoReq struct {
 	FileId       string `form:"fileId" desc:"actual file_id of the file record"`
@@ -46,12 +44,16 @@ type FstoreFile struct {
 	PhyDelTime *miso.ETime `json:"phyDelTime" desc:"physically deleted at"`
 }
 
+// endpoint
+miso.IGet("/file/info", GetFileInfoEp).
+    Desc("Fetch file info")
+
 // handler
 func GetFileInfoEp(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
     // ...
 }
 ```
 
-The resulting documentation looks like the following:
+The resulting documentation looks like the following (generated webpage):
 
-<img src="./apidoc-demo.png" height="500px"/>
+<img src="./apidoc-demo.png" height="700px"/>
