@@ -20,3 +20,38 @@ miso.Put("/file", UploadFileEp).
     Resource(ResCodeFstoreUpload).
     DocHeader("filename", "name of the uploaded file")
 ```
+
+With generics, the generated api doc is actually quite good, the following is a demonstration:
+
+```go
+// endpoint
+miso.IGet("/file/info", GetFileInfoEp).
+    Desc("Fetch file info")
+
+// the request object
+type FileInfoReq struct {
+	FileId       string `form:"fileId" desc:"actual file_id of the file record"`
+	UploadFileId string `form:"uploadFileId" desc:"temporary file_id returned when uploading files"`
+}
+
+// the response obejct
+type FstoreFile struct {
+	FileId     string      `json:"fileId" desc:"file unique identifier"`
+	Name       string      `json:"name" desc:"file name"`
+	Status     string      `json:"status" desc:"status, 'NORMAL', 'LOG_DEL' (logically deleted), 'PHY_DEL' (physically deleted)"`
+	Size       int64       `json:"size" desc:"file size in bytes"`
+	Md5        string      `json:"md5" desc:"MD5 checksum"`
+	UplTime    miso.ETime  `json:"uplTime" desc:"upload time"`
+	LogDelTime *miso.ETime `json:"logDelTime" desc:"logically deleted at"`
+	PhyDelTime *miso.ETime `json:"phyDelTime" desc:"physically deleted at"`
+}
+
+// handler
+func GetFileInfoEp(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
+    // ...
+}
+```
+
+The resulting documentation looks like the following:
+
+<img src="./apidoc-demo.png" height="500px"/>
