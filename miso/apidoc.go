@@ -472,7 +472,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 		if qp == "" {
 			qp = "?"
 		}
-		qp += fmt.Sprintf("%s=%s", q.Name, "apple")
+		qp += fmt.Sprintf("%s=", q.Name)
 		if i < len(d.QueryParams)-1 {
 			qp += "&"
 		}
@@ -493,7 +493,6 @@ func genRouteCurl(d HttpRouteDoc) string {
 		if err == nil {
 			sl.Printlnf("-d '%s'", sj)
 		}
-		// sl.Printlnf("-d '{  }'")
 	}
 	return sl.String()
 }
