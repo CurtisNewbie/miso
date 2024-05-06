@@ -1,8 +1,8 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -11,26 +11,34 @@ import (
 )
 
 const (
-	ModFile  = "go.mod"
-	ConfFile = "conf.yml"
-	MainFile = "main.go"
+	ModFile      = "go.mod"
+	ConfFile     = "conf.yml"
+	MainFile     = "main.go"
+	ConfigDocUrl = "https://github.com/CurtisNewbie/miso/blob/main/doc/config.md"
 )
 
 var (
-	SchemaDir         = filepath.Join("internal", "schema", "scripts")
-	SchemaFile        = filepath.Join(SchemaDir, "schema.sql")
-	SchemaMigrateFile = filepath.Join("internal", "schema", "migrate.go")
-	ServerFile        = filepath.Join("internal", "server", "server.go")
+	SchemaDir               = filepath.Join("internal", "schema", "scripts")
+	SchemaFile              = filepath.Join(SchemaDir, "schema.sql")
+	SchemaMigrateFile       = filepath.Join("internal", "schema", "migrate.go")
+	ServerFile              = filepath.Join("internal", "server", "server.go")
+	StaticFsFile            = filepath.Join("internal", "static", "static.go")
+	StaticFsDir             = filepath.Join("internal", "static", "static")
+	StaticFsPlaceholderFile = filepath.Join("internal", "static", "static", "miso.html")
+)
+
+var (
+	StaticFlag  = flag.Bool("static", false, "Generate code to embed and statically host frontend project")
+	ModNameFlag = flag.String("name", "", "Module name")
 )
 
 func main() {
-
+	flag.Parse()
 	fmt.Printf("misogen, current miso version: %s\n\n", miso.Version)
 
-	var initName string
-	args := os.Args
-	if len(args) > 1 {
-		initName = strings.TrimSpace(args[1])
+	var initName string = *ModNameFlag
+	if initName != "" {
+		initName = strings.TrimSpace(initName)
 	}
 
 	if ok, err := miso.FileExists(ModFile); err != nil || !ok {
@@ -40,7 +48,7 @@ func main() {
 		if !ok {
 			if initName == "" {
 				fmt.Printf("File %s not found\n\n", ModFile)
-				fmt.Println("Create new module yourself (go mod init), or run misogen with your module name\ne.g.,\n\tmisogen github.com/curtisnewbie/applejuice")
+				fmt.Println("Create new module yourself (go mod init), or run misogen with your module name\ne.g.,\n\tmisogen -name github.com/curtisnewbie/applejuice")
 				return
 			}
 			out, err := exec.Command("go", "mod", "init", initName).CombinedOutput()
@@ -50,6 +58,14 @@ func main() {
 			}
 			fmt.Printf("Initialized module '%s'\n", initName)
 		}
+	}
+
+	ok, err := miso.FileExists(MainFile)
+	if err != nil {
+		panic(fmt.Errorf("failed to open file %s, %v", MainFile, err))
+	}
+	if ok {
+		panic(fmt.Sprintf("%s already exists", MainFile))
 	}
 
 	cpltModName := ""
@@ -92,8 +108,6 @@ func main() {
 		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 
-	// os.MkdirAll("cmd", 0755)
-
 	fmt.Printf("Initializing %s\n", ConfFile)
 	if ok, err := miso.FileExists(ConfFile); err != nil || !ok {
 		if err != nil {
@@ -107,6 +121,8 @@ func main() {
 
 		sb, writef := NewWritef("  ")
 
+		writef(0, "# %s", ConfigDocUrl)
+		writef(0, "")
 		writef(0, "mode.production: \"%s\"", "false")
 		writef(0, "app.name: \"%s\"", modName)
 
@@ -138,6 +154,18 @@ func main() {
 		writef(1, "user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
 		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
 		writef(1, "database: \"%s\"", guessSchemaName(modName))
+		writef(1, "connection:")
+		writef(2, "parameters:")
+		for _, s := range []string{
+			"charset=utf8mb4",
+			"parseTime=True",
+			"loc=Local",
+			"readTimeout=30s",
+			"writeTimeout=30s",
+			"timeout=3s",
+		} {
+			writef(3, "- \"%s\"", s)
+		}
 
 		writef(0, "")
 		writef(0, "sqlite:")
@@ -159,82 +187,6 @@ func main() {
 		writef(2, "# file: \"logs/%s.log\"", modName)
 
 		if _, err := conf.WriteString(sb.String()); err != nil {
-			panic(err)
-		}
-	}
-
-	fmt.Printf("Initializing %s\n", MainFile)
-	ok, err := miso.FileExists(MainFile)
-	if err != nil {
-		panic(fmt.Errorf("failed to open file %s, %v", MainFile, err))
-	}
-	if ok {
-		panic(fmt.Sprintf("%s already exists", MainFile))
-	}
-
-	// server.go
-	{
-		if err := miso.MkdirParentAll(ServerFile); err != nil {
-			if err != nil {
-				panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
-			}
-		}
-		serverf, err := miso.ReadWriteFile(ServerFile)
-		if err != nil {
-			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
-		}
-
-		sb, writef := NewWritef("\t")
-		writef(0, "package server")
-		writef(0, "")
-		writef(0, "import (")
-		writef(1, "\"os\"")
-		writef(1, "")
-		writef(1, "\"%s/internal/schema\"", cpltModName)
-		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
-		writef(0, ")")
-		writef(0, "")
-		writef(0, "func BootstrapServer() {")
-		writef(1, "// automatic MySQL schema migration using svc")
-		writef(1, "schema.EnableSchemaMigrateOnProd()")
-		writef(1, "")
-		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
-		writef(1, "miso.PostServerBootstrapped(PostServerBootstrap)")
-		writef(1, "miso.BootstrapServer(os.Args)")
-		writef(0, "}")
-		writef(0, "")
-		writef(0, "func PreServerBootstrap(rail miso.Rail) error {")
-		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
-		writef(1, "return nil")
-		writef(0, "}")
-		writef(0, "")
-		writef(0, "func PostServerBootstrap(rail miso.Rail) error {")
-		writef(1, "// do stuff right after server being fully bootstrapped")
-		writef(1, "return nil")
-		writef(0, "}")
-		if _, err := serverf.WriteString(sb.String()); err != nil {
-			panic(err)
-		}
-	}
-
-	// main.go
-	{
-		mainf, err := miso.ReadWriteFile(MainFile)
-		if err != nil {
-			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
-		}
-
-		sb, writef := NewWritef("\t")
-		writef(0, "package main")
-		writef(0, "")
-		writef(0, "import (")
-		writef(1, "\"%s/internal/server\"", cpltModName)
-		writef(0, ")")
-		writef(0, "")
-		writef(0, "func main() {")
-		writef(1, "server.BootstrapServer()")
-		writef(0, "}")
-		if _, err := mainf.WriteString(sb.String()); err != nil {
 			panic(err)
 		}
 	}
@@ -284,6 +236,122 @@ func main() {
 		writef(0, "}")
 		mf.WriteString(sb.String())
 		mf.Close()
+	}
+
+	// for self-hosted frontend stuff
+	if *StaticFlag {
+		miso.MkdirParentAll(StaticFsFile)
+		fmt.Printf("Initializing %s\n", StaticFsFile)
+		f, err := miso.ReadWriteFile(StaticFsFile)
+		if err != nil {
+			panic(err)
+		}
+
+		sb, writef := NewWritef("\t")
+		writef(0, "package static")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"embed\"")
+		writef(1, "")
+		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "//go:embed static")
+		writef(0, "var staticFs embed.FS")
+		writef(0, "")
+		writef(0, "const (")
+		writef(1, "staticFsPre = \"/static\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "func PrepareWebStaticFs() {")
+		writef(1, "miso.PrepareWebStaticFs(staticFs, staticFsPre)")
+		writef(0, "}")
+		f.WriteString(sb.String())
+		f.Close()
+
+		miso.MkdirParentAll(StaticFsPlaceholderFile)
+		fmt.Printf("Initializing %s\n", StaticFsPlaceholderFile)
+		f, err = miso.ReadWriteFile(StaticFsPlaceholderFile)
+		if err != nil {
+			panic(err)
+		}
+		f.WriteString(fmt.Sprintf("Powered by miso %s.", miso.Version))
+		f.Close()
+	}
+
+	// server.go
+	{
+		if err := miso.MkdirParentAll(ServerFile); err != nil {
+			if err != nil {
+				panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
+			}
+		}
+		serverf, err := miso.ReadWriteFile(ServerFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
+		}
+
+		sb, writef := NewWritef("\t")
+		writef(0, "package server")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"os\"")
+		writef(1, "")
+		writef(1, "\"%s/internal/static\"", cpltModName)
+		writef(1, "\"%s/internal/schema\"", cpltModName)
+		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "func BootstrapServer() {")
+		writef(1, "// automatic MySQL schema migration using svc")
+		writef(1, "schema.EnableSchemaMigrateOnProd()")
+		if *StaticFlag {
+			writef(1, "")
+			writef(1, "// host static files, try 'http://%s:%s/static/miso.html'",
+				miso.GetPropStr(miso.PropServerHost), miso.GetPropStr(miso.PropServerPort))
+			writef(1, "static.PrepareWebStaticFs()")
+		}
+		writef(1, "")
+		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
+		writef(1, "miso.PostServerBootstrapped(PostServerBootstrap)")
+		writef(1, "miso.BootstrapServer(os.Args)")
+		writef(0, "}")
+		writef(0, "")
+		writef(0, "func PreServerBootstrap(rail miso.Rail) error {")
+		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
+		writef(1, "return nil")
+		writef(0, "}")
+		writef(0, "")
+		writef(0, "func PostServerBootstrap(rail miso.Rail) error {")
+		writef(1, "// do stuff right after server being fully bootstrapped")
+		writef(1, "return nil")
+		writef(0, "}")
+		if _, err := serverf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Printf("Initializing %s\n", MainFile)
+	// main.go
+	{
+		mainf, err := miso.ReadWriteFile(MainFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
+		}
+
+		sb, writef := NewWritef("\t")
+		writef(0, "package main")
+		writef(0, "")
+		writef(0, "import (")
+		writef(1, "\"%s/internal/server\"", cpltModName)
+		writef(0, ")")
+		writef(0, "")
+		writef(0, "func main() {")
+		writef(1, "server.BootstrapServer()")
+		writef(0, "}")
+		if _, err := mainf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
 	}
 
 	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
