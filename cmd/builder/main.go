@@ -28,9 +28,10 @@ var (
 )
 
 var (
-	StaticFlag  = flag.Bool("static", false, "Generate code to embed and statically host frontend project")
-	SvcFlag     = flag.Bool("svc", false, "Generate code to integrate svc for automatic schema migration")
-	ModNameFlag = flag.String("name", "", "Module name")
+	ModNameFlag    = flag.String("name", "", "Module name")
+	StaticFlag     = flag.Bool("static", false, "Generate code to embed and statically host frontend project")
+	SvcFlag        = flag.Bool("svc", false, "Generate code to integrate svc for automatic schema migration")
+	DisableWebFlag = flag.Bool("disable-web", false, "Disable web server")
 )
 
 func main() {
@@ -129,7 +130,11 @@ func main() {
 
 		writef(0, "")
 		writef(0, "server: # http server")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropServerEnabled))
+		serverEnabled := miso.GetPropStr(miso.PropServerEnabled)
+		if *DisableWebFlag {
+			serverEnabled = "false"
+		}
+		writef(1, "enabled: \"%s\"", serverEnabled)
 		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropServerHost))
 		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropServerPort))
 
