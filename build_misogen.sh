@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go build -o misogen cmd/builder/main.go
+go build -o misogen cmd/misogen/main.go
