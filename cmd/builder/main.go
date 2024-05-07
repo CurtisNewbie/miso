@@ -29,6 +29,7 @@ var (
 
 var (
 	StaticFlag  = flag.Bool("static", false, "Generate code to embed and statically host frontend project")
+	SvcFlag     = flag.Bool("svc", false, "Generate code to integrate svc for automatic schema migration")
 	ModNameFlag = flag.String("name", "", "Module name")
 )
 
@@ -192,7 +193,7 @@ func main() {
 	}
 
 	// for svc
-	{
+	if *SvcFlag {
 		fmt.Printf("Initializing %s\n", SchemaFile)
 		miso.MkdirAll(SchemaDir)
 		sf, err := miso.ReadWriteFile(SchemaFile)
@@ -297,21 +298,29 @@ func main() {
 		writef(0, "import (")
 		writef(1, "\"os\"")
 		writef(1, "")
-		writef(1, "\"%s/internal/static\"", cpltModName)
-		writef(1, "\"%s/internal/schema\"", cpltModName)
+		if *StaticFlag {
+			writef(1, "\"%s/internal/static\"", cpltModName)
+		}
+		if *SvcFlag {
+			writef(1, "\"%s/internal/schema\"", cpltModName)
+		}
 		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
 		writef(0, ")")
 		writef(0, "")
 		writef(0, "func BootstrapServer() {")
-		writef(1, "// automatic MySQL schema migration using svc")
-		writef(1, "schema.EnableSchemaMigrateOnProd()")
+		if *SvcFlag {
+			writef(1, "// automatic MySQL schema migration using svc")
+			writef(1, "schema.EnableSchemaMigrateOnProd()")
+		}
 		if *StaticFlag {
-			writef(1, "")
+			if *SvcFlag {
+				writef(1, "")
+			}
 			writef(1, "// host static files, try 'http://%s:%s/static/miso.html'",
 				miso.GetPropStr(miso.PropServerHost), miso.GetPropStr(miso.PropServerPort))
 			writef(1, "static.PrepareWebStaticFs()")
+			writef(1, "")
 		}
-		writef(1, "")
 		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
 		writef(1, "miso.PostServerBootstrapped(PostServerBootstrap)")
 		writef(1, "miso.BootstrapServer(os.Args)")
