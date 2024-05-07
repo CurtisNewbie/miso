@@ -553,14 +553,14 @@ func genJsonTsDef(typeName string, descs []jsonDesc) string {
 	if len(descs) < 1 {
 		return ""
 	}
-	sb, writef := NewIndentWritef("  ")
+	sb, writef := NewIndWritef("  ")
 	writef(0, "export interface %s {", typeName)
 	genJsonTsDefRecur(1, writef, descs)
 	writef(0, "}")
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef IndentWritef, descs []jsonDesc) {
+func genJsonTsDefRecur(indentc int, writef IndWritef, descs []jsonDesc) {
 	for _, d := range descs {
 		if len(d.Fields) > 0 {
 			writef(indentc, "%s?: {", d.Name)

@@ -119,12 +119,40 @@ func (s *SLPinter) Printlnf(st string, args ...any) {
 	s.Builder.WriteString(s.LinePrefix + fmt.Sprintf(st, args...))
 }
 
-type IndentWritef = func(indentCnt int, pat string, args ...any)
+type IndWritef = func(indentCnt int, pat string, args ...any)
 
 // Wrap strings.Builder, and returns a Writef func that automatically adds indentation.
-func NewIndentWritef(indentStr string) (*strings.Builder, IndentWritef) {
+func NewIndWritef(indentStr string) (*strings.Builder, IndWritef) {
 	sb := strings.Builder{}
 	return &sb, func(indentCnt int, pat string, args ...any) {
 		sb.WriteString(strings.Repeat(indentStr, indentCnt) + fmt.Sprintf(pat+"\n", args...))
 	}
+}
+
+type IndentWriter struct {
+	*strings.Builder
+	indentc int
+	writef  IndWritef
+}
+
+func (i *IndentWriter) StepIn(f func(iw *IndentWriter)) *IndentWriter {
+	i.indentc += 1
+	f(i)
+	i.indentc -= 1
+	return i
+}
+
+func (i *IndentWriter) Writef(pat string, args ...any) *IndentWriter {
+	i.writef(i.indentc, pat, args...)
+	return i
+}
+
+func NewIndentWriter(indentStr string) IndentWriter {
+	b, writef := NewIndWritef(indentStr)
+	iw := IndentWriter{
+		Builder: b,
+		writef:  writef,
+		indentc: 0,
+	}
+	return iw
 }

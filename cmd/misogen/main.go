@@ -32,6 +32,7 @@ var (
 	StaticFlag     = flag.Bool("static", false, "Generate code to embed and statically host frontend project")
 	SvcFlag        = flag.Bool("svc", false, "Generate code to integrate svc for automatic schema migration")
 	DisableWebFlag = flag.Bool("disable-web", false, "Disable web server")
+	CliFlag        = flag.Bool("cli", false, "Generate CLI style project")
 )
 
 func main() {
@@ -110,6 +111,143 @@ func main() {
 		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 
+	// cli style project
+	if *CliFlag {
+		fmt.Printf("Initializing %s\n", MainFile)
+		// main.go
+		{
+			mainf, err := miso.ReadWriteFile(MainFile)
+			if err != nil {
+				panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
+			}
+
+			iw := miso.NewIndentWriter("\t")
+			iw.Writef("package main")
+			iw.Writef("")
+			iw.Writef("import (").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("\"bytes\"")
+					iw.Writef("\"flag\"")
+					iw.Writef("")
+					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
+				}).
+				Writef(")").Writef("")
+
+			iw.Writef("var (").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("DebugFlag = flag.Bool(\"debug\", false, \"Enable debug log\")")
+				}).
+				Writef(")").Writef("")
+
+			// embeded conf as string
+			iw.Writef("var (").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("ConfByt = []byte(`")
+				})
+			cw := miso.NewIndentWriter("  ")
+			cw.Writef("redis:").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("enabled: \"%s\"", "true")
+					iw.Writef("address: \"%s\"", miso.GetPropStr(miso.PropRedisAddress))
+					iw.Writef("port: \"%s\"", miso.GetPropStr(miso.PropRedisPort))
+					iw.Writef("username: \"%s\"", miso.GetPropStr(miso.PropRedisUsername))
+					iw.Writef("password: \"%s\"", miso.GetPropStr(miso.PropRedisPassword))
+					iw.Writef("database: \"%s\"", miso.GetPropStr(miso.PropRedisDatabase))
+				}).Writef("")
+
+			cw.Writef("mysql:").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("enabled: \"%s\"", "true")
+					iw.Writef("host: \"%s\"", miso.GetPropStr(miso.PropMySQLHost))
+					iw.Writef("port: \"%s\"", miso.GetPropStr(miso.PropMySQLPort))
+					iw.Writef("user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
+					iw.Writef("password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
+					iw.Writef("database: \"%s\"", guessSchemaName(modName))
+					iw.Writef("connection:").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("parameters:").StepIn(func(iw *miso.IndentWriter) {
+								for _, s := range []string{
+									"charset=utf8mb4",
+									"parseTime=True",
+									"loc=Local",
+									"readTimeout=30s",
+									"writeTimeout=30s",
+									"timeout=3s",
+								} {
+									iw.Writef("- \"%s\"", s)
+								}
+							})
+						})
+				})
+			cw.Writef("")
+			cw.Writef("sqlite:").StepIn(func(iw *miso.IndentWriter) {
+				iw.Writef("file: \"%s\"", miso.GetPropStr(miso.PropSqliteFile))
+			})
+			iw.Writef(cw.String() + "`)")
+			iw.Writef(")").Writef("")
+
+			// main func
+			iw.Writef("func main() {").
+				StepIn(func(iw *miso.IndentWriter) {
+					iw.Writef("flag.Parse()")
+					iw.Writef("")
+					iw.Writef("rail := miso.EmptyRail()")
+					iw.Writef("if err := miso.LoadConfigFromReader(bytes.NewReader(ConfByt), rail); err != nil {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("panic(err)")
+						}).Writef("}")
+
+					iw.Writef("")
+					iw.Writef("if *DebugFlag {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("miso.SetLogLevel(\"debug\")")
+						}).
+						Writef("}").Writef("")
+
+					iw.Writef("// for mysql")
+					iw.Writef("if err := miso.InitMySQLFromProp(rail); err != nil {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("panic(err)")
+						}).
+						Writef("}")
+
+					iw.Writef("db := miso.GetMySQL()")
+					iw.Writef("if err := db.Exec(`SELECT 1`).Error; err != nil {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("panic(err)")
+						}).
+						Writef("}").Writef("")
+
+					iw.Writef("// for redis")
+					iw.Writef("redis, err := miso.InitRedisFromProp(rail)")
+					iw.Writef("if err != nil {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("panic(err)")
+						}).
+						Writef("}")
+
+					iw.Writef("res, err := redis.Ping().Result()")
+					iw.Writef("if err != nil {").
+						StepIn(func(iw *miso.IndentWriter) {
+							iw.Writef("panic(err)")
+						}).
+						Writef("}")
+					iw.Writef("rail.Infof(\"Ping result: %%v\", res)")
+
+				}).
+				Writef("}")
+
+			if _, err := mainf.WriteString(iw.String()); err != nil {
+				panic(err)
+			}
+		}
+		if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	// conf.yml
 	fmt.Printf("Initializing %s\n", ConfFile)
 	if ok, err := miso.FileExists(ConfFile); err != nil || !ok {
 		if err != nil {
@@ -121,7 +259,7 @@ func main() {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		sb, writef := miso.NewIndentWritef("  ")
+		sb, writef := miso.NewIndWritef("  ")
 
 		writef(0, "# %s", ConfigDocUrl)
 		writef(0, "")
@@ -214,7 +352,7 @@ func main() {
 			panic(err)
 		}
 
-		sb, writef := miso.NewIndentWritef("\t")
+		sb, writef := miso.NewIndWritef("\t")
 		writef(0, "// This is for automated MySQL schema migration.")
 		writef(0, "//")
 		writef(0, "// See https://github.com/CurtisNewbie/svc for more information.")
@@ -253,7 +391,7 @@ func main() {
 			panic(err)
 		}
 
-		sb, writef := miso.NewIndentWritef("\t")
+		sb, writef := miso.NewIndWritef("\t")
 		writef(0, "package static")
 		writef(0, "")
 		writef(0, "import (")
@@ -297,7 +435,7 @@ func main() {
 			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
 		}
 
-		sb, writef := miso.NewIndentWritef("\t")
+		sb, writef := miso.NewIndWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "import (")
@@ -353,7 +491,7 @@ func main() {
 			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 		}
 
-		sb, writef := miso.NewIndentWritef("\t")
+		sb, writef := miso.NewIndWritef("\t")
 		writef(0, "package main")
 		writef(0, "")
 		writef(0, "import (")
