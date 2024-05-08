@@ -549,29 +549,44 @@ func genJsonReqMap(jm map[string]any, descs []jsonDesc) {
 	}
 }
 
+// generate one or more typescript interface definitions based on a set of jsonDesc.
 func genJsonTsDef(typeName string, descs []jsonDesc) string {
 	if len(descs) < 1 {
 		return ""
 	}
 	sb, writef := NewIndWritef("  ")
-	writef(0, "export interface %s {", typeName)
-	genJsonTsDefRecur(1, writef, descs)
+	writef(0, "export interface %s {", guessTsItfName(typeName))
+	deferred := make([]func(), 0, 10)
+	genJsonTsDefRecur(1, writef, &deferred, descs)
 	writef(0, "}")
+
+	for i := 0; i < len(deferred); i++ {
+		writef(0, "")
+		deferred[i]()
+	}
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef IndWritef, descs []jsonDesc) {
-	for _, d := range descs {
+func genJsonTsDefRecur(indentc int, writef IndWritef, deferred *[]func(), descs []jsonDesc) {
+	for i := range descs {
+		d := descs[i]
+
 		if len(d.Fields) > 0 {
-			writef(indentc, "%s?: {", d.Name)
-			genJsonTsDefRecur(indentc+1, writef, d.Fields)
+			tsTypeName := guessTsItfName(d.TypeName)
 			if strings.HasPrefix(d.TypeName, "[]") {
-				writef(indentc, "}[]")
+				writef(indentc, "%s?: %s[]", d.Name, tsTypeName)
 			} else {
-				writef(indentc, "}")
+				writef(indentc, "%s?: %s", d.Name, tsTypeName)
 			}
+
+			*deferred = append(*deferred, func() {
+				writef(0, "export interface %s {", tsTypeName)
+				genJsonTsDefRecur(1, writef, deferred, d.Fields)
+				writef(0, "}")
+			})
+
 		} else {
-			var tname string = guessTsTypeName(d.TypeName)
+			var tname string = guessTsPrimiTypeName(d.TypeName)
 			var comment string
 			if d.Desc != "" {
 				comment = " // " + d.Desc
@@ -581,8 +596,8 @@ func genJsonTsDefRecur(indentc int, writef IndWritef, descs []jsonDesc) {
 	}
 }
 
-// try to convert golang type name to typescript type name
-func guessTsTypeName(typeName string) string {
+// try to convert golang type name to typescript primitive type name.
+func guessTsPrimiTypeName(typeName string) string {
 	var tname string
 	switch typeName {
 	case "string", "*string":
@@ -596,10 +611,33 @@ func guessTsTypeName(typeName string) string {
 		tname = "boolean"
 	default:
 		if v, ok := strings.CutPrefix(typeName, "[]"); ok {
-			tname = guessTsTypeName(v) + "[]"
+			tname = guessTsPrimiTypeName(v) + "[]"
 		} else {
-			tname = "any"
+			tname = typeName
 		}
 	}
 	return tname
+}
+
+// try to convert golang type (incl struct name) name to typescript interface name.
+func guessTsItfName(n string) string {
+	cp := n
+	v, ok := strings.CutPrefix(n, "[]")
+	if ok {
+		n = v
+	}
+
+	if n[len(n)-1] == ']' {
+		j := strings.IndexByte(n, '[')
+		if j > -1 {
+			n = n[:j]
+		}
+	}
+
+	i := strings.LastIndexByte(n, '.')
+	if i > -1 {
+		n = n[i+1:]
+	}
+	Debugf("guessing typescript interface name: %v -> %v", cp, n)
+	return n
 }
