@@ -15,3 +15,5 @@
 # vendor/
 
 analyze.log
+
+.DS_Store
