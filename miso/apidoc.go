@@ -378,7 +378,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 	sl.LinePrefix = "  "
 
 	for _, h := range d.Headers {
-		sl.Printlnf("-H '%s: apple'", h.Name)
+		sl.Printlnf("-H '%s: '", h.Name)
 	}
 
 	if len(d.JsonRequestDesc) > 0 {
