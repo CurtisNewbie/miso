@@ -463,8 +463,11 @@ func genJsonTsDefRecur(indentc int, writef IndWritef, deferred *[]func(), descs 
 			var comment string
 			if d.Desc != "" {
 				comment = " // " + d.Desc
+				fieldDec := fmt.Sprintf("%s?: %s", d.Name, tname)
+				writef(indentc, "%-30s%s", fieldDec, comment)
+			} else {
+				writef(indentc, "%s?: %s", d.Name, tname)
 			}
-			writef(indentc, "%s?: %s%s", d.Name, tname, comment)
 		}
 	}
 }
