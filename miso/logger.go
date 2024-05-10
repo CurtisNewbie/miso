@@ -16,9 +16,6 @@ const (
 	callerField = "caller"
 )
 
-type CTFormatter struct {
-}
-
 func init() {
 	logrus.SetReportCaller(false) // it's now set manually using Rail
 
@@ -39,6 +36,9 @@ var (
 		},
 	}
 )
+
+type CTFormatter struct {
+}
 
 func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var fn string
