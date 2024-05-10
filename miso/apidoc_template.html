@@ -1,0 +1,148 @@
+{{define "unpackJsonDesc"}}
+<ul>
+{{range . }}
+    <li>'{{.Name}}': <i>({{.TypeName}})</i> {{.Desc}}
+        {{if .Fields}}
+            {{template "unpackJsonDesc" .Fields}}
+        {{end}}
+    </li>
+{{end}}
+</ul>
+{{end}}
+
+{{define "apiDocTempl"}}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.css">
+    <title>{{.App}} API</title>
+</head>
+
+<body>
+    <div style="margin:30px;">
+        <h1>Generated {{.App}} API Documentation:</h1>
+        <h2>1. HTML API DOC:</h2>
+        {{range .Doc}}
+            <div style="background-color:#DBD5D4; margin-top:30px; margin-bottom:30px;
+                padding-left:30px; padding-right:30px; padding-top:10px; padding-bottom:10px; border-radius: 20px;">
+            <h3>{{.Method}} {{.Url}}</h3>
+            {{if .Desc }}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Description:</i></b>
+                    </div>
+                </p>
+                <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Desc}}</p>
+            {{end}}
+
+            {{if .Scope }}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Expected Access Scope:</i></b>
+                    </div>
+                </p>
+                <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Scope}}</p>
+            {{end}}
+
+            {{if .Headers}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Header Parameters:</i></b>
+                    </div>
+                    <ul>
+                    {{range .Headers}}
+                        <li>'{{.Name}}': {{.Desc}}</li>
+                    {{end}}
+                    </ul>
+                </p>
+            {{end}}
+
+            {{if .QueryParams}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Query Parameters:</i></b>
+                    </div>
+                    <ul>
+                        {{range .QueryParams}}
+                            <li>'{{.Name}}': {{.Desc}}</li>
+                        {{end}}
+                    </ul>
+                </p>
+            {{end}}
+
+            {{if .JsonRequestDesc}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>JSON Request:</i></b>
+                    </div>
+                    {{template "unpackJsonDesc" .JsonRequestDesc}}
+                </p>
+            {{end}}
+
+            {{if .JsonResponseDesc}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>JSON Response:</i></b>
+                    </div>
+                    {{template "unpackJsonDesc" .JsonResponseDesc}}
+                </p>
+            {{end}}
+
+            {{if .Curl}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>cURL:</i></b>
+                    </div>
+                    <p><pre><code style="border-radius: 10px;" class="language-sh">{{.Curl}}</code></pre></p>
+                </p>
+            {{end}}
+
+            {{if .JsonReqTsDef}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>JSON Request In TypeScript:</i></b>
+                    </div>
+                    <p><pre><code style="border-radius: 10px;" class="language-ts">{{.JsonReqTsDef}}</code></pre></p>
+                </p>
+            {{end}}
+
+            {{if .JsonRespTsDef}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>JSON Response In TypeScript:</i></b>
+                    </div>
+                    <p><pre><code style="border-radius: 10px;" class="language-ts">{{.JsonRespTsDef}}</code></pre></p>
+                </p>
+            {{end}}
+
+            </div>
+        {{end}}
+
+        <h2>2. Markdown API Doc:</h2>
+
+        <div style="text-align: right;">
+            <button style="padding:10px; box-shadow: 3px 3px 10px lightgrey;" onclick="copyMarkdown()">Copy Generated Markdown</button>
+        </div>
+        <pre id="markdownPre" style="white-space: pre-wrap; background-color:DBD5D4; padding:30px; border-radius: 30px;">{{.Markdown}}</pre>
+
+        <script>
+            function copyMarkdown() {
+                var preContent = document.getElementById("markdownPre").textContent;
+                const textArea = document.createElement('textarea');
+                textArea.textContent = preContent;
+                document.body.append(textArea);
+                textArea.select();
+                document.execCommand("copy");
+                textArea.remove();
+            }
+            hljs.highlightAll();
+        </script>
+    </div>
+</body>
+</html>
+{{end}}
