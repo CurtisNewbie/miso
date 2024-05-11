@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func PadNum(n int, digit int) string {
@@ -109,6 +110,13 @@ type SLPinter struct {
 	LinePrefix string
 }
 
+func (s *SLPinter) Printf(st string, args ...any) {
+	if s.Builder == nil {
+		s.Builder = &strings.Builder{}
+	}
+	s.Builder.WriteString(fmt.Sprintf(st, args...))
+}
+
 func (s *SLPinter) Printlnf(st string, args ...any) {
 	if s.Builder == nil {
 		s.Builder = &strings.Builder{}
@@ -155,4 +163,26 @@ func NewIndentWriter(indentStr string) IndentWriter {
 		indentc: 0,
 	}
 	return iw
+}
+
+func CamelCase(s string) string {
+	upper := false
+	b := strings.Builder{}
+	for i, r := range s {
+		if i == 0 {
+			b.WriteRune(unicode.ToLower(r))
+			continue
+		}
+		if r == '_' || r == '-' {
+			upper = true
+		} else {
+			if upper {
+				b.WriteRune(unicode.ToUpper(r))
+				upper = false
+			} else {
+				b.WriteRune(r)
+			}
+		}
+	}
+	return b.String()
 }

@@ -49,6 +49,7 @@ type HttpRouteDoc struct {
 	Curl             string     // curl demo
 	JsonReqTsDef     string     // json request type def in ts
 	JsonRespTsDef    string     // json response type def in ts
+	NgHttpClientDemo string     // angular http client demo
 }
 
 func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
@@ -65,17 +66,22 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 			Headers:     r.Headers,
 			QueryParams: r.QueryParams,
 		}
+		var tsReqTypeName string
 		if r.JsonRequestVal != nil {
 			rv := reflect.ValueOf(r.JsonRequestVal)
+			tsReqTypeName = rv.Type().Name()
 			d.JsonRequestDesc = buildJsonDesc(rv)
-			d.JsonReqTsDef = genJsonTsDef(rv.Type().Name(), d.JsonRequestDesc)
+			d.JsonReqTsDef = genJsonTsDef(tsReqTypeName, d.JsonRequestDesc)
 		}
+		var tsRespTypeName string
 		if r.JsonResponseVal != nil {
 			rv := reflect.ValueOf(r.JsonResponseVal)
+			tsRespTypeName = rv.Type().Name()
 			d.JsonResponseDesc = buildJsonDesc(rv)
-			d.JsonRespTsDef = genJsonTsDef(rv.Type().Name(), d.JsonResponseDesc)
+			d.JsonRespTsDef = genJsonTsDef(tsRespTypeName, d.JsonResponseDesc)
 		}
 		d.Curl = genRouteCurl(d)
+		d.NgHttpClientDemo = genNgHttpClientDemo(d, tsReqTypeName, tsRespTypeName)
 		docs = append(docs, d)
 	}
 	return docs
@@ -516,4 +522,72 @@ func guessTsItfName(n string) string {
 	}
 	Debugf("guessing typescript interface name: %v -> %v", cp, n)
 	return n
+}
+
+func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {
+	sl := new(SLPinter)
+
+	var qp string
+	for i, q := range d.QueryParams {
+		cname := CamelCase(q.Name)
+		sl.Printlnf("let %s: any | null = null;", cname)
+
+		if qp == "" {
+			qp = "?"
+		}
+		qp += fmt.Sprintf("%s=${%s}", q.Name, cname)
+		if i < len(d.QueryParams)-1 {
+			qp += "&"
+		}
+	}
+	url := fmt.Sprintf("`http://localhost:%s%s%s`", GetPropStr(PropServerPort), d.Url, qp)
+
+	for _, h := range d.Headers {
+		sl.Printlnf("let %s: any | null = null;", CamelCase(h.Name))
+	}
+	if respTypeName != "" {
+		respTypeName = guessTsItfName(respTypeName)
+	}
+
+	if reqTypeName != "" {
+		reqTypeName = guessTsItfName(reqTypeName)
+		sl.Printlnf("let req: %s | null = null;", reqTypeName)
+		if respTypeName != "" {
+			sl.Printlnf("this.http.%s<%s>(%s, req", strings.ToLower(d.Method), respTypeName, url)
+		} else {
+			sl.Printlnf("this.http.%s<any>(%s, req", strings.ToLower(d.Method), url)
+		}
+	} else {
+		if respTypeName != "" {
+			sl.Printlnf("this.http.%s<%s>(%s", strings.ToLower(d.Method), respTypeName, url)
+		} else {
+			sl.Printlnf("this.http.%s<any>(%s", strings.ToLower(d.Method), url)
+		}
+	}
+	if len(d.Headers) > 0 {
+		sl.Printf(",")
+		sl.Printlnf("  {")
+		sl.Printlnf("    headers: {")
+		for _, h := range d.Headers {
+			sl.Printlnf("      \"%s\": %s", h.Name, CamelCase(h.Name))
+		}
+		sl.Printlnf("    }")
+		sl.Printlnf("  })")
+	} else {
+		sl.Printf(")")
+	}
+	sl.Printlnf("  .subscribe({")
+
+	if respTypeName != "" {
+		respTypeName = guessTsItfName(respTypeName)
+		sl.Printlnf("    next: (resp: %s) => {", respTypeName)
+	} else {
+		sl.Printlnf("    next: () => {")
+	}
+	sl.Printlnf("    },")
+	sl.Printlnf("    error: (err) => {")
+	sl.Printlnf("      console.log(err)")
+	sl.Printlnf("    }")
+	sl.Printlnf("  });")
+	return sl.String()
 }

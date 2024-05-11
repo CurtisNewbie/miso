@@ -98,7 +98,7 @@
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>cURL:</i></b>
                     </div>
-                    <p><pre><code style="border-radius: 10px;" class="language-sh">{{.Curl}}</code></pre></p>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-sh">{{.Curl}}</code></pre></p>
                 </p>
             {{end}}
 
@@ -107,7 +107,7 @@
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Request In TypeScript:</i></b>
                     </div>
-                    <p><pre><code style="border-radius: 10px;" class="language-ts">{{.JsonReqTsDef}}</code></pre></p>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.JsonReqTsDef}}</code></pre></p>
                 </p>
             {{end}}
 
@@ -116,10 +116,18 @@
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Response In TypeScript:</i></b>
                     </div>
-                    <p><pre><code style="border-radius: 10px;" class="language-ts">{{.JsonRespTsDef}}</code></pre></p>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.JsonRespTsDef}}</code></pre></p>
                 </p>
             {{end}}
 
+            {{if .NgHttpClientDemo}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Angular HttpClient Demo:</i></b>
+                    </div>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.NgHttpClientDemo}}</code></pre></p>
+                </p>
+            {{end}}
             </div>
         {{end}}
 
