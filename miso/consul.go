@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -323,6 +324,12 @@ func RegisterConsulService() error {
 		registerAddress = ResolveServerHost(GetPropStr(PropServerHost))
 	}
 
+	meta := GetPropStrMap(PropConsulMetadata)
+	if meta == nil {
+		meta = map[string]string{}
+	}
+	meta["miso-register_time"] = cast.ToString(Now().UnixMilli())
+
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
 	registration := &api.AgentServiceRegistration{
 		ID:      proposedServiceId,
@@ -336,7 +343,7 @@ func RegisterConsulService() error {
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
 			Status:                         ConsulStatusPassing, // for responsiveness
 		},
-		Meta: GetPropStrMap(PropConsulMetadata),
+		Meta: meta,
 	}
 
 	if err := ConsulApi.RegisterService(registration); err != nil {
