@@ -14,6 +14,10 @@ import (
 )
 
 const (
+	ConsulMetaRegisterTime = "miso-register_time"
+)
+
+const (
 	// Service registration status - passing.
 	ConsulStatusPassing = "passing"
 
@@ -328,7 +332,7 @@ func RegisterConsulService() error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta["miso-register_time"] = cast.ToString(Now().UnixMilli())
+	meta[ConsulMetaRegisterTime] = cast.ToString(Now().UnixMilli())
 
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
 	registration := &api.AgentServiceRegistration{
