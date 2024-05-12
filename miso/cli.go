@@ -1,6 +1,8 @@
 package miso
 
 import (
+	"flag"
+	"fmt"
 	"os/exec"
 	"runtime"
 )
@@ -20,4 +22,21 @@ func TermOpenUrl(url string) error {
 	}
 	args = append(args, url)
 	return exec.Command(cmd, args...).Start()
+}
+
+type StrSliceFlag []string
+
+func (s *StrSliceFlag) String() string {
+	return fmt.Sprintf("%v", []string(*s))
+}
+
+func (s *StrSliceFlag) Set(t string) error {
+	*s = append(*s, t)
+	return nil
+}
+
+func FlagStrSlice(name string, usage string) *StrSliceFlag {
+	p := new(StrSliceFlag)
+	flag.Var(p, name, usage)
+	return p
 }
