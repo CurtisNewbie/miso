@@ -605,7 +605,8 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 			qp += "&"
 		}
 	}
-	url := fmt.Sprintf("`http://localhost:%s%s%s`", GetPropStr(PropServerPort), d.Url, qp)
+	sl.Printlnf("let baseUrl: string = 'http://localhost:%s';", GetPropStr(PropServerPort))
+	url := fmt.Sprintf("`${baseUrl}%s%s`", d.Url, qp)
 
 	for _, h := range d.Headers {
 		sl.Printlnf("let %s: any | null = null;", CamelCase(h.Name))
@@ -631,28 +632,28 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	}
 	if len(d.Headers) > 0 {
 		sl.Printf(",")
-		sl.Printlnf("  {")
-		sl.Printlnf("    headers: {")
+		sl.Printlnf(Spaces(2) + "{")
+		sl.Printlnf(Spaces(4) + "headers: {")
 		for _, h := range d.Headers {
-			sl.Printlnf("      \"%s\": %s", h.Name, CamelCase(h.Name))
+			sl.Printlnf(Spaces(6)+"\"%s\": %s", h.Name, CamelCase(h.Name))
 		}
-		sl.Printlnf("    }")
-		sl.Printlnf("  })")
+		sl.Printlnf(Spaces(4) + "}")
+		sl.Printlnf(Spaces(2) + "})")
 	} else {
 		sl.Printf(")")
 	}
-	sl.Printlnf("  .subscribe({")
+	sl.Printlnf(Spaces(2) + ".subscribe({")
 
 	if respTypeName != "" {
 		respTypeName = guessTsItfName(respTypeName)
-		sl.Printlnf("    next: (resp: %s) => {", respTypeName)
+		sl.Printlnf(Spaces(4)+"next: (resp: %s) => {", respTypeName)
 	} else {
-		sl.Printlnf("    next: () => {")
+		sl.Printlnf(Spaces(4) + "next: () => {")
 	}
-	sl.Printlnf("    },")
-	sl.Printlnf("    error: (err) => {")
-	sl.Printlnf("      console.log(err)")
-	sl.Printlnf("    }")
-	sl.Printlnf("  });")
+	sl.Printlnf(Spaces(4) + "},")
+	sl.Printlnf(Spaces(4) + "error: (err) => {")
+	sl.Printlnf(Spaces(6) + "console.log(err)")
+	sl.Printlnf(Spaces(4) + "}")
+	sl.Printlnf(Spaces(2) + "});")
 	return sl.String()
 }
