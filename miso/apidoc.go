@@ -153,6 +153,71 @@ func genMarkDownDoc(hr []HttpRouteDoc) string {
 			b.WriteString("- JSON Response:")
 			appendJsonPayloadDoc(&b, r.JsonResponseDesc, 2)
 		}
+
+		if r.Curl != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- cURL:\n")
+			b.WriteString(Spaces(4) + "```sh\n")
+			sp := strings.Split(r.Curl, "\n")
+			for _, spt := range sp {
+				b.WriteString(Spaces(4) + spt)
+				b.WriteRune('\n')
+			}
+			b.WriteString(Spaces(4) + "```\n")
+		}
+
+		if r.JsonReqTsDef != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- JSON Request Object In TypeScript:\n")
+			b.WriteString(Spaces(4) + "```ts\n")
+			sp := strings.Split(r.JsonReqTsDef, "\n")
+			for k, spt := range sp {
+				if spt == "" {
+					continue
+				}
+				b.WriteString(Spaces(4) + spt)
+				if k < len(sp)-1 {
+					b.WriteRune('\n')
+				}
+			}
+			b.WriteString(Spaces(4) + "```\n")
+		}
+
+		if r.JsonRespTsDef != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- JSON Response Object In TypeScript:\n")
+			b.WriteString(Spaces(4) + "```ts\n")
+			sp := strings.Split(r.JsonRespTsDef, "\n")
+			for k, spt := range sp {
+				if spt == "" {
+					continue
+				}
+				b.WriteString(Spaces(4) + spt)
+				if k < len(sp)-1 {
+					b.WriteRune('\n')
+				}
+			}
+			b.WriteString(Spaces(4) + "```\n")
+		}
+
+		if r.NgHttpClientDemo != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Angular HttpClient Demo:\n")
+			b.WriteString(Spaces(4) + "```ts\n")
+			sp := strings.Split(r.NgHttpClientDemo, "\n")
+			for _, spt := range sp {
+				if spt == "" {
+					continue
+				}
+				b.WriteString(Spaces(4) + spt)
+				b.WriteRune('\n')
+			}
+			b.WriteString(Spaces(4) + "```\n")
+		}
 	}
 	return b.String()
 }
