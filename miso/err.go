@@ -12,6 +12,14 @@ var (
 	NoneErr *MisoErr = NewErrf("none")
 )
 
+var (
+	// Unknown Error
+	ErrUnknownError *MisoErr = NewErrf("Unknown Error")
+
+	// Not Permitted
+	ErrNotPermitted *MisoErr = NewErrf("Not Permitted")
+)
+
 // Check if the error represents None
 func IsNoneErr(err error) bool {
 	return errors.Is(err, NoneErr)
