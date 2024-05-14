@@ -22,6 +22,7 @@ var (
 	SchemaFile              = filepath.Join(SchemaDir, "schema.sql")
 	SchemaMigrateFile       = filepath.Join("internal", "schema", "migrate.go")
 	ServerFile              = filepath.Join("internal", "server", "server.go")
+	VersionFile             = filepath.Join("internal", "server", "version.go")
 	StaticFsFile            = filepath.Join("internal", "static", "static.go")
 	StaticFsDir             = filepath.Join("internal", "static", "static")
 	StaticFsPlaceholderFile = filepath.Join("internal", "static", "static", "miso.html")
@@ -423,6 +424,28 @@ func main() {
 		f.Close()
 	}
 
+	// version.go
+	{
+		if err := miso.MkdirParentAll(VersionFile); err != nil {
+			if err != nil {
+				panic(fmt.Errorf("failed to make parent dir for file %s, %v", VersionFile, err))
+			}
+		}
+		vf, err := miso.ReadWriteFile(VersionFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", VersionFile, err))
+		}
+
+		sb, writef := miso.NewIndWritef("\t")
+		writef(0, "package server")
+		writef(0, "")
+		writef(0, "const (")
+		writef(1, "Version = \"v0.0.0\"")
+		writef(0, ")")
+		vf.WriteString(sb.String())
+		vf.Close()
+	}
+
 	// server.go
 	{
 		if err := miso.MkdirParentAll(ServerFile); err != nil {
@@ -449,6 +472,12 @@ func main() {
 		}
 		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
 		writef(0, ")")
+		writef(0, "func init() {")
+		writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
+		writef(2, "rail.Infof(\"%v version: %%v\", Version)", modName)
+		writef(2, "return nil")
+		writef(1, "})")
+		writef(0, "}")
 		writef(0, "")
 		writef(0, "func BootstrapServer() {")
 		if *SvcFlag {
