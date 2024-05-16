@@ -156,6 +156,14 @@ func UnmarshalFromPropKey(key string, ptr any) {
 	})
 }
 
+// Overwrite existing conf using environment and cli args.
+func OverwriteConf(args []string) {
+	// overwrite loaded configuration with environment variables
+	overwriteConf(ArgKeyVal(os.Environ()))
+	// overwrite the loaded configuration with cli arguments
+	overwriteConf(ArgKeyVal(args))
+}
+
 /*
 Default way to read config file.
 
@@ -205,12 +213,7 @@ func DefaultReadConfig(args []string, rail Rail) {
 		}
 	}
 
-	// overwrite loaded configuration with environment variables
-	env := os.Environ()
-	overwriteConf(ArgKeyVal(env))
-
-	// overwrite the loaded configuration with cli arguments
-	overwriteConf(ArgKeyVal(args))
+	OverwriteConf(args)
 
 	// try again, one may specify the extra files through cli args or environment variables
 	extraFiles = GetPropStrSlice(PropConfigExtraFiles)

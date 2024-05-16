@@ -129,6 +129,8 @@ func main() {
 				StepIn(func(iw *miso.IndentWriter) {
 					iw.Writef("\"bytes\"")
 					iw.Writef("\"flag\"")
+					iw.Writef("\"os\"")
+					iw.Writef("\"strings\"")
 					iw.Writef("")
 					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
 				}).
@@ -190,14 +192,18 @@ func main() {
 			// main func
 			iw.Writef("func main() {").
 				StepIn(func(iw *miso.IndentWriter) {
-					iw.Writef("flag.Parse()")
-					iw.Writef("")
 					iw.Writef("rail := miso.EmptyRail()")
 					iw.Writef("if err := miso.LoadConfigFromReader(bytes.NewReader(ConfByt), rail); err != nil {").
 						StepIn(func(iw *miso.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).Writef("}")
 
+					iw.Writef("miso.OverwriteConf(os.Args)")
+					iw.Writef("")
+					iw.Writef("cpArgs := os.Args")
+					iw.Writef("os.Args = append([]string{os.Args[0]}, miso.CopyFilter[string](os.Args, func(s string) bool { return strings.HasPrefix(s, \"-\") })...)")
+					iw.Writef("flag.Parse()")
+					iw.Writef("os.Args = cpArgs")
 					iw.Writef("")
 					iw.Writef("if *DebugFlag {").
 						StepIn(func(iw *miso.IndentWriter) {
