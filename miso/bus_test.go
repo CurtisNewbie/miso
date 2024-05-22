@@ -23,20 +23,20 @@ func TestDeclareEventBus(t *testing.T) {
 	time.Sleep(time.Second * 3)
 }
 
-type Dummy struct {
-	Name string
-	Age  int
-}
-
 func TestSendToEventBus(t *testing.T) {
 	preTest()
+
+	type dummy struct {
+		Name string
+		Age  int
+	}
 
 	rail, cancel := EmptyRail().WithCancel()
 	if e := StartRabbitMqClient(rail); e != nil {
 		t.Fatal(e)
 	}
 
-	if e := PubEventBus(EmptyRail(), &Dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
+	if e := PubEventBus(EmptyRail(), &dummy{Name: "apple", Age: 1}, "test-bus"); e != nil {
 		t.Fatal(e)
 	}
 
@@ -47,7 +47,12 @@ func TestSendToEventBus(t *testing.T) {
 func TestSubscribeEventBus(t *testing.T) {
 	preTest()
 
-	SubEventBus("test-bus", 1, func(rail Rail, t Dummy) error {
+	type dummy struct {
+		Name string
+		Age  int
+	}
+
+	SubEventBus("test-bus", 1, func(rail Rail, t dummy) error {
 		rail.Infof("received dummy: %+v", t)
 		return nil
 	})

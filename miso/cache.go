@@ -28,8 +28,13 @@ func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, er
 	return v, err
 }
 
+type evictedItem[T any] struct {
+	Key    string
+	Bucket TBucket[T]
+}
+
 type cacheEvictStrategy[T any] interface {
-	Evict(tc *ttlCache[T]) bool
+	Evict(tc *ttlCache[T]) []evictedItem[T]
 	OnItemAdded(key string)
 	OnItemRemoved(key string)
 }
@@ -56,6 +61,12 @@ type TTLCache[T any] interface {
 	Size() int
 	Exists(key string) bool
 	PutIfAbsent(key string, t T) bool
+
+	// Register callback to be invoked when entry is evicted.
+	//
+	// Callback may be invoked with locks obtained, callback should not block currnet goroutine.
+	// Callback should not call any method on TTLCache, deadlock is almost guaranteed.
+	OnEvicted(f func(key string, t T))
 }
 
 type ttlCache[T any] struct {
@@ -64,6 +75,13 @@ type ttlCache[T any] struct {
 	ttl           time.Duration
 	maxSize       int
 	evictStrategy cacheEvictStrategy[T]
+	onEvictCbk    func(key string, t T)
+}
+
+func (tc *ttlCache[T]) OnEvicted(f func(key string, t T)) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+	tc.onEvictCbk = f
 }
 
 func (tc *ttlCache[T]) Size() int {
@@ -84,6 +102,32 @@ func (tc *ttlCache[T]) Del(key string) {
 
 func (tc *ttlCache[T]) TryGet(key string) (T, bool) {
 	return tc.Get(key, nil)
+}
+
+func (tc *ttlCache[T]) addBuck(prev bool, key string, v T) {
+	// replace original bucket, still using the same key
+	if prev {
+		tc.cache[key] = NewTBucket(v)
+		return
+	}
+
+	// new bucket, max size not exceeded yet
+	if tc.maxSize < 1 || len(tc.cache) < tc.maxSize {
+		tc.cache[key] = NewTBucket(v)
+		tc.evictStrategy.OnItemAdded(key)
+		return
+	}
+
+	// max size exceeded, evict some items
+	evicted := tc.evictStrategy.Evict(tc)
+	tc.cache[key] = NewTBucket(v)
+	tc.evictStrategy.OnItemAdded(key)
+	if tc.onEvictCbk != nil {
+		for i := range evicted {
+			ei := evicted[i]
+			defer tc.onEvictCbk(ei.Key, ei.Bucket.val)
+		}
+	}
 }
 
 func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
@@ -109,31 +153,25 @@ func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
 	if ok && buk.alive(now, tc.ttl) {
 		return buk.val, true
 	}
-	evictable := ok // if ok, then v must be evictable
+
+	prev := ok
+
+	// if exist, the bucket must be expired, invokes onEvict callback
+	if prev && tc.onEvictCbk != nil {
+		evicted := buk.val
+		defer tc.onEvictCbk(key, evicted)
+	}
 
 	if elseGet != nil {
 		v, ok = elseGet()
 		if ok {
-
-			// max size not exceeded yet
-			if tc.maxSize < 1 || len(tc.cache) < tc.maxSize-1 {
-				tc.cache[key] = NewTBucket(v)
-				tc.evictStrategy.OnItemAdded(key)
-				return v, true
-			}
-
-			// max size exceeded, evict some items
-			if tc.evictStrategy.Evict(tc) {
-				tc.cache[key] = NewTBucket(v)
-				tc.evictStrategy.OnItemAdded(key)
-			}
-
+			tc.addBuck(prev, key, v)
 			return v, true
 		}
 	}
 
 	// elseGet() doesn't get the value, the evictable bucket is still there
-	if evictable {
+	if prev {
 		delete(tc.cache, key)
 	}
 
@@ -143,7 +181,12 @@ func (tc *ttlCache[T]) Get(key string, elseGet func() (T, bool)) (T, bool) {
 func (tc *ttlCache[T]) Put(key string, t T) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.cache[key] = NewTBucket(t)
+
+	prev := false
+	if _, ok := tc.cache[key]; ok {
+		prev = true
+	}
+	tc.addBuck(prev, key, t)
 }
 
 func (tc *ttlCache[T]) Exists(key string) bool {
@@ -165,7 +208,7 @@ func (tc *ttlCache[T]) PutIfAbsent(key string, t T) bool {
 		return false
 	}
 
-	tc.cache[key] = NewTBucket(t)
+	tc.addBuck(false, key, t)
 	return true
 }
 
@@ -201,14 +244,18 @@ type lruCacheEvictStrategy[T any] struct {
 	linkedItems *list.List
 }
 
-func (p *lruCacheEvictStrategy[T]) Evict(tc *ttlCache[T]) bool {
+func (p *lruCacheEvictStrategy[T]) Evict(tc *ttlCache[T]) []evictedItem[T] {
 	pop := p.linkedItems.Back()
 	if pop == nil || pop.Value == nil {
-		return true
+		return nil
 	}
 	k := p.linkedItems.Remove(pop).(string)
+	v := tc.cache[k]
 	delete(tc.cache, k)
-	return true
+	return []evictedItem[T]{evictedItem[T]{
+		Key:    k,
+		Bucket: v,
+	}}
 }
 
 func (p *lruCacheEvictStrategy[T]) OnItemAdded(key string) {

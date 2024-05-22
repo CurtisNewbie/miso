@@ -57,6 +57,9 @@ func TestTTLCacheEvicted(t *testing.T) {
 	}
 
 	cache := NewTTLCache[ttlDummy](1*time.Second, 5)
+	cache.OnEvicted(func(key string, tt ttlDummy) {
+		t.Logf(">>>>>>> evicted: %v, %#v", key, tt)
+	})
 
 	cnt := 0
 	elseGet := func() (ttlDummy, bool) {
@@ -92,6 +95,7 @@ func TestTTLCacheEvicted(t *testing.T) {
 		t.Fatalf("cnt should be 2, but %v", cnt)
 	}
 
+	t.Logf(">>>>>>> iter")
 	for i := 0; i < 10; i++ {
 		v, ok = cache.Get(fmt.Sprintf("abc-%v", i), elseGet)
 		if !ok {
@@ -112,6 +116,9 @@ func TestTTLCacheMaxSize(t *testing.T) {
 	}
 
 	cache := NewTTLCache[ttlDummy](1*time.Second, 10)
+	cache.OnEvicted(func(key string, tt ttlDummy) {
+		t.Logf(">>>>>>> evicted: %v, %#v", key, tt)
+	})
 
 	cnt := 0
 	elseGet := func() (ttlDummy, bool) {
@@ -123,15 +130,12 @@ func TestTTLCacheMaxSize(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		cache.Get(ERand(5), elseGet)
+		cache.Get(fmt.Sprintf("%d", i), elseGet)
 	}
 
 	if cnt != 10 {
 		t.Fatalf("cnt should be 10, but %v", cnt)
 	}
-
-	// all the key should be evicted already
-	time.Sleep(2 * time.Second)
 
 	v, ok := cache.Get("abc", elseGet)
 	if !ok {
@@ -157,6 +161,24 @@ func TestTTLCacheMaxSize(t *testing.T) {
 
 	if cnt != 11 {
 		t.Fatalf("cnt should be 11, but %v", cnt)
+	}
+
+	ok = cache.PutIfAbsent("abc", ttlDummy{})
+	if ok {
+		t.Fatal("ok")
+	}
+
+	if cnt != 11 {
+		t.Fatalf("cnt should be 11, but %v", cnt)
+	}
+
+	ok = cache.PutIfAbsent("what", ttlDummy{name: "what"})
+	if !ok {
+		t.Fatal("not ok")
+	}
+
+	if cache.Size() != 10 {
+		t.Fatalf("size should be 10, but %v", cache.Size())
 	}
 }
 
