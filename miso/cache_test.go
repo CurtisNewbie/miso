@@ -49,6 +49,12 @@ func TestTTLCacheNormal(t *testing.T) {
 	if cnt > 1 {
 		t.Fatalf("cnt should be 1, but %v", cnt)
 	}
+
+	keys := cache.Keys()
+	if len(keys) != 1 {
+		t.Logf("cache keys.len != 1")
+	}
+	t.Logf("keys: %v", keys)
 }
 
 func TestTTLCacheEvicted(t *testing.T) {
@@ -106,6 +112,8 @@ func TestTTLCacheEvicted(t *testing.T) {
 		t.Fatalf("size is over 5, actual: %v", cache.Size())
 	}
 	Infof("cache.size: %v", cache.Size())
+
+	t.Logf("keys: %v", cache.Keys())
 }
 
 func TestTTLCacheMaxSize(t *testing.T) {

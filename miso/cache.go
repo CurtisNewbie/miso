@@ -67,6 +67,7 @@ type TTLCache[T any] interface {
 	// Callback may be invoked with locks obtained, callback should not block currnet goroutine.
 	// Callback should not call any method on TTLCache, deadlock is almost guaranteed.
 	OnEvicted(f func(key string, t T))
+	Keys() []string
 }
 
 type ttlCache[T any] struct {
@@ -210,6 +211,19 @@ func (tc *ttlCache[T]) PutIfAbsent(key string, t T) bool {
 
 	tc.addBuck(false, key, t)
 	return true
+}
+
+func (tc *ttlCache[T]) Keys() []string {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+	keys := make([]string, 0, len(tc.cache))
+	now := time.Now()
+	for k, v := range tc.cache {
+		if v.alive(now, tc.ttl) {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 // Create new TTLCache.
