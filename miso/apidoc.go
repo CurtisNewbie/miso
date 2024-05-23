@@ -605,8 +605,7 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 			qp += "&"
 		}
 	}
-	sl.Printlnf("let baseUrl: string = 'http://localhost:%s';", GetPropStr(PropServerPort))
-	url := fmt.Sprintf("`${baseUrl}%s%s`", d.Url, qp)
+	url := "`" + d.Url + qp + "`"
 
 	for _, h := range d.Headers {
 		sl.Printlnf("let %s: any | null = null;", CamelCase(h.Name))
