@@ -266,7 +266,7 @@ func (p *lruCacheEvictStrategy[T]) Evict(tc *ttlCache[T]) []evictedItem[T] {
 	k := p.linkedItems.Remove(pop).(string)
 	v := tc.cache[k]
 	delete(tc.cache, k)
-	return []evictedItem[T]{evictedItem[T]{
+	return []evictedItem[T]{{
 		Key:    k,
 		Bucket: v,
 	}}
