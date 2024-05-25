@@ -186,3 +186,11 @@ func CamelCase(s string) string {
 	}
 	return b.String()
 }
+
+func LastNStr(s string, n int) string {
+	ru := []rune(s)
+	if len(ru) <= n {
+		return s
+	}
+	return string(ru[len(ru)-n:])
+}
