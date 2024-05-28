@@ -64,11 +64,16 @@ func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t
 //
 // Use NewEventPipeline to instantiate.
 type EventPipeline[T any] struct {
-	name string
+	name      string
+	logPaylod bool
 }
 
 func (ep *EventPipeline[T]) Name() string {
 	return ep.name
+}
+
+func (ep *EventPipeline[T]) LogPayload() {
+	ep.logPaylod = true
 }
 
 // Call PubEventBus.
@@ -78,7 +83,12 @@ func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
 
 // Call SubEventBus.
 func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T) error) {
-	SubEventBus[T](ep.name, concurrency, listener)
+	SubEventBus[T](ep.name, concurrency, func(rail Rail, t T) error {
+		if ep.logPaylod {
+			rail.Infof("Pipeline %s receive %#v", ep.name, t)
+		}
+		return listener(rail, t)
+	})
 }
 
 // Create new EventPipeline. NewEventBus is internally called as well.
