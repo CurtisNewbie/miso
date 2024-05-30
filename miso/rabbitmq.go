@@ -10,12 +10,30 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/spf13/cast"
 )
 
 const (
-	DEFAULT_QOS     = 68   // default QOS
 	redeliverDelay  = 5000 // redeliver delay, changing it will also create a new queue for redelivery
 	defaultExchange = ""   // default exchange that routes based on queue name using routing key
+)
+
+const (
+	// Default QOS
+	DefaultQos = 68
+
+	// RabbitMQ messages are redelivered every 5 seconds, 180 times is roughly equivalent to 15 minutes retry.
+	MaxRetryTimes15Min = 180
+
+	// Header key of rabbitmq message, specify how many times the message can be redelivered.
+	//
+	// Actual redelivery mechanism is implemented by miso's message listener.
+	HeaderRabbitMaxRetry = "miso-rabbitmq-max-retry"
+
+	// Header key of rabbitmq message, specify how many times the message has been redelivered.
+	//
+	// Actual redelivery mechanism is implemented by miso's message listener.
+	HeaderRabbitCurrRetry = "miso-rabbitmq-curr-retry"
 )
 
 var (
@@ -57,7 +75,7 @@ func init() {
 	SetDefProp(PropRabbitMqUsername, "guest")
 	SetDefProp(PropRabbitMqPassword, "guest")
 	SetDefProp(PropRabbitMqVhost, "")
-	SetDefProp(PropRabbitMqConsumerQos, DEFAULT_QOS)
+	SetDefProp(PropRabbitMqConsumerQos, DefaultQos)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap RabbitMQ",
@@ -164,11 +182,16 @@ func (m MsgListener) String() string {
 
 // Publish json message with confirmation
 func PublishJson(c Rail, obj any, exchange string, routingKey string) error {
+	return PublishJsonHeaders(c, obj, exchange, routingKey, nil)
+}
+
+// Publish json message with headers and confirmation
+func PublishJsonHeaders(c Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
 	j, err := WriteJson(obj)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message body, %w", err)
 	}
-	return PublishMsg(c, j, exchange, routingKey, "application/json", nil)
+	return PublishMsg(c, j, exchange, routingKey, "application/json", headers)
 }
 
 // Publish plain text message with confirmation
@@ -187,13 +210,14 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 	}
 	defer returnPubChan(pc)
 
-	// propogate trace through headers
 	if headers == nil {
 		headers = map[string]any{}
-		UsePropagationKeys(func(key string) {
-			headers[key] = c.CtxValue(key)
-		})
 	}
+
+	// propogate trace through headers
+	UsePropagationKeys(func(key string) {
+		headers[key] = c.CtxValue(key)
+	})
 
 	publishing := amqp.Publishing{
 		ContentType:  contentType,
@@ -547,14 +571,38 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			//
 			// 	src: https://ivanyu.me/blog/2015/02/16/delayed-message-delivery-in-rabbitmq/
 			rq := redeliverQueue(msg.Exchange, msg.RoutingKey)
-			if _, ok := redeliverQueueMap.Load(rq); ok { // have to make sure we indeed have a redeliver queue for this message
-				err := PublishMsg(rail, msg.Body, defaultExchange, rq, msg.ContentType, nil)
+
+			// make sure we indeed have a redeliver queue for this message
+			if _, ok := redeliverQueueMap.Load(rq); ok {
+
+				var nextHeaders map[string]any = nil
+
+				// before we retry, check whether the message configured max retry, and whether we should continue redelivering the message.
+				if msg.Headers != nil {
+					if maxv, ok := msg.Headers[HeaderRabbitMaxRetry]; ok {
+						max := cast.ToInt(maxv)
+						curr := 0
+						if currv, ok := msg.Headers[HeaderRabbitCurrRetry]; ok {
+							curr = cast.ToInt(currv)
+						}
+						if curr >= max {
+							msg.Ack(false)
+							rail.Infof("RabbitMQ message %v exceeds configured max redelivery times: %d, payload: '%s', message dropped", msg.MessageId, max, payload)
+							continue
+						}
+						nextHeaders = make(map[string]any, 2)
+						nextHeaders[HeaderRabbitMaxRetry] = maxv
+						nextHeaders[HeaderRabbitCurrRetry] = curr + 1
+					}
+				}
+
+				err := PublishMsg(rail, msg.Body, defaultExchange, rq, msg.ContentType, nextHeaders)
 				if err == nil {
 					msg.Ack(false)
 					rail.Debugf("Sent message to delayed redeliver queue: %v", msg.MessageId)
 					continue
 				}
-				rail.Debugf("Failed to send message to delayed redeliver queue: %v, %v", msg.MessageId, err)
+				rail.Errorf("Failed to send message to delayed redeliver queue: %v, %v", msg.MessageId, err)
 			}
 
 			// nack the message

@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -63,6 +64,90 @@ func TestSubscribeEventBus(t *testing.T) {
 	}
 
 	time.Sleep(time.Second * 3)
+
+	cancel()
+	time.Sleep(time.Second * 3)
+}
+
+func TestNewPipeline(t *testing.T) {
+	preTest()
+
+	type dummy struct{}
+	NewEventPipeline[dummy]("test-pipe")
+
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
+		t.Fatal(e)
+	}
+
+	cancel()
+	time.Sleep(time.Second * 3)
+}
+
+func TestPipeSend(t *testing.T) {
+	preTest()
+
+	type dummy struct {
+		Attr string
+	}
+
+	pipe := NewEventPipeline[dummy]("test-pipe")
+	pipe.MaxRetry(2)
+
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
+		t.Fatal(e)
+	}
+
+	if err := pipe.Send(EmptyRail(), dummy{Attr: "yes"}); err != nil {
+		t.Fatal(err)
+	}
+
+	cancel()
+	time.Sleep(time.Second * 3)
+}
+
+func TestPipeListen(t *testing.T) {
+	preTest()
+
+	type dummy struct {
+		Attr string
+	}
+	pipe := NewEventPipeline[dummy]("test-pipe")
+
+	pipe.Listen(1, func(rail Rail, t dummy) error {
+		rail.Infof("received dummy: %+v", t)
+		return nil
+	})
+
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
+		t.Fatal(e)
+	}
+
+	cancel()
+	time.Sleep(time.Second * 3)
+}
+
+func TestPipeListenRetry(t *testing.T) {
+	preTest()
+
+	type dummy struct {
+		Attr string
+	}
+	pipe := NewEventPipeline[dummy]("test-pipe")
+
+	pipe.Listen(1, func(rail Rail, t dummy) error {
+		rail.Infof("received dummy: %+v", t)
+		return errors.New("nope")
+	})
+
+	rail, cancel := EmptyRail().WithCancel()
+	if e := StartRabbitMqClient(rail); e != nil {
+		t.Fatal(e)
+	}
+
+	time.Sleep(time.Second * 17)
 
 	cancel()
 	time.Sleep(time.Second * 3)

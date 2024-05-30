@@ -7,7 +7,6 @@ import (
 
 func TestERand(t *testing.T) {
 	var s string
-	var err error
 
 	s = ERand(0)
 	if s != "" {
@@ -16,9 +15,6 @@ func TestERand(t *testing.T) {
 
 	l := 10
 	s = ERand(l)
-	if err != nil {
-		t.Fatalf("Failed to generate random str, %v", err)
-	}
 
 	rc := utf8.RuneCountInString(s)
 	if rc != l {

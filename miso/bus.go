@@ -21,10 +21,19 @@ var (
 //
 // Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
 func PubEventBus(rail Rail, eventObject any, name string) error {
+	return PubEventBusHeaders(rail, eventObject, name, nil)
+}
+
+// Send msg to event bus.
+//
+// It's identical to sending a message to an exchange identified by the name using routing key '#'.
+//
+// Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
+func PubEventBusHeaders(rail Rail, eventObject any, name string, headers map[string]any) error {
 	if name == "" {
 		return errBusNameEmpty
 	}
-	return PublishJson(rail, eventObject, name, BusRoutingKey)
+	return PublishJsonHeaders(rail, eventObject, name, BusRoutingKey, headers)
 }
 
 // Declare event bus.
@@ -66,6 +75,7 @@ func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t
 type EventPipeline[T any] struct {
 	name      string
 	logPaylod bool
+	maxRetry  int
 }
 
 func (ep *EventPipeline[T]) Name() string {
@@ -76,8 +86,18 @@ func (ep *EventPipeline[T]) LogPayload() {
 	ep.logPaylod = true
 }
 
+// Specify max retry times, by default, it's -1, meaning that the message will be redelivered forever until it's successfully consumed.
+//
+// The message redelivery mechanism is implemented in miso's message consumer not publisher.
+func (ep *EventPipeline[T]) MaxRetry(n int) {
+	ep.maxRetry = n
+}
+
 // Call PubEventBus.
 func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
+	if ep.maxRetry > -1 {
+		return PubEventBusHeaders(rail, event, ep.name, map[string]any{HeaderRabbitMaxRetry: ep.maxRetry})
+	}
 	return PubEventBus(rail, event, ep.name)
 }
 
@@ -95,6 +115,7 @@ func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T
 func NewEventPipeline[T any](name string) EventPipeline[T] {
 	NewEventBus(name)
 	return EventPipeline[T]{
-		name: name,
+		name:     name,
+		maxRetry: -1,
 	}
 }
