@@ -82,15 +82,17 @@ func (ep *EventPipeline[T]) Name() string {
 	return ep.name
 }
 
-func (ep *EventPipeline[T]) LogPayload() {
+func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 	ep.logPaylod = true
+	return ep
 }
 
 // Specify max retry times, by default, it's -1, meaning that the message will be redelivered forever until it's successfully consumed.
 //
 // The message redelivery mechanism is implemented in miso's message consumer not publisher.
-func (ep *EventPipeline[T]) MaxRetry(n int) {
+func (ep *EventPipeline[T]) MaxRetry(n int) *EventPipeline[T] {
 	ep.maxRetry = n
+	return ep
 }
 
 // Call PubEventBus.
@@ -112,9 +114,9 @@ func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T
 }
 
 // Create new EventPipeline. NewEventBus is internally called as well.
-func NewEventPipeline[T any](name string) EventPipeline[T] {
+func NewEventPipeline[T any](name string) *EventPipeline[T] {
 	NewEventBus(name)
-	return EventPipeline[T]{
+	return &EventPipeline[T]{
 		name:     name,
 		maxRetry: -1,
 	}
