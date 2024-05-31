@@ -742,15 +742,21 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 	if len(httpCall) > 1 {
 		httpCall = strings.ToUpper(string(d.Method[0])) + strings.ToLower(string(d.Method[1:]))
 	}
+	um := strings.ToUpper(d.Method)
 	if reqTypeName != "" {
-		um := strings.ToUpper(d.Method)
 		if um == "POST" {
 			sl.Printf(".\n%sPostJson(req)", Tabs(2))
 		} else if um == "PUT" {
 			sl.Printf(".\n%sPutJson(req)", Tabs(2))
 		}
 	} else {
-		sl.Printf(".\n%s%s()", Tabs(2), httpCall)
+		if um == "POST" {
+			sl.Printf(".\n%sPost(nil)", Tabs(2))
+		} else if um == "PUT" {
+			sl.Printf(".\n%sPut(nil)", Tabs(2))
+		} else {
+			sl.Printf(".\n%s%s()", Tabs(2), httpCall)
+		}
 	}
 	sl.Printf(".\n%sJson(&res)", Tabs(2))
 
