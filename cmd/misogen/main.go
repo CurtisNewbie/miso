@@ -127,10 +127,7 @@ func main() {
 			iw.Writef("")
 			iw.Writef("import (").
 				StepIn(func(iw *miso.IndentWriter) {
-					iw.Writef("\"bytes\"")
 					iw.Writef("\"flag\"")
-					iw.Writef("\"os\"")
-					iw.Writef("\"strings\"")
 					iw.Writef("")
 					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
 				}).
@@ -142,68 +139,11 @@ func main() {
 				}).
 				Writef(")").Writef("")
 
-			// embeded conf as string
-			iw.Writef("var (").
-				StepIn(func(iw *miso.IndentWriter) {
-					iw.Writef("ConfByt = []byte(`")
-				})
-			cw := miso.NewIndentWriter("  ")
-			cw.Writef("redis:").
-				StepIn(func(iw *miso.IndentWriter) {
-					iw.Writef("enabled: \"%s\"", "true")
-					iw.Writef("address: \"%s\"", miso.GetPropStr(miso.PropRedisAddress))
-					iw.Writef("port: \"%s\"", miso.GetPropStr(miso.PropRedisPort))
-					iw.Writef("username: \"%s\"", miso.GetPropStr(miso.PropRedisUsername))
-					iw.Writef("password: \"%s\"", miso.GetPropStr(miso.PropRedisPassword))
-					iw.Writef("database: \"%s\"", miso.GetPropStr(miso.PropRedisDatabase))
-				}).Writef("")
-
-			cw.Writef("mysql:").
-				StepIn(func(iw *miso.IndentWriter) {
-					iw.Writef("enabled: \"%s\"", "true")
-					iw.Writef("host: \"%s\"", miso.GetPropStr(miso.PropMySQLHost))
-					iw.Writef("port: \"%s\"", miso.GetPropStr(miso.PropMySQLPort))
-					iw.Writef("user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
-					iw.Writef("password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
-					iw.Writef("database: \"%s\"", guessSchemaName(modName))
-					iw.Writef("connection:").
-						StepIn(func(iw *miso.IndentWriter) {
-							iw.Writef("parameters:").StepIn(func(iw *miso.IndentWriter) {
-								for _, s := range []string{
-									"charset=utf8mb4",
-									"parseTime=True",
-									"loc=Local",
-									"readTimeout=30s",
-									"writeTimeout=30s",
-									"timeout=3s",
-								} {
-									iw.Writef("- \"%s\"", s)
-								}
-							})
-						})
-				})
-			cw.Writef("")
-			cw.Writef("sqlite:").StepIn(func(iw *miso.IndentWriter) {
-				iw.Writef("file: \"%s\"", miso.GetPropStr(miso.PropSqliteFile))
-			})
-			iw.Writef(cw.String() + "`)")
-			iw.Writef(")").Writef("")
-
 			// main func
 			iw.Writef("func main() {").
 				StepIn(func(iw *miso.IndentWriter) {
 					iw.Writef("rail := miso.EmptyRail()")
-					iw.Writef("if err := miso.LoadConfigFromReader(bytes.NewReader(ConfByt), rail); err != nil {").
-						StepIn(func(iw *miso.IndentWriter) {
-							iw.Writef("panic(err)")
-						}).Writef("}")
-
-					iw.Writef("miso.OverwriteConf(os.Args)")
-					iw.Writef("")
-					iw.Writef("cpArgs := os.Args")
-					iw.Writef("os.Args = append([]string{os.Args[0]}, miso.CopyFilter[string](os.Args, func(s string) bool { return strings.HasPrefix(s, \"-\") })...)")
 					iw.Writef("flag.Parse()")
-					iw.Writef("os.Args = cpArgs")
 					iw.Writef("")
 					iw.Writef("if *DebugFlag {").
 						StepIn(func(iw *miso.IndentWriter) {
@@ -212,7 +152,7 @@ func main() {
 						Writef("}").Writef("")
 
 					iw.Writef("// for mysql")
-					iw.Writef("if err := miso.InitMySQLFromProp(rail); err != nil {").
+					iw.Writef("if err := miso.InitMySQL(rail, miso.MySQLConnParam{}); err != nil {").
 						StepIn(func(iw *miso.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
@@ -226,7 +166,7 @@ func main() {
 						Writef("}").Writef("")
 
 					iw.Writef("// for redis")
-					iw.Writef("redis, err := miso.InitRedisFromProp(rail)")
+					iw.Writef("redis, err := miso.InitRedis(rail, miso.RedisConnParam{})")
 					iw.Writef("if err != nil {").
 						StepIn(func(iw *miso.IndentWriter) {
 							iw.Writef("panic(err)")
@@ -433,9 +373,7 @@ func main() {
 	// version.go
 	{
 		if err := miso.MkdirParentAll(VersionFile); err != nil {
-			if err != nil {
-				panic(fmt.Errorf("failed to make parent dir for file %s, %v", VersionFile, err))
-			}
+			panic(fmt.Errorf("failed to make parent dir for file %s, %v", VersionFile, err))
 		}
 		vf, err := miso.ReadWriteFile(VersionFile)
 		if err != nil {
@@ -455,9 +393,7 @@ func main() {
 	// server.go
 	{
 		if err := miso.MkdirParentAll(ServerFile); err != nil {
-			if err != nil {
-				panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
-			}
+			panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
 		}
 		serverf, err := miso.ReadWriteFile(ServerFile)
 		if err != nil {
