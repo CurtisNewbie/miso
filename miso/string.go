@@ -104,6 +104,10 @@ func Spaces(count int) string {
 	return strings.Repeat(" ", count)
 }
 
+func Tabs(count int) string {
+	return strings.Repeat("\t", count)
+}
+
 type SLPinter struct {
 	*strings.Builder
 	LineSuffix string

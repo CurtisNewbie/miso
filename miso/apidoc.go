@@ -50,6 +50,7 @@ type HttpRouteDoc struct {
 	JsonReqTsDef     string     // json request type def in ts
 	JsonRespTsDef    string     // json response type def in ts
 	NgHttpClientDemo string     // angular http client demo
+	MisoTClientDemo  string     // miso TClient demo
 }
 
 func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
@@ -66,22 +67,33 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 			Headers:     r.Headers,
 			QueryParams: r.QueryParams,
 		}
-		var tsReqTypeName string
+
+		// json stuff
+		var reqTypeName string
 		if r.JsonRequestVal != nil {
 			rv := reflect.ValueOf(r.JsonRequestVal)
-			tsReqTypeName = rv.Type().Name()
+			reqTypeName = rv.Type().Name()
 			d.JsonRequestDesc = buildJsonDesc(rv)
-			d.JsonReqTsDef = genJsonTsDef(tsReqTypeName, d.JsonRequestDesc)
+			d.JsonReqTsDef = genJsonTsDef(reqTypeName, d.JsonRequestDesc)
 		}
-		var tsRespTypeName string
+
+		var respTypeName string
 		if r.JsonResponseVal != nil {
 			rv := reflect.ValueOf(r.JsonResponseVal)
-			tsRespTypeName = rv.Type().Name()
+			respTypeName = rv.Type().Name()
 			d.JsonResponseDesc = buildJsonDesc(rv)
-			d.JsonRespTsDef = genJsonTsDef(tsRespTypeName, d.JsonResponseDesc)
+			d.JsonRespTsDef = genJsonTsDef(respTypeName, d.JsonResponseDesc)
 		}
+
+		// curl
 		d.Curl = genRouteCurl(d)
-		d.NgHttpClientDemo = genNgHttpClientDemo(d, tsReqTypeName, tsRespTypeName)
+
+		// ng http client
+		d.NgHttpClientDemo = genNgHttpClientDemo(d, reqTypeName, respTypeName)
+
+		// miso http TClient
+		d.MisoTClientDemo = genTClientDemo(d, reqTypeName, respTypeName)
+
 		docs = append(docs, d)
 	}
 	return docs
@@ -269,10 +281,11 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 		}
 
 		jd := jsonDesc{
-			Name:     name,
-			TypeName: typeName,
-			Desc:     f.Tag.Get(TagApiDocDesc),
-			Fields:   []jsonDesc{},
+			FieldName: f.Name,
+			Name:      name,
+			TypeName:  typeName,
+			Desc:      f.Tag.Get(TagApiDocDesc),
+			Fields:    []jsonDesc{},
 		}
 
 		if typeAliasMatched {
@@ -330,10 +343,11 @@ func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []jsonDesc) [
 }
 
 type jsonDesc struct {
-	Name     string
-	TypeName string
-	Desc     string
-	Fields   []jsonDesc
+	FieldName string
+	Name      string
+	TypeName  string
+	Desc      string
+	Fields    []jsonDesc
 }
 
 var (
@@ -654,5 +668,135 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	sl.Printlnf(Spaces(6) + "console.log(err)")
 	sl.Printlnf(Spaces(4) + "}")
 	sl.Printlnf(Spaces(2) + "});")
+	return sl.String()
+}
+
+func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {
+	sl := new(SLPinter)
+
+	respGeneName := respTypeName
+	if respGeneName == "" {
+		respGeneName = "any"
+	} else {
+		respGeneName = guessTsItfName(respTypeName)
+		if respGeneName == "Resp" {
+			for _, n := range d.JsonResponseDesc {
+				if n.FieldName == "Data" {
+					respGeneName = guessTsItfName(n.TypeName)
+					break
+				}
+			}
+		}
+		if respGeneName == "Resp" {
+			respGeneName = "any"
+		}
+	}
+
+	qhp := make([]string, 0, len(d.QueryParams)+len(d.Headers))
+	for _, s := range d.QueryParams {
+		qhp = append(qhp, fmt.Sprintf("%s string", CamelCase(s.Name)))
+	}
+	for _, s := range d.Headers {
+		qhp = append(qhp, fmt.Sprintf("%s string", CamelCase(s.Name)))
+	}
+
+	// for _, q := range d.QueryParams {
+	// 	cname := CamelCase(q.Name)
+	// 	sl.Printlnf("var %s string", cname)
+	// }
+	// for _, h := range d.Headers {
+	// 	cname := CamelCase(h.Name)
+	// 	sl.Printlnf("var %s string", cname)
+	// }
+
+	qh := ""
+	if len(qhp) > 0 {
+		qh = ", " + strings.Join(qhp, ", ")
+	}
+
+	if reqTypeName != "" {
+		mn := "SendRequest"
+		if len(reqTypeName) > 1 {
+			mn = fmt.Sprintf("Send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
+		}
+		if respGeneName == "any" {
+			sl.Printlnf("func %s(rail miso.Rail, req %s%s) error {", mn, reqTypeName, qh)
+		} else {
+			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqTypeName, qh, respGeneName)
+		}
+	} else {
+		mn := "SendRequest"
+		if respGeneName == "any" {
+			sl.Printlnf("func %s(rail miso.Rail%s) error {", mn, qh)
+		} else {
+			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respGeneName)
+		}
+	}
+
+	sl.LinePrefix = "\t"
+
+	// sl.Printlnf("var rail miso.Rail")
+	// sl.Printlnf("var req %s", reqTypeName)
+	// sl.Printlnf("")
+
+	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
+	sl.Printf("\n%serr := miso.NewDynTClient(rail, \"%s\", \"%s\")", Tabs(1), d.Url, GetPropStr(PropAppName))
+
+	for _, q := range d.QueryParams {
+		cname := CamelCase(q.Name)
+		sl.Printf(".\n%sAddQueryParams(\"%s\", %s)", Tabs(2), cname, cname)
+	}
+
+	for _, h := range d.Headers {
+		cname := CamelCase(h.Name)
+		sl.Printf(".\n%sAddHeader(\"%s\", %s)", Tabs(2), cname, cname)
+	}
+
+	httpCall := d.Method
+	if len(httpCall) > 1 {
+		httpCall = strings.ToUpper(string(d.Method[0])) + strings.ToLower(string(d.Method[1:]))
+	}
+	if reqTypeName != "" {
+		um := strings.ToUpper(d.Method)
+		if um == "POST" {
+			sl.Printf(".\n%sPostJson(req)", Tabs(2))
+		} else if um == "PUT" {
+			sl.Printf(".\n%sPutJson(req)", Tabs(2))
+		}
+	} else {
+		sl.Printf(".\n%s%s()", Tabs(2), httpCall)
+	}
+	sl.Printf(".\n%sJson(&res)", Tabs(2))
+
+	sl.Printlnf("if err != nil {")
+	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", Tabs(1))
+	if respGeneName == "any" {
+		sl.Printlnf("%sreturn err", Tabs(1))
+	} else {
+		if strings.HasPrefix(respGeneName, "*") {
+			sl.Printlnf("%sreturn nil, err", Tabs(1))
+		} else {
+			sl.Printlnf("%svar dat %s", Tabs(1), respGeneName)
+			sl.Printlnf("%sreturn dat, err", Tabs(1))
+		}
+	}
+	sl.Printlnf("}")
+
+	if respGeneName == "any" {
+		sl.Printlnf("err = res.Err()")
+		sl.Printlnf("if err != nil {")
+		sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", Tabs(1))
+		sl.Printlnf("}")
+		sl.Printlnf("return err")
+		sl.Printf("\n}")
+		return sl.String()
+	}
+
+	sl.Printlnf("dat, err := res.Res()")
+	sl.Printlnf("if err != nil {")
+	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", Tabs(1))
+	sl.Printlnf("}")
+	sl.Printlnf("return dat, err")
+	sl.Printf("\n}")
 	return sl.String()
 }
