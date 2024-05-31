@@ -1,7 +1,9 @@
 package miso
 
 import (
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func determineIdealMethodName() {
@@ -74,4 +76,24 @@ func BenchmarkInfo(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rail.Info("abc")
 	}
+}
+
+func BenchmarkError(b *testing.B) {
+	rail := EmptyRail()
+
+	var n int64
+	if ok := SetErrLogHandler(func(el *ErrorLog) {
+		atomic.AddInt64(&n, 1)
+	}); !ok {
+		b.Fatal("not ok")
+	}
+
+	b.Run("yes", func(b *testing.B) {
+		// 1253 B/op         13 allocs/op
+		for i := 0; i < b.N; i++ {
+			rail.Error("abc")
+		}
+	})
+	time.Sleep(1 * time.Second)
+	b.Logf("n: %d", atomic.LoadInt64(&n))
 }

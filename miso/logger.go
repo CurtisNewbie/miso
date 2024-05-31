@@ -37,6 +37,26 @@ var (
 	}
 )
 
+var (
+	errLogHandlerOnce sync.Once
+	errLogPipe        chan *ErrorLog = nil
+	errLogPool                       = sync.Pool{
+		New: func() any { return new(ErrorLog) },
+	}
+	errLogRoutineCancel func()          = nil
+	errLogHandler       ErrorLogHandler = nil
+)
+
+type ErrorLog struct {
+	Time     string
+	TraceId  string
+	SpanId   string
+	FuncName string
+	Message  string
+}
+
+type ErrorLogHandler func(el *ErrorLog)
+
 type CTFormatter struct {
 }
 
@@ -61,13 +81,11 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	levelstr := toLevelStr(entry.Level)
 
-	// s := fmt.Sprintf("%s %-5s [%-16v,%-16v]%-30s : %s\n", entry.Time.Format("2006-01-02 15:04:05.000"), levelstr, traceId, spanId, fn, entry.Message)
-	// return UnsafeStr2Byt(s), nil
-
 	b := logBufPool.Get().(*bytes.Buffer)
 	defer putLogBuf(b)
 
-	b.WriteString(entry.Time.Format("2006-01-02 15:04:05.000"))
+	stime := entry.Time.Format("2006-01-02 15:04:05.000")
+	b.WriteString(stime)
 	b.WriteByte(' ')
 	b.WriteString(levelstr)
 
@@ -99,6 +117,21 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(" : ")
 	b.WriteString(entry.Message)
 	b.WriteByte('\n')
+
+	if errLogPipe != nil && entry.Level == logrus.ErrorLevel {
+		el := errLogPool.Get().(*ErrorLog)
+		el.Time = stime
+		el.FuncName = fn
+		el.Message = entry.Message
+		el.SpanId = spanId
+		el.TraceId = traceId
+
+		select {
+		case errLogPipe <- el:
+		default: // just in case the pipe is blocked
+		}
+	}
+
 	return b.Bytes(), nil
 }
 
@@ -330,4 +363,36 @@ func unsafeGetShortFnName(fn string) string {
 
 func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
+}
+
+// Setup error log handler.
+//
+// ErrorLogHnadler is invoked when ERROR level log is printed, the log messages passed to handler
+// are buffered, but handler should never block for a long time (i.e., process as fast as possible).
+// If the buffer is full, latest error log messages are simply dropped.
+//
+// ErrorLogHandler can only be set once.
+func SetErrLogHandler(h ErrorLogHandler) bool {
+	set := false
+	errLogHandlerOnce.Do(func() {
+		errLogHandler = h
+		errLogPipe = make(chan *ErrorLog, 1024)
+		c, cancel := context.WithCancel(context.Background())
+		errLogRoutineCancel = cancel
+		AddShutdownHook(errLogRoutineCancel)
+
+		go func() {
+			for {
+				select {
+				case <-c.Done():
+					return
+				case el := <-errLogPipe:
+					errLogHandler(el)
+					errLogPool.Put(el)
+				}
+			}
+		}()
+		set = true
+	})
+	return set
 }
