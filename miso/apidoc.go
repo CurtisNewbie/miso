@@ -700,15 +700,6 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 		qhp = append(qhp, fmt.Sprintf("%s string", CamelCase(s.Name)))
 	}
 
-	// for _, q := range d.QueryParams {
-	// 	cname := CamelCase(q.Name)
-	// 	sl.Printlnf("var %s string", cname)
-	// }
-	// for _, h := range d.Headers {
-	// 	cname := CamelCase(h.Name)
-	// 	sl.Printlnf("var %s string", cname)
-	// }
-
 	qh := ""
 	if len(qhp) > 0 {
 		qh = ", " + strings.Join(qhp, ", ")
@@ -734,11 +725,6 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 	}
 
 	sl.LinePrefix = "\t"
-
-	// sl.Printlnf("var rail miso.Rail")
-	// sl.Printlnf("var req %s", reqTypeName)
-	// sl.Printlnf("")
-
 	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
 	sl.Printf("\n%serr := miso.NewDynTClient(rail, \"%s\", \"%s\")", Tabs(1), d.Url, GetPropStr(PropAppName))
 
