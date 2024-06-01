@@ -136,10 +136,13 @@ func SliceGetOne[T any](items []*T) *T {
 }
 
 // Copy values of map
-func MapValues[K comparable, V any](m *map[K]V) []V {
+func MapValues[K comparable, V any](m map[K]V) []V {
 	var values []V = []V{}
-	for k := range *m {
-		values = append(values, (*m)[k])
+	if m == nil {
+		return values
+	}
+	for k := range m {
+		values = append(values, (m)[k])
 	}
 	return values
 }

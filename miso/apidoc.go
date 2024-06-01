@@ -53,7 +53,7 @@ type HttpRouteDoc struct {
 	MisoTClientDemo  string     // miso TClient demo
 }
 
-func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
+func buildHttpRouteDoc(hr []HttpRoute) []HttpRouteDoc {
 	docs := make([]HttpRouteDoc, 0, len(hr))
 
 	for _, r := range hr {
@@ -99,7 +99,7 @@ func buildHttpRouteDoc(rail Rail, hr []HttpRoute) []HttpRouteDoc {
 	return docs
 }
 
-func genMarkDownDoc(hr []HttpRouteDoc) string {
+func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
@@ -231,6 +231,56 @@ func genMarkDownDoc(hr []HttpRouteDoc) string {
 			b.WriteString(Spaces(4) + "```\n")
 		}
 	}
+
+	if len(pd) > 0 {
+
+		b.WriteString("\n# Event Pipelines\n")
+
+		for _, p := range pd {
+			b.WriteString("\n- ")
+			b.WriteString(p.Name)
+
+			if p.Desc != "" {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- Description: ")
+				b.WriteString(p.Desc)
+			}
+
+			if p.Queue != "" {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- RabbitMQ Queue: `")
+				b.WriteString(p.Queue)
+				b.WriteString("`")
+			}
+
+			if p.Exchange != "" {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- RabbitMQ Exchange: `")
+				b.WriteString(p.Exchange)
+				b.WriteString("`")
+			}
+
+			if p.RoutingKey != "" {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- RabbitMQ RoutingKey: `")
+				b.WriteString(p.RoutingKey)
+				b.WriteString("`")
+			}
+
+			if len(p.PayloadDesc) > 0 {
+				b.WriteRune('\n')
+				b.WriteString(Spaces(2))
+				b.WriteString("- Event Payload:")
+				appendJsonPayloadDoc(&b, p.PayloadDesc, 2)
+			}
+			b.WriteString("\n")
+		}
+	}
+
 	return b.String()
 }
 
@@ -373,19 +423,22 @@ func serveApiDocTmpl(rail Rail) error {
 		func(inb *Inbound) {
 			defer DebugTimeOp(rail, time.Now(), "gen api doc")
 
-			routeDoc := buildHttpRouteDoc(rail, GetHttpRoutes())
-			markdown := genMarkDownDoc(routeDoc)
+			httpRouteDoc := buildHttpRouteDoc(GetHttpRoutes())
+			pipelineDoc := buildPipelineDoc(MapValues(pipelineDescMap))
+			markdown := genMarkDownDoc(httpRouteDoc, pipelineDoc)
 
 			w, _ := inb.Unwrap()
 			if err := apiDocTmpl.ExecuteTemplate(w, "apiDocTempl",
 				struct {
-					App      string
-					Doc      []HttpRouteDoc
-					Markdown string
+					App         string
+					HttpDoc     []HttpRouteDoc
+					PipelineDoc []PipelineDoc
+					Markdown    string
 				}{
-					App:      GetPropStr(PropAppName),
-					Doc:      routeDoc,
-					Markdown: markdown,
+					App:         GetPropStr(PropAppName),
+					HttpDoc:     httpRouteDoc,
+					PipelineDoc: pipelineDoc,
+					Markdown:    markdown,
 				}); err != nil {
 				rail.Errorf("failed to serve apiDocTmpl, %v", err)
 			}
@@ -791,4 +844,32 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 	sl.Printlnf("return dat, err")
 	sl.Printf("\n}")
 	return sl.String()
+}
+
+type PipelineDoc struct {
+	Name        string
+	Desc        string
+	Exchange    string
+	RoutingKey  string
+	Queue       string
+	PayloadDesc []jsonDesc
+}
+
+func buildPipelineDoc(epd []EventPipelineDesc) []PipelineDoc {
+	docs := make([]PipelineDoc, 0, len(epd))
+	for _, pd := range epd {
+		d := PipelineDoc{
+			Name:       pd.Name,
+			Desc:       pd.Desc,
+			Exchange:   pd.Exchange,
+			RoutingKey: pd.RoutingKey,
+			Queue:      pd.Queue,
+		}
+		if pd.PayloadVal != nil {
+			rv := reflect.ValueOf(pd.PayloadVal)
+			d.PayloadDesc = buildJsonDesc(rv)
+		}
+		docs = append(docs, d)
+	}
+	return docs
 }

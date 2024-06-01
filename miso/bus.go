@@ -13,6 +13,8 @@ const (
 var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
 	declaredBus     sync.Map
+
+	pipelineDescMap map[string]EventPipelineDesc = nil
 )
 
 // Send msg to event bus.
@@ -78,12 +80,30 @@ type EventPipeline[T any] struct {
 	maxRetry  int
 }
 
+// Name of the pipeline.
 func (ep *EventPipeline[T]) Name() string {
 	return ep.name
 }
 
+// Log payload in message consumer.
 func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 	ep.logPaylod = true
+	return ep
+}
+
+// Document EventPipline in the generated apidoc.
+func (ep *EventPipeline[T]) Document(name string, desc string) *EventPipeline[T] {
+	if pipelineDescMap == nil {
+		pipelineDescMap = map[string]EventPipelineDesc{}
+	}
+	pipelineDescMap[ep.name] = EventPipelineDesc{
+		Name:       name,
+		Desc:       desc,
+		RoutingKey: BusRoutingKey,
+		Queue:      ep.name,
+		Exchange:   ep.name,
+		PayloadVal: NewVar[T](),
+	}
 	return ep
 }
 
@@ -121,4 +141,13 @@ func NewEventPipeline[T any](name string) *EventPipeline[T] {
 		name:     name,
 		maxRetry: -1,
 	}
+}
+
+type EventPipelineDesc struct {
+	Name       string
+	Desc       string
+	PayloadVal any
+	Exchange   string
+	RoutingKey string
+	Queue      string
 }

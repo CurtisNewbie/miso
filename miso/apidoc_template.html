@@ -27,7 +27,7 @@
     <div style="margin:30px;">
         <h1>Generated {{.App}} API Documentation:</h1>
         <h2>1. HTML API DOC:</h2>
-        {{range .Doc}}
+        {{range .HttpDoc}}
             <div style="background-color:#DBD5D4; margin-top:30px; margin-bottom:30px;
                 padding-left:30px; padding-right:30px; padding-top:10px; padding-bottom:10px; border-radius: 20px;">
             <h3>{{.Method}} {{.Url}}</h3>
@@ -140,7 +140,65 @@
             </div>
         {{end}}
 
-        <h2>2. Markdown API Doc:</h2>
+        {{ if .PipelineDoc }}
+            <h2>2. Event Pipeline Doc:</h2>
+            {{range .PipelineDoc}}
+                <div style="background-color:#DBD5D4; margin-top:30px; margin-bottom:30px;
+                    padding-left:30px; padding-right:30px; padding-top:10px; padding-bottom:10px; border-radius: 20px;">
+                <h3>{{.Name}}</h3>
+                {{if .Desc }}
+                    <p>
+                        <div style="text-indent:8px;border-left: 4px solid #757575;">
+                            <b><i>Description:</i></b>
+                        </div>
+                    </p>
+                    <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Desc}}</p>
+                {{end}}
+
+                {{if .Exchange}}
+                    <p>
+                        <div style="text-indent:8px;border-left: 4px solid #757575;">
+                            <b><i>RabbitMQ Exchange:</i></b>
+                        </div>
+                    </p>
+                    <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Exchange}}</p>
+                {{end}}
+
+                {{if .Queue}}
+                    <p>
+                        <div style="text-indent:8px;border-left: 4px solid #757575;">
+                            <b><i>RabbitMQ Queue:</i></b>
+                        </div>
+                    </p>
+                    <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.Queue}}</p>
+                {{end}}
+
+                {{if .RoutingKey}}
+                    <p>
+                        <div style="text-indent:8px;border-left: 4px solid #757575;">
+                            <b><i>RabbitMQ RoutingKey:</i></b>
+                        </div>
+                    </p>
+                    <p>&nbsp;&nbsp;&nbsp;&nbsp;{{.RoutingKey}}</p>
+                {{end}}
+
+                {{if .PayloadDesc}}
+                    <p>
+                        <div style="text-indent:8px;border-left: 4px solid #757575;">
+                            <b><i>Event JSON Payload:</i></b>
+                        </div>
+                        {{template "unpackJsonDesc" .PayloadDesc}}
+                    </p>
+                {{end}}
+                </div>
+            {{end}}
+        {{end}}
+
+        {{if .PipelineDoc }}
+            <h2>3. Markdown API Doc:</h2>
+        {{else}}
+            <h2>2. Markdown API Doc:</h2>
+        {{end}}
 
         <div style="text-align: right;">
             <button style="padding:10px; box-shadow: 3px 3px 10px lightgrey;" onclick="copyMarkdown()">Copy Generated Markdown</button>
