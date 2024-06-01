@@ -44,8 +44,7 @@ var (
 	errLogPool                       = sync.Pool{
 		New: func() any { return new(ErrorLog) },
 	}
-	errLogRoutineCancel func()          = nil
-	errLogHandler       ErrorLogHandler = nil
+	errLogRoutineCancel func() = nil
 )
 
 type ErrorLog struct {
@@ -118,7 +117,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(entry.Message)
 	b.WriteByte('\n')
 
-	if errLogPipe != nil && entry.Level == logrus.ErrorLevel {
+	if entry.Level == logrus.ErrorLevel && errLogPipe != nil {
 		el := errLogPool.Get().(*ErrorLog)
 		el.Time = entry.Time
 		el.FuncName = fn
@@ -372,10 +371,9 @@ func Printlnf(pat string, args ...any) {
 // If the buffer is full, latest error log messages are simply dropped.
 //
 // ErrorLogHandler can only be set once.
-func SetErrLogHandler(h ErrorLogHandler) bool {
+func SetErrLogHandler(handler ErrorLogHandler) bool {
 	set := false
 	errLogHandlerOnce.Do(func() {
-		errLogHandler = h
 		errLogPipe = make(chan *ErrorLog, 1024)
 		c, cancel := context.WithCancel(context.Background())
 		errLogRoutineCancel = cancel
@@ -387,7 +385,7 @@ func SetErrLogHandler(h ErrorLogHandler) bool {
 				case <-c.Done():
 					return
 				case el := <-errLogPipe:
-					errLogHandler(el)
+					handler(el)
 					errLogPool.Put(el)
 				}
 			}
