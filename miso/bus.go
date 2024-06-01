@@ -104,13 +104,14 @@ func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
 }
 
 // Call SubEventBus.
-func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T) error) {
+func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T) error) *EventPipeline[T] {
 	SubEventBus[T](ep.name, concurrency, func(rail Rail, t T) error {
 		if ep.logPaylod {
 			rail.Infof("Pipeline %s receive %#v", ep.name, t)
 		}
 		return listener(rail, t)
 	})
+	return ep
 }
 
 // Create new EventPipeline. NewEventBus is internally called as well.
