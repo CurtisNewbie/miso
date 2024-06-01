@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -48,7 +49,7 @@ var (
 )
 
 type ErrorLog struct {
-	Time     string
+	Time     time.Time
 	TraceId  string
 	SpanId   string
 	FuncName string
@@ -64,7 +65,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var fn string
 	caller, ok := entry.Data[callerField]
 	if ok {
-		fn = " " + caller.(string)
+		fn = caller.(string)
 	}
 
 	var traceId string
@@ -84,8 +85,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b := logBufPool.Get().(*bytes.Buffer)
 	defer putLogBuf(b)
 
-	stime := entry.Time.Format("2006-01-02 15:04:05.000")
-	b.WriteString(stime)
+	b.WriteString(entry.Time.Format("2006-01-02 15:04:05.000"))
 	b.WriteByte(' ')
 	b.WriteString(levelstr)
 
@@ -107,7 +107,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		b.WriteString(Spaces(traceSpanIdWidth - len(spanId)))
 	}
 
-	b.WriteString("] ")
+	b.WriteString("]  ")
 	b.WriteString(fn)
 
 	if len(fn) < fnWidth {
@@ -120,7 +120,7 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	if errLogPipe != nil && entry.Level == logrus.ErrorLevel {
 		el := errLogPool.Get().(*ErrorLog)
-		el.Time = stime
+		el.Time = entry.Time
 		el.FuncName = fn
 		el.Message = entry.Message
 		el.SpanId = spanId
