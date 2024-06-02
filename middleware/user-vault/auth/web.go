@@ -13,6 +13,11 @@ const (
 )
 
 var (
+	registeredResources = []Resource{}
+	callbackRegistered  = false
+)
+
+var (
 	loadResourcePathOnce sync.Once
 	loadedResources      = []Resource{}
 	loadedPaths          = []Endpoint{}
@@ -38,27 +43,35 @@ type ResourceInfoRes struct {
 }
 
 // Create endpoint to expose resources and endpoint paths to be collected by user-vault.
-func ExposeResourceInfo(resources []Resource) {
+func ExposeResourceInfo(res []Resource) {
+
+	registeredResources = append(registeredResources, res...)
+
+	if callbackRegistered {
+		return
+	}
 
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 
 		// resources and paths are polled by uservault
-		miso.Get("/auth/resource", ServeResourceInfo(resources)).
+		miso.Get("/auth/resource", ServeResourceInfo()).
 			Desc("Expose resource and endpoint information to other backend service for authorization.").
 			Protected().
 			DocJsonResp(miso.GnResp[ResourceInfoRes]{})
 
 		return nil
 	})
+
+	callbackRegistered = true
 }
 
-func ServeResourceInfo(resources []Resource) func(inb *miso.Inbound) (any, error) {
+func ServeResourceInfo() func(inb *miso.Inbound) (any, error) {
 	return func(inb *miso.Inbound) (any, error) {
 
 		// resources and paths are lazily loaded
 		loadResourcePathOnce.Do(func() {
 			app := miso.GetPropStr(miso.PropAppName)
-			for _, res := range resources {
+			for _, res := range registeredResources {
 				if res.Code == "" || res.Name == "" {
 					continue
 				}
