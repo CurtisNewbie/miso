@@ -109,6 +109,7 @@ func (ep *EventPipeline[T]) Document(name string, desc string, provider string) 
 			Exchange:   ep.name,
 			PayloadVal: NewVar[T](),
 		}
+		return nil
 	})
 	return ep
 }
