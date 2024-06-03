@@ -92,18 +92,24 @@ func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 }
 
 // Document EventPipline in the generated apidoc.
-func (ep *EventPipeline[T]) Document(name string, desc string) *EventPipeline[T] {
-	if pipelineDescMap == nil {
-		pipelineDescMap = map[string]EventPipelineDesc{}
-	}
-	pipelineDescMap[ep.name] = EventPipelineDesc{
-		Name:       name,
-		Desc:       desc,
-		RoutingKey: BusRoutingKey,
-		Queue:      ep.name,
-		Exchange:   ep.name,
-		PayloadVal: NewVar[T](),
-	}
+func (ep *EventPipeline[T]) Document(name string, desc string, provider string) *EventPipeline[T] {
+	PreServerBootstrap(func(rail Rail) error {
+		if GetPropStr(PropAppName) != provider {
+			return nil
+		}
+
+		if pipelineDescMap == nil {
+			pipelineDescMap = map[string]EventPipelineDesc{}
+		}
+		pipelineDescMap[ep.name] = EventPipelineDesc{
+			Name:       name,
+			Desc:       desc,
+			RoutingKey: BusRoutingKey,
+			Queue:      ep.name,
+			Exchange:   ep.name,
+			PayloadVal: NewVar[T](),
+		}
+	})
 	return ep
 }
 
