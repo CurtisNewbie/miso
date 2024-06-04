@@ -126,7 +126,7 @@ func (r *RLock) Lock() error {
 		return fmt.Errorf("failed to obtain lock, key: %v, %w", r.key, err)
 	}
 	r.lock = lock
-	r.rail.Infof("Obtained lock for key '%s'", r.key)
+	r.rail.Debugf("Obtained lock for key '%s'", r.key)
 
 	cancelChan := make(chan struct{}, 1)
 	r.cancelRefresher = func() {
@@ -146,10 +146,10 @@ func (r *RLock) Lock() error {
 						return
 					}
 				} else {
-					rail.Infof("Refreshed rlock for '%v'", r.key)
+					rail.Debugf("Refreshed rlock for '%v'", r.key)
 				}
 			case <-cancelChan:
-				rail.Infof("RLock Refresher cancelled for '%v'", r.key)
+				rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
@@ -172,7 +172,7 @@ func (r *RLock) Unlock() error {
 			r.rail.Errorf("Failed to release lock for key '%s', err: %v", r.key, err)
 			return err
 		} else {
-			r.rail.Infof("Released lock for key '%s'", r.key)
+			r.rail.Debugf("Released lock for key '%s'", r.key)
 		}
 		r.lock = nil
 	}
