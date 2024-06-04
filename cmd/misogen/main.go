@@ -321,9 +321,9 @@ func main() {
 		writef(0, "// Use miso svc middleware to handle schema migration, only executed on production mode.")
 		writef(0, "//")
 		writef(0, "// Script files should follow the classic semver, e.g., v0.0.1.sql, v0.0.2.sql, etc.")
-		writef(0, "func EnableSchemaMigrateOnProd() {")
+		writef(0, "func EnableSchemaMigrate() {")
 		writef(1, "migrate.ExcludeSchemaFile(\"schema.sql\")")
-		writef(1, "migrate.EnableSchemaMigrateOnProd(schemaFs, BaseDir, \"\")")
+		writef(1, "migrate.EnableSchemaMigrate(schemaFs, BaseDir, \"\")")
 		writef(0, "}")
 		mf.WriteString(sb.String())
 		mf.Close()
@@ -424,7 +424,7 @@ func main() {
 		writef(0, "func BootstrapServer() {")
 		if *SvcFlag {
 			writef(1, "// automatic MySQL schema migration using svc")
-			writef(1, "schema.EnableSchemaMigrateOnProd()")
+			writef(1, "schema.EnableSchemaMigrate()")
 		}
 		if *StaticFlag {
 			if *SvcFlag {
