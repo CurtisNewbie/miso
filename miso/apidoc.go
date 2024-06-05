@@ -741,7 +741,7 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 		sl.Printlnf(Spaces(4) + "next: (resp) => {")
 		if isBuiltinResp && hasData {
 			sl.Printlnf(Spaces(6) + "if (resp.error) {")
-			sl.Printlnf(Spaces(8) + "this.snackBar.open(resp.msg, \"\", { duration: 6000 })")
+			sl.Printlnf(Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
 			sl.Printlnf(Spaces(8) + "return;")
 			sl.Printlnf(Spaces(6) + "}")
 			if dataField, ok := SliceFilterFirst(d.JsonResponseDesc,
@@ -757,7 +757,7 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 
 	sl.Printlnf(Spaces(4) + "error: (err) => {")
 	sl.Printlnf(Spaces(6) + "console.log(err)")
-	sl.Printlnf(Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"\", { duration: 3000 })")
+	sl.Printlnf(Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
 	sl.Printlnf(Spaces(4) + "}")
 	sl.Printlnf(Spaces(2) + "});")
 	return sl.String()
