@@ -229,6 +229,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			sp := strings.Split(r.NgHttpClientDemo, "\n")
 			for _, spt := range sp {
 				if spt == "" {
+					b.WriteRune('\n')
 					continue
 				}
 				b.WriteString(Spaces(4) + spt)
