@@ -1,16 +1,17 @@
-package miso
+package sqlite
 
 import (
 	"os"
 	"testing"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/sirupsen/logrus"
 )
 
 func TestGetSqlite(t *testing.T) {
-	SetLogLevel("debug")
-	SetProp(PropSqliteFile, "test.db")
-	tx := GetSqlite()
+	miso.SetLogLevel("debug")
+	miso.SetProp(PropSqliteFile, "test.db")
+	tx := GetDB()
 	db, e := tx.DB()
 	if e != nil {
 		t.Error(e)

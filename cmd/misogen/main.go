@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
 )
 
@@ -260,7 +261,7 @@ func main() {
 
 		writef(0, "")
 		writef(0, "sqlite:")
-		writef(1, "file: \"%s\"", miso.GetPropStr(miso.PropSqliteFile))
+		writef(1, "file: \"%s\"", miso.GetPropStr(sqlite.PropSqliteFile))
 
 		writef(0, "")
 		writef(0, "rabbitmq:")

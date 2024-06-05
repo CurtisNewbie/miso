@@ -99,17 +99,6 @@ const (
 	/*
 		------------------------------------
 
-		Prop for SQLite
-
-		------------------------------------
-	*/
-
-	PropSqliteFile       = "sqlite.file"
-	PropSqliteWalEnabled = "sqlite.wal.enabled"
-
-	/*
-		------------------------------------
-
 		Prop for RabbitMQ
 
 		------------------------------------
