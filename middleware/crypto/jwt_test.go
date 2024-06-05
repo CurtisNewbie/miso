@@ -1,9 +1,10 @@
-package miso
+package crypto
 
 import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -14,9 +15,9 @@ const (
 )
 
 func TestEncodeToken(t *testing.T) {
-	SetProp(PropJwtPrivateKey, privateKey)
-	SetProp(PropJwtPublicKey, publicKey)
-	SetProp(PropJwtIssue, issuer)
+	miso.SetProp(PropJwtPrivateKey, privateKey)
+	miso.SetProp(PropJwtPublicKey, publicKey)
+	miso.SetProp(PropJwtIssue, issuer)
 	tkn, err := JwtEncode(jwt.MapClaims{
 		"username": "zhuangyongj",
 	}, 15*time.Minute)
@@ -30,9 +31,9 @@ func TestEncodeToken(t *testing.T) {
 }
 
 func TestDecodeToken(t *testing.T) {
-	SetProp(PropJwtPrivateKey, privateKey)
-	SetProp(PropJwtPublicKey, publicKey)
-	SetProp(PropJwtIssue, issuer)
+	miso.SetProp(PropJwtPrivateKey, privateKey)
+	miso.SetProp(PropJwtPublicKey, publicKey)
+	miso.SetProp(PropJwtIssue, issuer)
 
 	jwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTA2MjM1MTQsImlzcyI6Imp3dF90ZXN0IiwidXNlcm5hbWUiOiJ6aHVhbmd5b25naiJ9.Q_2CR6MyZ9jzmI0HswtfMHZ7-T9BZK62XXEDz_GwmmO_YRYRF5NmSdYng3-jHVjUsNIsfvu5VSUxOSrUgGzsURwYvxG-I8BtXAJf3dtV4n---iz9zvm8TzItiVeplEgW3N_QGx5RibKQM8lwt3-VZL2tU70AmsxNGVlKp63We_A"
 	tkn, err := JwtDecode(jwt)

@@ -1,4 +1,4 @@
-package miso
+package crypto
 
 import (
 	"crypto/rsa"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
@@ -34,7 +35,7 @@ func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
 		return "", err
 	}
 
-	claims["iss"] = GetPropStr(PropJwtIssue)
+	claims["iss"] = miso.GetPropStr(PropJwtIssue)
 	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -72,14 +73,14 @@ func loadPublicKey() (any, error) {
 	pubKeyRwmu.Lock()
 	defer pubKeyRwmu.Unlock()
 
-	if !HasProp(PropJwtPublicKey) {
+	if !miso.HasProp(PropJwtPublicKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := GetPropStr(PropJwtPublicKey)
+	k := miso.GetPropStr(PropJwtPublicKey)
 	pk, err := LoadPubKey(k)
 	if err != nil {
-		EmptyRail().Errorf("Failed to load public key, %v", err)
+		miso.EmptyRail().Errorf("Failed to load public key, %v", err)
 		return nil, err
 	}
 
@@ -102,14 +103,14 @@ func loadPrivateKey() (any, error) {
 		return privKey, nil
 	}
 
-	if !HasProp(PropJwtPrivateKey) {
+	if !miso.HasProp(PropJwtPrivateKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := GetPropStr(PropJwtPrivateKey)
+	k := miso.GetPropStr(PropJwtPrivateKey)
 	pk, err := LoadPrivKey(k)
 	if err != nil {
-		EmptyRail().Errorf("Failed to load private key, %v", err)
+		miso.EmptyRail().Errorf("Failed to load private key, %v", err)
 		return nil, err
 	}
 
@@ -118,7 +119,7 @@ func loadPrivateKey() (any, error) {
 }
 
 func ValidateIssuer() jwt.ParserOption {
-	iss := GetPropStr(PropJwtIssue)
+	iss := miso.GetPropStr(PropJwtIssue)
 	if iss == "" {
 		return func(p *jwt.Parser) {}
 	}

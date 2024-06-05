@@ -1,4 +1,4 @@
-package miso
+package crypto
 
 import (
 	"crypto/rsa"
@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/curtisnewbie/miso/miso"
 )
 
 var (
@@ -28,7 +30,7 @@ func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
 		content = content + "\n" + PRIV_PEM_END
 	}
 
-	decodedPem, _ := pem.Decode(UnsafeStr2Byt(content))
+	decodedPem, _ := pem.Decode(miso.UnsafeStr2Byt(content))
 	if decodedPem == nil {
 		return nil, ErrDecodePemFailed
 	}
@@ -54,7 +56,7 @@ func LoadPubKey(content string) (*rsa.PublicKey, error) {
 		content = content + "\n" + PUB_PEM_END
 	}
 
-	decodedPem, _ := pem.Decode(UnsafeStr2Byt(content))
+	decodedPem, _ := pem.Decode(miso.UnsafeStr2Byt(content))
 	if decodedPem == nil {
 		return nil, ErrDecodePemFailed
 	}

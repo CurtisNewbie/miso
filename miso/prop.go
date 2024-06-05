@@ -151,18 +151,6 @@ const (
 	/*
 		------------------------------------
 
-		Prop for JWT
-
-		------------------------------------
-	*/
-
-	PropJwtPublicKey  = "jwt.key.public"
-	PropJwtPrivateKey = "jwt.key.private"
-	PropJwtIssue      = "jwt.key.issuer"
-
-	/*
-		------------------------------------
-
 		Prop for Metrics & Prometheus
 
 		------------------------------------
