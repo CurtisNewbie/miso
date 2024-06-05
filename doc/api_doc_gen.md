@@ -126,5 +126,3 @@ The resulting documentation looks like the following (this is the markdown versi
         }
       });
     ```
-
----
