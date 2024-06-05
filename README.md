@@ -115,7 +115,7 @@ mysql:
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.0.29
+go get github.com/curtisnewbie/miso@v0.0.34
 ```
 
 ## Generate miso project
