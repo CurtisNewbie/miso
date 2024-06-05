@@ -54,6 +54,77 @@ func GetFileInfoEp(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
 }
 ```
 
-The resulting documentation looks like the following (generated webpage):
+The resulting documentation looks like the following (this is the markdown version, but the web page version is almost the same):
 
-<img src="./apidoc-demo.png" height="700px"/>
+- GET /file/info
+  - Description: Fetch file info
+  - Query Parameter:
+    - "fileId": actual file_id of the file record
+    - "uploadFileId": temporary file_id returned when uploading files
+  - JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+    - "data": (FstoreFile) response data
+      - "fileId": (string) file unique identifier
+      - "name": (string) file name
+      - "status": (string) status, 'NORMAL', 'LOG_DEL' (logically deleted), 'PHY_DEL' (physically deleted)
+      - "size": (int64) file size in bytes
+      - "md5": (string) MD5 checksum
+      - "uplTime": (int64) upload time
+      - "logDelTime": (int64) logically deleted at
+      - "phyDelTime": (int64) physically deleted at
+  - cURL:
+    ```sh
+    curl -X GET 'http://localhost:8084/file/info?fileId=&uploadFileId='
+    ```
+
+  - JSON Response Object In TypeScript:
+    ```ts
+    export interface Resp {
+      errorCode?: string             // error code
+      msg?: string                   // message
+      error?: boolean                // whether the request was successful
+      data?: FstoreFile
+    }
+    export interface FstoreFile {
+      fileId?: string                // file unique identifier
+      name?: string                  // file name
+      status?: string                // status, 'NORMAL', 'LOG_DEL' (logically deleted), 'PHY_DEL' (physically deleted)
+      size?: number                  // file size in bytes
+      md5?: string                   // MD5 checksum
+      uplTime?: number               // upload time
+      logDelTime?: number            // logically deleted at
+      phyDelTime?: number            // physically deleted at
+    }
+    ```
+
+  - Angular HttpClient Demo:
+    ```ts
+    import { MatSnackBar } from "@angular/material/snack-bar";
+    import { HttpClient } from "@angular/common/http";
+
+    constructor(
+      private snackBar: MatSnackBar,
+      private http: HttpClient
+    ) {}
+
+    let fileId: any | null = null;
+    let uploadFileId: any | null = null;
+    this.http.get<any>(`/file/info?fileId=${fileId}&uploadFileId=${uploadFileId}`)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+          let dat: FstoreFile = resp.data;
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+    ```
+
+---
