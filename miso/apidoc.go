@@ -669,8 +669,12 @@ func guessTsItfName(n string) string {
 func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {
 	sl := new(SLPinter)
 	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
+	sl.Printlnf("import { HttpClient } from \"@angular/common/http\";")
 	sl.Printlnf("")
-	sl.Printlnf("constructor(private snackBar: MatSnackBar) { }")
+	sl.Printlnf("constructor(")
+	sl.Printlnf(Spaces(2) + "private snackBar: MatSnackBar,")
+	sl.Printlnf(Spaces(2) + "private http: HttpClient")
+	sl.Printlnf(") {}")
 	sl.Printlnf("")
 
 	var qp string
