@@ -143,7 +143,7 @@ func (ep *EventPipeline[T]) Send(rail miso.Rail, event T) error {
 func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail miso.Rail, t T) error) *EventPipeline[T] {
 	SubEventBus[T](ep.name, concurrency, func(rail miso.Rail, t T) error {
 		if ep.logPaylod {
-			rail.Infof("Pipeline %s receive %#v", ep.name, t)
+			rail.Infof("Pipeline %s receive %+v", ep.name, t)
 		}
 		return listener(rail, t)
 	})
