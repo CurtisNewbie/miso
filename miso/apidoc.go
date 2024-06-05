@@ -44,8 +44,8 @@ type HttpRouteDoc struct {
 	Resource         string     // the documented resource that the route should be bound to (metadata).
 	Headers          []ParamDoc // the documented header parameters that will be used by the endpoint (metadata).
 	QueryParams      []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
-	JsonRequestDesc  []jsonDesc // the documented json request type that is expected by the endpoint (metadata).
-	JsonResponseDesc []jsonDesc // the documented json response type that will be returned by the endpoint (metadata).
+	JsonRequestDesc  []JsonDesc // the documented json request type that is expected by the endpoint (metadata).
+	JsonResponseDesc []JsonDesc // the documented json response type that will be returned by the endpoint (metadata).
 	Curl             string     // curl demo
 	JsonReqTsDef     string     // json request type def in ts
 	JsonRespTsDef    string     // json response type def in ts
@@ -73,7 +73,7 @@ func buildHttpRouteDoc(hr []HttpRoute) []HttpRouteDoc {
 		if r.JsonRequestVal != nil {
 			rv := reflect.ValueOf(r.JsonRequestVal)
 			reqTypeName = rv.Type().Name()
-			d.JsonRequestDesc = buildJsonDesc(rv)
+			d.JsonRequestDesc = BuildJsonDesc(rv)
 			d.JsonReqTsDef = genJsonTsDef(reqTypeName, d.JsonRequestDesc)
 		}
 
@@ -81,7 +81,7 @@ func buildHttpRouteDoc(hr []HttpRoute) []HttpRouteDoc {
 		if r.JsonResponseVal != nil {
 			rv := reflect.ValueOf(r.JsonResponseVal)
 			respTypeName = rv.Type().Name()
-			d.JsonResponseDesc = buildJsonDesc(rv)
+			d.JsonResponseDesc = BuildJsonDesc(rv)
 			d.JsonRespTsDef = genJsonTsDef(respTypeName, d.JsonResponseDesc)
 		}
 
@@ -284,7 +284,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 	return b.String()
 }
 
-func appendJsonPayloadDoc(b *strings.Builder, jds []jsonDesc, indent int) {
+func appendJsonPayloadDoc(b *strings.Builder, jds []JsonDesc, indent int) {
 	for _, jd := range jds {
 		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", Spaces(indent+2), jd.Name, jd.TypeName, jd.Desc))
 
@@ -294,9 +294,9 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []jsonDesc, indent int) {
 	}
 }
 
-func buildJsonDesc(v reflect.Value) []jsonDesc {
+func BuildJsonDesc(v reflect.Value) []JsonDesc {
 	t := v.Type()
-	jds := make([]jsonDesc, 0, 5)
+	jds := make([]JsonDesc, 0, 5)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		if IsVoid(f.Type) {
@@ -330,12 +330,12 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 			typeName = typeAlias
 		}
 
-		jd := jsonDesc{
+		jd := JsonDesc{
 			FieldName: f.Name,
 			Name:      name,
 			TypeName:  typeName,
 			Desc:      f.Tag.Get(TagApiDocDesc),
-			Fields:    []jsonDesc{},
+			Fields:    []JsonDesc{},
 		}
 
 		if typeAliasMatched {
@@ -367,19 +367,19 @@ func buildJsonDesc(v reflect.Value) []jsonDesc {
 	return jds
 }
 
-func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []jsonDesc) []jsonDesc {
+func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []JsonDesc) []JsonDesc {
 	if t.Kind() == reflect.Struct {
-		fields = append(fields, buildJsonDesc(v)...)
+		fields = append(fields, BuildJsonDesc(v)...)
 	} else if t.Kind() == reflect.Slice {
 		et := t.Elem()
 		if et.Kind() == reflect.Struct {
 			ev := reflect.New(et).Elem()
-			fields = append(fields, buildJsonDesc(ev)...)
+			fields = append(fields, BuildJsonDesc(ev)...)
 		}
 	} else if t.Kind() == reflect.Pointer {
 		ev := reflect.New(t.Elem()).Elem()
 		if ev.Kind() == reflect.Struct {
-			fields = append(fields, buildJsonDesc(ev)...)
+			fields = append(fields, BuildJsonDesc(ev)...)
 		}
 	} else if t.Kind() == reflect.Interface {
 		if !v.IsZero() && !v.IsNil() {
@@ -392,12 +392,12 @@ func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []jsonDesc) [
 	return fields
 }
 
-type jsonDesc struct {
+type JsonDesc struct {
 	FieldName string
 	Name      string
 	TypeName  string
 	Desc      string
-	Fields    []jsonDesc
+	Fields    []JsonDesc
 }
 
 var (
@@ -532,7 +532,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 	return sl.String()
 }
 
-func genJsonReqMap(jm map[string]any, descs []jsonDesc) {
+func genJsonReqMap(jm map[string]any, descs []JsonDesc) {
 	for _, d := range descs {
 		if len(d.Fields) > 0 {
 			t := map[string]any{}
@@ -561,7 +561,7 @@ func genJsonReqMap(jm map[string]any, descs []jsonDesc) {
 }
 
 // generate one or more typescript interface definitions based on a set of jsonDesc.
-func genJsonTsDef(typeName string, descs []jsonDesc) string {
+func genJsonTsDef(typeName string, descs []JsonDesc) string {
 	if len(descs) < 1 {
 		return ""
 	}
@@ -578,7 +578,7 @@ func genJsonTsDef(typeName string, descs []jsonDesc) string {
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef IndWritef, deferred *[]func(), descs []jsonDesc) {
+func genJsonTsDefRecur(indentc int, writef IndWritef, deferred *[]func(), descs []JsonDesc) {
 	for i := range descs {
 		d := descs[i]
 
@@ -852,7 +852,7 @@ type PipelineDoc struct {
 	Exchange    string
 	RoutingKey  string
 	Queue       string
-	PayloadDesc []jsonDesc
+	PayloadDesc []JsonDesc
 }
 
 func buildPipelineDoc(epd []EventPipelineDesc) []PipelineDoc {
@@ -867,7 +867,7 @@ func buildPipelineDoc(epd []EventPipelineDesc) []PipelineDoc {
 		}
 		if pd.PayloadVal != nil {
 			rv := reflect.ValueOf(pd.PayloadVal)
-			d.PayloadDesc = buildJsonDesc(rv)
+			d.PayloadDesc = BuildJsonDesc(rv)
 		}
 		docs = append(docs, d)
 	}
