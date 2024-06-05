@@ -58,7 +58,6 @@ Initializing main.go
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
-- [Customize Build](./doc/customize_build.md)
 - [Json Processing Behaviour](./doc/json.md)
 - [Using pprof](./doc/pprof.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
