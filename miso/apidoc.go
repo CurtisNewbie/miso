@@ -686,21 +686,43 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	for _, h := range d.Headers {
 		sl.Printlnf("let %s: any | null = null;", CamelCase(h.Name))
 	}
+
+	isBuiltinResp := false
 	if respTypeName != "" {
 		respTypeName = guessTsItfName(respTypeName)
+		if respTypeName == "Resp" || respTypeName == "GnResp" {
+			hasData := false
+			hasError := false
+			for _, d := range d.JsonResponseDesc {
+				if d.FieldName == "Data" {
+					hasData = true
+				} else if d.FieldName == "Error" {
+					hasError = true
+				}
+			}
+			isBuiltinResp = hasData && hasError
+		}
 	}
 
 	if reqTypeName != "" {
 		reqTypeName = guessTsItfName(reqTypeName)
 		sl.Printlnf("let req: %s | null = null;", reqTypeName)
 		if respTypeName != "" {
-			sl.Printlnf("this.http.%s<%s>(%s, req", strings.ToLower(d.Method), respTypeName, url)
+			if isBuiltinResp {
+				sl.Printlnf("this.http.%s<any>(%s, req", strings.ToLower(d.Method), url)
+			} else {
+				sl.Printlnf("this.http.%s<%s>(%s, req", strings.ToLower(d.Method), respTypeName, url)
+			}
 		} else {
 			sl.Printlnf("this.http.%s<any>(%s, req", strings.ToLower(d.Method), url)
 		}
 	} else {
 		if respTypeName != "" {
-			sl.Printlnf("this.http.%s<%s>(%s", strings.ToLower(d.Method), respTypeName, url)
+			if isBuiltinResp {
+				sl.Printlnf("this.http.%s<any>(%s", strings.ToLower(d.Method), url)
+			} else {
+				sl.Printlnf("this.http.%s<%s>(%s", strings.ToLower(d.Method), respTypeName, url)
+			}
 		} else {
 			sl.Printlnf("this.http.%s<any>(%s", strings.ToLower(d.Method), url)
 		}
@@ -720,12 +742,23 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	sl.Printlnf(Spaces(2) + ".subscribe({")
 
 	if respTypeName != "" {
-		respTypeName = guessTsItfName(respTypeName)
-		sl.Printlnf(Spaces(4)+"next: (resp: %s) => {", respTypeName)
+		sl.Printlnf(Spaces(4) + "next: (resp) => {")
+		if isBuiltinResp {
+			var dataField JsonDesc
+			for i, f := range d.JsonResponseDesc {
+				if f.FieldName == "Data" {
+					dataField = d.JsonResponseDesc[i]
+					break
+				}
+			}
+			sl.Printlnf(Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
+		}
+		sl.Printlnf(Spaces(4) + "},")
 	} else {
 		sl.Printlnf(Spaces(4) + "next: () => {")
+		sl.Printlnf(Spaces(4) + "},")
 	}
-	sl.Printlnf(Spaces(4) + "},")
+
 	sl.Printlnf(Spaces(4) + "error: (err) => {")
 	sl.Printlnf(Spaces(6) + "console.log(err)")
 	sl.Printlnf(Spaces(4) + "}")
@@ -830,8 +863,18 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 		if strings.HasPrefix(respGeneName, "*") {
 			sl.Printlnf("%sreturn nil, err", Tabs(1))
 		} else {
-			sl.Printlnf("%svar dat %s", Tabs(1), respGeneName)
-			sl.Printlnf("%sreturn dat, err", Tabs(1))
+			dat := "dat"
+			switch respGeneName {
+			case "string":
+				dat = "\"\""
+			case "int", "int8", "int16", "int32", "int64", "float", "float32", "float64":
+				dat = "0"
+			case "bool":
+				dat = "false"
+			default:
+				sl.Printlnf("%svar dat %s", Tabs(1), respGeneName)
+			}
+			sl.Printlnf("%sreturn %s, err", Tabs(1), dat)
 		}
 	}
 	sl.Printlnf("}")
@@ -867,4 +910,16 @@ type PipelineDoc struct {
 // Register func to supply PipelineDoc.
 func AddGetPipelineDocFunc(f GetPipelineDocFunc) {
 	getPipelineDocFuncs = append(getPipelineDocFuncs, f)
+}
+
+func guessTsTypeName(d JsonDesc) string {
+	if len(d.Fields) > 0 {
+		tsTypeName := guessTsItfName(d.TypeName)
+		if strings.HasPrefix(d.TypeName, "[]") {
+			return tsTypeName + "[]"
+		}
+		return tsTypeName
+	} else {
+		return guessTsPrimiTypeName(d.TypeName)
+	}
 }
