@@ -1,4 +1,4 @@
-package migrate
+package svc
 
 import (
 	"embed"
