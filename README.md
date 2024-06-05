@@ -8,108 +8,6 @@ Miso provides an opinionated way to write application, common functionalities su
 
 The overall target is to make it as small and simple as possible, backward compatibility may break in future releases.
 
-<!-- **How a miso app may look like (for demonstration only):**
-
-```go
-func main() {
-  // register callbacks that are invoked after configuration loaded, before server bootstrap
-  miso.PreServerBootstrap(PrepareServer)
-
-  // register callbacks that are invoked after server fully bootstrapped
-  miso.PostServerBootstrapped(TriggerWorkflowOnBootstrapped)
-
-  // start the bootstrap process
-  miso.BootstrapServer(os.Args)
-}
-
-func PrepareServer(rail miso.Rail) error {
-
-  // declare event bus (for mq)
-  miso.NewEventBus(demoEventBusName)
-
-  // register some distributed tasks
-  err := miso.ScheduleDistributedTask(miso.Job{
-    Cron:                   "*/15 * * * *",
-    CronWithSeconds:        false,
-    Name:                   "MyDistributedTask",
-    LogJobExec:             true,
-    TriggeredOnBoostrapped: false,
-    Run: func(miso miso.Rail) error {
-      rail.Infof("MyDistributedTask running, now: %v", time.Now())
-      return nil
-    },
-  })
-  if err != nil {
-    panic(err) // for demo only
-  }
-
-  // register endpoints, api-doc are automatically generated
-  // routes can also be grouped based on shared url path
-  miso.BaseRoute("/open/api/demo/grouped").Group(
-
-    // /open/api/demo/grouped/post
-    miso.IPost("/open/api/demo/post",
-      func(inb *miso.Inbound, req PostReq) (PostRes, error) {
-        rail := inb.Rail()
-        rail.Infof("Received request: %#v", req)
-
-        // e.g., read some table
-        var res PostRes
-        err := miso.GetMySQL().
-          Raw(`SELECT result_id FROM post_result WHERE request_id = ?`,
-            req.RequestId).
-          Scan(&res).Error
-        if err != nil {
-          return PostRes{}, err
-        }
-
-        return res, nil // serialized to json
-      }).
-      Desc("Post demo stuff").                            // describe endpoint in api-doc
-      DocHeader("Authorization", "Bearer Authorization"), // document request header
-
-    miso.BaseRoute("/subgroup").Group(
-
-      // /open/api/demo/grouped/subgroup/post
-      miso.IPost("/post1", doSomethingEndpoint),
-    ),
-  )
-  return nil
-}
-
-func TriggerWorkflowOnBootstrapped(rail miso.Rail) error {
-  // maybe send some requests to other backend services
-  // (using consul-based service discovery)
-  var res TriggerResult
-  err := miso.NewDynTClient(rail, "/open/api/engine", "workflow-engine" /* service name */).
-    PostJson(TriggerWorkFlow{WorkFlowId: "123"}).
-    Json(&res)
-
-  if err != nil {
-    rail.Errorf("request failed, %v", err)
-  } else {
-    rail.Infof("request succeded, %#v", res)
-  }
-  return nil
-}
-```
-
-**Example of configuration file:**
-
-```yml
-mode.production: true
-
-mysql:
-  enabled: true
-  user: root
-  password: 123456
-  database: mydb
-  host: localhost
-  port: 3306
-```
-
--->
-
 ## Include miso in your project
 
 Install a specific release of miso:
@@ -170,7 +68,7 @@ Initializing main.go
 
 ## Projects that use miso
 
-The following are some projects that use miso (mine tho):
+The following are projects that use miso (mine tho):
 
 - [gatekeeper](https://github.com/curtisnewbie/gatekeeper)
 - [event-pump](https://github.com/curtisnewbie/event-pump)
