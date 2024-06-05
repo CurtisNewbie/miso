@@ -126,13 +126,13 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString("- Expected Access Scope: ")
 			b.WriteString(r.Scope)
 		}
-		// if r.Resource != "" {
-		// 	b.WriteRune('\n')
-		// 	b.WriteString(Spaces(2))
-		// 	b.WriteString("- Bound to Resource: \"")
-		// 	b.WriteString(r.Resource)
-		// 	b.WriteRune('"')
-		// }
+		if r.Resource != "" {
+			b.WriteRune('\n')
+			b.WriteString(Spaces(2))
+			b.WriteString("- Bound to Resource: `\"")
+			b.WriteString(r.Resource)
+			b.WriteString("\"`")
+		}
 		if len(r.Headers) > 0 {
 			b.WriteRune('\n')
 			b.WriteString(Spaces(2))
@@ -593,11 +593,11 @@ func genJsonTsDefRecur(indentc int, writef IndWritef, deferred *[]func(), descs 
 
 		if len(d.Fields) > 0 {
 			tsTypeName := guessTsItfName(d.TypeName)
+			n := tsTypeName
 			if strings.HasPrefix(d.TypeName, "[]") {
-				writef(indentc, "%s?: %s[]", d.Name, tsTypeName)
-			} else {
-				writef(indentc, "%s?: %s", d.Name, tsTypeName)
+				n += "[]"
 			}
+			writef(indentc, "%s?: %s", d.Name, n)
 
 			*deferred = append(*deferred, func() {
 				writef(0, "export interface %s {", tsTypeName)
@@ -667,6 +667,10 @@ func guessTsItfName(n string) string {
 
 func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {
 	sl := new(SLPinter)
+	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
+	sl.Printlnf("")
+	sl.Printlnf("constructor(private snackBar: MatSnackBar) { }")
+	sl.Printlnf("")
 
 	var qp string
 	for i, q := range d.QueryParams {
@@ -688,45 +692,37 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	}
 
 	isBuiltinResp := false
+	hasData := false
 	if respTypeName != "" {
 		respTypeName = guessTsItfName(respTypeName)
 		if respTypeName == "Resp" || respTypeName == "GnResp" {
-			hasData := false
+			hasErrorCode := false
 			hasError := false
 			for _, d := range d.JsonResponseDesc {
 				if d.FieldName == "Data" {
 					hasData = true
 				} else if d.FieldName == "Error" {
 					hasError = true
+				} else if d.FieldName == "ErrorCode" {
+					hasErrorCode = true
 				}
 			}
-			isBuiltinResp = hasData && hasError
+			isBuiltinResp = hasErrorCode && hasError
 		}
 	}
 
+	reqVar := ""
 	if reqTypeName != "" {
 		reqTypeName = guessTsItfName(reqTypeName)
 		sl.Printlnf("let req: %s | null = null;", reqTypeName)
-		if respTypeName != "" {
-			if isBuiltinResp {
-				sl.Printlnf("this.http.%s<any>(%s, req", strings.ToLower(d.Method), url)
-			} else {
-				sl.Printlnf("this.http.%s<%s>(%s, req", strings.ToLower(d.Method), respTypeName, url)
-			}
-		} else {
-			sl.Printlnf("this.http.%s<any>(%s, req", strings.ToLower(d.Method), url)
-		}
-	} else {
-		if respTypeName != "" {
-			if isBuiltinResp {
-				sl.Printlnf("this.http.%s<any>(%s", strings.ToLower(d.Method), url)
-			} else {
-				sl.Printlnf("this.http.%s<%s>(%s", strings.ToLower(d.Method), respTypeName, url)
-			}
-		} else {
-			sl.Printlnf("this.http.%s<any>(%s", strings.ToLower(d.Method), url)
-		}
+		reqVar = ", req"
 	}
+	n := "any"
+	if respTypeName != "" && !isBuiltinResp {
+		n = respTypeName
+	}
+	sl.Printlnf("this.http.%s<%s>(%s%s", strings.ToLower(d.Method), n, url, reqVar)
+
 	if len(d.Headers) > 0 {
 		sl.Printf(",")
 		sl.Printlnf(Spaces(2) + "{")
@@ -743,15 +739,15 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 
 	if respTypeName != "" {
 		sl.Printlnf(Spaces(4) + "next: (resp) => {")
-		if isBuiltinResp {
-			var dataField JsonDesc
-			for i, f := range d.JsonResponseDesc {
-				if f.FieldName == "Data" {
-					dataField = d.JsonResponseDesc[i]
-					break
-				}
+		if isBuiltinResp && hasData {
+			sl.Printlnf(Spaces(6) + "if (resp.error) {")
+			sl.Printlnf(Spaces(8) + "this.snackBar.open(resp.msg, \"\", { duration: 6000 })")
+			sl.Printlnf(Spaces(8) + "return;")
+			sl.Printlnf(Spaces(6) + "}")
+			if dataField, ok := SliceFilterFirst(d.JsonResponseDesc,
+				func(d JsonDesc) bool { return d.FieldName == "Data" }); ok {
+				sl.Printlnf(Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
 			}
-			sl.Printlnf(Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
 		}
 		sl.Printlnf(Spaces(4) + "},")
 	} else {
@@ -761,6 +757,7 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 
 	sl.Printlnf(Spaces(4) + "error: (err) => {")
 	sl.Printlnf(Spaces(6) + "console.log(err)")
+	sl.Printlnf(Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"\", { duration: 3000 })")
 	sl.Printlnf(Spaces(4) + "}")
 	sl.Printlnf(Spaces(2) + "});")
 	return sl.String()

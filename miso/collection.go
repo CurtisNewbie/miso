@@ -126,6 +126,17 @@ func NewSet[T comparable]() Set[T] {
 	return Set[T]{Keys: map[T]Void{}}
 }
 
+// Select one from the slice that matches the condition.
+func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
+	for i := range items {
+		t := items[i]
+		if f(t) {
+			return t, true
+		}
+	}
+	return NewVar[T](), false
+}
+
 // Select random one from the slice
 func SliceGetOne[T any](items []*T) *T {
 	l := len(items)
