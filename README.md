@@ -4,11 +4,11 @@
 
 Miso, yet another simple application framework. It's mainly a fun project for me to prove: ***'yes, we can just write a framework ourselves.'***.
 
-Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write almost any kind of application.
+Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write *almost* any kind of application, but it's mainly a backend framework.
 
 The overall target is to make it as small and simple as possible, backward compatibility may break in future releases.
 
-**How a miso app may look like (for demonstration only):**
+<!-- **How a miso app may look like (for demonstration only):**
 
 ```go
 func main() {
@@ -108,12 +108,49 @@ mysql:
   port: 3306
 ```
 
+-->
+
 ## Include miso in your project
 
 Install a specific release of miso:
 
 ```
 go get github.com/curtisnewbie/miso@v0.0.29
+```
+
+## Generate miso project
+
+Build latest `misogen` tool:
+
+```sh
+go build -o misogen cmd/misogen/main.go
+```
+
+Use `misogen` to generate new projects, e.g.,
+
+```sh
+$ misogen -h
+Usage of misogen:
+  -cli
+        Generate CLI style project
+  -disable-web
+        Disable web server
+  -name string
+        Module name
+  -static
+        Generate code to embed and statically host frontend project
+  -svc
+        Generate code to integrate svc for automatic schema migration
+
+$ mkdir myapp && cd myapp && misogen -name "myapp" -svc
+misogen, current miso version: v0.0.34
+
+Initialized module 'myapp'
+Installing dependency: github.com/curtisnewbie/miso/miso@v0.0.34
+Initializing conf.yml
+Initializing internal/schema/scripts/schema.sql
+Initializing internal/schema/migrate.go
+Initializing main.go
 ```
 
 ## Documentations
