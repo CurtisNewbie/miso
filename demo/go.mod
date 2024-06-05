@@ -2,10 +2,7 @@ module github.com/curtisnewbie/miso/demo
 
 go 1.20
 
-require (
-	github.com/curtisnewbie/miso v0.0.24
-	github.com/gin-gonic/gin v1.8.1
-)
+require github.com/curtisnewbie/miso v0.0.24
 
 require (
 	github.com/armon/go-metrics v0.4.0 // indirect
@@ -15,6 +12,7 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/gin-gonic/gin v1.8.1 // indirect
 	github.com/go-co-op/gocron v1.17.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
