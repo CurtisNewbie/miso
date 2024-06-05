@@ -1,6 +1,10 @@
 package miso
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/spf13/cast"
+)
 
 func TestSet(t *testing.T) {
 	s := NewSet[string]()
@@ -99,4 +103,22 @@ func BenchmarkDistinct(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestSliceMap(t *testing.T) {
+	s := []string{"1", "2", "3"}
+	v := SliceMap(s, func(s string) int { return cast.ToInt(s) })
+	if len(v) < 3 {
+		t.Fatal("len != 3")
+	}
+	if v[0] != 1 {
+		t.Fatal("[0] != 1")
+	}
+	if v[1] != 2 {
+		t.Fatal("[1] != 2")
+	}
+	if v[2] != 3 {
+		t.Fatal("[2] != 3")
+	}
+	t.Log(v)
 }
