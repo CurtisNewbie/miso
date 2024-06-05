@@ -40,3 +40,12 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 	flag.Var(p, name, usage)
 	return p
 }
+
+func CliRun(ex string, args ...string) ([]byte, error) {
+	cmd := exec.Command(ex, args...)
+	cmdout, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	return cmdout, nil
+}
