@@ -99,22 +99,6 @@ const (
 	/*
 		------------------------------------
 
-		Prop for RabbitMQ
-
-		------------------------------------
-	*/
-
-	PropRabbitMqEnabled     = "rabbitmq.enabled"
-	PropRabbitMqHost        = "rabbitmq.host"
-	PropRabbitMqPort        = "rabbitmq.port"
-	PropRabbitMqUsername    = "rabbitmq.username"
-	PropRabbitMqPassword    = "rabbitmq.password"
-	PropRabbitMqVhost       = "rabbitmq.vhost"
-	PropRabbitMqConsumerQos = "rabbitmq.consumer.qos"
-
-	/*
-		------------------------------------
-
 		Prop for Tracing
 
 		------------------------------------

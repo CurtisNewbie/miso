@@ -1,4 +1,4 @@
-package miso
+package rabbit
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/cast"
 )
@@ -48,7 +49,7 @@ var (
 		New: func() any {
 			c, err := newPubChan()
 			if err != nil {
-				Errorf("Failed to create new publishing channel, %v", err)
+				miso.Errorf("Failed to create new publishing channel, %v", err)
 				return nil
 			}
 
@@ -69,25 +70,25 @@ var (
 )
 
 func init() {
-	SetDefProp(PropRabbitMqEnabled, false)
-	SetDefProp(PropRabbitMqHost, "localhost")
-	SetDefProp(PropRabbitMqPort, 5672)
-	SetDefProp(PropRabbitMqUsername, "guest")
-	SetDefProp(PropRabbitMqPassword, "guest")
-	SetDefProp(PropRabbitMqVhost, "")
-	SetDefProp(PropRabbitMqConsumerQos, DefaultQos)
+	miso.SetDefProp(PropRabbitMqEnabled, false)
+	miso.SetDefProp(PropRabbitMqHost, "localhost")
+	miso.SetDefProp(PropRabbitMqPort, 5672)
+	miso.SetDefProp(PropRabbitMqUsername, "guest")
+	miso.SetDefProp(PropRabbitMqPassword, "guest")
+	miso.SetDefProp(PropRabbitMqVhost, "")
+	miso.SetDefProp(PropRabbitMqConsumerQos, DefaultQos)
 
-	RegisterBootstrapCallback(ComponentBootstrap{
+	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap RabbitMQ",
 		Bootstrap: RabbitBootstrap,
 		Condition: RabbitBootstrapCondition,
-		Order:     BootstrapOrderL4,
+		Order:     miso.BootstrapOrderL4,
 	})
 }
 
 func amqpChannelFinalizer(c *amqp.Channel) {
 	if !c.IsClosed() {
-		Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
+		miso.Debugf("Garbage collecting *amqp.Channel from pool, closing channel")
 		c.Close()
 	}
 }
@@ -112,20 +113,20 @@ type ExchangeRegistration struct {
 
 /* Is RabbitMQ Enabled */
 func RabbitMQEnabled() bool {
-	return GetPropBool(PropRabbitMqEnabled)
+	return miso.GetPropBool(PropRabbitMqEnabled)
 }
 
 // RabbitListener of Queue
 type RabbitListener interface {
-	Queue() string                          // return name of the queue
-	Handle(rail Rail, payload string) error // handle message
+	Queue() string                               // return name of the queue
+	Handle(rail miso.Rail, payload string) error // handle message
 	Concurrency() int
 }
 
 // Json Message Listener for Queue
 type JsonMsgListener[T any] struct {
 	QueueName     string
-	Handler       func(rail Rail, payload T) error
+	Handler       func(rail miso.Rail, payload T) error
 	NumOfRoutines int
 }
 
@@ -133,9 +134,9 @@ func (m JsonMsgListener[T]) Queue() string {
 	return m.QueueName
 }
 
-func (m JsonMsgListener[T]) Handle(rail Rail, payload string) error {
+func (m JsonMsgListener[T]) Handle(rail miso.Rail, payload string) error {
 	var t T
-	if e := ParseJson(UnsafeStr2Byt(payload), &t); e != nil {
+	if e := miso.ParseJson(miso.UnsafeStr2Byt(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -156,7 +157,7 @@ func (m JsonMsgListener[T]) String() string {
 // Message Listener for Queue
 type MsgListener struct {
 	QueueName     string
-	Handler       func(rail Rail, payload string) error
+	Handler       func(rail miso.Rail, payload string) error
 	NumOfRoutines int
 }
 
@@ -164,7 +165,7 @@ func (m MsgListener) Queue() string {
 	return m.QueueName
 }
 
-func (m MsgListener) Handle(rail Rail, payload string) error {
+func (m MsgListener) Handle(rail miso.Rail, payload string) error {
 	return m.Handler(rail, payload)
 }
 
@@ -181,13 +182,13 @@ func (m MsgListener) String() string {
 }
 
 // Publish json message with confirmation
-func PublishJson(c Rail, obj any, exchange string, routingKey string) error {
+func PublishJson(c miso.Rail, obj any, exchange string, routingKey string) error {
 	return PublishJsonHeaders(c, obj, exchange, routingKey, nil)
 }
 
 // Publish json message with headers and confirmation
-func PublishJsonHeaders(c Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
-	j, err := WriteJson(obj)
+func PublishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
+	j, err := miso.WriteJson(obj)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message body, %w", err)
 	}
@@ -195,12 +196,12 @@ func PublishJsonHeaders(c Rail, obj any, exchange string, routingKey string, hea
 }
 
 // Publish plain text message with confirmation
-func PublishText(c Rail, msg string, exchange string, routingKey string) error {
-	return PublishMsg(c, UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
+func PublishText(c miso.Rail, msg string, exchange string, routingKey string) error {
+	return PublishMsg(c, miso.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
 }
 
 // Publish message with confirmation
-func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
+func PublishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
 	_pubWg.Add(1)
 	defer _pubWg.Done()
 
@@ -215,7 +216,7 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 	}
 
 	// propogate trace through headers
-	UsePropagationKeys(func(key string) {
+	miso.UsePropagationKeys(func(key string) {
 		headers[key] = c.CtxValue(key)
 	})
 
@@ -224,7 +225,7 @@ func PublishMsg(c Rail, msg []byte, exchange string, routingKey string, contentT
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 		Headers:      headers,
-		MessageId:    GenIdP("mq_"),
+		MessageId:    miso.GenIdP("mq_"),
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
 		false, false, publishing)
@@ -259,7 +260,7 @@ func DeclareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	if e != nil {
 		return fmt.Errorf("failed to declare queue, %v, %w", queue.Name, e)
 	}
-	Debugf("Declared queue '%s'", dqueue.Name)
+	miso.Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
 }
 
@@ -291,7 +292,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	if e != nil {
 		return fmt.Errorf("failed to declare binding, queue: %v, routingkey: %v, exchange: %v, %w", bind.Queue, bind.RoutingKey, bind.Exchange, e)
 	}
-	Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
+	miso.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 
 	// declare a redeliver queue, this queue will not have any subscriber, once the messages are expired, they are
 	// routed to the original queue
@@ -309,7 +310,7 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 		return fmt.Errorf("failed to declare redeliver queue '%v' for '%v', %w", rq, bind.Queue, e)
 	}
 	redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
-	Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
+	miso.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
 	return nil
 }
 
@@ -323,7 +324,7 @@ func DeclareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) erro
 	if e != nil {
 		return fmt.Errorf("failed to declare exchange, %v, %w", exchange.Name, e)
 	}
-	Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
+	miso.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
 }
 
@@ -338,7 +339,7 @@ When connection is lost, it will attmpt to reconnect to recover, unless the give
 
 To register listener, please use 'AddListener' func.
 */
-func StartRabbitMqClient(rail Rail) error {
+func StartRabbitMqClient(rail miso.Rail) error {
 	notifyCloseChan, err := initRabbitClient(rail)
 	if err != nil {
 		return err
@@ -354,7 +355,7 @@ func StartRabbitMqClient(rail Rail) error {
 			} else {
 				notifyCloseChan, err = initRabbitClient(rail)
 				if err != nil {
-					Errorf("Error connecting to RabbitMQ: %v", err)
+					miso.Errorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
 					continue
 				}
@@ -367,7 +368,7 @@ func StartRabbitMqClient(rail Rail) error {
 			// context is done, close the connection, and exit
 			case <-doneCh:
 				if err := RabbitDisconnect(rail); err != nil {
-					Warnf("Failed to close connection to RabbitMQ: %v", err)
+					miso.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
 				return
 			}
@@ -378,7 +379,7 @@ func StartRabbitMqClient(rail Rail) error {
 }
 
 // Disconnect from RabbitMQ server
-func RabbitDisconnect(rail Rail) error {
+func RabbitDisconnect(rail miso.Rail) error {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 	if _conn == nil {
@@ -393,17 +394,17 @@ func RabbitDisconnect(rail Rail) error {
 }
 
 // Try to establish Connection
-func tryConnRabbit(rail Rail) (*amqp.Connection, error) {
+func tryConnRabbit(rail miso.Rail) (*amqp.Connection, error) {
 	if _conn != nil && !_conn.IsClosed() {
 		return _conn, nil
 	}
 
 	c := amqp.Config{}
-	username := GetPropStr(PropRabbitMqUsername)
-	password := GetPropStr(PropRabbitMqPassword)
-	vhost := GetPropStr(PropRabbitMqVhost)
-	host := GetPropStr(PropRabbitMqHost)
-	port := GetPropInt(PropRabbitMqPort)
+	username := miso.GetPropStr(PropRabbitMqUsername)
+	password := miso.GetPropStr(PropRabbitMqPassword)
+	vhost := miso.GetPropStr(PropRabbitMqVhost)
+	host := miso.GetPropStr(PropRabbitMqHost)
+	port := miso.GetPropInt(PropRabbitMqPort)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
@@ -459,7 +460,7 @@ Init RabbitMQ Client
 
 return notifyCloseChannel for connection and error
 */
-func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
+func initRabbitClient(rail miso.Rail) (chan *amqp.Error, error) {
 	_mutex.Lock()
 	defer _mutex.Unlock()
 
@@ -496,7 +497,7 @@ func initRabbitClient(rail Rail) (chan *amqp.Error, error) {
 }
 
 func startRabbitConsumers(conn *amqp.Connection) error {
-	qos := GetPropInt(PropRabbitMqConsumerQos)
+	qos := miso.GetPropInt(PropRabbitMqConsumerQos)
 
 	for _, v := range _listeners {
 		listener := v
@@ -520,25 +521,25 @@ func startRabbitConsumers(conn *amqp.Connection) error {
 			}
 			msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 			if err != nil {
-				Errorf("Failed to listen to '%s', err: %v", qname, err)
+				miso.Errorf("Failed to listen to '%s', err: %v", qname, err)
 			}
 			startListening(msgCh, listener, ic)
 		}
 	}
 
-	Debug("RabbitMQ consumer initialization finished")
+	miso.Debug("RabbitMQ consumer initialization finished")
 	return nil
 }
 
 func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
-		Debugf("%d-%v started", routineNo, listener)
+		miso.Debugf("%d-%v started", routineNo, listener)
 		for msg := range msgCh {
 
 			// read trace from headers
-			rail := EmptyRail()
+			rail := miso.EmptyRail()
 			if msg.Headers != nil {
-				UsePropagationKeys(func(k string) {
+				miso.UsePropagationKeys(func(k string) {
 					if hv, ok := msg.Headers[k]; ok {
 						rail = rail.WithCtxVal(k, fmt.Sprintf("%v", hv))
 					}
@@ -546,7 +547,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			}
 
 			// message body, we only support text
-			payload := UnsafeByt2Str(msg.Body)
+			payload := miso.UnsafeByt2Str(msg.Body)
 
 			// listener handling the message payload
 			e := listener.Handle(rail, payload)
@@ -609,7 +610,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			msg.Nack(false, true)
 			rail.Debugf("Nacked message: %v", msg.MessageId)
 		}
-		Debugf("%d-%v stopped", routineNo, listener)
+		miso.Debugf("%d-%v stopped", routineNo, listener)
 	}()
 }
 
@@ -655,7 +656,7 @@ func newPubChan() (*amqp.Channel, error) {
 		return nil, fmt.Errorf("channel could not be put into confirm mode, %w", err)
 	}
 
-	Debugf("Created new RabbitMQ publishing channel")
+	miso.Debugf("Created new RabbitMQ publishing channel")
 
 	return newChan, nil
 }
@@ -671,13 +672,13 @@ func newChan() (*amqp.Channel, error) {
 	return _conn.Channel()
 }
 
-func RabbitBootstrap(rail Rail) error {
+func RabbitBootstrap(rail miso.Rail) error {
 	if e := StartRabbitMqClient(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
 	return nil
 }
 
-func RabbitBootstrapCondition(rail Rail) (bool, error) {
+func RabbitBootstrapCondition(rail miso.Rail) (bool, error) {
 	return RabbitMQEnabled(), nil
 }

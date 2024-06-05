@@ -1,8 +1,11 @@
-package miso
+package rabbit
 
 import (
 	"errors"
+	"reflect"
 	"sync"
+
+	"github.com/curtisnewbie/miso/miso"
 )
 
 const (
@@ -17,12 +20,18 @@ var (
 	pipelineDescMap map[string]EventPipelineDesc = nil
 )
 
+func init() {
+	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
+		return buildPipelineDoc(miso.MapValues(pipelineDescMap))
+	})
+}
+
 // Send msg to event bus.
 //
 // It's identical to sending a message to an exchange identified by the name using routing key '#'.
 //
 // Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
-func PubEventBus(rail Rail, eventObject any, name string) error {
+func PubEventBus(rail miso.Rail, eventObject any, name string) error {
 	return PubEventBusHeaders(rail, eventObject, name, nil)
 }
 
@@ -31,7 +40,7 @@ func PubEventBus(rail Rail, eventObject any, name string) error {
 // It's identical to sending a message to an exchange identified by the name using routing key '#'.
 //
 // Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
-func PubEventBusHeaders(rail Rail, eventObject any, name string, headers map[string]any) error {
+func PubEventBusHeaders(rail miso.Rail, eventObject any, name string, headers map[string]any) error {
 	if name == "" {
 		return errBusNameEmpty
 	}
@@ -59,7 +68,7 @@ func NewEventBus(name string) {
 // Subscribe to event bus.
 //
 // Internally, it calls NewEventBus(...) and registers a listener for the queue identified by the bus name.
-func SubEventBus[T any](name string, concurrency int, listener func(rail Rail, t T) error) {
+func SubEventBus[T any](name string, concurrency int, listener func(rail miso.Rail, t T) error) {
 	if name == "" {
 		panic("event bus name is empty")
 	}
@@ -93,8 +102,8 @@ func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 
 // Document EventPipline in the generated apidoc.
 func (ep *EventPipeline[T]) Document(name string, desc string, provider string) *EventPipeline[T] {
-	PreServerBootstrap(func(rail Rail) error {
-		if GetPropStr(PropAppName) != provider {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
+		if miso.GetPropStr(miso.PropAppName) != provider {
 			return nil
 		}
 
@@ -107,7 +116,7 @@ func (ep *EventPipeline[T]) Document(name string, desc string, provider string) 
 			RoutingKey: BusRoutingKey,
 			Queue:      ep.name,
 			Exchange:   ep.name,
-			PayloadVal: NewVar[T](),
+			PayloadVal: miso.NewVar[T](),
 		}
 		return nil
 	})
@@ -123,7 +132,7 @@ func (ep *EventPipeline[T]) MaxRetry(n int) *EventPipeline[T] {
 }
 
 // Call PubEventBus.
-func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
+func (ep *EventPipeline[T]) Send(rail miso.Rail, event T) error {
 	if ep.maxRetry > -1 {
 		return PubEventBusHeaders(rail, event, ep.name, map[string]any{HeaderRabbitMaxRetry: ep.maxRetry})
 	}
@@ -131,8 +140,8 @@ func (ep *EventPipeline[T]) Send(rail Rail, event T) error {
 }
 
 // Call SubEventBus.
-func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail Rail, t T) error) *EventPipeline[T] {
-	SubEventBus[T](ep.name, concurrency, func(rail Rail, t T) error {
+func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail miso.Rail, t T) error) *EventPipeline[T] {
+	SubEventBus[T](ep.name, concurrency, func(rail miso.Rail, t T) error {
 		if ep.logPaylod {
 			rail.Infof("Pipeline %s receive %#v", ep.name, t)
 		}
@@ -157,4 +166,23 @@ type EventPipelineDesc struct {
 	Exchange   string
 	RoutingKey string
 	Queue      string
+}
+
+func buildPipelineDoc(epd []EventPipelineDesc) []miso.PipelineDoc {
+	docs := make([]miso.PipelineDoc, 0, len(epd))
+	for _, pd := range epd {
+		d := miso.PipelineDoc{
+			Name:       pd.Name,
+			Desc:       pd.Desc,
+			Exchange:   pd.Exchange,
+			RoutingKey: pd.RoutingKey,
+			Queue:      pd.Queue,
+		}
+		if pd.PayloadVal != nil {
+			rv := reflect.ValueOf(pd.PayloadVal)
+			d.PayloadDesc = miso.BuildJsonDesc(rv)
+		}
+		docs = append(docs, d)
+	}
+	return docs
 }

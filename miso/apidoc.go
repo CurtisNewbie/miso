@@ -26,9 +26,15 @@ var (
 	ignoredJsonDocTag   = []string{"form", "header"}
 )
 
+var (
+	getPipelineDocFuncs []GetPipelineDocFunc
+)
+
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 }
+
+type GetPipelineDocFunc func() []PipelineDoc
 
 type ParamDoc struct {
 	Name string
@@ -424,7 +430,10 @@ func serveApiDocTmpl(rail Rail) error {
 			defer DebugTimeOp(rail, time.Now(), "gen api doc")
 
 			httpRouteDoc := buildHttpRouteDoc(GetHttpRoutes())
-			pipelineDoc := buildPipelineDoc(MapValues(pipelineDescMap))
+			var pipelineDoc []PipelineDoc
+			for _, f := range getPipelineDocFuncs {
+				pipelineDoc = append(pipelineDoc, f()...)
+			}
 			markdown := genMarkDownDoc(httpRouteDoc, pipelineDoc)
 
 			w, _ := inb.Unwrap()
@@ -855,21 +864,7 @@ type PipelineDoc struct {
 	PayloadDesc []JsonDesc
 }
 
-func buildPipelineDoc(epd []EventPipelineDesc) []PipelineDoc {
-	docs := make([]PipelineDoc, 0, len(epd))
-	for _, pd := range epd {
-		d := PipelineDoc{
-			Name:       pd.Name,
-			Desc:       pd.Desc,
-			Exchange:   pd.Exchange,
-			RoutingKey: pd.RoutingKey,
-			Queue:      pd.Queue,
-		}
-		if pd.PayloadVal != nil {
-			rv := reflect.ValueOf(pd.PayloadVal)
-			d.PayloadDesc = BuildJsonDesc(rv)
-		}
-		docs = append(docs, d)
-	}
-	return docs
+// Register func to supply PipelineDoc.
+func AddGetPipelineDocFunc(f GetPipelineDocFunc) {
+	getPipelineDocFuncs = append(getPipelineDocFuncs, f)
 }

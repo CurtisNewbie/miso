@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
 )
@@ -265,12 +266,12 @@ func main() {
 
 		writef(0, "")
 		writef(0, "rabbitmq:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropRabbitMqEnabled))
-		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropRabbitMqHost))
-		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropRabbitMqPort))
-		writef(1, "username: \"%s\"", miso.GetPropStr(miso.PropRabbitMqUsername))
-		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropRabbitMqPassword))
-		writef(1, "vhost: \"%s\"", miso.GetPropStr(miso.PropRabbitMqVhost))
+		writef(1, "enabled: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqEnabled))
+		writef(1, "host: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqHost))
+		writef(1, "port: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqPort))
+		writef(1, "username: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqUsername))
+		writef(1, "password: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqPassword))
+		writef(1, "vhost: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqVhost))
 
 		writef(0, "")
 		writef(0, "logging:")

@@ -1,9 +1,11 @@
-package miso
+package rabbit
 
 import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/curtisnewbie/miso/miso"
 )
 
 type RabbitDummy struct {
@@ -11,22 +13,22 @@ type RabbitDummy struct {
 	Desc string `json:"desc"`
 }
 
-func msgHandler(rail Rail, payload string) error {
+func msgHandler(rail miso.Rail, payload string) error {
 	rail.Infof("Received message %s", payload)
 	// return errors.New("nack intentionally")
 	return nil
 }
 
-func jsonMsgHandler(rail Rail, payload RabbitDummy) error {
+func jsonMsgHandler(rail miso.Rail, payload RabbitDummy) error {
 	rail.Infof("Received message %s", payload)
 	return nil
 }
 
 func TestInitClient(t *testing.T) {
-	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../conf_dev.yml", rail)
-	SetProp(PropRabbitMqUsername, "guest")
-	SetProp(PropRabbitMqPassword, "guest")
+	rail, cancel := miso.EmptyRail().WithCancel()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
+	miso.SetProp(PropRabbitMqUsername, "guest")
+	miso.SetProp(PropRabbitMqPassword, "guest")
 
 	AddRabbitListener(JsonMsgListener[RabbitDummy]{QueueName: "dummy-queue", Handler: jsonMsgHandler})
 	AddRabbitListener(MsgListener{QueueName: "my-first-queue", Handler: msgHandler})
@@ -60,11 +62,11 @@ func TestInitClient(t *testing.T) {
 }
 
 func TestPublishMessage(t *testing.T) {
-	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../conf_dev.yml", rail)
-	SetProp(PropRabbitMqUsername, "guest")
-	SetProp(PropRabbitMqPassword, "guest")
-	SetLogLevel("debug")
+	rail, cancel := miso.EmptyRail().WithCancel()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
+	miso.SetProp(PropRabbitMqUsername, "guest")
+	miso.SetProp(PropRabbitMqPassword, "guest")
+	miso.SetLogLevel("debug")
 
 	RegisterRabbitQueue(QueueRegistration{Name: "my-first-queue", Durable: true})
 	RegisterRabbitQueue(QueueRegistration{Name: "my-second-queue", Durable: true})
@@ -96,11 +98,11 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestPublishJsonMessage(t *testing.T) {
-	rail, cancel := EmptyRail().WithCancel()
-	LoadConfigFromFile("../conf_dev.yml", rail)
-	SetProp(PropRabbitMqUsername, "guest")
-	SetProp(PropRabbitMqPassword, "guest")
-	SetLogLevel("debug")
+	rail, cancel := miso.EmptyRail().WithCancel()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
+	miso.SetProp(PropRabbitMqUsername, "guest")
+	miso.SetProp(PropRabbitMqPassword, "guest")
+	miso.SetLogLevel("debug")
 
 	e := StartRabbitMqClient(rail)
 	if e != nil {

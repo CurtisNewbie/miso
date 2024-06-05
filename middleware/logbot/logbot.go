@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/miso"
 )
 
@@ -18,7 +19,7 @@ type errorLog struct {
 }
 
 var (
-	reportLogPipeline = miso.NewEventPipeline[errorLog]("logbot:error-log:report:pipeline").
+	reportLogPipeline = rabbit.NewEventPipeline[errorLog]("logbot:error-log:report:pipeline").
 		MaxRetry(3)
 )
 
