@@ -104,6 +104,8 @@ func TestRLock(t *testing.T) {
 func TestRLockCount(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
+	lockRefreshTime = time.Millisecond
+
 	rail := EmptyRail()
 	LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
@@ -121,7 +123,7 @@ func TestRLockCount(t *testing.T) {
 			defer wg.Done()
 
 			lock := NewCustomRLock(rail, "test:rlock", RLockConfig{
-				BackoffDuration: time.Second * 2,
+				BackoffDuration: time.Second * 5,
 			})
 
 			err := lock.Lock()
@@ -131,6 +133,7 @@ func TestRLockCount(t *testing.T) {
 			}
 			defer lock.Unlock()
 
+			time.Sleep(time.Millisecond * 3)
 			atomic.StoreInt32(&count, atomic.LoadInt32(&count)+1)
 		}()
 	}
@@ -150,12 +153,12 @@ func TestCancelRefresher(t *testing.T) {
 	}
 	SetLogLevel("trace")
 
+	lockRefreshTime = time.Second
 	lock := NewRLock(rail, "mylock")
 	if err := lock.Lock(); err != nil {
 		t.Fatal(err)
 	}
 
-	// need to change lockRefreshTime and lockLeaseTime beforehand
 	time.Sleep(10 * time.Second)
 	lock.Unlock()
 	time.Sleep(5 * time.Second)

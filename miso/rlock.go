@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -128,12 +129,12 @@ func (r *RLock) Lock() error {
 	r.lock = lock
 	r.rail.Debugf("Obtained lock for key '%s'", r.key)
 
-	cancelChan := make(chan struct{}, 1)
-	r.cancelRefresher = func() {
-		cancelChan <- struct{}{}
-	}
+	srcSpan := r.rail.SpanId()
+	refreshCtx, cancel := context.WithCancel(context.Background())
+	r.cancelRefresher = cancel
 
-	go func(rail Rail) {
+	go func() {
+		rail := r.rail.NextSpan()
 		ticker := time.NewTicker(lockRefreshTime)
 		defer ticker.Stop()
 
@@ -141,19 +142,19 @@ func (r *RLock) Lock() error {
 			select {
 			case <-ticker.C:
 				if err := lock.Refresh(lockLeaseTime, nil); err != nil {
-					rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
 					if errors.Is(err, redislock.ErrNotObtained) {
 						return
 					}
+					rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
 				} else {
-					rail.Debugf("Refreshed rlock for '%v'", r.key)
+					rail.Infof("Refreshed rlock for '%v', source span_id: %v", r.key, srcSpan)
 				}
-			case <-cancelChan:
+			case <-refreshCtx.Done():
 				rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
-	}(r.rail.NextSpan())
+	}()
 
 	return nil
 }
@@ -162,10 +163,6 @@ func (r *RLock) Lock() error {
 //
 // If the lock is not obtained, method call will be ignored.
 func (r *RLock) Unlock() error {
-	if r.cancelRefresher != nil {
-		r.cancelRefresher()
-	}
-
 	if r.lock != nil {
 		err := r.lock.Release()
 		if err != nil {
@@ -175,7 +172,10 @@ func (r *RLock) Unlock() error {
 			r.rail.Debugf("Released lock for key '%s'", r.key)
 		}
 		r.lock = nil
-	}
 
+		if r.cancelRefresher != nil {
+			r.cancelRefresher()
+		}
+	}
 	return nil
 }
