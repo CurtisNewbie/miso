@@ -740,14 +740,16 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 
 	if respTypeName != "" {
 		sl.Printlnf(Spaces(4) + "next: (resp) => {")
-		if isBuiltinResp && hasData {
+		if isBuiltinResp {
 			sl.Printlnf(Spaces(6) + "if (resp.error) {")
 			sl.Printlnf(Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
 			sl.Printlnf(Spaces(8) + "return;")
 			sl.Printlnf(Spaces(6) + "}")
-			if dataField, ok := SliceFilterFirst(d.JsonResponseDesc,
-				func(d JsonDesc) bool { return d.FieldName == "Data" }); ok {
-				sl.Printlnf(Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
+			if hasData {
+				if dataField, ok := SliceFilterFirst(d.JsonResponseDesc,
+					func(d JsonDesc) bool { return d.FieldName == "Data" }); ok {
+					sl.Printlnf(Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
+				}
 			}
 		}
 		sl.Printlnf(Spaces(4) + "},")
