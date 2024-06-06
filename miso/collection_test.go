@@ -122,3 +122,32 @@ func TestSliceMap(t *testing.T) {
 	}
 	t.Log(v)
 }
+
+func TestRWMap(t *testing.T) {
+	m := NewRWMap[string, string]()
+	aw := NewAwaitFutures[any](NewAsyncPool(100, 5))
+
+	aw.SubmitAsync(func() (any, error) {
+		m.Put("ky", "yes")
+		return nil, nil
+	})
+
+	aw.SubmitAsync(func() (any, error) {
+		m.Put("kn", "no")
+		return nil, nil
+	})
+
+	aw.SubmitAsync(func() (any, error) {
+		m.GetElse("ke", func(k string) string { return k + "lse" })
+		return nil, nil
+	})
+	aw.Await()
+
+	for _, k := range m.Keys() {
+		v, ok := m.Get(k)
+		if !ok {
+			t.Fatal("!ok")
+		}
+		t.Logf("%v -> %v", k, v)
+	}
+}

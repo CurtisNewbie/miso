@@ -99,7 +99,7 @@ func (s *Set[T]) Size() int {
 
 // To string
 func (s *Set[T]) String() string {
-	var ks []T = MapKeys(&s.Keys)
+	var ks []T = MapKeys(s.Keys)
 	lks := len(ks)
 	st := "{ "
 	for i, k := range ks {
@@ -164,9 +164,9 @@ func SetToSlice[T comparable](s Set[T]) []T {
 }
 
 // Get keys from map
-func MapKeys[T comparable, V any](m *map[T]V) []T {
+func MapKeys[T comparable, V any](m map[T]V) []T {
 	var keys []T = []T{}
-	for k := range *m {
+	for k := range m {
 		keys = append(keys, k)
 	}
 	return keys
@@ -232,6 +232,12 @@ func NewRWMap[K comparable, V any]() *RWMap[K, V] {
 
 func (r *RWMap[K, V]) Get(k K) (V, bool) {
 	return r.GetElse(k, nil)
+}
+
+func (r *RWMap[K, V]) Keys() []K {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return MapKeys(r.storage)
 }
 
 func (r *RWMap[K, V]) Put(k K, v V) {
