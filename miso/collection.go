@@ -173,11 +173,12 @@ func MapKeys[T comparable, V any](m *map[T]V) []T {
 }
 
 // Get first from map
-func MapFirst[K comparable, V any](m *map[K]*V) *V {
-	for k := range *m {
-		return (*m)[k]
+func MapFirst[K comparable, V any](m map[K]V) V {
+	for k := range m {
+		return (m)[k]
 	}
-	return nil
+	var v V
+	return v
 }
 
 // Filter duplicate values
@@ -217,39 +218,57 @@ func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V
 }
 
 // Map with sync.RWMutex embeded.
-type RWMap[V any] struct {
-	sync.RWMutex
-	storage map[string]V
-	new     func(string) V
+type RWMap[K comparable, V any] struct {
+	mu      sync.RWMutex
+	storage map[K]V
 }
 
 // Create new RWMap
-func NewRWMap[V any](newFunc func(string) V) *RWMap[V] {
-	return &RWMap[V]{
-		storage: make(map[string]V),
-		new:     newFunc,
+func NewRWMap[K comparable, V any]() *RWMap[K, V] {
+	return &RWMap[K, V]{
+		storage: make(map[K]V),
 	}
 }
 
-// Get V using k, if V exists return, else create a new one and store it.
-func (r *RWMap[V]) Get(k string) V {
-	r.RLock()
+func (r *RWMap[K, V]) Get(k K) (V, bool) {
+	return r.GetElse(k, nil)
+}
+
+func (r *RWMap[K, V]) Put(k K, v V) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.storage[k] = v
+}
+
+func (r *RWMap[K, V]) Del(k K) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.storage, k)
+}
+
+func (r *RWMap[K, V]) GetElse(k K, elseFunc func(k K) V) (V, bool) {
+	r.mu.RLock()
 	if v, ok := r.storage[k]; ok {
-		defer r.RUnlock()
-		return v
+		defer r.mu.RUnlock()
+		return v, true
 	}
-	r.RUnlock()
+	r.mu.RUnlock()
 
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	if v, ok := r.storage[k]; ok {
-		return v
+		return v, true
 	}
 
-	newItem := r.new(k)
+	if elseFunc == nil {
+		var v V
+		return v, false
+	}
+
+	newItem := elseFunc(k)
 	r.storage[k] = newItem
-	return newItem
+	return newItem, true
 }
 
 // Filter slice values in place.
