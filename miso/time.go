@@ -122,5 +122,5 @@ func FuzzParseTime(formats []string, value string) (time.Time, error) {
 			return t, nil
 		}
 	}
-	return t, err
+	return t, fmt.Errorf("failed to parse time '%s'", value)
 }
