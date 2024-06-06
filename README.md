@@ -18,10 +18,10 @@ go get github.com/curtisnewbie/miso@v0.0.34
 
 ## Generate miso project
 
-Build latest `misogen` tool:
+Install latest `misogen` tool:
 
 ```sh
-go build -o misogen cmd/misogen/main.go
+go install github.com/curtisnewbie/miso/cmd/misogen@v0.0.34
 ```
 
 Use `misogen` to generate new projects, e.g.,
