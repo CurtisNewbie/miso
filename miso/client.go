@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/cast"
 )
 
@@ -107,7 +108,7 @@ func (tr *TResponse) Str() (string, error) {
 	if e != nil {
 		return "", e
 	}
-	return UnsafeByt2Str(b), nil
+	return util.UnsafeByt2Str(b), nil
 }
 
 // Read response as JSON object.
@@ -129,8 +130,8 @@ func (tr *TResponse) Json(ptr any) error {
 		return e
 	}
 
-	if e = ParseJson(body, ptr); e != nil {
-		s := UnsafeByt2Str(body)
+	if e = util.ParseJson(body, ptr); e != nil {
+		s := util.UnsafeByt2Str(body)
 		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
 		tr.Rail.Error(errMsg)
 		return fmt.Errorf(errMsg)
@@ -149,7 +150,7 @@ func (tr *TResponse) Require2xx() error {
 		var body string
 		byt, err := tr.Bytes()
 		if err == nil {
-			body = UnsafeByt2Str(byt)
+			body = util.UnsafeByt2Str(byt)
 		}
 		return fmt.Errorf("unknown error, status code: %v, body: %v", tr.StatusCode, body)
 	}
@@ -280,7 +281,7 @@ func (t *TClient) PostForm(data url.Values) *TResponse {
 //
 // Use simple types like struct instad of pointer for body.
 func (t *TClient) PostJson(body any) *TResponse {
-	jsonBody, e := WriteJson(body)
+	jsonBody, e := util.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}
@@ -313,7 +314,7 @@ func (t *TClient) PostBytes(body []byte) *TResponse {
 
 // Send PUT request with JSON
 func (t *TClient) PutJson(body any) *TResponse {
-	jsonBody, e := WriteJson(body)
+	jsonBody, e := util.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}
@@ -396,7 +397,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
 				if copy, err := req.GetBody(); err == nil && copy != nil {
 					if buf, e := io.ReadAll(copy); e == nil {
-						loggedBody = UnsafeByt2Str(buf)
+						loggedBody = util.UnsafeByt2Str(buf)
 					}
 				}
 			}
@@ -520,7 +521,7 @@ func AddHeaders(req *http.Request, headers map[string][]string) {
 
 // Send POST request
 func PostJson(url string, json string) (*http.Response, error) {
-	body := bytes.NewBuffer(UnsafeStr2Byt(json))
+	body := bytes.NewBuffer(util.UnsafeStr2Byt(json))
 	return SendPost(url, body)
 }
 

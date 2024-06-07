@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/viper"
 )
 
@@ -176,7 +177,7 @@ You can also use ReadConfig to load your custom configFile. This func is essenti
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
 func DefaultReadConfig(args []string, rail Rail) {
-	loaded := NewSet[string]()
+	loaded := util.NewSet[string]()
 
 	defConfigFile := GuessConfigFilePath(args)
 	loaded.Add(defConfigFile)
@@ -197,7 +198,7 @@ func DefaultReadConfig(args []string, rail Rail) {
 			continue
 		}
 
-		if ok, err := FileExists(f); err != nil || !ok {
+		if ok, err := util.FileExists(f); err != nil || !ok {
 			if err != nil {
 				rail.Warnf("Failed to open extra config file, %v, %v", f, err)
 			}
@@ -390,7 +391,7 @@ func IsProdMode() bool {
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
 func ResolveServerHost(address string) string {
-	if IsBlankStr(address) || address == LOCAL_IP_ANY {
+	if util.IsBlankStr(address) || address == LOCAL_IP_ANY {
 		address = GetLocalIPV4()
 	}
 	return address

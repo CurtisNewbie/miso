@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 )
 
 const (
@@ -22,7 +23,7 @@ var (
 
 func init() {
 	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
-		return buildPipelineDoc(miso.MapValues(pipelineDescMap))
+		return buildPipelineDoc(util.MapValues(pipelineDescMap))
 	})
 }
 
@@ -116,7 +117,7 @@ func (ep *EventPipeline[T]) Document(name string, desc string, provider string) 
 			RoutingKey: BusRoutingKey,
 			Queue:      ep.name,
 			Exchange:   ep.name,
-			PayloadVal: miso.NewVar[T](),
+			PayloadVal: util.NewVar[T](),
 		}
 		return nil
 	})

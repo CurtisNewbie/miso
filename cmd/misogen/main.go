@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 )
 
 const (
@@ -47,7 +48,7 @@ func main() {
 		initName = strings.TrimSpace(initName)
 	}
 
-	if ok, err := miso.FileExists(ModFile); err != nil || !ok {
+	if ok, err := util.FileExists(ModFile); err != nil || !ok {
 		if err != nil {
 			panic(err)
 		}
@@ -59,14 +60,14 @@ func main() {
 			}
 			out, err := exec.Command("go", "mod", "init", initName).CombinedOutput()
 			if err != nil {
-				fmt.Println(miso.UnsafeByt2Str(out))
+				fmt.Println(util.UnsafeByt2Str(out))
 				panic(err)
 			}
 			fmt.Printf("Initialized module '%s'\n", initName)
 		}
 	}
 
-	ok, err := miso.FileExists(MainFile)
+	ok, err := util.FileExists(MainFile)
 	if err != nil {
 		panic(fmt.Errorf("failed to open file %s, %v", MainFile, err))
 	}
@@ -76,7 +77,7 @@ func main() {
 
 	cpltModName := ""
 	modName := ""
-	modfCtn, err := miso.ReadFileAll(ModFile)
+	modfCtn, err := util.ReadFileAll(ModFile)
 	if err != nil {
 		panic(fmt.Errorf("failed to read file %v, %v", ModFile, err))
 	}
@@ -89,7 +90,7 @@ func main() {
 					i = j + 1
 					continue
 				}
-				line := miso.UnsafeByt2Str(modfCtn[i:j])
+				line := util.UnsafeByt2Str(modfCtn[i:j])
 				line = strings.TrimSpace(line)
 				if n, ok := strings.CutPrefix(line, "module"); ok {
 					modName = strings.TrimSpace(n)
@@ -110,7 +111,7 @@ func main() {
 
 	out, err := exec.Command("go", "get", "-x", pkg).CombinedOutput()
 	if err != nil {
-		fmt.Println(miso.UnsafeByt2Str(out))
+		fmt.Println(util.UnsafeByt2Str(out))
 		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 
@@ -119,16 +120,16 @@ func main() {
 		fmt.Printf("Initializing %s\n", MainFile)
 		// main.go
 		{
-			mainf, err := miso.ReadWriteFile(MainFile)
+			mainf, err := util.ReadWriteFile(MainFile)
 			if err != nil {
 				panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 			}
 
-			iw := miso.NewIndentWriter("\t")
+			iw := util.NewIndentWriter("\t")
 			iw.Writef("package main")
 			iw.Writef("")
 			iw.Writef("import (").
-				StepIn(func(iw *miso.IndentWriter) {
+				StepIn(func(iw *util.IndentWriter) {
 					iw.Writef("\"flag\"")
 					iw.Writef("")
 					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
@@ -136,33 +137,33 @@ func main() {
 				Writef(")").Writef("")
 
 			iw.Writef("var (").
-				StepIn(func(iw *miso.IndentWriter) {
+				StepIn(func(iw *util.IndentWriter) {
 					iw.Writef("DebugFlag = flag.Bool(\"debug\", false, \"Enable debug log\")")
 				}).
 				Writef(")").Writef("")
 
 			// main func
 			iw.Writef("func main() {").
-				StepIn(func(iw *miso.IndentWriter) {
+				StepIn(func(iw *util.IndentWriter) {
 					iw.Writef("rail := miso.EmptyRail()")
 					iw.Writef("flag.Parse()")
 					iw.Writef("")
 					iw.Writef("if *DebugFlag {").
-						StepIn(func(iw *miso.IndentWriter) {
+						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("miso.SetLogLevel(\"debug\")")
 						}).
 						Writef("}").Writef("")
 
 					iw.Writef("// for mysql")
 					iw.Writef("if err := miso.InitMySQL(rail, miso.MySQLConnParam{}); err != nil {").
-						StepIn(func(iw *miso.IndentWriter) {
+						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
 					iw.Writef("db := miso.GetMySQL()")
 					iw.Writef("if err := db.Exec(`SELECT 1`).Error; err != nil {").
-						StepIn(func(iw *miso.IndentWriter) {
+						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}").Writef("")
@@ -170,14 +171,14 @@ func main() {
 					iw.Writef("// for redis")
 					iw.Writef("redis, err := miso.InitRedis(rail, miso.RedisConnParam{})")
 					iw.Writef("if err != nil {").
-						StepIn(func(iw *miso.IndentWriter) {
+						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
 					iw.Writef("res, err := redis.Ping().Result()")
 					iw.Writef("if err != nil {").
-						StepIn(func(iw *miso.IndentWriter) {
+						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
@@ -198,17 +199,17 @@ func main() {
 
 	// conf.yml
 	fmt.Printf("Initializing %s\n", ConfFile)
-	if ok, err := miso.FileExists(ConfFile); err != nil || !ok {
+	if ok, err := util.FileExists(ConfFile); err != nil || !ok {
 		if err != nil {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		conf, err := miso.ReadWriteFile(ConfFile)
+		conf, err := util.ReadWriteFile(ConfFile)
 		if err != nil {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		sb, writef := miso.NewIndWritef("  ")
+		sb, writef := util.NewIndWritef("  ")
 
 		writef(0, "# %s", ConfigDocUrl)
 		writef(0, "")
@@ -287,8 +288,8 @@ func main() {
 	// for svc
 	if *SvcFlag {
 		fmt.Printf("Initializing %s\n", SchemaFile)
-		miso.MkdirAll(SchemaDir)
-		sf, err := miso.ReadWriteFile(SchemaFile)
+		util.MkdirAll(SchemaDir)
+		sf, err := util.ReadWriteFile(SchemaFile)
 		if err != nil {
 			panic(err)
 		}
@@ -296,12 +297,12 @@ func main() {
 		sf.Close()
 
 		fmt.Printf("Initializing %s\n", SchemaMigrateFile)
-		mf, err := miso.ReadWriteFile(SchemaMigrateFile)
+		mf, err := util.ReadWriteFile(SchemaMigrateFile)
 		if err != nil {
 			panic(err)
 		}
 
-		sb, writef := miso.NewIndWritef("\t")
+		sb, writef := util.NewIndWritef("\t")
 		writef(0, "// This is for automated MySQL schema migration.")
 		writef(0, "//")
 		writef(0, "// See https://github.com/CurtisNewbie/svc for more information.")
@@ -333,14 +334,14 @@ func main() {
 
 	// for self-hosted frontend stuff
 	if *StaticFlag {
-		miso.MkdirParentAll(StaticFsFile)
+		util.MkdirParentAll(StaticFsFile)
 		fmt.Printf("Initializing %s\n", StaticFsFile)
-		f, err := miso.ReadWriteFile(StaticFsFile)
+		f, err := util.ReadWriteFile(StaticFsFile)
 		if err != nil {
 			panic(err)
 		}
 
-		sb, writef := miso.NewIndWritef("\t")
+		sb, writef := util.NewIndWritef("\t")
 		writef(0, "package static")
 		writef(0, "")
 		writef(0, "import (")
@@ -362,9 +363,9 @@ func main() {
 		f.WriteString(sb.String())
 		f.Close()
 
-		miso.MkdirParentAll(StaticFsPlaceholderFile)
+		util.MkdirParentAll(StaticFsPlaceholderFile)
 		fmt.Printf("Initializing %s\n", StaticFsPlaceholderFile)
-		f, err = miso.ReadWriteFile(StaticFsPlaceholderFile)
+		f, err = util.ReadWriteFile(StaticFsPlaceholderFile)
 		if err != nil {
 			panic(err)
 		}
@@ -374,15 +375,15 @@ func main() {
 
 	// version.go
 	{
-		if err := miso.MkdirParentAll(VersionFile); err != nil {
+		if err := util.MkdirParentAll(VersionFile); err != nil {
 			panic(fmt.Errorf("failed to make parent dir for file %s, %v", VersionFile, err))
 		}
-		vf, err := miso.ReadWriteFile(VersionFile)
+		vf, err := util.ReadWriteFile(VersionFile)
 		if err != nil {
 			panic(fmt.Errorf("failed to create file %s, %v", VersionFile, err))
 		}
 
-		sb, writef := miso.NewIndWritef("\t")
+		sb, writef := util.NewIndWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "const (")
@@ -394,15 +395,15 @@ func main() {
 
 	// server.go
 	{
-		if err := miso.MkdirParentAll(ServerFile); err != nil {
+		if err := util.MkdirParentAll(ServerFile); err != nil {
 			panic(fmt.Errorf("failed to make parent dir for file %s, %v", ServerFile, err))
 		}
-		serverf, err := miso.ReadWriteFile(ServerFile)
+		serverf, err := util.ReadWriteFile(ServerFile)
 		if err != nil {
 			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
 		}
 
-		sb, writef := miso.NewIndWritef("\t")
+		sb, writef := util.NewIndWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "import (")
@@ -459,12 +460,12 @@ func main() {
 	fmt.Printf("Initializing %s\n", MainFile)
 	// main.go
 	{
-		mainf, err := miso.ReadWriteFile(MainFile)
+		mainf, err := util.ReadWriteFile(MainFile)
 		if err != nil {
 			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 		}
 
-		sb, writef := miso.NewIndWritef("\t")
+		sb, writef := util.NewIndWritef("\t")
 		writef(0, "package main")
 		writef(0, "")
 		writef(0, "import (")

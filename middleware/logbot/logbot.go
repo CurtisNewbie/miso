@@ -6,12 +6,13 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 )
 
 type errorLog struct {
 	Node     string
 	App      string
-	Time     miso.ETime
+	Time     util.ETime
 	TraceId  string
 	SpanId   string
 	FuncName string
@@ -31,7 +32,7 @@ func EnableLogbotErrLogReport() {
 			reportLogPipeline.Send(rail, errorLog{
 				Node:     node,
 				App:      app,
-				Time:     miso.ETime(el.Time),
+				Time:     util.ETime(el.Time),
 				TraceId:  el.TraceId,
 				SpanId:   el.SpanId,
 				FuncName: el.FuncName,

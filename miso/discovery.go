@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 var (
@@ -32,7 +34,7 @@ var (
 	// Map of ServerChangeListeners
 	serverChangeListeners = ServerChangeListenerMap{
 		Listeners: map[string][]func(){},
-		Pool:      NewAsyncPool(500, 4),
+		Pool:      util.NewAsyncPool(500, 4),
 	}
 
 	// Get ServerList implementation
@@ -110,14 +112,14 @@ type HardcodedServiceRegistry struct {
 }
 
 func (r HardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
-	if IsBlankStr(service) {
+	if util.IsBlankStr(service) {
 		return "", ErrMissingServiceName
 	}
 
 	host := r.serverHostFromProp(service)
 	port := r.serverPortFromProp(service)
 
-	if IsBlankStr(host) {
+	if util.IsBlankStr(host) {
 		return httpProto + service + relativeUrl, nil
 	}
 
@@ -125,14 +127,14 @@ func (r HardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relative
 }
 
 func (r HardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
-	if IsBlankStr(service) {
+	if util.IsBlankStr(service) {
 		return []Server{}, ErrMissingServiceName
 	}
 
 	host := r.serverHostFromProp(service)
 	port := r.serverPortFromProp(service)
 
-	if IsBlankStr(host) {
+	if util.IsBlankStr(host) {
 		return []Server{{Address: host, Port: port, Meta: map[string]string{}}}, nil
 	}
 
@@ -155,7 +157,7 @@ func (r HardcodedServiceRegistry) serverPortFromProp(name string) int {
 
 type ServerChangeListenerMap struct {
 	Listeners map[string][]func()
-	Pool      *AsyncPool
+	Pool      *util.AsyncPool
 	sync.RWMutex
 }
 

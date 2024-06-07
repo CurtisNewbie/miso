@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
@@ -208,8 +209,8 @@ func triggerShutdownHook() {
 }
 
 // Record server route
-func recordHttpServerRoute(url string, method string, extra ...StrPair) {
-	extras := MergeStrPairs(extra...)
+func recordHttpServerRoute(url string, method string, extra ...util.StrPair) {
+	extras := util.MergeStrPairs(extra...)
 	r := HttpRoute{
 		Url:    url,
 		Method: method,
@@ -259,7 +260,7 @@ func GetHttpRoutes() []HttpRoute {
 }
 
 // Register ANY request route (raw version)
-func RawAny(url string, handler RawTRouteHandler, extra ...StrPair) {
+func RawAny(url string, handler RawTRouteHandler, extra ...util.StrPair) {
 	for i := range anyHttpMethods {
 		recordHttpServerRoute(url, anyHttpMethods[i], extra...)
 	}
@@ -292,7 +293,7 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 // and serialized to json.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodGet, newTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register POST request.
@@ -301,7 +302,7 @@ func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPost, newTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register PUT request.
@@ -310,7 +311,7 @@ func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPut, newTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register DELETE request.
@@ -319,7 +320,7 @@ func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and serialized to json.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodDelete, newTRouteHandler(handler)).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register POST request.
@@ -334,8 +335,8 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // and generate an API documentation describing the endpoint.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPost, newMappedTRouteHandler(handler)).
-		DocJsonReq(NewVar[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonReq(util.NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register GET request.
@@ -353,7 +354,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 	return NewLazyRouteDecl(url, http.MethodGet, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register DELETE request.
@@ -371,7 +372,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 	return NewLazyRouteDecl(url, http.MethodDelete, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 // Register PUT request.
@@ -386,8 +387,8 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // and generate an API documentation describing the endpoint.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return NewLazyRouteDecl(url, http.MethodPut, newMappedTRouteHandler(handler)).
-		DocJsonReq(NewVar[Req]()).
-		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(NewVar[Res]()))
+		DocJsonReq(util.NewVar[Req]()).
+		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
 type routesRegistar func(*gin.Engine)
@@ -804,7 +805,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 			wtcbCnt += 1
 		}
 		if wtcbCnt > 0 {
-			wtcb := make([]WalkTagCallback, 0, wtcbCnt)
+			wtcb := make([]util.WalkTagCallback, 0, wtcbCnt)
 
 			// validate request
 			if GetPropBool(PropServerRequestValidateEnabled) {
@@ -816,7 +817,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 				wtcb = append(wtcb, reflectSetHeaderCallback(c))
 			}
 
-			if err := WalkTagShallow(&req, wtcb...); err != nil {
+			if err := util.WalkTagShallow(&req, wtcb...); err != nil {
 				endpointResultHandler(c, rail, nil, err)
 				return
 			}
@@ -993,8 +994,8 @@ type LazyRouteDecl struct {
 	Method  string
 	Handler func(c *gin.Context)
 
-	RegisterFunc func(extra ...StrPair)
-	Extras       []StrPair
+	RegisterFunc func(extra ...util.StrPair)
+	Extras       []util.StrPair
 }
 
 // Build endpoint.
@@ -1032,11 +1033,11 @@ func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
 	return g.extra(key, value, nil)
 }
 
-type extraMatchCond = func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool)
+type extraMatchCond = func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool)
 
 func (g *LazyRouteDecl) extra(key string, value any, cond extraMatchCond) *LazyRouteDecl {
 	if cond == nil {
-		g.Extras = append(g.Extras, StrPair{key, value})
+		g.Extras = append(g.Extras, util.StrPair{Left: key, Right: value})
 	} else {
 		for i, ex := range g.Extras {
 			overwrite, breakLoop := cond(key, value, ex)
@@ -1050,7 +1051,7 @@ func (g *LazyRouteDecl) extra(key string, value any, cond extraMatchCond) *LazyR
 				return g
 			}
 		}
-		g.Extras = append(g.Extras, StrPair{key, value})
+		g.Extras = append(g.Extras, util.StrPair{Left: key, Right: value})
 	}
 	return g
 }
@@ -1095,7 +1096,7 @@ func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
 }
 
 func extraFilterOneByKey() extraMatchCond {
-	return func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool) {
+	return func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool) {
 		if key == ex.Left {
 			return true, true
 		}
@@ -1104,7 +1105,7 @@ func extraFilterOneByKey() extraMatchCond {
 }
 
 func extraFilterOneParamDocByName() extraMatchCond {
-	return func(key string, val any, ex StrPair) (overwrite bool, breakLoop bool) {
+	return func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool) {
 		vd := val.(ParamDoc)
 
 		if key != ex.Left {
@@ -1128,7 +1129,7 @@ func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *
 		Url:     url,
 		Method:  method,
 		Handler: handler,
-		Extras:  []StrPair{},
+		Extras:  []util.StrPair{},
 	}
 	lazyRouteRegistars = append(lazyRouteRegistars, dec)
 	return dec
@@ -1180,12 +1181,12 @@ func PreProcessGin(preProcessor GinPreProcessor) {
 	ginPreProcessors = append(ginPreProcessors, preProcessor)
 }
 
-func reflectSetHeaderCallback(c *gin.Context) WalkTagCallback {
+func reflectSetHeaderCallback(c *gin.Context) util.WalkTagCallback {
 	return walkHeaderTagCallback(func(k string) string { return c.GetHeader(k) })
 }
 
-func walkHeaderTagCallback(getHeader func(k string) string) WalkTagCallback {
-	return WalkTagCallback{
+func walkHeaderTagCallback(getHeader func(k string) string) util.WalkTagCallback {
+	return util.WalkTagCallback{
 		Tag: TagHeaderParam,
 		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
 			hv := getHeader(tagVal)

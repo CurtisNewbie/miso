@@ -2,6 +2,8 @@ package miso
 
 import (
 	"sync"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 const (
@@ -10,11 +12,11 @@ const (
 )
 
 var (
-	propagationKeys = PropagationKeys{keys: NewSet[string]()}
+	propagationKeys = PropagationKeys{keys: util.NewSet[string]()}
 )
 
 type PropagationKeys struct {
-	keys Set[string]
+	keys util.Set[string]
 	rwmu sync.RWMutex
 }
 

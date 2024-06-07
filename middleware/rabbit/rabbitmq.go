@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/cast"
 )
@@ -136,7 +137,7 @@ func (m JsonMsgListener[T]) Queue() string {
 
 func (m JsonMsgListener[T]) Handle(rail miso.Rail, payload string) error {
 	var t T
-	if e := miso.ParseJson(miso.UnsafeStr2Byt(payload), &t); e != nil {
+	if e := util.ParseJson(util.UnsafeStr2Byt(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -188,7 +189,7 @@ func PublishJson(c miso.Rail, obj any, exchange string, routingKey string) error
 
 // Publish json message with headers and confirmation
 func PublishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
-	j, err := miso.WriteJson(obj)
+	j, err := util.WriteJson(obj)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message body, %w", err)
 	}
@@ -197,7 +198,7 @@ func PublishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string
 
 // Publish plain text message with confirmation
 func PublishText(c miso.Rail, msg string, exchange string, routingKey string) error {
-	return PublishMsg(c, miso.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
+	return PublishMsg(c, util.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
 }
 
 // Publish message with confirmation
@@ -225,7 +226,7 @@ func PublishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, con
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 		Headers:      headers,
-		MessageId:    miso.GenIdP("mq_"),
+		MessageId:    util.GenIdP("mq_"),
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
 		false, false, publishing)
@@ -547,7 +548,7 @@ func startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routine
 			}
 
 			// message body, we only support text
-			payload := miso.UnsafeByt2Str(msg.Body)
+			payload := util.UnsafeByt2Str(msg.Body)
 
 			// listener handling the message payload
 			e := listener.Handle(rail, payload)

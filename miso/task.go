@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 var (
@@ -69,7 +71,7 @@ func prepareTaskScheduling(rail Rail, tasks []Job) error {
 	if proposedGroup != "" {
 		group = proposedGroup
 	}
-	nodeId = ERand(30)
+	nodeId = util.ERand(30)
 
 	if err := registerTasks(rail, tasks); err != nil {
 		return err

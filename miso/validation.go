@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 const (
@@ -30,12 +32,12 @@ const (
 )
 
 var (
-	rules                             = NewSet[string]()
-	ValidateWalkTagCallbackDeprecated = WalkTagCallback{
+	rules                             = util.NewSet[string]()
+	ValidateWalkTagCallbackDeprecated = util.WalkTagCallback{
 		Tag:      TagValidationV1,
 		OnWalked: validateOnWalked,
 	}
-	ValidateWalkTagCallback = WalkTagCallback{
+	ValidateWalkTagCallback = util.WalkTagCallback{
 		Tag:      TagValidationV2,
 		OnWalked: validateOnWalked,
 	}
@@ -92,7 +94,7 @@ Available Rules:
   - validated
 */
 func Validate(target any) error {
-	introspector := Introspect(target)
+	introspector := util.Introspect(target)
 	targetVal := reflect.ValueOf(target)
 	var verr error
 
@@ -143,7 +145,7 @@ func Validate(target any) error {
 
 func ValidateRule(field reflect.StructField, value reflect.Value, rule string, ruleParam string) error {
 	fname := field.Name
-	if !IsFieldExposed(fname) {
+	if !util.IsFieldExposed(fname) {
 		return nil
 	}
 

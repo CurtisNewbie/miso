@@ -1,4 +1,4 @@
-package miso
+package util
 
 // https://stackoverflow.com/questions/8357203/is-it-possible-to-display-text-in-a-console-with-a-strike-through-effect
 // https://en.wikipedia.org/wiki/ANSI_escape_code

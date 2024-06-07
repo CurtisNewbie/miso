@@ -1,6 +1,10 @@
 package miso
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/curtisnewbie/miso/util"
+)
 
 // Value serializer / deserializer.
 type Serializer interface {
@@ -16,11 +20,11 @@ func (j JsonSerializer) Serialize(t any) (string, error) {
 		return v, nil
 	}
 
-	b, err := WriteJson(t)
+	b, err := util.WriteJson(t)
 	if err != nil {
 		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}
-	return UnsafeByt2Str(b), nil
+	return util.UnsafeByt2Str(b), nil
 }
 
 func (j JsonSerializer) Deserialize(ptr any, v string) error {
@@ -29,7 +33,7 @@ func (j JsonSerializer) Deserialize(ptr any, v string) error {
 		return nil
 	}
 
-	err := ParseJson(UnsafeStr2Byt(v), ptr)
+	err := util.ParseJson(util.UnsafeStr2Byt(v), ptr)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal from string, %v", err)
 	}

@@ -1,7 +1,8 @@
-package miso
+package util
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -35,7 +36,6 @@ func TestRunAsync(t *testing.T) {
 }
 
 func TestRunAsyncPool(t *testing.T) {
-	SetLogLevel("debug")
 	cnt := 1000
 	pool := NewAsyncPool(cnt+1, 100)
 	start := time.Now()
@@ -45,7 +45,7 @@ func TestRunAsyncPool(t *testing.T) {
 		j := i
 		futures = append(futures, SubmitAsync(pool, func() (int, error) {
 			time.Sleep(5 * time.Millisecond)
-			Infof("%v is done", j)
+			fmt.Printf("%v is done\n", j)
 			return j, nil
 		}))
 	}
@@ -57,20 +57,18 @@ func TestRunAsyncPool(t *testing.T) {
 			t.Fatal(err)
 		}
 		sum += res
-		Infof("Get future %d", i)
+		t.Logf("Get future %d", i)
 	}
 	expected := (cnt * (cnt + 1)) / 2
 	if sum != expected {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
-	Infof("sum: %v, time: %v", sum, time.Since(start))
+	t.Logf("sum: %v, time: %v", sum, time.Since(start))
 
 	time.Sleep(time.Second * 5)
 }
 
 func TestRunAsyncWithPanic(t *testing.T) {
-	SetLogLevel("debug")
-
 	future := RunAsync[struct{}](panicFunc)
 	_, err := future.Get()
 	if err == nil {
@@ -94,12 +92,11 @@ func TestRunAsyncWithPanic(t *testing.T) {
 }
 
 func panicFunc() (struct{}, error) {
-	Info("about to panic")
+	Printlnf("about to panic")
 	panic("panic func panicked")
 }
 
 func TestAwaitFutures(t *testing.T) {
-	SetLogLevel("debug")
 	cnt := 1000
 	pool := NewAsyncPool(cnt+1, 100)
 	awaitFutures := NewAwaitFutures[int](pool)
@@ -126,5 +123,5 @@ func TestAwaitFutures(t *testing.T) {
 	if sum != expected {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
-	Infof("sum: %v, time: %v", sum, time.Since(start))
+	t.Logf("sum: %v, time: %v", sum, time.Since(start))
 }

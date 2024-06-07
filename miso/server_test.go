@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -173,7 +174,7 @@ func TestSetHeaderTag(t *testing.T) {
 		}
 		return ""
 	}
-	err := WalkTagShallow(&d, walkHeaderTagCallback(GetHeader))
+	err := util.WalkTagShallow(&d, walkHeaderTagCallback(GetHeader))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +205,7 @@ func BenchmarkSetHeaderTag(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = WalkTagShallow(&d, callback)
+		err = util.WalkTagShallow(&d, callback)
 	}
 
 	if err != nil {

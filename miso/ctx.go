@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -227,7 +228,7 @@ func (r Rail) WithCtxVal(key string, val any) Rail {
 // Create a new Rail with a new SpanId
 func (r Rail) NextSpan() Rail {
 	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
-	return r.WithCtxVal(XSpanId, RandLowerAlphaNumeric16())
+	return r.WithCtxVal(XSpanId, util.RandLowerAlphaNumeric16())
 }
 
 // Create new Rail with context's CancelFunc
@@ -244,10 +245,10 @@ func EmptyRail() Rail {
 // Create new Rail from context.
 func NewRail(ctx context.Context) Rail {
 	if ctx.Value(XSpanId) == nil {
-		ctx = context.WithValue(ctx, XSpanId, RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
+		ctx = context.WithValue(ctx, XSpanId, util.RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 	if ctx.Value(XTraceId) == nil {
-		ctx = context.WithValue(ctx, XTraceId, RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
+		ctx = context.WithValue(ctx, XTraceId, util.RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 	return Rail{ctx: ctx}
 }

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -85,5 +86,5 @@ func sqliteBootstrap(rail miso.Rail) error {
 }
 
 func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
-	return !miso.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
+	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
 }

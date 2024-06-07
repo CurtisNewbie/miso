@@ -1,4 +1,4 @@
-package miso
+package util
 
 import (
 	"sync"

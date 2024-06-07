@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"github.com/spf13/cast"
@@ -332,7 +333,7 @@ func RegisterConsulService() error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[ConsulMetaRegisterTime] = cast.ToString(Now().UnixMilli())
+	meta[ConsulMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
 
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
 	registration := &api.AgentServiceRegistration{
@@ -426,7 +427,7 @@ func ConsulBootstrap(rail Rail) error {
 
 	if GetPropBool(PropConsulEnableDeregisterUrl) {
 		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
-		if !IsBlankStr(deregisterUrl) {
+		if !util.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
 			Get(deregisterUrl,

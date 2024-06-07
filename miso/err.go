@@ -3,6 +3,8 @@ package miso
 import (
 	"errors"
 	"fmt"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 var (
@@ -39,7 +41,7 @@ func (e *MisoErr) Error() string {
 }
 
 func (e *MisoErr) HasCode() bool {
-	return !IsBlankStr(e.Code)
+	return !util.IsBlankStr(e.Code)
 }
 
 func (e *MisoErr) WithCode(code string) *MisoErr {

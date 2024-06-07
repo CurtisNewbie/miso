@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -93,7 +94,7 @@ func MustCompile(fs embed.FS, s string) *template.Template {
 		panic(err)
 	}
 
-	t, err := template.New("").Parse(UnsafeByt2Str(b))
+	t, err := template.New("").Parse(util.UnsafeByt2Str(b))
 	if err != nil {
 		panic(err)
 	}

@@ -1,4 +1,4 @@
-package miso
+package util
 
 import (
 	"reflect"
@@ -90,7 +90,7 @@ func TestWalkTagShallow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	Infof("%#v", d)
+	t.Logf("%#v", d)
 }
 
 func TestWalkTagShallowFalseCase(t *testing.T) {

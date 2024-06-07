@@ -1,4 +1,4 @@
-package miso
+package util
 
 import (
 	"flag"
@@ -48,4 +48,8 @@ func CliRun(ex string, args ...string) ([]byte, error) {
 		return nil, err
 	}
 	return cmdout, nil
+}
+
+func Printlnf(pat string, args ...any) {
+	fmt.Printf(pat+"\n", args...)
 }

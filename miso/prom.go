@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -94,7 +95,7 @@ func PrometheusBootstrap(rail Rail) error {
 	handler := PrometheusHandler()
 
 	if GetPropBool(PropMetricsAuthEnabled) {
-		if IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
+		if util.IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
 			return fmt.Errorf("metrics authorization enabled, but secret is missing, please configure property '%v'",
 				PropMetricsAuthBearer)
 		}

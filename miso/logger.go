@@ -3,12 +3,12 @@ package miso
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 )
@@ -89,28 +89,28 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(levelstr)
 
 	if len(levelstr) < levelWidth {
-		b.WriteString(Spaces(levelWidth - len(levelstr)))
+		b.WriteString(util.Spaces(levelWidth - len(levelstr)))
 	}
 
 	b.WriteString(" [")
 	b.WriteString(traceId)
 
 	if len(traceId) < traceSpanIdWidth {
-		b.WriteString(Spaces(traceSpanIdWidth - len(traceId)))
+		b.WriteString(util.Spaces(traceSpanIdWidth - len(traceId)))
 	}
 
 	b.WriteByte(',')
 	b.WriteString(spanId)
 
 	if len(spanId) < traceSpanIdWidth {
-		b.WriteString(Spaces(traceSpanIdWidth - len(spanId)))
+		b.WriteString(util.Spaces(traceSpanIdWidth - len(spanId)))
 	}
 
 	b.WriteString("]  ")
 	b.WriteString(fn)
 
 	if len(fn) < fnWidth {
-		b.WriteString(Spaces(fnWidth - len(fn)))
+		b.WriteString(util.Spaces(fnWidth - len(fn)))
 	}
 
 	b.WriteString(" : ")
@@ -357,11 +357,7 @@ func unsafeGetShortFnName(fn string) string {
 	if j < 0 {
 		return fn
 	}
-	return UnsafeByt2Str(UnsafeStr2Byt(fn)[j+1:])
-}
-
-func Printlnf(pat string, args ...any) {
-	fmt.Printf(pat+"\n", args...)
+	return util.UnsafeByt2Str(util.UnsafeStr2Byt(fn)[j+1:])
 }
 
 // Setup error log handler.
