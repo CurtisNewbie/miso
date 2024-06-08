@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
-	github.com/curtisnewbie/svc v0.0.7
+	github.com/curtisnewbie/svc v0.0.8
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
