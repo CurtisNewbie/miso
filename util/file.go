@@ -68,3 +68,15 @@ func MkdirAll(path string) error {
 func MkdirParentAll(path string) error {
 	return MkdirAll(filepath.Dir(path))
 }
+
+// Save to temp file, returns temp file path or error.
+func SaveTmpFile(tmpDir string, reader io.Reader) (string, error) {
+	f, err := os.CreateTemp(tmpDir, "temp_*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file, %w", err)
+	}
+	if _, err := io.Copy(f, reader); err != nil {
+		return "", fmt.Errorf("failed to save temp file, %v, %w", f.Name(), err)
+	}
+	return f.Name(), nil
+}

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"os"
 	"testing"
 )
@@ -33,4 +34,13 @@ func TestMkdirParentAll(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.RemoveAll(p)
+}
+
+func TestSaveTmpFile(t *testing.T) {
+	buf := bytes.NewReader([]byte("oh"))
+	p, err := SaveTmpFile("/tmp", buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(p)
 }
