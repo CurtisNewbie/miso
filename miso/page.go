@@ -1,6 +1,9 @@
 package miso
 
-import "gorm.io/gorm"
+import (
+	"github.com/curtisnewbie/miso/util"
+	"gorm.io/gorm"
+)
 
 const (
 	DefaultPageLimit = 30
@@ -88,25 +91,18 @@ func (q *QueryPageParam[V]) Exec(rail Rail, tx *gorm.DB) (PageRes[V], error) {
 // COUNT query is called first, if none is found (i.e., COUNT(...) == 0), this method
 // will not call the actual SELECT query to avoid unnecessary performance lost.
 func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
-	var res PageRes[Res]
-	var total int
-
 	newQuery := func() *gorm.DB {
 		return p.baseQuery(tx)
 	}
 
-	// count
-	t := newQuery().Select("COUNT(*)").Scan(&total)
-
-	if t.Error != nil {
-		return res, t.Error
-	}
-
-	var payload []Res
-
-	// the actual page
-	if total > 0 {
-		t = newQuery()
+	countFuture := util.RunAsync(func() (int, error) {
+		var total int
+		t := newQuery().Select("COUNT(*)").Scan(&total)
+		return total, t.Error
+	})
+	pageFuture := util.RunAsync(func() ([]Res, error) {
+		var payload []Res
+		t := newQuery()
 		if p.selectQuery != nil {
 			t = p.selectQuery(t)
 		}
@@ -114,7 +110,7 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 			Limit(p.reqPage.GetLimit()).
 			Scan(&payload)
 		if t.Error != nil {
-			return res, t.Error
+			return nil, t.Error
 		}
 
 		if p.forEach != nil {
@@ -122,9 +118,22 @@ func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[
 				payload[i] = p.forEach(payload[i])
 			}
 		}
+		return payload, nil
+	})
+
+	var res PageRes[Res]
+	total, err := countFuture.Get()
+	if err != nil {
+		return res, err
 	}
 
-	return PageRes[Res]{Payload: payload, Page: RespPage(p.reqPage, total)}, nil
+	payload, err := pageFuture.Get()
+	if err != nil {
+		return res, err
+	}
+
+	res = PageRes[Res]{Payload: payload, Page: RespPage(p.reqPage, total)}
+	return res, nil
 }
 
 func NewPageQuery[Res any]() *QueryPageParam[Res] {
