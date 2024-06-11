@@ -12,7 +12,7 @@ import (
 const (
 	unixSecPersudoMax = 9999999999 // 2286-11-21, should be enough :D
 
-	sqlTimeFormat = "2006/01/02 15:04:05"
+	SQLDateTimeFormat = "2006/01/02 15:04:05"
 )
 
 /*
@@ -43,8 +43,12 @@ func (t ETime) UnixMilli() int64 {
 	return t.ToTime().UnixMilli()
 }
 
+func (t ETime) FormatDate() string {
+	return t.ToTime().Format(time.DateOnly)
+}
+
 func (t ETime) FormatClassic() string {
-	return t.ToTime().Format("2006/01/02 15:04:05")
+	return t.ToTime().Format(SQLDateTimeFormat)
 }
 
 func (t ETime) FormatClassicLocale() string {
@@ -61,7 +65,7 @@ func (et ETime) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
-	return t.Format(sqlTimeFormat), nil
+	return t.Format(SQLDateTimeFormat), nil
 }
 
 // implements decorder.Unmarshaler in encoding/json.
@@ -87,14 +91,14 @@ func (et *ETime) Scan(value interface{}) error {
 		*et = ETime(v)
 	case []byte:
 		var t time.Time
-		t, err := time.Parse(sqlTimeFormat, string(v))
+		t, err := time.Parse(SQLDateTimeFormat, string(v))
 		if err != nil {
 			return err
 		}
 		*et = ETime(t)
 	case string:
 		var t time.Time
-		t, err := time.Parse(sqlTimeFormat, v)
+		t, err := time.Parse(SQLDateTimeFormat, v)
 		if err != nil {
 			return err
 		}
@@ -134,4 +138,12 @@ func FuzzParseTimeLoc(formats []string, value string, loc *time.Location) (time.
 		}
 	}
 	return t, fmt.Errorf("failed to parse time '%s'", value)
+}
+
+// Parse classic datetime format using patterns: "2006-01-02 15:04:05", "2006/01/02 15:04:05".
+func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {
+	return FuzzParseTimeLoc([]string{
+		time.DateTime,
+		SQLDateTimeFormat,
+	}, val, loc)
 }
