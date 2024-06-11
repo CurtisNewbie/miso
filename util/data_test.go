@@ -113,7 +113,7 @@ func BenchmarkDistinct(b *testing.B) {
 
 func TestSliceMap(t *testing.T) {
 	s := []string{"1", "2", "3"}
-	v := SliceMap(s, func(s string) int { return cast.ToInt(s) })
+	v := MapTo(s, func(s string) int { return cast.ToInt(s) })
 	if len(v) < 3 {
 		t.Fatal("len != 3")
 	}

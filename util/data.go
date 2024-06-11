@@ -316,7 +316,7 @@ func CopyFilter[T any](l []T, f func(T) bool) []T {
 }
 
 // Map slice item to another.
-func SliceMap[T any, V any](ts []T, mapFunc func(t T) V) []V {
+func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
 	var vs []V
 	if len(ts) < 1 {
 		return vs
