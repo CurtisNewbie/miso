@@ -151,3 +151,29 @@ func TestRWMap(t *testing.T) {
 		t.Logf("%v -> %v", k, v)
 	}
 }
+
+func TestMergeSlice(t *testing.T) {
+	type vt struct {
+		name string
+		val  int
+	}
+	vs := []vt{{name: "apple", val: 1}, {name: "juice", val: 2}, {name: "apple", val: 3}}
+	m := MergeSlice(vs, func(v vt) string { return v.name })
+	t.Logf("merged: %+v", m)
+
+	s, ok := m["apple"]
+	if !ok {
+		t.Fatal("apple not found")
+	}
+	if len(s) != 2 {
+		t.Fatal("apple should have 2 values")
+	}
+
+	s, ok = m["juice"]
+	if !ok {
+		t.Fatal("juice not found")
+	}
+	if len(s) != 1 {
+		t.Fatal("juice should have 1 value")
+	}
+}

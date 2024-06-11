@@ -321,3 +321,22 @@ func SliceMap[T any, V any](ts []T, mapFunc func(t T) V) []V {
 	}
 	return vs
 }
+
+// Merge slice of items to a map.
+func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
+	if len(vs) < 1 {
+		return make(map[K][]V)
+	}
+
+	m := make(map[K][]V, len(vs))
+	for i := range vs {
+		v := vs[i]
+		k := keyFunc(v)
+		if prev, ok := m[k]; ok {
+			m[k] = append(prev, v)
+		} else {
+			m[k] = []V{v}
+		}
+	}
+	return m
+}
