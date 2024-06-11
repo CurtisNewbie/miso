@@ -693,7 +693,12 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 			qp += "&"
 		}
 	}
-	url := "`" + d.Url + qp + "`"
+
+	app := GetPropStr(PropAppName)
+	if app != "" {
+		app = "/" + app
+	}
+	url := "`" + app + d.Url + qp + "`"
 
 	for _, h := range d.Headers {
 		sl.Printlnf("let %s: any | null = null;", util.CamelCase(h.Name))
