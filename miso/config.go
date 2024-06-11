@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -232,13 +233,11 @@ func DefaultReadConfig(args []string, rail Rail) {
 	}
 }
 
-/*
-Load config from reader.
-
-It's the caller's responsibility to close the provided reader.
-
-Repetitively calling this method overides previously loaded config.
-*/
+// Load config from io Reader.
+//
+// It's the caller's responsibility to close the provided reader.
+//
+// Calling this method overides previously loaded config.
 func LoadConfigFromReader(reader io.Reader, r Rail) error {
 	var eo error
 
@@ -259,47 +258,37 @@ func LoadConfigFromReader(reader io.Reader, r Rail) error {
 	return eo
 }
 
-/*
-Load config from file
+// Load config from string.
+//
+// Calling this method overides previously loaded config.
+func LoadConfigFromStr(s string, r Rail) error {
+	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
+	return LoadConfigFromReader(sr, r)
+}
 
-Repetitively calling this method overides previously loaded config.
-*/
+// Load config from file.
+//
+// Calling this method overides previously loaded config.
 func LoadConfigFromFile(configFile string, r Rail) error {
 	if configFile == "" {
 		return nil
 	}
 
-	var eo error
-
-	doWithViperWriteLock(func() {
-		f, err := os.Open(configFile)
-		if err != nil {
-			if os.IsNotExist(err) {
-				eo = fmt.Errorf("unable to find config file: '%s'", configFile)
-				return
-			}
-
-			eo = fmt.Errorf("failed to open config file: '%s', %v", configFile, err)
-			return
+	f, err := os.Open(configFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("unable to find config file: '%s'", configFile)
 		}
-		defer f.Close()
+		return fmt.Errorf("failed to open config file: '%s', %v", configFile, err)
+	}
+	defer f.Close()
 
-		viper.SetConfigType("yml")
-		if err = viper.MergeConfig(f); err != nil {
-			eo = fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
-		}
-
-		r.Debugf("Loaded config file: '%v'", configFile)
-
-		// reset the whole fastBoolCache
-		configVar.Lock()
-		defer configVar.Unlock()
-		if len(configVar.fastBoolCache) > 0 {
-			configVar.fastBoolCache = make(map[string]bool)
-		}
-	})
-
-	return eo
+	err = LoadConfigFromReader(f, r)
+	if err != nil {
+		return fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
+	}
+	r.Debugf("Loaded config file: '%v'", configFile)
+	return nil
 }
 
 // Guess config file path.

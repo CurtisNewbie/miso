@@ -10,7 +10,7 @@ import (
 
 func TestParseArg(t *testing.T) {
 	args := make([]string, 2)
-	args[1] = "configFile=../conf_dev.yml"
+	args[1] = "configFile=../testdata/conf_dev.yml"
 	DefaultReadConfig(args, EmptyRail())
 
 	if m := GetPropBool(PropProdMode); !m {
@@ -119,7 +119,7 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	SetEnv("CLIENT_AS", "http://localhost:8081")
 
 	args := make([]string, 2)
-	args[1] = "configFile=../conf_test.yml"
+	args[1] = "configFile=../testdata/conf_test.yml"
 	DefaultReadConfig(args, EmptyRail())
 
 	t.Logf("PRODUCTION MODE: %t", GetPropBool(PropProdMode))
@@ -294,6 +294,23 @@ switch: "true"
 test: "TestLoadConfigFromReader"
 `))
 	if err := LoadConfigFromReader(b, EmptyRail()); err != nil {
+		t.Fatal(err)
+	}
+	if !GetPropBool("switch") {
+		t.Fatal("should be true")
+	}
+	if GetPropStr("test") != "TestLoadConfigFromReader" {
+		t.Fatal("incorrect test value")
+	}
+}
+
+func TestLoadConfigFromStr(t *testing.T) {
+	SetDefProp("switch", false)
+	s := `
+switch: "true"
+test: "TestLoadConfigFromReader"
+`
+	if err := LoadConfigFromStr(s, EmptyRail()); err != nil {
 		t.Fatal(err)
 	}
 	if !GetPropBool("switch") {
