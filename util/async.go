@@ -150,7 +150,7 @@ func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
 func (p *AsyncPool) Go(f func()) {
 	select {
 	case p.workers <- struct{}{}:
-		go func() { p.spawn(f) }()
+		go p.spawn(f)
 	case p.tasks <- f:
 		// channel select is completely random
 		// extra select is to make sure that we have at least one worker running
@@ -158,7 +158,7 @@ func (p *AsyncPool) Go(f func()) {
 		// conc package has the same problem as well :(, but the way we use the pool is different.
 		select {
 		case p.workers <- struct{}{}:
-			go p.spawnEmpty()
+			go p.spawn(nil)
 		default:
 		}
 		return
@@ -170,19 +170,21 @@ func (p *AsyncPool) spawn(first func()) {
 	defer func() { <-p.workers }()
 
 	if first != nil {
-		first()
+		PanicSafeFunc(first)()
 	}
 
 	for f := range p.tasks {
-		f()
+		PanicSafeFunc(f)()
 	}
 }
 
-// spawn a new worker.
-func (p *AsyncPool) spawnEmpty() {
-	defer func() { <-p.workers }()
-
-	for f := range p.tasks {
-		f()
+func PanicSafeFunc(op func()) func() {
+	return func() {
+		defer func() {
+			if v := recover(); v != nil {
+				Printlnf("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+			}
+		}()
+		op()
 	}
 }

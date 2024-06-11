@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -124,4 +125,27 @@ func TestAwaitFutures(t *testing.T) {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
 	t.Logf("sum: %v, time: %v", sum, time.Since(start))
+}
+
+func TestPoolPanic(t *testing.T) {
+	pool := NewAsyncPool(1, 10)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	pool.Go(func() {
+		defer wg.Done()
+		panic("oops")
+	})
+
+	wg.Add(1)
+	pool.Go(func() {
+		defer wg.Done()
+		panic("oops")
+	})
+
+	wg.Add(1)
+	pool.Go(func() {
+		defer wg.Done()
+		panic("oops")
+	})
+	wg.Wait()
 }
