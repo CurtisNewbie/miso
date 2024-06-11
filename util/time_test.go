@@ -35,3 +35,13 @@ func TestFuzzParseTime(t *testing.T) {
 	}
 	t.Log(tt.String())
 }
+
+func TestTimeAdd(t *testing.T) {
+	n := Now()
+	t.Logf("now: %+v", n)
+	v := n.Add(-time.Hour)
+	t.Logf("v: %+v", v)
+	if n.ToTime().Sub(v.ToTime()) != time.Hour {
+		t.Fatal("diff is not an hour")
+	}
+}

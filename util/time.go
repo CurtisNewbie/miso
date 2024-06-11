@@ -51,6 +51,10 @@ func (t ETime) FormatClassicLocale() string {
 	return t.ToTime().Format("2006/01/02 15:04:05 (MST)")
 }
 
+func (t ETime) Add(d time.Duration) ETime {
+	return ETime(t.ToTime().Add(d))
+}
+
 // Implements driver.Valuer in database/sql.
 func (et ETime) Value() (driver.Value, error) {
 	t := time.Time(et)
@@ -110,14 +114,21 @@ func (et *ETime) Scan(value interface{}) error {
 }
 
 func FuzzParseTime(formats []string, value string) (time.Time, error) {
+	return FuzzParseTimeLoc(formats, value, time.UTC)
+}
+
+func FuzzParseTimeLoc(formats []string, value string, loc *time.Location) (time.Time, error) {
 	if len(formats) < 1 {
 		return time.Time{}, errors.New("formats is empty")
+	}
+	if loc == nil {
+		loc = time.UTC
 	}
 
 	var t time.Time
 	var err error
 	for _, f := range formats {
-		t, err = time.Parse(f, value)
+		t, err = time.ParseInLocation(f, value, loc)
 		if err == nil {
 			return t, nil
 		}
