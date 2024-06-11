@@ -45,6 +45,12 @@ func TestSet(t *testing.T) {
 	}
 
 	t.Logf("Set: %s", s.String())
+
+	s.Del("juice")
+	if s.Has("juice") {
+		t.Fatal("set shouldn't contain juice")
+	}
+	t.Logf("Set: %s", s.String())
 }
 
 func TestDistinct(t *testing.T) {

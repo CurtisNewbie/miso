@@ -71,6 +71,11 @@ func (s *Set[T]) Add(key T) bool {
 	return true
 }
 
+// Delete key.
+func (s *Set[T]) Del(key T) {
+	delete(s.Keys, key)
+}
+
 // Add keys to set
 func (s *Set[T]) AddAll(keys []T) {
 	if keys == nil {
