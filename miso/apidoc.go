@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -13,7 +14,8 @@ import (
 )
 
 const (
-	TagApiDocDesc = "desc"
+	TagApiDocDesc  = "desc"
+	TagApiDocXDesc = "xdesc"
 )
 
 var (
@@ -27,6 +29,10 @@ var (
 	apiDocTmpl          *template.Template
 	buildApiDocTmplOnce sync.Once
 	ignoredJsonDocTag   = []string{"form", "header"}
+)
+
+var (
+	xdescs map[string]string
 )
 
 var (
@@ -344,7 +350,7 @@ func BuildJsonDesc(v reflect.Value) []JsonDesc {
 			FieldName: f.Name,
 			Name:      name,
 			TypeName:  typeName,
-			Desc:      f.Tag.Get(TagApiDocDesc),
+			Desc:      getTagDesc(f.Tag),
 			Fields:    []JsonDesc{},
 		}
 
@@ -478,7 +484,7 @@ func parseQueryDoc(t reflect.Type) []ParamDoc {
 		if query == "" {
 			continue
 		}
-		desc := f.Tag.Get(TagApiDocDesc)
+		desc := getTagDesc(f.Tag)
 		pds = append(pds, ParamDoc{
 			Name: query,
 			Desc: desc,
@@ -503,7 +509,7 @@ func parseHeaderDoc(t reflect.Type) []ParamDoc {
 			continue
 		}
 		header = strings.ToLower(header)
-		desc := f.Tag.Get(TagApiDocDesc)
+		desc := getTagDesc(f.Tag)
 		pds = append(pds, ParamDoc{
 			Name: header,
 			Desc: desc,
@@ -934,4 +940,30 @@ func guessTsTypeName(d JsonDesc) string {
 	} else {
 		return guessTsPrimiTypeName(d.TypeName)
 	}
+}
+
+func AddXDesc(code string, desc string) {
+	if xdescs == nil {
+		xdescs = map[string]string{}
+	}
+	xdescs[code] = desc
+}
+
+func getTagDesc(tag reflect.StructTag) string {
+	if desc, ok := tag.Lookup(TagApiDocDesc); ok {
+		return desc
+	}
+	if xt, ok := tag.Lookup(TagApiDocXDesc); ok {
+		if v, ok := xdescs[xt]; ok {
+			return singleLine(v)
+		}
+	}
+	return ""
+}
+
+var singleLineRegex = regexp.MustCompile(` *[\t\n]+`)
+
+func singleLine(v string) string {
+	v = strings.TrimSpace(v)
+	return singleLineRegex.ReplaceAllString(v, " ")
 }
