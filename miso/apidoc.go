@@ -942,20 +942,25 @@ func guessTsTypeName(d JsonDesc) string {
 	}
 }
 
+// Associate xdesc value with the code appeared in field tag `xdesc:"..."`.
 func AddXDesc(code string, desc string) {
 	if xdescs == nil {
 		xdescs = map[string]string{}
 	}
-	xdescs[code] = desc
+	xdescs[code] = singleLine(desc)
 }
 
+// Get tag api description.
+//
+// If tag `desc` appears, returns the value first. If not, it looks for tag `xdesc`,
+// and returns the value stored in xdescs map.
 func getTagDesc(tag reflect.StructTag) string {
 	if desc, ok := tag.Lookup(TagApiDocDesc); ok {
 		return desc
 	}
 	if xt, ok := tag.Lookup(TagApiDocXDesc); ok {
 		if v, ok := xdescs[xt]; ok {
-			return singleLine(v)
+			return v
 		}
 	}
 	return ""
