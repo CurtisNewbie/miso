@@ -1,4 +1,4 @@
-package crypto
+package jwt
 
 // JWT Configuration Properties
 const (

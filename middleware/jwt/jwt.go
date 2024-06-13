@@ -1,4 +1,4 @@
-package crypto
+package jwt
 
 import (
 	"crypto/rsa"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/middleware/crypto"
 	"github.com/curtisnewbie/miso/miso"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
@@ -78,7 +79,7 @@ func loadPublicKey() (any, error) {
 	}
 
 	k := miso.GetPropStr(PropJwtPublicKey)
-	pk, err := LoadPubKey(k)
+	pk, err := crypto.LoadPubKey(k)
 	if err != nil {
 		miso.EmptyRail().Errorf("Failed to load public key, %v", err)
 		return nil, err
@@ -108,7 +109,7 @@ func loadPrivateKey() (any, error) {
 	}
 
 	k := miso.GetPropStr(PropJwtPrivateKey)
-	pk, err := LoadPrivKey(k)
+	pk, err := crypto.LoadPrivKey(k)
 	if err != nil {
 		miso.EmptyRail().Errorf("Failed to load private key, %v", err)
 		return nil, err
