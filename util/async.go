@@ -74,9 +74,9 @@ func SubmitAsync[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
 	return fut
 }
 
-// AwaitFutures represent multiple tasks that will be submitted to the pool asynchronously whose results will be awaited together.
+// AwaitFutures represent tasks that are submitted to the pool asynchronously whose results are awaited together.
 //
-// AwaitFutures should only be used once everytime it's needed.
+// AwaitFutures should only be used once for the same group of tasks.
 //
 // Use miso.NewAwaitFutures() to create one.
 type AwaitFutures[T any] struct {
@@ -85,19 +85,41 @@ type AwaitFutures[T any] struct {
 	futures []Future[T]
 }
 
+// Submit task to AwaitFutures.
 func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
 	a.wg.Add(1)
-	a.futures = append(a.futures, SubmitAsync[T](a.pool, func() (T, error) {
+	delegate := func() (T, error) {
 		defer a.wg.Done()
 		return task()
-	}))
+	}
+	if a.pool != nil {
+		a.futures = append(a.futures, SubmitAsync[T](a.pool, delegate))
+	} else {
+		a.futures = append(a.futures, RunAsync[T](delegate))
+	}
 }
 
+// Await results of all tasks.
 func (a *AwaitFutures[T]) Await() []Future[T] {
 	a.wg.Wait()
 	return a.futures
 }
 
+// Await results of all tasks and return any error that is found in the task Futures.
+func (a *AwaitFutures[T]) AwaitAnyErr() error {
+	fut := a.Await()
+	for _, f := range fut {
+		_, err := f.Get()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Create new AwaitFutures for a group of tasks.
+//
+// *AsyncPool is optional, provide nil if not needed.
 func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
 	return &AwaitFutures[T]{
 		pool:    pool,
