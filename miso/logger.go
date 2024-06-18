@@ -1,7 +1,6 @@
 package miso
 
 import (
-	"bytes"
 	"context"
 	"runtime"
 	"strings"
@@ -31,11 +30,7 @@ const (
 )
 
 var (
-	logBufPool = sync.Pool{
-		New: func() any {
-			return &bytes.Buffer{}
-		},
-	}
+	logBufPool = util.NewByteBufferPool(128)
 )
 
 var (
@@ -81,8 +76,8 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	levelstr := toLevelStr(entry.Level)
 
-	b := logBufPool.Get().(*bytes.Buffer)
-	defer putLogBuf(b)
+	b := logBufPool.Get()
+	defer logBufPool.Put(b)
 
 	b.WriteString(entry.Time.Format("2006-01-02 15:04:05.000"))
 	b.WriteByte(' ')
@@ -132,11 +127,6 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	return b.Bytes(), nil
-}
-
-func putLogBuf(b *bytes.Buffer) {
-	b.Reset()
-	logBufPool.Put(b)
 }
 
 type NewRollingLogFileParam struct {

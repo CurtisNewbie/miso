@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -143,4 +144,35 @@ func BenchmarkIsBlankStr(b *testing.B) {
 	if !r {
 		b.Fatal()
 	}
+}
+
+func TestNamedSprintf(t *testing.T) {
+	s := NamedSprintf("{{.brand}} Yes!", map[string]any{"brand": "AMD"})
+	if s != "AMD Yes!" {
+		t.Fatal(s)
+	}
+	t.Log(s)
+}
+
+func BenchmarkNamedSprintf(b *testing.B) {
+	p := map[string]any{"brand": "AMD"}
+	pat := NamedFmt("{{.brand}} Yes!")
+
+	// 587.2 ns/op           248 B/op         11 allocs/op
+	b.Run("NamedFmt", func(b *testing.B) {
+		var s string
+		for i := 0; i < b.N; i++ {
+			s = pat.Sprintf(p)
+		}
+		b.Log(s)
+	})
+
+	// 42.79 ns/op            8 B/op          1 allocs/op
+	b.Run("fmt", func(b *testing.B) {
+		var s string
+		for i := 0; i < b.N; i++ {
+			s = fmt.Sprintf("%v Yes!", "AMD")
+		}
+		b.Log(s)
+	})
 }

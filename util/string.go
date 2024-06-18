@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"html/template"
 	"strconv"
 	"strings"
 	"unicode"
@@ -155,4 +156,39 @@ func LastNStr(s string, n int) string {
 		return s
 	}
 	return string(ru[len(ru)-n:])
+}
+
+var namedFmtBufPool = NewByteBufferPool(0)
+
+// Equivalent to NamedFmt(pat).Sprintf(p).
+func NamedSprintf(pat string, p map[string]any) string {
+	return NamedFmt(pat).Sprintf(p)
+}
+
+// Create reuseable named variables string formatter.
+func NamedFmt(pat string) *namedFmt {
+	t, err := template.New("").Parse(pat)
+	if err != nil {
+		return &namedFmt{pat: pat, temp: nil}
+	}
+	return &namedFmt{pat: pat, temp: t}
+}
+
+type namedFmt struct {
+	pat  string
+	temp *template.Template
+}
+
+func (n *namedFmt) Sprintf(p map[string]any) string {
+	if n.temp == nil {
+		return n.pat
+	}
+
+	buf := namedFmtBufPool.Get()
+	defer namedFmtBufPool.Put(buf)
+
+	if err := n.temp.Execute(buf, p); err != nil {
+		return n.pat
+	}
+	return buf.String()
 }
