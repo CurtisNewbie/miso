@@ -172,7 +172,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 		switch value.Kind() {
 		case reflect.String:
 			sval := value.String()
-			if trimed := strings.TrimSpace(sval); trimed == "" {
+			if util.IsBlankStr(sval) {
 				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
 			}
 		case reflect.Array, reflect.Slice, reflect.Map:
