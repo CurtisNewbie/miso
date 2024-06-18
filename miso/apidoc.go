@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/encoding"
 	"github.com/curtisnewbie/miso/util"
 )
 
@@ -337,7 +338,7 @@ func BuildJsonDesc(v reflect.Value) []JsonDesc {
 			}
 			name = v
 		} else {
-			name = util.LowercaseNamingStrategy(f.Name)
+			name = encoding.LowercaseNamingStrategy(f.Name)
 		}
 
 		typeName := util.TypeName(f.Type)
@@ -543,7 +544,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 
 		jm := map[string]any{}
 		genJsonReqMap(jm, d.JsonRequestDesc)
-		sj, err := util.SWriteJson(jm)
+		sj, err := encoding.SWriteJson(jm)
 		if err == nil {
 			sl.Printlnf("-d '%s'", sj)
 		}

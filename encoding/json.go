@@ -1,9 +1,10 @@
-package util
+package encoding
 
 import (
 	"io"
 	"unicode"
 
+	"github.com/curtisnewbie/miso/util"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/json-iterator/go/extra"
 )
@@ -12,18 +13,23 @@ func init() {
 	extra.SetNamingStrategy(LowercaseNamingStrategy)
 }
 
-// Parse JSON using jsoniter.
+// Parse json bytes.
 func ParseJson(body []byte, ptr any) error {
 	e := jsoniter.Unmarshal(body, ptr)
 	return e
 }
 
-// Write JSON using jsoniter.
+// Parse json string.
+func SParseJson(body string, ptr any) error {
+	return ParseJson(util.UnsafeStr2Byt(body), ptr)
+}
+
+// Write json as bytes.
 func WriteJson(body any) ([]byte, error) {
 	return jsoniter.Marshal(body)
 }
 
-// Write JSON as string using jsoniter.
+// Write json as string.
 func SWriteJson(body any) (string, error) {
 	if v, ok := body.(string); ok {
 		return v, nil
@@ -32,15 +38,15 @@ func SWriteJson(body any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return UnsafeByt2Str(buf), nil
+	return util.UnsafeByt2Str(buf), nil
 }
 
-// Decode JSON using jsoniter.
+// Decode json.
 func DecodeJson(reader io.Reader, ptr any) error {
 	return jsoniter.NewDecoder(reader).Decode(ptr)
 }
 
-// Encode JSON using jsoniter.
+// Encode json.
 func EncodeJson(writer io.Writer, body any) error {
 	return jsoniter.NewEncoder(writer).Encode(body)
 }
