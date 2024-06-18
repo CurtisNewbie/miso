@@ -283,6 +283,7 @@ func (r *RWMap[K, V]) GetElse(k K, elseFunc func(k K) V) (V, bool) {
 }
 
 // Filter slice values in place.
+//
 // Be cautious that both slices are backed by the same array.
 func Filter[T any](l []T, f func(T) bool) []T {
 	cp := l[:0]
@@ -298,14 +299,11 @@ func Filter[T any](l []T, f func(T) bool) []T {
 	return cp
 }
 
-// Filter slice value, the original slice is copied before filtering.
+// Filter slice value.
+//
+// The original slice is not modified only copied.
 func CopyFilter[T any](l []T, f func(T) bool) []T {
-	initLen := len(l)
-	if initLen > 2 {
-		initLen = initLen / 2
-	}
-
-	cp := make([]T, 0, initLen)
+	cp := make([]T, 0, len(l))
 	for i := range l {
 		x := l[i]
 		if f(x) {
@@ -317,10 +315,11 @@ func CopyFilter[T any](l []T, f func(T) bool) []T {
 
 // Map slice item to another.
 func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
-	var vs []V
 	if len(ts) < 1 {
-		return vs
+		return []V{}
 	}
+
+	vs := make([]V, 0, len(ts))
 	for i := range ts {
 		vs = append(vs, mapFunc(ts[i]))
 	}

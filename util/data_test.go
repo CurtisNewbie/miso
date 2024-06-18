@@ -111,7 +111,7 @@ func BenchmarkDistinct(b *testing.B) {
 	})
 }
 
-func TestSliceMap(t *testing.T) {
+func TestMapTo(t *testing.T) {
 	s := []string{"1", "2", "3"}
 	v := MapTo(s, func(s string) int { return cast.ToInt(s) })
 	if len(v) < 3 {
