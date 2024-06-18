@@ -13,7 +13,7 @@ The overall target is to make it as small and simple as possible, backward compa
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.1.0
+go get github.com/curtisnewbie/miso@v0.1.1
 ```
 
 ## Generate miso project
@@ -21,7 +21,7 @@ go get github.com/curtisnewbie/miso@v0.1.0
 Install latest `misogen` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misogen@v0.1.0
+go install github.com/curtisnewbie/miso/cmd/misogen@v0.1.1
 ```
 
 Use `misogen` to generate new projects, e.g.,
@@ -41,10 +41,10 @@ Usage of misogen:
         Generate code to integrate svc for automatic schema migration
 
 $ mkdir myapp && cd myapp && misogen -name "myapp" -svc
-misogen, current miso version: v0.1.0
+misogen, current miso version: v0.1.1
 
 Initialized module 'myapp'
-Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.0
+Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.1
 Initializing conf.yml
 Initializing internal/schema/scripts/schema.sql
 Initializing internal/schema/migrate.go
