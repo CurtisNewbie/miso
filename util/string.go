@@ -27,7 +27,7 @@ func PadNum(n int, digit int) string {
 
 // Check if the string is blank
 func IsBlankStr(s string) bool {
-	return strings.TrimSpace(s) == ""
+	return s == "" || strings.TrimSpace(s) == ""
 }
 
 // Substring such that len(s) <= max

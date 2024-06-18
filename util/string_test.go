@@ -116,3 +116,31 @@ func BenchmarkHasPrefix(b *testing.B) {
 		}
 	})
 }
+
+func TestIsBlankStr(t *testing.T) {
+	if !IsBlankStr("") {
+		t.Fatal()
+	}
+	if !IsBlankStr(" ") {
+		t.Fatal()
+	}
+	if IsBlankStr("a") {
+		t.Fatal()
+	}
+	if IsBlankStr(" a ") {
+		t.Fatal()
+	}
+}
+
+func BenchmarkIsBlankStr(b *testing.B) {
+	// before: 2.061 ns/op           0 B/op          0 allocs/op
+	// after: 0.2890 ns/op          0 B/op          0 allocs/op
+	var r bool
+	for i := 0; i < b.N; i++ {
+		r = IsBlankStr("")
+	}
+	b.ReportAllocs()
+	if !r {
+		b.Fatal()
+	}
+}
