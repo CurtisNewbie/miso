@@ -15,32 +15,32 @@ const (
 	SQLDateTimeFormat = "2006/01/02 15:04:05"
 )
 
-/*
-EpochTime, same as time.Time but will be serialized/deserialized as epoch milliseconds
-
-This type can be safely used in GORM just like time.Time
-*/
-type ETime time.Time
+// ETime, same as time.Time but is serialized/deserialized in forms of unix epoch milliseconds.
+//
+// This type implements sql.Scanner, and thus can be safely used in GORM just like time.Time. It also
+// implements driver.Valuer and decorder.Unmarshaler to support json marshalling (in forms of epoch milliseconds).
+//
+// In previous releases, ETime was a type alias to time.Time. Since v0.1.2, ETime embeds time.Time to access all of it's methods.
+//
+// To cast from time.Time to ETime, use ToETime() method. To cast from ETime to time.Time, use ETime.ToTime() method.
+type ETime struct {
+	time.Time
+}
 
 func Now() ETime {
-	return ETime(time.Now())
+	return ToETime(time.Now())
+}
+
+func ToETime(t time.Time) ETime {
+	return ETime{t}
 }
 
 func (t ETime) MarshalJSON() ([]byte, error) {
-	tt := time.Time(t)
-	return UnsafeStr2Byt(fmt.Sprintf("%d", tt.UnixMilli())), nil
-}
-
-func (t ETime) String() string {
-	return time.Time(t).String()
+	return UnsafeStr2Byt(fmt.Sprintf("%d", t.UnixMilli())), nil
 }
 
 func (t ETime) ToTime() time.Time {
-	return time.Time(t)
-}
-
-func (t ETime) UnixMilli() int64 {
-	return t.ToTime().UnixMilli()
+	return t.Time
 }
 
 func (t ETime) FormatDate() string {
@@ -55,13 +55,8 @@ func (t ETime) FormatClassicLocale() string {
 	return t.ToTime().Format("2006/01/02 15:04:05 (MST)")
 }
 
-func (t ETime) Add(d time.Duration) ETime {
-	return ETime(t.ToTime().Add(d))
-}
-
 // Implements driver.Valuer in database/sql.
-func (et ETime) Value() (driver.Value, error) {
-	t := time.Time(et)
+func (t ETime) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
@@ -76,7 +71,7 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	}
 
 	pt := time.UnixMilli(millisec)
-	*t = ETime(pt)
+	*t = ToETime(pt)
 	return nil
 }
 
@@ -88,27 +83,27 @@ func (et *ETime) Scan(value interface{}) error {
 
 	switch v := value.(type) {
 	case time.Time:
-		*et = ETime(v)
+		*et = ToETime(v)
 	case []byte:
 		var t time.Time
 		t, err := time.Parse(SQLDateTimeFormat, string(v))
 		if err != nil {
 			return err
 		}
-		*et = ETime(t)
+		*et = ToETime(t)
 	case string:
 		var t time.Time
 		t, err := time.Parse(SQLDateTimeFormat, v)
 		if err != nil {
 			return err
 		}
-		*et = ETime(t)
+		*et = ToETime(t)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
 		if val > unixSecPersudoMax {
-			*et = ETime(time.UnixMilli(val)) // in milli-sec
+			*et = ToETime(time.UnixMilli(val)) // in milli-sec
 		} else {
-			*et = ETime(time.Unix(val, 0)) // in sec
+			*et = ToETime(time.Unix(val, 0)) // in sec
 		}
 	default:
 		err := fmt.Errorf("invalid field type '%v' for ETime, unable to convert, %#v", reflect.TypeOf(value), v)
@@ -140,10 +135,9 @@ func FuzzParseTimeLoc(formats []string, value string, loc *time.Location) (time.
 	return t, fmt.Errorf("failed to parse time '%s'", value)
 }
 
+var classicDateTimeFmt = []string{time.DateTime, SQLDateTimeFormat}
+
 // Parse classic datetime format using patterns: "2006-01-02 15:04:05", "2006/01/02 15:04:05".
 func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {
-	return FuzzParseTimeLoc([]string{
-		time.DateTime,
-		SQLDateTimeFormat,
-	}, val, loc)
+	return FuzzParseTimeLoc(classicDateTimeFmt, val, loc)
 }

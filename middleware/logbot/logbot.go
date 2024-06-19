@@ -32,7 +32,7 @@ func EnableLogbotErrLogReport() {
 			reportLogPipeline.Send(rail, errorLog{
 				Node:     node,
 				App:      app,
-				Time:     util.ETime(el.Time),
+				Time:     util.ToETime(el.Time),
 				TraceId:  el.TraceId,
 				SpanId:   el.SpanId,
 				FuncName: el.FuncName,
