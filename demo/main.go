@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/miso"
 )
 
@@ -30,7 +31,7 @@ func main() {
 func PrepareServer(rail miso.Rail) error {
 
 	// declare event bus (for mq)
-	miso.NewEventBus(demoEventBusName)
+	rabbit.NewEventBus(demoEventBusName)
 
 	// register some distributed tasks
 	err := miso.ScheduleDistributedTask(miso.Job{
