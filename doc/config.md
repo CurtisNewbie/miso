@@ -107,8 +107,6 @@ The tables shown below list all configuration that you can tune. You can also re
 | mysql.connection.open.max   | max number of open connections            | 10                                                                                                              |
 | mysql.connection.idle.max   | max number of idle connections            | 10                                                                                                              |
 
-
-
 ## Redis Configuration
 
 | property       | description         | default value |
@@ -141,7 +139,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | sqlite.file        | path to SQLite database file |               |
 | sqlite.wal.enabled | enable WAL mode              | true          |
 
-
 ## Logging Configuration
 
 | property                  | description                                | default value                  |
@@ -149,7 +146,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | logging.level             | log level                                  | info                           |
 | logging.rolling.file      | path to rolling log file                   |                                |
 | logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
-| logging.file.max-size     | max size of each log file                  | 100                            |
+| logging.file.max-size     | max size of each log file (in mb)          | 50                             |
 | logging.file.max-backups  | max number of backup log files             | 0 (all files are retained)     |
 | logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
 
@@ -167,7 +164,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | client.addr.${SERVICE_NAME}.host | client service host |               |
 | client.addr.${SERVICE_NAME}.port | client service port |               |
 
-
 ## JWT Configuration
 
 | property        | description                            | default value |
@@ -175,7 +171,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | jwt.key.public  | public key for verifying the JWT token |               |
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
-
 
 ## Metrics Configuration
 
@@ -187,7 +182,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |                 |
 | metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false           |
 | metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | `0 */1 * * * *` |
-
 
 ## Yaml Configuration File Example
 
