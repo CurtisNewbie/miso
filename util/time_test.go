@@ -39,12 +39,33 @@ func TestFuzzParseTime(t *testing.T) {
 	t.Log(tt.String())
 }
 
-func TestTimeAdd(t *testing.T) {
+func TestTimeAddSub(t *testing.T) {
 	n := Now()
 	t.Logf("now: %+v", n)
 	v := n.Add(-time.Hour)
 	t.Logf("v: %+v", v)
-	if n.ToTime().Sub(v) != time.Hour {
+	if n.Sub(v) != time.Hour {
 		t.Fatal("diff is not an hour")
+	}
+}
+
+func TestTimeAddDate(t *testing.T) {
+	n := Now()
+	t.Logf("now: %+v", n)
+	v := n.AddDate(1, 0, 0)
+	t.Logf("n: %v, v: %v", n, v)
+
+	v = n.AddDate(0, 1, 0)
+	t.Logf("n: %v, v: %v", n, v)
+
+	v = n.AddDate(0, 0, 1)
+	t.Logf("n: %v, v: %v", n, v)
+
+	if n.After(v) {
+		t.Fatal("n should not be after v")
+	}
+
+	if v.Before(n) {
+		t.Fatal("v should not be before n")
 	}
 }

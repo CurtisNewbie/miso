@@ -43,6 +43,28 @@ func (t ETime) ToTime() time.Time {
 	return t.Time
 }
 
+func (t ETime) Add(d time.Duration) ETime {
+	t.Time = t.Time.Add(d)
+	return t
+}
+
+func (t ETime) Sub(u ETime) time.Duration {
+	return t.Time.Sub(u.Time)
+}
+
+func (t ETime) AddDate(years int, months int, days int) ETime {
+	t.Time = t.Time.AddDate(years, months, days)
+	return t
+}
+
+func (t ETime) After(u ETime) bool {
+	return t.Time.After(u.Time)
+}
+
+func (t ETime) Before(u ETime) bool {
+	return t.Time.Before(u.Time)
+}
+
 func (t ETime) FormatDate() string {
 	return t.ToTime().Format(time.DateOnly)
 }
