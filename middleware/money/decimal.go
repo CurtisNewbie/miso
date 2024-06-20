@@ -147,7 +147,7 @@ func (a Amt) Value() (driver.Value, error) {
 
 // Implements encoding/json Marshaler
 func (a Amt) MarshalJSON() ([]byte, error) {
-	return util.UnsafeStr2Byt(a.String()), nil
+	return util.UnsafeStr2Byt("\"" + a.String() + "\""), nil
 }
 
 // Implements encoding/json Unmarshaler.
@@ -176,6 +176,12 @@ func (et *Amt) Scan(value interface{}) error {
 	case float32, float64, *float32, *float64:
 		val := reflect.Indirect(reflect.ValueOf(v)).Float()
 		return et.SetString(cast.ToString(val))
+	case []uint8:
+		s := string(v)
+		if s == "" {
+			return et.SetString("0")
+		}
+		return et.SetString(s)
 	default:
 		return fmt.Errorf("invalid field type '%v' for *Amt, unable to convert, %#v", reflect.TypeOf(value), v)
 	}
