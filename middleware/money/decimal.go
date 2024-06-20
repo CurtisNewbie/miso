@@ -140,6 +140,14 @@ func (a *Amt) RoundUnit(unit currency.Unit) *Amt {
 	return &v
 }
 
+func (a *Amt) RoundCurrency(currency string) (*Amt, error) {
+	u, err := Unit(currency)
+	if err != nil {
+		return a, err
+	}
+	return a.RoundUnit(u), nil
+}
+
 // Implements driver.Valuer in database/sql.
 func (a Amt) Value() (driver.Value, error) {
 	return a.String(), nil
