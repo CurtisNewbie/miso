@@ -17,8 +17,8 @@ const (
 
 // ETime, same as time.Time but is serialized/deserialized in forms of unix epoch milliseconds.
 //
-// This type implements sql.Scanner, and thus can be safely used in GORM just like time.Time. It also
-// implements driver.Valuer and decorder.Unmarshaler to support json marshalling (in forms of epoch milliseconds).
+// This type implements sql.Scanner and driver.Valuer, and thus can be safely used in GORM just like time.Time. It also
+// implements json/encoding Marshaler and Unmarshaler to support json marshalling (in forms of epoch milliseconds).
 //
 // In previous releases, ETime was a type alias to time.Time. Since v0.1.2, ETime embeds time.Time to access all of it's methods.
 //
@@ -33,10 +33,6 @@ func Now() ETime {
 
 func ToETime(t time.Time) ETime {
 	return ETime{t}
-}
-
-func (t ETime) MarshalJSON() ([]byte, error) {
-	return UnsafeStr2Byt(fmt.Sprintf("%d", t.UnixMilli())), nil
 }
 
 func (t ETime) ToTime() time.Time {
@@ -85,7 +81,12 @@ func (t ETime) Value() (driver.Value, error) {
 	return t.Format(SQLDateTimeFormat), nil
 }
 
-// implements decorder.Unmarshaler in encoding/json.
+// Implements encoding/json Marshaler
+func (t ETime) MarshalJSON() ([]byte, error) {
+	return UnsafeStr2Byt(fmt.Sprintf("%d", t.UnixMilli())), nil
+}
+
+// Implements encoding/json Unmarshaler.
 func (t *ETime) UnmarshalJSON(b []byte) error {
 	millisec, err := strconv.ParseInt(string(b), 10, 64)
 	if err != nil {
