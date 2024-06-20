@@ -166,6 +166,9 @@ func (et *Amt) Scan(value interface{}) error {
 	}
 	switch v := value.(type) {
 	case string:
+		if v == "" {
+			return et.SetString("0")
+		}
 		return et.SetString(v)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
