@@ -159,6 +159,13 @@ func (a *Amt) TryRoundCurrency(currency string) *Amt {
 	return cp
 }
 
+func (a *Amt) Abs() *Amt {
+	aa := inf.Dec(*a)
+	v := new(inf.Dec).Abs(&aa)
+	cp := Amt(*v)
+	return &cp
+}
+
 // Implements driver.Valuer in database/sql.
 func (a Amt) Value() (driver.Value, error) {
 	return a.String(), nil
@@ -172,10 +179,10 @@ func (a Amt) MarshalJSON() ([]byte, error) {
 // Implements encoding/json Unmarshaler.
 func (t *Amt) UnmarshalJSON(b []byte) error {
 	s := string(b)
-	if s == "null" {
+	if s == "null" || s == "\"\"" || len(s) < 2 {
 		return nil
 	}
-	return t.SetString(s)
+	return t.SetString(s[1 : len(s)-1])
 }
 
 // Implements sql.Scanner in database/sql.

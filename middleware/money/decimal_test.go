@@ -103,4 +103,13 @@ func TestAmt(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("amt: %v", amt)
+
+	err = amt.Scan(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("amt: %v", amt)
+
+	abs := amt.Abs()
+	t.Logf("amt: %v, abs: %v", amt, abs)
 }
