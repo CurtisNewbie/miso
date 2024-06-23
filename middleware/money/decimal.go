@@ -5,11 +5,17 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/cast"
 	"golang.org/x/text/currency"
 	inf "gopkg.in/inf.v0"
 )
+
+func init() {
+	miso.ApiDocTypeAlias["*money.Amt"] = "string"
+	miso.ApiDocTypeAlias["money.Amt"] = "string"
+}
 
 // Create new signed arbitrary-precision decimal with appropriate scale for the currency and HalfEven rounding.
 func UnitDec(amt string, unit currency.Unit) *inf.Dec {
