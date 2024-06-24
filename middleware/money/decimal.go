@@ -166,6 +166,11 @@ func (a *Amt) Abs() *Amt {
 	return &cp
 }
 
+func (a *Amt) Sign() int {
+	aa := inf.Dec(*a)
+	return aa.Sign()
+}
+
 // Implements driver.Valuer in database/sql.
 func (a Amt) Value() (driver.Value, error) {
 	return a.String(), nil

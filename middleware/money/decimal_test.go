@@ -112,4 +112,7 @@ func TestAmt(t *testing.T) {
 
 	abs := amt.Abs()
 	t.Logf("amt: %v, abs: %v", amt, abs)
+
+	si := amt.Sign()
+	t.Logf("amt: %v, si: %v", amt, si)
 }
