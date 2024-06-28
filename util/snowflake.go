@@ -8,17 +8,17 @@ import (
 )
 
 var (
-	/** 1 January 2022 00:00:00 */
+	/* 1 January 2022 00:00:00 */
 	startTime int64 = 1640995200000
-	/** Machine Code for current instance */
+	/* Machine Code for current instance */
 	machineCode string = RandNum(6)
-	/** Max number of bits for sequenceNo (0~16383) */
+	/* Max number of bits for sequenceNo (0~16383) */
 	maxSeqNoBits int64 = 14
-	/** Mask for seqNo, 1|1 -> 1|100000000000000 -> 0|011111111111111 */
+	/* Mask for seqNo, 1|1 -> 1|100000000000000 -> 0|011111111111111 */
 	seqNoMask int64 = ^(-1 << maxSeqNoBits)
-	/** previous timestamp */
+	/* previous timestamp */
 	timestamp int64 = 0
-	/** previous seqNo */
+	/* previous seqNo */
 	seqNo int64 = 0
 	_idMu sync.Mutex
 )
