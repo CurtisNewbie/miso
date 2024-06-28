@@ -345,11 +345,11 @@ func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
 	return m
 }
 
-func NewStack[T any](cap int) Stack[T] {
+func NewStack[T any](cap int) *Stack[T] {
 	if cap < 0 {
 		cap = 0
 	}
-	return Stack[T]{
+	return &Stack[T]{
 		st: make([]T, 0, cap),
 		p:  -1,
 	}
