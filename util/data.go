@@ -406,3 +406,7 @@ func (s *Stack[T]) ForEach(f func(v T) bool) {
 		}
 	}
 }
+
+func (s *Stack[T]) Slice() []T {
+	return slices.Clone(s.st)
+}

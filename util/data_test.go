@@ -193,6 +193,7 @@ func TestStack(t *testing.T) {
 	s.Push(&v2)
 	s.Push(&v3)
 	t.Logf("stack: %v", s)
+	t.Logf("copy: %+v", s.Slice())
 
 	fef := func(v *string) bool {
 		t.Logf("foreach: %v", *v)
