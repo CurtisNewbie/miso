@@ -183,3 +183,55 @@ func TestMergeSlice(t *testing.T) {
 		t.Fatal("juice should have 1 value")
 	}
 }
+
+func TestStack(t *testing.T) {
+	s := NewStack[*string](3)
+	v1 := "1"
+	v2 := "2"
+	v3 := "3"
+	s.Push(&v1)
+	s.Push(&v2)
+	s.Push(&v3)
+	t.Logf("%v", s)
+
+	fef := func(v *string) bool {
+		t.Logf("foreach: %v", *v)
+		return true
+	}
+	s.ForEach(fef)
+
+	p, ok := s.Peek()
+	if !ok {
+		t.Fatal("cannot peek")
+	}
+	t.Logf("peeked: %v", *p)
+
+	expected := []string{"3", "2", "1"}
+	for _, ex := range expected {
+		if s.Empty() {
+			t.Fatal("empty")
+		}
+		v, ok := s.Pop()
+		if !ok {
+			t.Fatal("cannot pop")
+		}
+		if *v != ex {
+			t.Fatalf("not %v", ex)
+		}
+		t.Logf("popped: %v", ex)
+	}
+
+	if !s.Empty() {
+		t.Fatal("not empty")
+	}
+	_, ok = s.Pop()
+	if ok {
+		t.Fatal("can pop")
+	}
+	s.ForEach(fef)
+
+	v4 := "4"
+	s.Push(&v4)
+	t.Logf("%v", s)
+	s.ForEach(fef)
+}
