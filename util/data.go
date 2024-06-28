@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"slices"
 	"sort"
 	"sync"
 )
@@ -372,9 +373,7 @@ func (s *Stack[T]) Pop() (T, bool) {
 	}
 	v = s.st[s.p]
 
-	var nilT T
-	s.st[s.p] = nilT // if T is a pointer, then st[s.p] is set to nil
-	s.st = s.st[:s.p]
+	s.st = slices.Delete(s.st, s.p, s.p+1)
 	s.p--
 	return v, true
 }

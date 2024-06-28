@@ -192,7 +192,7 @@ func TestStack(t *testing.T) {
 	s.Push(&v1)
 	s.Push(&v2)
 	s.Push(&v3)
-	t.Logf("%v", s)
+	t.Logf("stack: %v", s)
 
 	fef := func(v *string) bool {
 		t.Logf("foreach: %v", *v)
@@ -219,6 +219,7 @@ func TestStack(t *testing.T) {
 			t.Fatalf("not %v", ex)
 		}
 		t.Logf("popped: %v", ex)
+		t.Logf("stack: %v", s)
 	}
 
 	if !s.Empty() {
@@ -232,6 +233,6 @@ func TestStack(t *testing.T) {
 
 	v4 := "4"
 	s.Push(&v4)
-	t.Logf("%v", s)
+	t.Logf("stack: %v", s)
 	s.ForEach(fef)
 }
