@@ -210,3 +210,16 @@ func FmtFloat(f float64, width int, precision int) string {
 	}
 	return fmt.Sprintf("%"+ws+"."+cast.ToString(ps)+"f", f)
 }
+
+func PadSpace(n int, s string, left bool) string {
+	r := []rune(s)
+	rl := len(r)
+	if len(r) >= n {
+		return s
+	}
+	pad := n - rl
+	if left {
+		return strings.Repeat(" ", pad) + s
+	}
+	return s + strings.Repeat(" ", pad)
+}
