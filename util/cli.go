@@ -53,3 +53,7 @@ func CliRun(ex string, args ...string) ([]byte, error) {
 func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }
+
+func NamedPrintlnf(pat string, p map[string]any) {
+	println(NamedSprintf(pat, p))
+}
