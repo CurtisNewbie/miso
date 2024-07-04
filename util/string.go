@@ -223,7 +223,7 @@ func PadSpace(n int, s string) string {
 	}
 	pad := an - rl
 	if n < 0 {
-		return strings.Repeat(" ", pad) + s
+		return s + strings.Repeat(" ", pad)
 	}
-	return s + strings.Repeat(" ", pad)
+	return strings.Repeat(" ", pad) + s
 }

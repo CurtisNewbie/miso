@@ -214,4 +214,6 @@ func TestPadSpace(t *testing.T) {
 	for _, v := range tab {
 		t.Logf("'%s'", PadSpace(v[0].(int), s))
 	}
+	t.Logf("'%-6s'", s)
+	t.Logf("'%6s'", s)
 }
