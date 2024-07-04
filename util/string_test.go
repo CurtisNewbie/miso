@@ -176,3 +176,25 @@ func BenchmarkNamedSprintf(b *testing.B) {
 		b.Log(s)
 	})
 }
+
+func TestFmtFloat(t *testing.T) {
+	tab := [][]int{
+		{0, 0},
+		{1, 0},
+		{2, 0},
+		{3, 0},
+		{4, 0},
+		{4, 1},
+		{4, 2},
+		{5, 2},
+		{5, 3},
+		{5, 4},
+		{-5, 4},
+		{-6, 4},
+		{-7, 4},
+	}
+	f := 12.333
+	for _, v := range tab {
+		t.Logf("'%s'", FmtFloat(f, v[0], v[1]))
+	}
+}

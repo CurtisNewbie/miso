@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/spf13/cast"
 )
 
 func PadNum(n int, digit int) string {
@@ -191,4 +193,20 @@ func (n *namedFmt) Sprintf(p map[string]any) string {
 		return n.pat
 	}
 	return buf.String()
+}
+
+func FmtFloat(f float64, width int, precision int) string {
+	if width == 0 && precision == 0 {
+		return fmt.Sprintf("%f", f)
+	}
+
+	var ws string
+	var ps string
+	if width != 0 {
+		ws = cast.ToString(width)
+	}
+	if precision != 0 {
+		ps = cast.ToString(precision)
+	}
+	return fmt.Sprintf("%"+ws+"."+cast.ToString(ps)+"f", f)
 }
