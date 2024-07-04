@@ -202,16 +202,16 @@ func TestFmtFloat(t *testing.T) {
 func TestPadSpace(t *testing.T) {
 	s := "yes"
 	tab := [][]any{
-		{0, true},
-		{1, true},
-		{2, true},
-		{3, true},
-		{4, true},
-		{5, true},
-		{6, true},
-		{6, false},
+		{0},
+		{-1},
+		{-2},
+		{-3},
+		{-4},
+		{-5},
+		{-6},
+		{6},
 	}
 	for _, v := range tab {
-		t.Logf("'%s'", PadSpace(v[0].(int), s, v[1].(bool)))
+		t.Logf("'%s'", PadSpace(v[0].(int), s))
 	}
 }
