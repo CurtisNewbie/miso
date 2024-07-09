@@ -147,8 +147,20 @@ func BenchmarkIsBlankStr(b *testing.B) {
 }
 
 func TestNamedSprintf(t *testing.T) {
-	s := NamedSprintf("{{.brand}} Yes!", map[string]any{"brand": "AMD"})
+	s := NamedSprintf("${brand} Yes!", map[string]any{"brand": "AMD"})
 	if s != "AMD Yes!" {
+		t.Fatal(s)
+	}
+	t.Log(s)
+
+	s = NamedSprintf("{brand} Yes!", map[string]any{"brand": "AMD"})
+	if s != "{brand} Yes!" {
+		t.Fatal(s)
+	}
+	t.Log(s)
+
+	s = NamedSprintf("${brand} Yes!", map[string]any{"brand1": "AMD"})
+	if s != " Yes!" {
 		t.Fatal(s)
 	}
 	t.Log(s)
@@ -156,9 +168,9 @@ func TestNamedSprintf(t *testing.T) {
 
 func BenchmarkNamedSprintf(b *testing.B) {
 	p := map[string]any{"brand": "AMD"}
-	pat := NamedFmt("{{.brand}} Yes!")
+	pat := NamedFmt("${brand} Yes!")
 
-	// 587.2 ns/op           248 B/op         11 allocs/op
+	// 236.9 ns/op            32 B/op          3 allocs/op
 	b.Run("NamedFmt", func(b *testing.B) {
 		var s string
 		for i := 0; i < b.N; i++ {

@@ -2,12 +2,16 @@ package util
 
 import (
 	"fmt"
-	"html/template"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/spf13/cast"
+)
+
+var (
+	namedFmtPat = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
 )
 
 func PadNum(n int, digit int) string {
@@ -160,39 +164,41 @@ func LastNStr(s string, n int) string {
 	return string(ru[len(ru)-n:])
 }
 
-var namedFmtBufPool = NewByteBufferPool(0)
-
+// Format message using named args.
+//
 // Equivalent to NamedFmt(pat).Sprintf(p).
+//
+// e.g., '${startTime} ${message}'
 func NamedSprintf(pat string, p map[string]any) string {
 	return NamedFmt(pat).Sprintf(p)
 }
 
 // Create reuseable named variables string formatter.
 func NamedFmt(pat string) *namedFmt {
-	t, err := template.New("").Parse(pat)
-	if err != nil {
-		return &namedFmt{pat: pat, temp: nil}
-	}
-	return &namedFmt{pat: pat, temp: t}
+	return &namedFmt{pat: pat}
 }
 
 type namedFmt struct {
-	pat  string
-	temp *template.Template
+	pat string
 }
 
+func (n *namedFmt) get(p map[string]any, k string) string {
+	v, ok := p[k]
+	if ok {
+		return cast.ToString(v)
+	}
+	return ""
+}
+
+// Format message using named args.
+//
+// e.g., '${startTime} ${message}'
 func (n *namedFmt) Sprintf(p map[string]any) string {
-	if n.temp == nil {
-		return n.pat
-	}
-
-	buf := namedFmtBufPool.Get()
-	defer namedFmtBufPool.Put(buf)
-
-	if err := n.temp.Execute(buf, p); err != nil {
-		return n.pat
-	}
-	return buf.String()
+	return namedFmtPat.ReplaceAllStringFunc(n.pat, func(s string) string {
+		r := []rune(s)
+		key := string(r[2 : len(r)-1])
+		return n.get(p, key)
+	})
 }
 
 func FmtFloat(f float64, width int, precision int) string {
