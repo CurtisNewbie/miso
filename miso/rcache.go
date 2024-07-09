@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/go-redis/redis"
 )
 
@@ -31,11 +32,11 @@ type RCacheConfig struct {
 //
 //	Use NewRCache(...) to instantiate.
 type RCache[T any] struct {
-	ValueSerializer Serializer              // serializer / deserializer
-	getClient       Supplier[*redis.Client] // supplier of client (using func to make it lazy)
-	exp             time.Duration           // ttl for each cache entry
-	name            string                  // name of the cache
-	sync            bool                    // synchronize operation
+	ValueSerializer Serializer                   // serializer / deserializer
+	getClient       util.Supplier[*redis.Client] // supplier of client (using func to make it lazy)
+	exp             time.Duration                // ttl for each cache entry
+	name            string                       // name of the cache
+	sync            bool                         // synchronize operation
 }
 
 func (r *RCache[T]) Put(rail Rail, key string, t T) error {

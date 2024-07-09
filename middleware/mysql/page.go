@@ -1,6 +1,7 @@
-package miso
+package mysql
 
 import (
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/gorm"
 )
@@ -55,10 +56,10 @@ type PageQueryBuilder func(tx *gorm.DB) *gorm.DB
 
 // Create param for page query.
 type QueryPageParam[V any] struct {
-	reqPage     Paging           // Request Paging Param.
-	selectQuery PageQueryBuilder // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
-	baseQuery   PageQueryBuilder // Base query, e.g., return tx.Table(`myTable`).Where(...)
-	forEach     Transform[V]     // callback triggered on each record, the value returned will overwrite the value passed in.
+	reqPage     Paging            // Request Paging Param.
+	selectQuery PageQueryBuilder  // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
+	baseQuery   PageQueryBuilder  // Base query, e.g., return tx.Table(`myTable`).Where(...)
+	forEach     util.Transform[V] // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
 func (q *QueryPageParam[V]) WithPage(p Paging) *QueryPageParam[V] {
@@ -76,13 +77,13 @@ func (q *QueryPageParam[V]) WithBaseQuery(qry PageQueryBuilder) *QueryPageParam[
 	return q
 }
 
-func (q *QueryPageParam[V]) ForEach(t Transform[V]) *QueryPageParam[V] {
+func (q *QueryPageParam[V]) ForEach(t util.Transform[V]) *QueryPageParam[V] {
 	q.forEach = t
 	return q
 }
 
 // Execute paging query
-func (q *QueryPageParam[V]) Exec(rail Rail, tx *gorm.DB) (PageRes[V], error) {
+func (q *QueryPageParam[V]) Exec(rail miso.Rail, tx *gorm.DB) (PageRes[V], error) {
 	return QueryPage(rail, tx, *q)
 }
 
@@ -90,7 +91,7 @@ func (q *QueryPageParam[V]) Exec(rail Rail, tx *gorm.DB) (PageRes[V], error) {
 //
 // COUNT query is called first, if none is found (i.e., COUNT(...) == 0), this method
 // will not call the actual SELECT query to avoid unnecessary performance lost.
-func QueryPage[Res any](rail Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
+func QueryPage[Res any](rail miso.Rail, tx *gorm.DB, p QueryPageParam[Res]) (PageRes[Res], error) {
 	newQuery := func() *gorm.DB {
 		return p.baseQuery(tx)
 	}

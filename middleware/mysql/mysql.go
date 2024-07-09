@@ -1,7 +1,4 @@
-//go:build !excl_mysql
-// +build !excl_mysql
-
-package miso
+package mysql
 
 import (
 	"fmt"
@@ -9,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -38,23 +36,23 @@ type mysqlHolder struct {
 }
 
 func init() {
-	SetDefProp(PropMySQLEnabled, false)
-	SetDefProp(PropMySQLUser, "root")
-	SetDefProp(PropMySQLPassword, "")
-	SetDefProp(PropMySQLHost, "localhost")
-	SetDefProp(PropMySQLPort, 3306)
-	SetDefProp(PropMySQLConnParam, defaultConnParams)
-	SetDefProp(PropMySQLMaxOpenConns, 10)
-	SetDefProp(PropMySQLMaxIdleConns, 10)
+	miso.SetDefProp(PropMySQLEnabled, false)
+	miso.SetDefProp(PropMySQLUser, "root")
+	miso.SetDefProp(PropMySQLPassword, "")
+	miso.SetDefProp(PropMySQLHost, "localhost")
+	miso.SetDefProp(PropMySQLPort, 3306)
+	miso.SetDefProp(PropMySQLConnParam, defaultConnParams)
+	miso.SetDefProp(PropMySQLMaxOpenConns, 10)
+	miso.SetDefProp(PropMySQLMaxIdleConns, 10)
 
 	// Connection max lifetime, hikari recommends 1800000, so we do the same thing
-	SetDefProp(PropMySQLConnLifetime, 30)
+	miso.SetDefProp(PropMySQLConnLifetime, 30)
 
-	RegisterBootstrapCallback(ComponentBootstrap{
+	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap MySQL",
 		Bootstrap: MySQLBootstrap,
 		Condition: MySQLBootstrapCondition,
-		Order:     BootstrapOrderL1,
+		Order:     miso.BootstrapOrderL1,
 	})
 }
 
@@ -66,7 +64,7 @@ This func looks for following prop:
 	"mysql.enabled"
 */
 func IsMySqlEnabled() bool {
-	return GetPropBool(PropMySQLEnabled)
+	return miso.GetPropBool(PropMySQLEnabled)
 }
 
 /*
@@ -83,17 +81,17 @@ This func looks for following props:
 	"mysql.port"
 	"mysql.connection.parameters"
 */
-func InitMySQLFromProp(rail Rail) error {
+func InitMySQLFromProp(rail miso.Rail) error {
 	p := MySQLConnParam{
-		User:            GetPropStr(PropMySQLUser),
-		Password:        GetPropStr(PropMySQLPassword),
-		Schema:          GetPropStr(PropMySQLSchema),
-		Host:            GetPropStr(PropMySQLHost),
-		Port:            GetPropInt(PropMySQLPort),
-		ConnParam:       strings.Join(GetPropStrSlice(PropMySQLConnParam), "&"),
-		MaxOpenConns:    GetPropInt(PropMySQLMaxOpenConns),
-		MaxIdleConns:    GetPropInt(PropMySQLMaxIdleConns),
-		MaxConnLifetime: GetPropDur(PropMySQLConnLifetime, time.Minute),
+		User:            miso.GetPropStr(PropMySQLUser),
+		Password:        miso.GetPropStr(PropMySQLPassword),
+		Schema:          miso.GetPropStr(PropMySQLSchema),
+		Host:            miso.GetPropStr(PropMySQLHost),
+		Port:            miso.GetPropInt(PropMySQLPort),
+		ConnParam:       strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
+		MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
+		MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
+		MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
 	}
 	return InitMySQL(rail, p)
 }
@@ -111,7 +109,7 @@ type MySQLConnParam struct {
 }
 
 // Create new MySQL connection
-func NewMySQLConn(rail Rail, p MySQLConnParam) (*gorm.DB, error) {
+func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 	p.ConnParam = strings.TrimSpace(p.ConnParam)
 	if p.ConnParam != "" && !strings.HasPrefix(p.ConnParam, "?") {
 		p.ConnParam = "?" + p.ConnParam
@@ -157,7 +155,7 @@ Init Handle to the database
 
 If mysql client has been initialized, current func call will be ignored.
 */
-func InitMySQL(rail Rail, p MySQLConnParam) error {
+func InitMySQL(rail miso.Rail, p MySQLConnParam) error {
 	if p.ConnParam == "" {
 		p.ConnParam = minimumConnParam
 	}
@@ -189,7 +187,7 @@ func GetMySQL() *gorm.DB {
 		panic("MySQL Connection hasn't been initialized yet")
 	}
 
-	if IsDebugLevel() {
+	if miso.IsDebugLevel() {
 		return mysqlp.conn.Debug()
 	}
 
@@ -203,7 +201,7 @@ func IsMySQLInitialized() bool {
 	return mysqlp.conn != nil
 }
 
-func MySQLBootstrap(rail Rail) error {
+func MySQLBootstrap(rail miso.Rail) error {
 	if e := InitMySQLFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
 	}
@@ -217,9 +215,9 @@ func MySQLBootstrap(rail Rail) error {
 		}
 	}
 
-	AddHealthIndicator(HealthIndicator{
+	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "MySQL Component",
-		CheckHealth: func(rail Rail) bool {
+		CheckHealth: func(rail miso.Rail) bool {
 			db, err := GetMySQL().DB()
 			if err != nil {
 				rail.Errorf("Failed to get MySQL DB, %v", err)
@@ -237,11 +235,11 @@ func MySQLBootstrap(rail Rail) error {
 	return nil
 }
 
-func MySQLBootstrapCondition(rail Rail) (bool, error) {
+func MySQLBootstrapCondition(rail miso.Rail) (bool, error) {
 	return IsMySqlEnabled(), nil
 }
 
-type MySQLBootstrapCallback func(rail Rail, db *gorm.DB) error
+type MySQLBootstrapCallback func(rail miso.Rail, db *gorm.DB) error
 
 func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 	mysqlBootstrapCallbacks = append(mysqlBootstrapCallbacks, cbk)

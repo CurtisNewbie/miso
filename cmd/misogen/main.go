@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/curtisnewbie/miso/middleware/mysql"
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
@@ -242,11 +243,11 @@ func main() {
 
 		writef(0, "")
 		writef(0, "mysql:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropMySQLEnabled))
-		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropMySQLHost))
-		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropMySQLPort))
-		writef(1, "user: \"%s\"", miso.GetPropStr(miso.PropMySQLUser))
-		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropMySQLPassword))
+		writef(1, "enabled: \"%s\"", miso.GetPropStr(mysql.PropMySQLEnabled))
+		writef(1, "host: \"%s\"", miso.GetPropStr(mysql.PropMySQLHost))
+		writef(1, "port: \"%s\"", miso.GetPropStr(mysql.PropMySQLPort))
+		writef(1, "user: \"%s\"", miso.GetPropStr(mysql.PropMySQLUser))
+		writef(1, "password: \"%s\"", miso.GetPropStr(mysql.PropMySQLPassword))
 		writef(1, "database: \"%s\"", guessSchemaName(modName))
 		writef(1, "connection:")
 		writef(2, "parameters:")

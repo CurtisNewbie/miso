@@ -312,7 +312,7 @@ To look for 'configFile=?'.
 
 	path := ExtractArgValue(args, func(key string) bool { return key == "configFile" }).
 */
-func ExtractArgValue(args []string, predicate Predicate[string]) string {
+func ExtractArgValue(args []string, predicate util.Predicate[string]) string {
 	for _, s := range args {
 		var eq int = strings.Index(s, "=")
 		if eq != -1 {

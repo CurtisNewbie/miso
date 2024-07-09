@@ -19,21 +19,6 @@ func TestParseArg(t *testing.T) {
 	if !IsProdMode() {
 		t.Error()
 	}
-	if s := GetPropStr(PropMySQLUser); s != "root" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLPassword); s != "123456" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLSchema); s != "fileServer" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLHost); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLPort); s != "3306" {
-		t.Error(s)
-	}
 
 	if s := GetPropBool(PropRedisEnabled); s {
 		t.Error(s)
@@ -130,21 +115,6 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	}
 	if IsProdMode() {
 		t.Error()
-	}
-	if s := GetPropStr(PropMySQLUser); s != "root" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLPassword); s != "123456" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLSchema); s != "fileServer" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLHost); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropMySQLPort); s != "3306" {
-		t.Error(s)
 	}
 
 	if s := GetPropStr(PropRedisAddress); s != "localhost" {

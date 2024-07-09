@@ -3,6 +3,7 @@ package svc
 import (
 	"embed"
 
+	"github.com/curtisnewbie/miso/middleware/mysql"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/svc"
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ import (
 //
 // SQL files should start with 'v' using a name that clearly indicates which version it belongs to, E.g., 'schema/managed/v0.0.1.sql'.
 func EnableSchemaMigrate(fs embed.FS, baseDir string, startVersion string) {
-	miso.AddMySQLBootstrapCallback(func(rail miso.Rail, db *gorm.DB) error {
+	mysql.AddMySQLBootstrapCallback(func(rail miso.Rail, db *gorm.DB) error {
 		conf := svc.MigrateConfig{
 			App:             miso.GetPropStr(miso.PropAppName),
 			Fs:              fs,

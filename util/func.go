@@ -1,4 +1,4 @@
-package miso
+package util
 
 // Predicate based on t
 type Predicate[T any] func(t T) bool
