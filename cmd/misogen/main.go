@@ -9,6 +9,7 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/mysql"
 	"github.com/curtisnewbie/miso/middleware/rabbit"
+	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
@@ -234,12 +235,12 @@ func main() {
 
 		writef(0, "")
 		writef(0, "redis:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropRedisEnabled))
-		writef(1, "address: \"%s\"", miso.GetPropStr(miso.PropRedisAddress))
-		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropRedisPort))
-		writef(1, "username: \"%s\"", miso.GetPropStr(miso.PropRedisUsername))
-		writef(1, "password: \"%s\"", miso.GetPropStr(miso.PropRedisPassword))
-		writef(1, "database: \"%s\"", miso.GetPropStr(miso.PropRedisDatabase))
+		writef(1, "enabled: \"%s\"", miso.GetPropStr(redis.PropRedisEnabled))
+		writef(1, "address: \"%s\"", miso.GetPropStr(redis.PropRedisAddress))
+		writef(1, "port: \"%s\"", miso.GetPropStr(redis.PropRedisPort))
+		writef(1, "username: \"%s\"", miso.GetPropStr(redis.PropRedisUsername))
+		writef(1, "password: \"%s\"", miso.GetPropStr(redis.PropRedisPassword))
+		writef(1, "database: \"%s\"", miso.GetPropStr(redis.PropRedisDatabase))
 
 		writef(0, "")
 		writef(0, "mysql:")

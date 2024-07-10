@@ -1,4 +1,4 @@
-package miso
+package redis
 
 import (
 	"sync"
@@ -6,16 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/sirupsen/logrus"
 )
 
 func TestRLockCallbacks(t *testing.T) {
-	rail := EmptyRail()
-	LoadConfigFromFile("../conf_dev.yml", rail)
+	rail := miso.EmptyRail()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	SetLogLevel("debug")
+	miso.SetLogLevel("debug")
 
 	var violated int32 = 0
 
@@ -54,12 +55,12 @@ func TestRLockCallbacks(t *testing.T) {
 func TestRLock(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
-	rail := EmptyRail()
-	LoadConfigFromFile("../conf_dev.yml", rail)
+	rail := miso.EmptyRail()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	SetLogLevel("debug")
+	miso.SetLogLevel("debug")
 
 	var violated int32 = 0
 
@@ -106,12 +107,12 @@ func TestRLockCount(t *testing.T) {
 
 	lockRefreshTime = time.Millisecond
 
-	rail := EmptyRail()
-	LoadConfigFromFile("../conf_dev.yml", rail)
+	rail := miso.EmptyRail()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	SetLogLevel("debug")
+	miso.SetLogLevel("debug")
 
 	total := 1000
 	var count int32 = 0
@@ -146,12 +147,12 @@ func TestRLockCount(t *testing.T) {
 }
 
 func TestCancelRefresher(t *testing.T) {
-	rail := EmptyRail()
-	LoadConfigFromFile("../conf_dev.yml", rail)
+	rail := miso.EmptyRail()
+	miso.LoadConfigFromFile("../conf_dev.yml", rail)
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
-	SetLogLevel("trace")
+	miso.SetLogLevel("trace")
 
 	lockRefreshTime = time.Second
 	lock := NewRLock(rail, "mylock")

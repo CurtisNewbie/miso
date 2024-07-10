@@ -46,20 +46,6 @@ const (
 	/*
 		------------------------------------
 
-		Prop for Redis
-
-		------------------------------------
-	*/
-	PropRedisEnabled  = "redis.enabled"
-	PropRedisAddress  = "redis.address"
-	PropRedisPort     = "redis.port"
-	PropRedisUsername = "redis.username"
-	PropRedisPassword = "redis.password"
-	PropRedisDatabase = "redis.database"
-
-	/*
-		------------------------------------
-
 		Prop for Server
 
 		------------------------------------
@@ -102,17 +88,6 @@ const (
 	PropLoggingRollingFileMaxSize     = "logging.file.max-size"
 	PropLoggingRollingFileMaxBackups  = "logging.file.max-backups"
 	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
-
-	/*
-		------------------------------------
-
-		Prop for distributed task scheduling
-
-		------------------------------------
-	*/
-
-	PropTaskSchedulingEnabled = "task.scheduling.enabled"
-	PropTaskSchedulingGroup   = "task.scheduling.group"
 
 	/*
 		------------------------------------

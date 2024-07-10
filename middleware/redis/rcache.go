@@ -1,10 +1,11 @@
-package miso
+package redis
 
 import (
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/go-redis/redis"
 )
@@ -39,7 +40,7 @@ type RCache[T any] struct {
 	sync            bool                         // synchronize operation
 }
 
-func (r *RCache[T]) Put(rail Rail, key string, t T) error {
+func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 	cacheKey := r.cacheKey(key)
 	val, err := r.ValueSerializer.Serialize(t)
 	if err != nil {
@@ -54,7 +55,7 @@ func (r *RCache[T]) Put(rail Rail, key string, t T) error {
 	return op()
 }
 
-func (r *RCache[T]) Del(rail Rail, key string) error {
+func (r *RCache[T]) Del(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
 		return r.getClient().Del(cacheKey).Err()
@@ -80,7 +81,7 @@ func (r *RCache[T]) lockKey(key string) string {
 // Get from cache else run supplier
 //
 // Return miso.NoneErr if none is found
-func (r *RCache[T]) Get(rail Rail, key string, supplier func() (T, error)) (T, error) {
+func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) (T, error) {
 
 	// the actual operation
 	op := func() (T, error) {
@@ -99,7 +100,7 @@ func (r *RCache[T]) Get(rail Rail, key string, supplier func() (T, error)) (T, e
 
 		// nothing to supply, give up
 		if supplier == nil {
-			return t, NoneErr
+			return t, miso.NoneErr
 		}
 
 		// call supplier and cache the supplied value
@@ -129,7 +130,7 @@ func (r *RCache[T]) Get(rail Rail, key string, supplier func() (T, error)) (T, e
 	return op()
 }
 
-func (r *RCache[T]) Exists(rail Rail, key string) (bool, error) {
+func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 	op := func() (bool, error) {
 		cacheKey := r.cacheKey(key)
 		cmd := r.getClient().Exists(cacheKey)
@@ -149,7 +150,7 @@ func (r *RCache[T]) Exists(rail Rail, key string) (bool, error) {
 	return op()
 }
 
-func (r *RCache[T]) DelAll(rail Rail) error {
+func (r *RCache[T]) DelAll(rail miso.Rail) error {
 	pat := r.cacheKeyPattern()
 	cmd := r.getClient().Scan(0, pat, rcacheScanLimit)
 	if cmd.Err() != nil {

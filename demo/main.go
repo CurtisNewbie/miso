@@ -4,7 +4,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/curtisnewbie/miso/middleware/mysql"
 	"github.com/curtisnewbie/miso/middleware/rabbit"
+	"github.com/curtisnewbie/miso/middleware/task"
 	"github.com/curtisnewbie/miso/miso"
 )
 
@@ -34,7 +36,7 @@ func PrepareServer(rail miso.Rail) error {
 	rabbit.NewEventBus(demoEventBusName)
 
 	// register some distributed tasks
-	err := miso.ScheduleDistributedTask(miso.Job{
+	err := task.ScheduleDistributedTask(miso.Job{
 		Cron:                   "*/15 * * * *",
 		CronWithSeconds:        false,
 		Name:                   "MyDistributedTask",
@@ -61,7 +63,7 @@ func PrepareServer(rail miso.Rail) error {
 
 				// e.g., read some table
 				var res PostRes
-				err := miso.GetMySQL().
+				err := mysql.GetMySQL().
 					Raw(`SELECT result_id FROM post_result WHERE request_id = ?`,
 						req.RequestId).
 					Scan(&res).Error

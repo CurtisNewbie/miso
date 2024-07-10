@@ -1,4 +1,4 @@
-package miso
+package redis
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bsm/redislock"
+	"github.com/curtisnewbie/miso/miso"
 )
 
 type Runnable func() error
@@ -38,7 +39,7 @@ The maximum time wait for the lock is 1s, retry every 5ms.
 
 May return 'redislock:ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun[T any](rail Rail, key string, runnable LRunnable[T]) (T, error) {
+func RLockRun[T any](rail miso.Rail, key string, runnable LRunnable[T]) (T, error) {
 	var t T
 
 	lock := NewRLock(rail, key)
@@ -57,7 +58,7 @@ The maximum time wait for the lock is 1s, retry every 5ms.
 
 May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockExec(ec Rail, key string, runnable Runnable) error {
+func RLockExec(ec miso.Rail, key string, runnable Runnable) error {
 	_, e := RLockRun(ec, key, func() (any, error) {
 		return nil, runnable()
 	})
@@ -66,7 +67,7 @@ func RLockExec(ec Rail, key string, runnable Runnable) error {
 
 // RLock
 type RLock struct {
-	rail            Rail
+	rail            miso.Rail
 	key             string
 	cancelRefresher func()
 	lock            *redislock.Lock
@@ -86,17 +87,17 @@ type RLockConfig struct {
 }
 
 // Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
-func NewRLock(rail Rail, key string) *RLock {
+func NewRLock(rail miso.Rail, key string) *RLock {
 	return NewCustomRLock(rail, key, RLockConfig{})
 }
 
 // Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
-func NewRLockf(rail Rail, keyPattern string, args ...any) *RLock {
+func NewRLockf(rail miso.Rail, keyPattern string, args ...any) *RLock {
 	return NewCustomRLock(rail, fmt.Sprintf(keyPattern, args...), RLockConfig{})
 }
 
 // Create customized RLock.
-func NewCustomRLock(rail Rail, key string, config RLockConfig) *RLock {
+func NewCustomRLock(rail miso.Rail, key string, config RLockConfig) *RLock {
 	r := RLock{
 		rail:            rail,
 		key:             key,

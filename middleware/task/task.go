@@ -1,4 +1,4 @@
-package miso
+package task
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/middleware/redis"
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 )
 
@@ -20,7 +22,7 @@ var (
 	nodeId string
 
 	// tasks
-	dtasks []Job = []Job{}
+	dtasks []miso.Job = []miso.Job{}
 
 	// ticker for refreshing master node lock
 	masterTicker *time.Ticker = nil
@@ -32,42 +34,42 @@ const (
 )
 
 func init() {
-	SetDefProp(PropTaskSchedulingEnabled, true)
-	SetDefProp(PropTaskSchedulingGroup, "${app.name}")
+	miso.SetDefProp(PropTaskSchedulingEnabled, true)
+	miso.SetDefProp(PropTaskSchedulingGroup, "${app.name}")
 
 	// run before SchedulerBootstrap
-	RegisterBootstrapCallback(ComponentBootstrap{
+	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name: "Bootstrap Distributed Task Scheduler",
-		Condition: func(rail Rail) (bool, error) {
+		Condition: func(rail miso.Rail) (bool, error) {
 			return !IsTaskSchedulingDisabled() && len(dtasks) > 0, nil
 		},
 		Bootstrap: DistriTaskBootstrap,
-		Order:     BootstrapOrderL4,
+		Order:     miso.BootstrapOrderL4,
 	})
 }
 
 // Check if it's disabled (based on configuration, doesn't affect method call)
 func IsTaskSchedulingDisabled() bool {
-	return !GetPropBool(PropTaskSchedulingEnabled)
+	return !miso.GetPropBool(PropTaskSchedulingEnabled)
 }
 
-func registerTasks(rail Rail, tasks []Job) error {
+func registerTasks(rail miso.Rail, tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
 	for _, d := range tasks {
-		if err := ScheduleCron(d); err != nil {
+		if err := miso.ScheduleCron(d); err != nil {
 			return fmt.Errorf("failed to schedule cron job, %+v, %w", d, err)
 		}
 	}
 	return nil
 }
 
-func prepareTaskScheduling(rail Rail, tasks []Job) error {
+func prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
-	proposedGroup := GetPropStr(PropTaskSchedulingGroup)
+	proposedGroup := miso.GetPropStr(PropTaskSchedulingGroup)
 	if proposedGroup != "" {
 		group = proposedGroup
 	}
@@ -93,9 +95,9 @@ func SetScheduleGroup(groupName string) {
 }
 
 // Check if current node is master
-func IsTaskMaster(rail Rail) bool {
+func IsTaskMaster(rail miso.Rail) bool {
 	key := getTaskMasterKey()
-	val, e := GetStr(key)
+	val, e := redis.GetStr(key)
 	if e != nil {
 		rail.Errorf("check is master failed: %v", e)
 		return false
@@ -128,10 +130,10 @@ func getTaskMasterKey() string {
 //		Run: MyTask,
 //	}
 //	ScheduleDistributedTask(job)
-func ScheduleDistributedTask(t Job) error {
-	Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
+func ScheduleDistributedTask(t miso.Job) error {
+	miso.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 	actualRun := t.Run
-	t.Run = func(rail Rail) error {
+	t.Run = func(rail miso.Rail) error {
 		dtaskMut.Lock()
 		if !tryTaskMaster(rail) {
 			rail.Debug("Not master node, skip scheduled task")
@@ -145,7 +147,7 @@ func ScheduleDistributedTask(t Job) error {
 }
 
 // Start distributed scheduler asynchronously
-func StartTaskSchedulerAsync(rail Rail) error {
+func StartTaskSchedulerAsync(rail miso.Rail) error {
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()
 	if len(dtasks) < 1 {
@@ -154,12 +156,12 @@ func StartTaskSchedulerAsync(rail Rail) error {
 	if err := prepareTaskScheduling(rail, dtasks); err != nil {
 		return err
 	}
-	StartSchedulerAsync()
+	miso.StartSchedulerAsync()
 	return nil
 }
 
 // Start distributed scheduler, current routine is blocked
-func StartTaskSchedulerBlocking(rail Rail) error {
+func StartTaskSchedulerBlocking(rail miso.Rail) error {
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()
 	if len(dtasks) < 1 {
@@ -168,7 +170,7 @@ func StartTaskSchedulerBlocking(rail Rail) error {
 	if err := prepareTaskScheduling(rail, dtasks); err != nil {
 		return err
 	}
-	StartSchedulerBlocking()
+	miso.StartSchedulerBlocking()
 	return nil
 }
 
@@ -177,9 +179,9 @@ func StopTaskScheduler() {
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()
 
-	StopScheduler()
+	miso.StopScheduler()
 	stopTaskMasterLockTicker()
-	releaseMasterNodeLock(EmptyRail())
+	releaseMasterNodeLock(miso.EmptyRail())
 }
 
 // Start refreshing master lock ticker
@@ -196,8 +198,8 @@ func startTaskMasterLockTicker() {
 	}(masterTicker.C)
 }
 
-func releaseMasterNodeLock(rail Rail) {
-	cmd := GetRedis().Eval(`
+func releaseMasterNodeLock(rail miso.Rail) {
+	cmd := redis.GetRedis().Eval(`
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -226,16 +228,16 @@ func stopTaskMasterLockTicker() {
 
 // Refresh master lock key ttl
 func refreshTaskMasterLock() error {
-	return GetRedis().Expire(getTaskMasterKey(), defMstLockTtl).Err()
+	return redis.GetRedis().Expire(getTaskMasterKey(), defMstLockTtl).Err()
 }
 
 // Try to become master node
-func tryTaskMaster(rail Rail) bool {
+func tryTaskMaster(rail miso.Rail) bool {
 	if IsTaskMaster(rail) {
 		return true
 	}
 
-	bcmd := GetRedis().SetNX(getTaskMasterKey(), nodeId, defMstLockTtl)
+	bcmd := redis.GetRedis().SetNX(getTaskMasterKey(), nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
 		rail.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false
@@ -251,8 +253,8 @@ func tryTaskMaster(rail Rail) bool {
 	return isMaster
 }
 
-func DistriTaskBootstrap(rail Rail) error {
-	AddShutdownHook(func() { StopTaskScheduler() })
+func DistriTaskBootstrap(rail miso.Rail) error {
+	miso.AddShutdownHook(func() { StopTaskScheduler() })
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()
 	if err := prepareTaskScheduling(rail, dtasks); err != nil {

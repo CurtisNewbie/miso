@@ -16,7 +16,7 @@ Before server bootstrap, you will need to declare the event bus as follows using
 
 ```go
 miso.PreServerBootstrap(func(rail miso.Rail) error {
-    miso.NewEventBus("vfm.image.compression")
+    rabbit.NewEventBus("vfm.image.compression")
     return nil
 })
 ```
@@ -29,7 +29,7 @@ type CompressionEvent struct {
 }
 
 miso.PreServerBootstrap(func(rail miso.Rail) error {
-    miso.SubEventBus(
+    rabbit.SubEventBus(
         /* event bus name */ "vfm.image.compression" ,
         /* concurrency */ 2,
         func(rail miso.Rail, evt CompressionEvent) error {
@@ -42,7 +42,7 @@ miso.PreServerBootstrap(func(rail miso.Rail) error {
 Once the server is fully up and running, to dispatch a new message to the event bus, you can use `miso.PubEventBus`
 
 ```go
-if err := miso.PubEventBus(rail, CompressionEvent{}, "vfm.image.compression"); err != nil {
+if err := rabbit.PubEventBus(rail, CompressionEvent{}, "vfm.image.compression"); err != nil {
     return fmt.Errorf("failed to send event, %w", err)
 }
 ```
@@ -51,16 +51,16 @@ Basically, event bus declare exchange, queue and binding for you. A direct excha
 
 Of course, you may declare the queue, exchange and binding yourself using following API:
 
-- `miso.RegisterRabbitQueue`
-- `miso.RegisterRabbitBinding`
-- `miso.RegisterRabbitExchange`
+- `rabbit.RegisterRabbitQueue`
+- `rabbit.RegisterRabbitBinding`
+- `rabbit.RegisterRabbitExchange`
 
 ```go
 miso.PreServerBootstrap(func(rail miso.Rail) error {
     name := "vfm.image.compression"
-    miso.RegisterRabbitQueue(miso.QueueRegistration{Name: name, Durable: true})
-    miso.RegisterRabbitBinding(miso.BindingRegistration{Queue: name, RoutingKey: "#", Exchange: name})
-    miso.RegisterRabbitExchange(miso.ExchangeRegistration{Name: name, Durable: true, Kind: "direct"})
+    rabbit.RegisterRabbitQueue(rabbit.QueueRegistration{Name: name, Durable: true})
+    rabbit.RegisterRabbitBinding(rabbit.BindingRegistration{Queue: name, RoutingKey: "#", Exchange: name})
+    rabbit.RegisterRabbitExchange(rabbit.ExchangeRegistration{Name: name, Durable: true, Kind: "direct"})
     return nil
 })
 ```
@@ -70,7 +70,7 @@ To declare a listener, you will need to use `miso.AddRabbitListener`:
 ```go
 miso.PreServerBootstrap(func(rail miso.Rail) error {
     name := "vfm.image.compression"
-    miso.AddRabbitListener(miso.JsonMsgListener[CompressionEvent]{
+    rabbit.AddRabbitListener(rabbit.JsonMsgListener[CompressionEvent]{
         QueueName:     name,
         NumOfRoutines: 2,
         Handler: func(rail miso.Rail, payload CompressionEvent) error {
@@ -83,7 +83,7 @@ miso.PreServerBootstrap(func(rail miso.Rail) error {
 To send a RabbitMQ message, you will need to use `miso.PublishJson`:
 
 ```go
-err := miso.PublishJson(rail, CompressionEvent{}, "vfm.image.compression.exchange" /* exchange */, "#" /* routingKey */)
+err := rabbit.PublishJson(rail, CompressionEvent{}, "vfm.image.compression.exchange" /* exchange */, "#" /* routingKey */)
 if err != nil {
     return fmt.Errorf("failed to send event, %w", err)
 }

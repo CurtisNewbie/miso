@@ -3,9 +3,9 @@
 Services' health are periodically check by Consul. You can register a health indicator for your service component as follows:
 
 ```go
-    AddHealthIndicator(HealthIndicator{
+    miso.AddHealthIndicator(miso.HealthIndicator{
         Name: "My Component",
-        CheckHealth: func(rail Rail) bool {
+        CheckHealth: func(rail miso.Rail) bool {
             err := checkHealth()
             if err != nil {
                 rail.Errorf("my component is down, %v", err)

@@ -1,10 +1,11 @@
-package miso
+package redis
 
 import (
 	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/curtisnewbie/miso/miso"
 	"github.com/go-redis/redis"
 )
 
@@ -19,18 +20,18 @@ type redisHolder struct {
 }
 
 func init() {
-	SetDefProp(PropRedisEnabled, false)
-	SetDefProp(PropRedisAddress, "localhost")
-	SetDefProp(PropRedisPort, 6379)
-	SetDefProp(PropRedisUsername, "")
-	SetDefProp(PropRedisPassword, "")
-	SetDefProp(PropRedisDatabase, 0)
+	miso.SetDefProp(PropRedisEnabled, false)
+	miso.SetDefProp(PropRedisAddress, "localhost")
+	miso.SetDefProp(PropRedisPort, 6379)
+	miso.SetDefProp(PropRedisUsername, "")
+	miso.SetDefProp(PropRedisPassword, "")
+	miso.SetDefProp(PropRedisDatabase, 0)
 
-	RegisterBootstrapCallback(ComponentBootstrap{
+	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap Redis",
 		Bootstrap: RedisBootstrap,
 		Condition: RedisBootstrapCondition,
-		Order:     BootstrapOrderL1,
+		Order:     miso.BootstrapOrderL1,
 	})
 }
 
@@ -42,7 +43,7 @@ This func looks for following prop:
 	"redis.enabled"
 */
 func IsRedisEnabled() bool {
-	return GetPropBool(PropRedisEnabled)
+	return miso.GetPropBool(PropRedisEnabled)
 }
 
 /*
@@ -86,15 +87,15 @@ This func looks for following prop:
 	"redis.password"
 	"redis.database"
 */
-func InitRedisFromProp(rail Rail) (*redis.Client, error) {
+func InitRedisFromProp(rail miso.Rail) (*redis.Client, error) {
 	return InitRedis(
 		rail,
 		RedisConnParam{
-			Address:  GetPropStr(PropRedisAddress),
-			Port:     GetPropStr(PropRedisPort),
-			Username: GetPropStr(PropRedisUsername),
-			Password: GetPropStr(PropRedisPassword),
-			Db:       GetPropInt(PropRedisDatabase),
+			Address:  miso.GetPropStr(PropRedisAddress),
+			Port:     miso.GetPropStr(PropRedisPort),
+			Username: miso.GetPropStr(PropRedisUsername),
+			Password: miso.GetPropStr(PropRedisPassword),
+			Db:       miso.GetPropInt(PropRedisDatabase),
 		})
 }
 
@@ -111,7 +112,7 @@ Initialize redis client
 
 If redis client has been initialized, current func call will be ignored
 */
-func InitRedis(rail Rail, p RedisConnParam) (*redis.Client, error) {
+func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 	if IsRedisClientInitialized() {
 		return GetRedis(), nil
 	}
@@ -147,13 +148,13 @@ func IsRedisClientInitialized() bool {
 	return redisp.client != nil
 }
 
-func RedisBootstrap(rail Rail) error {
+func RedisBootstrap(rail miso.Rail) error {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to Redis, %w", e)
 	}
-	AddHealthIndicator(HealthIndicator{
+	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "Redis Component",
-		CheckHealth: func(rail Rail) bool {
+		CheckHealth: func(rail miso.Rail) bool {
 			cmd := GetRedis().Ping()
 			if err := cmd.Err(); err != nil {
 				rail.Errorf("Redis ping failed, %v", err)
@@ -165,6 +166,6 @@ func RedisBootstrap(rail Rail) error {
 	return nil
 }
 
-func RedisBootstrapCondition(rail Rail) (bool, error) {
+func RedisBootstrapCondition(rail miso.Rail) (bool, error) {
 	return IsRedisEnabled(), nil
 }

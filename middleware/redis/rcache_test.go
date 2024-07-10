@@ -1,9 +1,11 @@
-package miso
+package redis
 
 import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/curtisnewbie/miso/miso"
 )
 
 type RCacheDummy struct {
@@ -11,10 +13,10 @@ type RCacheDummy struct {
 	Age  int
 }
 
-func preRCacheTest(t *testing.T) Rail {
-	rail := EmptyRail()
-	SetProp(PropRedisEnabled, true)
-	SetLogLevel("debug")
+func preRCacheTest(t *testing.T) miso.Rail {
+	rail := miso.EmptyRail()
+	miso.SetProp(PropRedisEnabled, true)
+	miso.SetLogLevel("debug")
 	if _, e := InitRedisFromProp(rail); e != nil {
 		t.Fatal(e)
 	}
@@ -81,7 +83,7 @@ func TestRCache(t *testing.T) {
 	rcache := NewRCache[string]("test2", RCacheConfig{Exp: exp})
 
 	_, e := rcache.Get(rail, "absent key", nil)
-	if e == nil || !IsNoneErr(e) {
+	if e == nil || !miso.IsNoneErr(e) {
 		t.Fatal(e)
 	}
 
@@ -105,7 +107,7 @@ func TestRCache2(t *testing.T) {
 
 	exp := 10 * time.Second
 	supplier := func() (string, error) {
-		return "", NoneErr
+		return "", miso.NoneErr
 	}
 
 	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp, NoSync: true})

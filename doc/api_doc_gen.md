@@ -39,9 +39,9 @@ type FstoreFile struct {
 	Status     string      `json:"status" desc:"status, 'NORMAL', 'LOG_DEL' (logically deleted), 'PHY_DEL' (physically deleted)"`
 	Size       int64       `json:"size" desc:"file size in bytes"`
 	Md5        string      `json:"md5" desc:"MD5 checksum"`
-	UplTime    miso.ETime  `json:"uplTime" desc:"upload time"`
-	LogDelTime *miso.ETime `json:"logDelTime" desc:"logically deleted at"`
-	PhyDelTime *miso.ETime `json:"phyDelTime" desc:"physically deleted at"`
+	UplTime    util.ETime  `json:"uplTime" desc:"upload time"`
+	LogDelTime *util.ETime `json:"logDelTime" desc:"logically deleted at"`
+	PhyDelTime *util.ETime `json:"phyDelTime" desc:"physically deleted at"`
 }
 
 // endpoint

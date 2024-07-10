@@ -20,22 +20,6 @@ func TestParseArg(t *testing.T) {
 		t.Error()
 	}
 
-	if s := GetPropBool(PropRedisEnabled); s {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisAddress); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisPort); s != "6379" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisUsername); s != "" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisPassword); s != "" {
-		t.Error(s)
-	}
-
 	if s := GetPropStr(PropServerHost); s != "localhost" {
 		t.Error(s)
 	}
@@ -115,19 +99,6 @@ func TestResolveArgForParsedConf(t *testing.T) {
 	}
 	if IsProdMode() {
 		t.Error()
-	}
-
-	if s := GetPropStr(PropRedisAddress); s != "localhost" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisPort); s != "6379" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisUsername); s != "admin" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropRedisPassword); s != "654321" {
-		t.Error(s)
 	}
 
 	if s := GetPropStr(PropServerHost); s != "localhost" {
