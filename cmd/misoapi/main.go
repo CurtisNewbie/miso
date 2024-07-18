@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"go/parser"
 	"io/fs"
 	"os"
@@ -66,7 +67,7 @@ func parseFiles(files []FsFile) error {
 	for _, df := range dstFiles {
 		dstutil.Apply(df.Dst,
 			func(c *dstutil.Cursor) bool {
-				ad, ok := parseApiDecl(c, df.Path, df.Dst)
+				ad, ok := parseApiDecl(c, df.Path)
 				if ok {
 					apiDecls = append(apiDecls, ad)
 				}
@@ -105,7 +106,7 @@ type OutputFile struct {
 	Content []string
 }
 
-func parseApiDecl(cursor *dstutil.Cursor, path string, file *dst.File) (ApiDecl, bool) {
+func parseApiDecl(cursor *dstutil.Cursor, path string) (ApiDecl, bool) {
 	switch n := cursor.Node().(type) {
 	case *dst.FuncDecl:
 		tags, ok := parseMisoApiTag(path, n.Decs.Start)
@@ -122,9 +123,6 @@ func parseApiDecl(cursor *dstutil.Cursor, path string, file *dst.File) (ApiDecl,
 			}
 			ad, ok := BuildApiDecl(tags)
 			if ok {
-				ad.TypeParams = n.Decs.TypeParams
-				ad.Params = n.Decs.Params
-				ad.Results = n.Decs.Results
 				ad.FuncParams = parseParamMeta(n.Type.Params)
 				ad.FuncResults = parseParamMeta(n.Type.Results)
 				ad.FuncName = n.Name.String()
@@ -189,15 +187,9 @@ type ApiDecl struct {
 	Scope    string
 	Resource string
 
-	TypeParams dst.Decorations
-	Params     dst.Decorations
-	Results    dst.Decorations
-
+	FuncName    string
 	FuncParams  []ParamMeta
 	FuncResults []ParamMeta
-
-	PkgPath  string
-	FuncName string
 }
 
 func genGoApiRegister(dec []ApiDecl, baseIndent int) (string, error) {
@@ -299,10 +291,19 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int) (string, error) {
 		}
 		if d.Scope != "" {
 			w.NoIndWritef(".\n")
+			var l string
+			switch d.Scope {
+			case "PROTECTED":
+				l = "Protected()"
+			case "PUBLIC":
+				l = "Public()"
+			default:
+				l = fmt.Sprintf("Scope(\"%v\")", d.Scope)
+			}
 			if d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Scope(\"%v\")", d.Scope)
+				w.NoLbWritef(l)
 			} else {
-				w.Writef("Scope(\"%v\")", d.Scope)
+				w.Writef(l)
 			}
 		}
 		if d.Resource != "" {
