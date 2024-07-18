@@ -291,10 +291,26 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int) (string, error) {
 		}
 		if d.Desc != "" {
 			w.NoIndWritef(".\n")
-			if len(d.Header) > 0 || len(d.Query) > 0 {
+			if d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
 				w.NoLbWritef("Desc(\"%v\")", d.Desc)
 			} else {
 				w.Writef("Desc(\"%v\")", d.Desc)
+			}
+		}
+		if d.Scope != "" {
+			w.NoIndWritef(".\n")
+			if d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
+				w.NoLbWritef("Scope(\"%v\")", d.Scope)
+			} else {
+				w.Writef("Scope(\"%v\")", d.Scope)
+			}
+		}
+		if d.Resource != "" {
+			w.NoIndWritef(".\n")
+			if len(d.Header) > 0 || len(d.Query) > 0 {
+				w.NoLbWritef("Resource(\"%v\")", d.Resource)
+			} else {
+				w.Writef("Resource(\"%v\")", d.Resource)
 			}
 		}
 		for i, dh := range d.Header {

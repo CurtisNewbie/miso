@@ -1019,6 +1019,11 @@ func (g *LazyRouteDecl) Public() *LazyRouteDecl {
 	return g.Extra(ExtraScope, ScopePublic)
 }
 
+// Document the access scope of the endpoint (only serves as metadata that maybe used by some plugins).
+func (g *LazyRouteDecl) Scope(scope string) *LazyRouteDecl {
+	return g.Extra(ExtraScope, scope)
+}
+
 // Documents that the endpoint requires protection (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) Protected() *LazyRouteDecl {
 	return g.Extra(ExtraScope, ScopeProtected)
