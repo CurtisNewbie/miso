@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/version"
 )
 
 const (
@@ -43,7 +44,7 @@ var (
 
 func main() {
 	flag.Parse()
-	fmt.Printf("misogen, current miso version: %s\n\n", miso.Version)
+	fmt.Printf("misogen, current miso version: %s\n\n", version.Version)
 
 	var initName string = *ModNameFlag
 	if initName != "" {
@@ -108,7 +109,7 @@ func main() {
 		}
 	}
 
-	pkg := fmt.Sprintf("github.com/curtisnewbie/miso/miso@%s", miso.Version)
+	pkg := fmt.Sprintf("github.com/curtisnewbie/miso/miso@%s", version.Version)
 	fmt.Printf("Installing dependency: %s\n", pkg)
 
 	out, err := exec.Command("go", "get", "-x", pkg).CombinedOutput()
@@ -371,7 +372,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		f.WriteString(fmt.Sprintf("Powered by miso %s.", miso.Version))
+		f.WriteString(fmt.Sprintf("Powered by miso %s.", version.Version))
 		f.Close()
 	}
 

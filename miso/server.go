@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/version"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
@@ -561,7 +562,7 @@ func BootstrapServer(args []string) {
 	}
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
-	rail.Infof("Miso Version: %s", Version)
+	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", GetPropBool(PropProdMode))
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded

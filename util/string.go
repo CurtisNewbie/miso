@@ -108,8 +108,21 @@ func NewIndWritef(indentStr string) (*strings.Builder, IndWritef) {
 
 type IndentWriter struct {
 	*strings.Builder
-	indentc int
-	writef  IndWritef
+	writef    IndWritef
+	indentc   int
+	indentStr string
+}
+
+func (i *IndentWriter) SetIndent(ind int) {
+	i.indentc = ind
+}
+
+func (i *IndentWriter) IncrIndent() {
+	i.indentc += 1
+}
+
+func (i *IndentWriter) DecrIndent() {
+	i.indentc -= 1
 }
 
 func (i *IndentWriter) StepIn(f func(iw *IndentWriter)) *IndentWriter {
@@ -124,12 +137,25 @@ func (i *IndentWriter) Writef(pat string, args ...any) *IndentWriter {
 	return i
 }
 
+// Writef with indentation and without line break.
+func (i *IndentWriter) NoLbWritef(pat string, args ...any) *IndentWriter {
+	i.WriteString(strings.Repeat(i.indentStr, i.indentc) + fmt.Sprintf(pat, args...))
+	return i
+}
+
+// Writef without indentation and with line break.
+func (i *IndentWriter) NoIndWritef(pat string, args ...any) *IndentWriter {
+	i.WriteString(fmt.Sprintf(pat, args...))
+	return i
+}
+
 func NewIndentWriter(indentStr string) IndentWriter {
 	b, writef := NewIndWritef(indentStr)
 	iw := IndentWriter{
-		Builder: b,
-		writef:  writef,
-		indentc: 0,
+		Builder:   b,
+		writef:    writef,
+		indentc:   0,
+		indentStr: indentStr,
 	}
 	return iw
 }

@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
 	github.com/curtisnewbie/svc v0.0.8
+	github.com/dave/dst v0.27.3
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -69,10 +70,12 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
