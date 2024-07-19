@@ -57,3 +57,9 @@ func Printlnf(pat string, args ...any) {
 func NamedPrintlnf(pat string, p map[string]any) {
 	println(NamedSprintf(pat, p))
 }
+
+func Must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
