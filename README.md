@@ -51,6 +51,28 @@ Initializing internal/schema/migrate.go
 Initializing main.go
 ```
 
+## Generate api endpoints
+
+```sh
+$ misoapi -h
+misoapi - automatically generate web endpoint in go based on misoapi-* comments
+
+  Supported miso version: v0.1.4-beta.1
+
+Usage of misoapi:
+  -debug
+        Enable debug log
+
+For example:
+
+  misoapi-http: GET /open/api/doc
+  misoapi-desc: open api endpoint to retrieve documents
+  misoapi-query-doc: page: curent page index
+  misoapi-header-doc: Authorization: bearer authorization token
+  misoapi-scope: PROTECTED
+  misoapi-resource: document:read
+```
+
 ## Documentations
 
 - [Configuration](./doc/config.md)

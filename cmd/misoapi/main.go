@@ -38,12 +38,13 @@ const (
 )
 
 var (
-	Debug = flag.Bool("debug", false, "Debug")
+	Debug = flag.Bool("debug", false, "Enable debug log")
 )
 
 func main() {
 	flag.Usage = func() {
-		util.Printlnf("misoapi for miso@%v\n", version.Version)
+		util.Printlnf("\nmisoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
+		util.Printlnf("  Supported miso version: %v\n", version.Version)
 		util.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
 		util.Printlnf("\nFor example:\n")
