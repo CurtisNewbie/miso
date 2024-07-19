@@ -223,7 +223,7 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 			ad, ok := BuildApiDecl(tags)
 			if ok {
 				ad.FuncName = n.Name.String()
-				ad.FuncParams = parseParamMeta(n.Type.Params, srcPath, ad.FuncName, importSpec, imports)
+				ad.FuncParams = parseParamMeta(n.Type.Params, srcPath, ad.FuncName, nil, imports)
 				ad.FuncResults = parseParamMeta(n.Type.Results, srcPath, ad.FuncName, importSpec, imports)
 			}
 			return ad, imports, ok
@@ -233,7 +233,7 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 }
 
 func guessImport(n string, importSpec map[string]string, imports util.Set[string]) {
-	if n == "" {
+	if n == "" || importSpec == nil {
 		return
 	}
 	cached, ok := importSpec[n]
