@@ -171,7 +171,19 @@ ${code}
 			util.Printlnf("DEBUG %v (%v) => \n\n%v", dir, v.Pkg, out)
 		}
 		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
-		util.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
+
+		prev, err := os.ReadFile(outFile)
+		if err == nil {
+			prevs := util.UnsafeByt2Str(prev)
+			if i := strings.Index(prevs, "\n"); i > -1 && i+1 < len(prevs) {
+				prevs = prevs[i+1:]
+			}
+			outBody := out[strings.Index(out, "\n")+1:]
+			if prevs == outBody {
+				util.Printlnf("Generated code remain the same, skipping %v", outFile)
+				continue
+			}
+		}
 
 		f, err := util.ReadWriteFile(outFile)
 		util.Must(err)
@@ -179,6 +191,7 @@ ${code}
 		_, err = f.WriteString(out)
 		util.Must(err)
 		f.Close()
+		util.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
 	}
 
 	return nil
@@ -588,7 +601,6 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 				if *Debug {
 					util.Printlnf("DEBUG parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
-				// return OutputFile{}, false
 				t = append(t, MisoApiTag{
 					Command: strings.TrimSpace(pre),
 					Body:    strings.TrimSpace(m),
