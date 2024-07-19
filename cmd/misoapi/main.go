@@ -272,14 +272,18 @@ func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec m
 		case *dst.Ident:
 			typeName = v.Name
 		case *dst.StarExpr:
-			xsel := v.X.(*dst.SelectorExpr)
-			typeName = xsel.X.(*dst.Ident).Name
-			guessImport(typeName, importSpec, imports)
-			typeName = "*" + typeName
+			switch vn := v.X.(type) {
+			case *dst.SelectorExpr:
+				typeName = vn.X.(*dst.Ident).Name
+				guessImport(typeName, importSpec, imports)
+				typeName = "*" + typeName
 
-			sn := xsel.Sel.String()
-			if sn != "" {
-				typeName += "." + sn
+				sn := vn.Sel.String()
+				if sn != "" {
+					typeName += "." + sn
+				}
+			case *dst.Ident:
+				typeName = "*" + vn.Name
 			}
 		case *dst.ArrayType:
 			switch vn := v.Elt.(type) {
