@@ -164,3 +164,23 @@ func api7(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (api.ApiRes, error) {
 func api8(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (*api.ApiRes, error) {
 	return &api.ApiRes{}, nil
 }
+
+// misoapi-http: POST /api/v9
+func api9(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (*[]api.ApiRes, error) {
+	return nil, nil
+}
+
+// misoapi-http: POST /api/v10
+func api10(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) ([]api.ApiRes, error) {
+	return nil, nil
+}
+
+// misoapi-http: POST /api/v11
+func api11(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) ([]PostRes, error) {
+	return nil, nil
+}
+
+// misoapi-http: POST /api/v12
+func api12(inb *miso.Inbound, req []api.ApiReq, db *gorm.DB) ([]PostRes, error) {
+	return nil, nil
+}

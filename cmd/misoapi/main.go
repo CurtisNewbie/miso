@@ -63,11 +63,11 @@ func main() {
 
 	files, err := walkDir(".")
 	if err != nil {
-		util.Printlnf("error - %v", err)
+		util.Printlnf("[ERROR] walkDir failed, %v", err)
 		return
 	}
 	if err := parseFiles(files); err != nil {
-		util.Printlnf("error - %v", err)
+		util.Printlnf("[ERROR] parseFiles failed, %v", err)
 	}
 }
 
@@ -91,7 +91,7 @@ func parseFiles(files []FsFile) error {
 
 	if *Debug {
 		for _, f := range dstFiles {
-			util.Printlnf("DEBUG Found %v", f.Path)
+			util.Printlnf("[DEBUG] Found %v", f.Path)
 		}
 	}
 
@@ -135,12 +135,12 @@ func parseFiles(files []FsFile) error {
 	for dir, v := range pathApiDecls {
 		for _, ad := range v.Apis {
 			if *Debug {
-				util.Printlnf("DEBUG %v (%v) => %#v", dir, v.Pkg, ad)
+				util.Printlnf("[DEBUG] %v (%v) => %#v", dir, v.Pkg, ad)
 			}
 		}
 		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
 		if err != nil {
-			util.Printlnf("error - %v", err)
+			util.Printlnf("[ERROR] generate code failed, %v", err)
 			continue
 		}
 
@@ -173,7 +173,7 @@ ${code}
 		})
 
 		if *Debug {
-			util.Printlnf("DEBUG %v (%v) => \n\n%v", dir, v.Pkg, out)
+			util.Printlnf("[DEBUG] %v (%v) => \n\n%v", dir, v.Pkg, out)
 		}
 		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
 
@@ -223,20 +223,20 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 		}
 		importSpec[alias] = importPath
 		if *Debug {
-			util.Printlnf("DEBUG parseApiDecl() alias: %v, importPath: %v", alias, importPath)
+			util.Printlnf("[DEBUG] parseApiDecl() alias: %v, importPath: %v", alias, importPath)
 		}
 	case *dst.FuncDecl:
 		imports := util.NewSet[string]()
 		tags, ok := parseMisoApiTag(srcPath, n.Decs.Start)
 		if ok {
 			if *Debug {
-				util.Printlnf("DEBUG parseApiDecl() type results: %#v", n.Type.Results)
-				util.Printlnf("DEBUG parseApiDecl() tags: %+v", tags)
+				util.Printlnf("[DEBUG] parseApiDecl() type results: %#v", n.Type.Results)
+				util.Printlnf("[DEBUG] parseApiDecl() tags: %+v", tags)
 			}
 			for _, t := range tags {
 				kv, ok := t.BodyKV()
 				if *Debug {
-					util.Printlnf("DEBUG parseApiDecl() tag -> %#v, kv: %#v, ok: %v", t, kv, ok)
+					util.Printlnf("[DEBUG] parseApiDecl() tag -> %#v, kv: %#v, ok: %v", t, kv, ok)
 				}
 			}
 			ad, ok := BuildApiDecl(tags)
@@ -278,90 +278,14 @@ func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec m
 		}
 
 		if *Debug {
-			util.Printlnf("DEBUG parseParamMeta() func: %v, param [%v], p: %#v", funcName, i, p.Type)
+			util.Printlnf("[DEBUG] parseParamMeta() func: %v, param [%v], p: %#v", funcName, i, p.Type)
 		}
 
-		// TODO: refactor this, change to recrusive style
-		var typeName string
-		switch v := p.Type.(type) {
-		case *dst.SelectorExpr:
-			typeName = v.X.(*dst.Ident).Name
-			guessImport(typeName, importSpec, imports)
-
-			sn := v.Sel.String()
-			if sn != "" {
-				typeName = typeName + "." + sn
-			}
-		case *dst.Ident:
-			typeName = v.Name
-		case *dst.StarExpr:
-			switch vn := v.X.(type) {
-			case *dst.SelectorExpr:
-				typeName = vn.X.(*dst.Ident).Name
-				guessImport(typeName, importSpec, imports)
-				typeName = "*" + typeName
-
-				sn := vn.Sel.String()
-				if sn != "" {
-					typeName += "." + sn
-				}
-			case *dst.Ident:
-				typeName = "*" + vn.Name
-			}
-		case *dst.ArrayType:
-			switch vn := v.Elt.(type) {
-			case *dst.Ident:
-				typeName = "[]" + vn.Name
-			case *dst.SelectorExpr:
-				gn := vn.X.(*dst.Ident).String()
-				guessImport(gn, importSpec, imports)
-				sn := vn.Sel.String()
-				if sn != "" {
-					gn += "." + sn
-				}
-				typeName = "[]" + gn
-			}
-		case *dst.IndexExpr:
-			xsel := v.X.(*dst.SelectorExpr)
-			typeName = xsel.X.(*dst.Ident).Name
-			guessImport(typeName, importSpec, imports)
-
-			sn := xsel.Sel.String()
-			if sn != "" {
-				typeName = typeName + "." + sn
-			}
-
-			switch vn := v.Index.(type) {
-			case *dst.Ident:
-				typeName = typeName + "[" + vn.Name + "]"
-			case *dst.SelectorExpr:
-				gn := vn.X.(*dst.Ident).String()
-				guessImport(gn, importSpec, imports)
-
-				sn := vn.Sel.String()
-				if sn != "" {
-					gn += "." + sn
-				}
-				typeName = typeName + "[" + gn + "]"
-			case *dst.StarExpr:
-				xsel := vn.X.(*dst.SelectorExpr)
-				t := xsel.X.(*dst.Ident).Name
-				guessImport(t, importSpec, imports)
-
-				sn := xsel.Sel.String()
-				if sn != "" {
-					t = t + "." + sn
-				}
-				if t != "" {
-					typeName += "[*" + t + "]"
-				}
-			}
-
-		default:
-			util.Printlnf("error - failed to parse param[%d]: %v %#v, %v: %v", i, p.Names, p.Type, path, funcName)
-		}
+		typeName := parseParamName(p.Type, importSpec, imports)
 		if typeName != "" {
 			pm = append(pm, ParamMeta{Name: varName, Type: typeName})
+		} else {
+			util.Printlnf("[ERROR] failed to parse param[%d]: %v %#v, %v: %v", i, p.Names, p.Type, path, funcName)
 		}
 	}
 	return pm
@@ -612,7 +536,7 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 				pre := m[:pi]
 				m = m[pi+1:]
 				if *Debug {
-					util.Printlnf("DEBUG parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
+					util.Printlnf("[DEBUG] parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
 				t = append(t, MisoApiTag{
 					Command: strings.TrimSpace(pre),
@@ -654,7 +578,7 @@ func walkDir(n string) ([]FsFile, error) {
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil {
-			util.Printlnf("error - %v", err)
+			util.Printlnf("[ERROR] %v", err)
 			continue
 		}
 		p := n + "/" + fi.Name()
@@ -670,4 +594,35 @@ func walkDir(n string) ([]FsFile, error) {
 		}
 	}
 	return files, nil
+}
+
+func parseParamName(t dst.Expr, importSpec map[string]string, imports util.Set[string]) string {
+	switch v := t.(type) {
+	case *dst.Ident:
+		p := v.Path
+		if p != "" {
+			guessImport(p, importSpec, imports)
+			p += "." + v.Name
+		} else {
+			p = v.Name
+		}
+		return p
+	case *dst.SelectorExpr:
+		n := parseParamName(v.X, importSpec, imports)
+		guessImport(n, importSpec, imports)
+		sn := v.Sel.String()
+		if sn != "" {
+			n += "." + sn
+		}
+		return n
+	case *dst.StarExpr:
+		return "*" + parseParamName(v.X, importSpec, imports)
+	case *dst.ArrayType:
+		return "[]" + parseParamName(v.Elt, importSpec, imports)
+	case *dst.IndexExpr:
+		n := parseParamName(v.X, importSpec, imports)
+		return n + "[" + parseParamName(v.Index, importSpec, imports) + "]"
+	default:
+		return ""
+	}
 }
