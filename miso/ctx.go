@@ -14,6 +14,10 @@ type Rail struct {
 	ctx context.Context
 }
 
+func (r Rail) IsDone() bool {
+	return r.ctx.Err() != nil
+}
+
 func (r Rail) Context() context.Context {
 	return r.ctx
 }

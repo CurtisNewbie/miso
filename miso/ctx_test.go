@@ -21,3 +21,19 @@ func TestNewSpan(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestRailIsDone(t *testing.T) {
+	r := EmptyRail()
+	if r.IsDone() {
+		t.Fatal("isDone")
+	}
+
+	r, c := r.WithCancel()
+	if r.IsDone() {
+		t.Fatal("isDone")
+	}
+	c()
+	if !r.IsDone() {
+		t.Fatal("not isDone")
+	}
+}
