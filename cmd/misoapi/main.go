@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/curtisnewbie/miso/util"
@@ -28,6 +29,8 @@ const (
 
 	importCommonUser = "github.com/curtisnewbie/miso/middleware/user-vault/common"
 	importMiso       = "github.com/curtisnewbie/miso/miso"
+	importGorm       = "gorm.io/gorm"
+	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 
 	tagHttp      = "http"
 	tagDesc      = "desc"
@@ -142,7 +145,9 @@ func parseFiles(files []FsFile) error {
 		}
 
 		importSb := strings.Builder{}
-		for s := range imports.Keys {
+		importStrs := imports.CopyKeys()
+		sort.Slice(importStrs, func(i, j int) bool { return strings.Compare(importStrs[i], importStrs[j]) < 0 })
+		for _, s := range importStrs {
 			if importSb.Len() > 0 {
 				importSb.WriteString("\n")
 			}
@@ -237,7 +242,7 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 			ad, ok := BuildApiDecl(tags)
 			if ok {
 				ad.FuncName = n.Name.String()
-				ad.FuncParams = parseParamMeta(n.Type.Params, srcPath, ad.FuncName, nil, imports)
+				ad.FuncParams = parseParamMeta(n.Type.Params, srcPath, ad.FuncName, importSpec, imports)
 				ad.FuncResults = parseParamMeta(n.Type.Results, srcPath, ad.FuncName, importSpec, imports)
 			}
 			return ad, imports, ok
@@ -252,7 +257,12 @@ func guessImport(n string, importSpec map[string]string, imports util.Set[string
 	}
 	cached, ok := importSpec[n]
 	if ok {
-		imports.Add(cached)
+		switch cached {
+		case importCommonUser, importMiso, importGorm, importMySQL:
+			return
+		default:
+			imports.Add(cached)
+		}
 	}
 }
 
@@ -268,7 +278,7 @@ func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec m
 		}
 
 		if *Debug {
-			util.Printlnf("DEBUG parseParamMeta() param [%v], p: %#v", i, p.Type)
+			util.Printlnf("DEBUG parseParamMeta() func: %v, param [%v], p: %#v", funcName, i, p.Type)
 		}
 
 		// TODO: refactor this, change to recrusive style
@@ -386,10 +396,13 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 		for _, p := range d.FuncParams {
 			switch p.Type {
-			case typeMisoInboundPtr, typeMisoRail, typeGormDbPtr:
+			case typeMisoInboundPtr, typeMisoRail:
 				continue
 			case typeCommonUser:
 				imports.Add(importCommonUser)
+				continue
+			case typeGormDbPtr:
+				imports.Add(importMySQL)
 				continue
 			default:
 				if custReqType == "" {
@@ -436,7 +449,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					case typeMisoRail:
 						v = "inb.Rail()"
 					case typeGormDbPtr:
-						v = "miso.GetMySQL()"
+						v = "mysql.GetMySQL()"
 					case typeCommonUser:
 						v = "common.GetUser(inb.Rail())"
 					case custReqType:

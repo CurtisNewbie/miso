@@ -4,10 +4,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/curtisnewbie/miso/demo/api"
 	"github.com/curtisnewbie/miso/middleware/mysql"
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/middleware/task"
 	"github.com/curtisnewbie/miso/miso"
+	"gorm.io/gorm"
 )
 
 const (
@@ -121,4 +123,44 @@ func doSomethingEndpoint(inb *miso.Inbound, req PostReq) (PostRes, error) {
 	rail := inb.Rail()
 	rail.Infof("Received request: %#v", req)
 	return PostRes{ResultId: "1234"}, nil
+}
+
+// misoapi-http: POST /api/v1
+func api1(inb *miso.Inbound, req PostReq) (PostRes, error) {
+	return PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v2
+func api2(inb *miso.Inbound, req *PostReq) (PostRes, error) {
+	return PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v3
+func api3(inb *miso.Inbound, req *PostReq) (*PostRes, error) {
+	return &PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v4
+func api4(inb *miso.Inbound, req api.ApiReq) (*PostRes, error) {
+	return &PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v5
+func api5(inb *miso.Inbound, req *api.ApiReq) (*PostRes, error) {
+	return &PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v6
+func api6(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (*PostRes, error) {
+	return &PostRes{}, nil
+}
+
+// misoapi-http: POST /api/v7
+func api7(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (api.ApiRes, error) {
+	return api.ApiRes{}, nil
+}
+
+// misoapi-http: POST /api/v8
+func api8(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) (*api.ApiRes, error) {
+	return &api.ApiRes{}, nil
 }
