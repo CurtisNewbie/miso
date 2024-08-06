@@ -259,3 +259,20 @@ func PadSpace(n int, s string) string {
 	}
 	return strings.Repeat(" ", pad) + s
 }
+
+// Splist kv pair. Returns false if token is not found or key is absent.
+func SplitKV(s string, token string) (string, string, bool) {
+	tokens := strings.SplitN(s, ":", 2)
+	var ok bool = false
+	var k string
+	var v string
+	if len(tokens) > 1 {
+		ok = true
+		k = strings.TrimSpace(tokens[0])
+		v = strings.TrimSpace(tokens[1])
+	}
+	if ok && k == "" { // e.g., ' : value'.
+		return k, v, false
+	}
+	return k, v, ok
+}

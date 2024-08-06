@@ -229,3 +229,36 @@ func TestPadSpace(t *testing.T) {
 	t.Logf("'%-6s'", s)
 	t.Logf("'%6s'", s)
 }
+
+func TestSplitKV(t *testing.T) {
+	logkv := func(k, v string, ok bool) { t.Logf("k: '%v', v: '%v', ok: %v", k, v, ok) }
+	k, v, ok := SplitKV("k : v", ":")
+	if !ok {
+		t.FailNow()
+	}
+	logkv(k, v, ok)
+
+	k, v, ok = SplitKV("k : ", ":")
+	if !ok {
+		t.FailNow()
+	}
+	logkv(k, v, ok)
+
+	k, v, ok = SplitKV(": v", ":")
+	if ok {
+		t.FailNow()
+	}
+	logkv(k, v, ok)
+
+	k, v, ok = SplitKV(": ", ":")
+	if ok {
+		t.FailNow()
+	}
+	logkv(k, v, ok)
+
+	k, v, ok = SplitKV("k : v1:v2", ":")
+	if !ok || v != "v1:v2" {
+		t.FailNow()
+	}
+	logkv(k, v, ok)
+}
