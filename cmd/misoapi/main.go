@@ -405,7 +405,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						case typeMisoRail:
 							v = "inb.Rail()"
 						case typeGormDbPtr:
-							v = "miso.GetMySQL()"
+							v = "mysql.GetMySQL()"
 						case typeCommonUser:
 							v = "common.GetUser(inb.Rail())"
 						}
