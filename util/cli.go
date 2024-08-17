@@ -54,6 +54,12 @@ func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }
 
+func DebugPrintlnf(debug bool, pat string, args ...any) {
+	if debug {
+		fmt.Printf("[DEBUG] "+pat+"\n", args...)
+	}
+}
+
 func NamedPrintlnf(pat string, p map[string]any) {
 	println(NamedSprintf(pat, p))
 }
