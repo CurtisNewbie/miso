@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -38,6 +39,10 @@ const (
 	tagRes       = "resource"
 	tagQueryDoc  = "query-doc"
 	tagHeaderDoc = "header-doc"
+)
+
+var (
+	refPat = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
 )
 
 var (
@@ -443,10 +448,17 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		}
 		if d.Resource != "" {
 			w.NoIndWritef(".\n")
-			if len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Resource(\"%v\")", d.Resource)
+			ref, isRef := parseRef(d.Resource)
+			var res string
+			if !isRef {
+				res = "\"" + d.Resource + "\""
 			} else {
-				w.Writef("Resource(\"%v\")", d.Resource)
+				res = ref
+			}
+			if len(d.Header) > 0 || len(d.Query) > 0 {
+				w.NoLbWritef("Resource(%v)", res)
+			} else {
+				w.Writef("Resource(%v)", res)
 			}
 		}
 		for i, dh := range d.Header {
@@ -625,4 +637,12 @@ func parseParamName(t dst.Expr, importSpec map[string]string, imports util.Set[s
 	default:
 		return ""
 	}
+}
+
+func parseRef(r string) (string, bool) {
+	s := refPat.FindStringSubmatch(r)
+	if s == nil {
+		return "", false
+	}
+	return strings.TrimSpace(s[1]), true
 }
