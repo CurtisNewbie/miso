@@ -21,10 +21,8 @@ import (
 const (
 	MisoApiPrefix = "misoapi-"
 
-	typeMisoInbound    = "miso.Inbound"
 	typeMisoInboundPtr = "*miso.Inbound"
 	typeMisoRail       = "miso.Rail"
-	typeGormDb         = "gorm.DB"
 	typeGormDbPtr      = "*gorm.DB"
 	typeCommonUser     = "common.User"
 
