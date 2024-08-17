@@ -64,6 +64,12 @@ func NamedPrintlnf(pat string, p map[string]any) {
 	println(NamedSprintf(pat, p))
 }
 
+func DebugNamedPrintlnf(debug bool, pat string, p map[string]any) {
+	if debug {
+		println(NamedSprintf("[DEBUG] "+pat, p))
+	}
+}
+
 func Must(err error) {
 	if err != nil {
 		panic(err)
