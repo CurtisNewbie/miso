@@ -136,6 +136,8 @@ func main() {
 					iw.Writef("\"flag\"")
 					iw.Writef("")
 					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
+					iw.Writef("\"github.com/curtisnewbie/miso/middleware/redis\"")
+					iw.Writef("\"github.com/curtisnewbie/miso/middleware/mysql\"")
 				}).
 				Writef(")").Writef("")
 
@@ -158,13 +160,13 @@ func main() {
 						Writef("}").Writef("")
 
 					iw.Writef("// for mysql")
-					iw.Writef("if err := miso.InitMySQL(rail, miso.MySQLConnParam{}); err != nil {").
+					iw.Writef("if err := mysql.InitMySQL(rail, mysql.MySQLConnParam{}); err != nil {").
 						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
-					iw.Writef("db := miso.GetMySQL()")
+					iw.Writef("db := mysql.GetMySQL()")
 					iw.Writef("if err := db.Exec(`SELECT 1`).Error; err != nil {").
 						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
@@ -172,14 +174,14 @@ func main() {
 						Writef("}").Writef("")
 
 					iw.Writef("// for redis")
-					iw.Writef("redis, err := miso.InitRedis(rail, miso.RedisConnParam{})")
+					iw.Writef("red, err := redis.InitRedis(rail, redis.RedisConnParam{})")
 					iw.Writef("if err != nil {").
 						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
-					iw.Writef("res, err := redis.Ping().Result()")
+					iw.Writef("res, err := red.Ping().Result()")
 					iw.Writef("if err != nil {").
 						StepIn(func(iw *util.IndentWriter) {
 							iw.Writef("panic(err)")
