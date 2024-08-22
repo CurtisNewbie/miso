@@ -147,7 +147,7 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | logging.rolling.file      | path to rolling log file                   |                                |
 | logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
 | logging.file.max-size     | max size of each log file (in mb)          | 50                             |
-| logging.file.max-backups  | max number of backup log files             | 0 (all files are retained)     |
+| logging.file.max-backups  | max number of backup log files             | 10                             |
 | logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
 
 ## Distributed Task Scheduling Configuration

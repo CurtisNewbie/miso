@@ -151,7 +151,7 @@ func init() {
 
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
-	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
+	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
 	SetDefProp(PropLoggingRollingFileRotateDaily, true)
 
 	RegisterBootstrapCallback(ComponentBootstrap{
