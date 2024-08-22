@@ -237,3 +237,13 @@ func TestStack(t *testing.T) {
 	t.Logf("stack: %v", s)
 	s.ForEach(fef)
 }
+
+func TestSliceCop(t *testing.T) {
+	a := []int{1, 2, 3, 4, 5}
+	b := SliceCopy(a)
+	b[0] = -1
+	t.Logf("a: %v, b: %v", a, b)
+
+	c := SliceCopy([]int(nil))
+	t.Logf("c: %v", c)
+}

@@ -410,3 +410,9 @@ func (s *Stack[T]) ForEach(f func(v T) bool) {
 func (s *Stack[T]) Slice() []T {
 	return slices.Clone(s.st)
 }
+
+func SliceCopy[T any](v []T) []T {
+	cp := make([]T, len(v))
+	copy(cp, v)
+	return cp
+}
