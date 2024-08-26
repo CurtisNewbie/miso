@@ -168,13 +168,14 @@ func TestNamedSprintf(t *testing.T) {
 
 func BenchmarkNamedSprintf(b *testing.B) {
 	p := map[string]any{"brand": "AMD"}
-	pat := NamedFmt("${brand} Yes!")
+	pat := "${brand} Yes!"
 
+	// 188.9 ns/op            32 B/op          3 allocs/op
 	// 236.9 ns/op            32 B/op          3 allocs/op
 	b.Run("NamedFmt", func(b *testing.B) {
 		var s string
 		for i := 0; i < b.N; i++ {
-			s = pat.Sprintf(p)
+			s = NamedSprintf(pat, p)
 		}
 		b.Log(s)
 	})

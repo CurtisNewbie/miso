@@ -196,34 +196,13 @@ func LastNStr(s string, n int) string {
 //
 // e.g., '${startTime} ${message}'
 func NamedSprintf(pat string, p map[string]any) string {
-	return NamedFmt(pat).Sprintf(p)
-}
-
-// Create reuseable named variables string formatter.
-func NamedFmt(pat string) *namedFmt {
-	return &namedFmt{pat: pat}
-}
-
-type namedFmt struct {
-	pat string
-}
-
-func (n *namedFmt) get(p map[string]any, k string) string {
-	v, ok := p[k]
-	if ok {
+	return namedFmtPat.ReplaceAllStringFunc(pat, func(s string) string {
+		key := s[2 : len(s)-1]
+		v := p[key]
+		if vs, ok := v.(string); ok {
+			return vs
+		}
 		return cast.ToString(v)
-	}
-	return ""
-}
-
-// Format message using named args.
-//
-// e.g., '${startTime} ${message}'
-func (n *namedFmt) Sprintf(p map[string]any) string {
-	return namedFmtPat.ReplaceAllStringFunc(n.pat, func(s string) string {
-		r := []rune(s)
-		key := string(r[2 : len(r)-1])
-		return n.get(p, key)
 	})
 }
 
