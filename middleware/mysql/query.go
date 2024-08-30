@@ -34,9 +34,25 @@ func (q *Query) Eq(col string, args ...any) *Query {
 	return q
 }
 
+// =
+func (q *Query) EqIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		return q.Eq(col, args...)
+	}
+	return q
+}
+
 // <=
 func (q *Query) Le(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" <= ?", args...)
+	return q
+}
+
+// <=
+func (q *Query) LeIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		return q.Le(col, args...)
+	}
 	return q
 }
 
@@ -46,15 +62,39 @@ func (q *Query) Lt(col string, args ...any) *Query {
 	return q
 }
 
+// <
+func (q *Query) LtIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		return q.Lt(col, args...)
+	}
+	return q
+}
+
 // >=
 func (q *Query) Ge(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" >= ?", args...)
 	return q
 }
 
+// >=
+func (q *Query) GeIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		return q.Ge(col, args...)
+	}
+	return q
+}
+
 // >
 func (q *Query) Gt(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" > ?", args...)
+	return q
+}
+
+// >
+func (q *Query) GtIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		return q.Gt(col, args...)
+	}
 	return q
 }
 
