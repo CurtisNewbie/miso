@@ -56,49 +56,49 @@ func ShuffleRunes(letters []rune, times int) []rune {
 //
 // ERand() is preferred for higher entrophy
 func RandStr(n int) string {
-	return doRand(n, []rune(digits+upperAlpha+lowerAlpha))
+	return RandRune(n, []rune(digits+upperAlpha+lowerAlpha))
 }
 
 // Generate random numeric string with specified length
 //
 // the generated string will contains [0-9]
 func RandNum(n int) string {
-	return doRand(n, []rune(digits))
+	return RandRune(n, []rune(digits))
 }
 
 // Generate random alphabetic string with specified length
 //
 // the generated string will contains [a-zA-Z]
 func RandAlpha(n int) string {
-	return doRand(n, []rune(upperAlpha+lowerAlpha))
+	return RandRune(n, []rune(upperAlpha+lowerAlpha))
 }
 
 // Generate random alphabetic, uppercase string with specified length
 //
 // the generated string will contains [A-Z]
 func RandUpperAlpha(n int) string {
-	return doRand(n, []rune(upperAlpha))
+	return RandRune(n, []rune(upperAlpha))
 }
 
 // Generate random alphabetic, lowercase string with specified length
 //
 // the generated string will contains [a-z]
 func RandLowerAlpha(n int) string {
-	return doRand(n, []rune(lowerAlpha))
+	return RandRune(n, []rune(lowerAlpha))
 }
 
 // Generate random alphabetic, uppercase string with specified length
 //
 // the generated string will contains [A-Z0-9]
 func RandUpperAlphaNumeric(n int) string {
-	return doRand(n, []rune(upperAlpha+digits))
+	return RandRune(n, []rune(upperAlpha+digits))
 }
 
 // Generate random alphabetic, lowercase string with specified length
 //
 // the generated string will contains [a-z0-9]
 func RandLowerAlphaNumeric(n int) string {
-	return doRand(n, lowerAlphaDigitsRune)
+	return RandRune(n, lowerAlphaDigitsRune)
 }
 
 // Same as RandLowerAlphaNumeric(16) but with less allocation.
@@ -118,7 +118,7 @@ func doRand16(set []rune) string {
 }
 
 // generate randon str based on given length and given charset
-func doRand(n int, set []rune) string {
+func RandRune(n int, set []rune) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = set[rand.Intn(len(set))]
