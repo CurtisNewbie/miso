@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"net/url"
@@ -404,8 +405,14 @@ func registerRouteForConsulHealthcheck(router *gin.Engine) {
 }
 
 func startHttpServer(rail Rail, server *http.Server) {
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		rail.Fatalf("http.Server ListenAndServe: %s", err)
+	ln, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		panic(fmt.Errorf("http.Server Serve: %s", err))
+	}
+	la := ln.Addr().(*net.TCPAddr)
+	rail.Infof("Serving HTTP on %s (actual port: %d)", server.Addr, la.Port)
+	if err := server.Serve(ln); err != nil && err != http.ErrServerClosed {
+		panic(fmt.Errorf("http.Server Serve: %s", err))
 	}
 }
 
@@ -978,7 +985,6 @@ func WebServerBootstrap(rail Rail) error {
 
 	// start the http server
 	server := createHttpServer(engine)
-	rail.Infof("Serving HTTP on %s", server.Addr)
 	go startHttpServer(rail, server)
 
 	AddShutdownHook(func() { shutdownHttpServer(server) })
