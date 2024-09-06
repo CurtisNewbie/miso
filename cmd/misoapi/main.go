@@ -338,10 +338,15 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			}
 		}
 
+		// TODO: this code is terrible, have to fix it :(
 		var custResType string
+		var errorOnly bool = false
 		for _, p := range d.FuncResults {
 			switch p.Type {
 			case "error":
+				if len(d.FuncResults) == 1 {
+					errorOnly = true
+				}
 				continue
 			case typeCommonUser:
 				if custResType == "" {
@@ -384,7 +389,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					}
 					paramTokens = append(paramTokens, v)
 				}
-				w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+				if errorOnly { // TODO: refactor this
+					w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+				} else {
+					w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+				}
 			})
 			w.NoLbWritef("})")
 		} else {
@@ -414,7 +423,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						}
 						paramTokens = append(paramTokens, v)
 					}
-					w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					if errorOnly { // TODO: refactor this
+						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					} else {
+						w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					}
 				})
 				w.NoLbWritef("})")
 			}
