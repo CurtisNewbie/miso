@@ -247,3 +247,9 @@ func TestSliceCop(t *testing.T) {
 	c := SliceCopy([]int(nil))
 	t.Logf("c: %v", c)
 }
+
+func TestSliceRemove(t *testing.T) {
+	a := []int{1, 2, 3, 4, 5}
+	b := SliceRemove(a, 1, 3)
+	t.Logf("a: %v, b: %v", a, b)
+}

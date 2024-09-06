@@ -416,3 +416,16 @@ func SliceCopy[T any](v []T) []T {
 	copy(cp, v)
 	return cp
 }
+
+func SliceRemove[T any](v []T, idx ...int) []T {
+	cp := make([]T, 0, len(v)-len(idx))
+	idSet := NewSet[int]()
+	idSet.AddAll(idx)
+	for i := 0; i < len(v); i++ {
+		if idSet.Has(i) {
+			continue
+		}
+		cp = append(cp, v[i])
+	}
+	return cp
+}
