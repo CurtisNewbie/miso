@@ -134,11 +134,11 @@ func (r HardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Serv
 	host := r.serverHostFromProp(service)
 	port := r.serverPortFromProp(service)
 
-	if util.IsBlankStr(host) {
+	if !util.IsBlankStr(host) {
 		return []Server{{Address: host, Port: port, Meta: map[string]string{}}}, nil
 	}
 
-	return []Server{{Address: service, Port: 0, Meta: map[string]string{}}}, nil
+	return []Server{{Address: service, Port: port, Meta: map[string]string{}}}, nil
 }
 
 func (r HardcodedServiceRegistry) serverHostFromProp(name string) string {
@@ -206,7 +206,10 @@ func SelectServer(rail Rail, name string, selector func(servers []Server) int) (
 			}
 			return SelectServer(rail, name, selector)
 		}
-		return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+		servers, _ = PropBasedServiceRegistry.ListServers(rail, name)
+		if len(servers) < 1 {
+			return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+		}
 	}
 	selected := selector(servers)
 	if selected >= 0 && selected < len(servers) {
@@ -240,7 +243,11 @@ func (c ServerListServiceRegistry) ListServers(rail Rail, service string) ([]Ser
 	if sl == nil {
 		return nil, ErrServerListNotFound
 	}
-	return sl.ListServers(rail, service), nil
+	servers := sl.ListServers(rail, service)
+	if len(servers) < 1 {
+		return PropBasedServiceRegistry.ListServers(rail, service)
+	}
+	return servers, nil
 }
 
 // Subscribe to changes to service instances.
