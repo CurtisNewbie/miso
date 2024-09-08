@@ -61,6 +61,7 @@ const (
 	PropServerRequestValidateEnabled     = "server.validate.request.enabled"
 	PropServerPprofEnabled               = "server.pprof.enabled"
 	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
+	PropServerGenerateEndpointDocFile    = "server.generate-endpoint-doc.file"
 	PropServerRequestAutoMapHeader       = "server.request.mapping.header"
 	PropServerGinValidationDisabled      = "server.gin.validation.disabled"
 

@@ -42,6 +42,31 @@ var (
 
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
+
+	PostServerBootstrapped(func(rail Rail) error {
+		if !GetPropBool(PropServerGenerateEndpointDocEnabled) {
+			return nil
+		}
+		outf := GetPropStr(PropServerGenerateEndpointDocFile)
+		if outf == "" {
+			return nil
+		}
+		f, err := util.ReadWriteFile(outf)
+		if err != nil {
+			rail.Debugf("Failed to open API doc file, %v, %v", outf, err)
+			return nil
+		}
+		defer f.Close()
+
+		httpRouteDoc := buildHttpRouteDoc(GetHttpRoutes())
+		var pipelineDoc []PipelineDoc
+		for _, f := range getPipelineDocFuncs {
+			pipelineDoc = append(pipelineDoc, f()...)
+		}
+		markdown := genMarkDownDoc(httpRouteDoc, pipelineDoc)
+		_, _ = f.WriteString(markdown)
+		return nil
+	})
 }
 
 type GetPipelineDocFunc func() []PipelineDoc
