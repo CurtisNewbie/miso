@@ -41,6 +41,18 @@ func SWriteJson(body any) (string, error) {
 	return util.UnsafeByt2Str(buf), nil
 }
 
+// Write json as string using customized jsoniter.Config.
+func CustomSWriteJson(c jsoniter.API, body any) (string, error) {
+	if v, ok := body.(string); ok {
+		return v, nil
+	}
+	buf, err := c.Marshal(body)
+	if err != nil {
+		return "", err
+	}
+	return util.UnsafeByt2Str(buf), nil
+}
+
 // Decode json.
 func DecodeJson(reader io.Reader, ptr any) error {
 	return jsoniter.NewDecoder(reader).Decode(ptr)

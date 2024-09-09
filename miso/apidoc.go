@@ -12,6 +12,7 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding"
 	"github.com/curtisnewbie/miso/util"
+	jsoniter "github.com/json-iterator/go"
 )
 
 const (
@@ -27,17 +28,23 @@ var (
 		"*util.ETime": "int64",
 	}
 
+	ignoredJsonDocTag = []string{"form", "header"}
+
+	// callback funcs to retrieve pipeline definitions
+	getPipelineDocFuncs []GetPipelineDocFunc
+
+	// extra descriptions
+	xdescs map[string]string
+
+	apiDocJsoniterConfig = jsoniter.Config{
+		EscapeHTML:  true,
+		SortMapKeys: true,
+	}.Froze()
+)
+
+var (
 	apiDocTmpl          *template.Template
 	buildApiDocTmplOnce sync.Once
-	ignoredJsonDocTag   = []string{"form", "header"}
-)
-
-var (
-	xdescs map[string]string
-)
-
-var (
-	getPipelineDocFuncs []GetPipelineDocFunc
 )
 
 func init() {
@@ -569,7 +576,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 
 		jm := map[string]any{}
 		genJsonReqMap(jm, d.JsonRequestDesc)
-		sj, err := encoding.SWriteJson(jm)
+		sj, err := encoding.CustomSWriteJson(apiDocJsoniterConfig, jm)
 		if err == nil {
 			sl.Printlnf("-d '%s'", sj)
 		}
