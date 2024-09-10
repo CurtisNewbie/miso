@@ -708,6 +708,14 @@ func guessTsItfName(n string) string {
 	return n
 }
 
+func guessGoTypName(n string) string {
+	tsTypeName := guessTsItfName(n)
+	if strings.HasPrefix(n, "[]") {
+		return "[]" + tsTypeName
+	}
+	return tsTypeName
+}
+
 func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {
 	sl := new(util.SLPinter)
 	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
@@ -824,11 +832,11 @@ func genTClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) str
 	if respGeneName == "" {
 		respGeneName = "any"
 	} else {
-		respGeneName = guessTsItfName(respTypeName)
+		respGeneName = guessGoTypName(respTypeName)
 		if respGeneName == "Resp" {
 			for _, n := range d.JsonResponseDesc {
 				if n.FieldName == "Data" {
-					respGeneName = guessTsItfName(n.TypeName)
+					respGeneName = guessGoTypName(n.TypeName)
 					break
 				}
 			}
