@@ -94,6 +94,10 @@ Available Rules:
   - validated
 */
 func Validate(target any) error {
+	if rv, ok := target.(reflect.Value); ok {
+		target = rv.Interface() // unwrap first
+	}
+
 	introspector := util.Introspect(target)
 	targetVal := reflect.ValueOf(target)
 	var verr error
@@ -224,6 +228,21 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 			if !value.IsNil() {
 				return ChainValidationError(fname, Validate(value.Elem().Interface()))
 			}
+		case reflect.Slice:
+			return validateSlice(fname, value)
+		case reflect.Array:
+			value = value.Slice(0, value.Len())
+			return validateSlice(fname, value)
+		}
+	}
+	return nil
+}
+
+func validateSlice(fname string, value reflect.Value) error {
+	for i := 0; i < value.Len(); i++ {
+		el := value.Index(i)
+		if err := Validate(el.Interface()); err != nil {
+			return ChainValidationError(fname, err)
 		}
 	}
 	return nil
