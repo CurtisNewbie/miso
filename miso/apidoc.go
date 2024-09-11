@@ -687,7 +687,7 @@ func guessTsPrimiTypeName(typeName string) string {
 
 // try to convert golang type (incl struct name) name to typescript interface name.
 func guessTsItfName(n string) string {
-	cp := n
+	// cp := n
 	v, ok := strings.CutPrefix(n, "[]")
 	if ok {
 		n = v
@@ -704,7 +704,7 @@ func guessTsItfName(n string) string {
 	if i > -1 {
 		n = n[i+1:]
 	}
-	Debugf("guessing typescript interface name: %v -> %v", cp, n)
+	// Debugf("guessing typescript interface name: %v -> %v", cp, n)
 	return n
 }
 
