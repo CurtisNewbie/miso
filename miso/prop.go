@@ -54,6 +54,7 @@ const (
 	PropServerEnabled                    = "server.enabled"
 	PropServerHost                       = "server.host"
 	PropServerPort                       = "server.port"
+	PropServerActualPort                 = "server.actual-port"
 	PropServerGracefulShutdownTimeSec    = "server.gracefulShutdownTimeSec"
 	PropServerPerfEnabled                = "server.perf.enabled"
 	PropServerRequestLogEnabled          = "server.request-log.enabled"

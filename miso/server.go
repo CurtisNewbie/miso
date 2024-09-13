@@ -411,6 +411,7 @@ func startHttpServer(rail Rail, server *http.Server) {
 	}
 	la := ln.Addr().(*net.TCPAddr)
 	rail.Infof("Serving HTTP on %s (actual port: %d)", server.Addr, la.Port)
+	SetProp(PropServerActualPort, la.Port)
 	if err := server.Serve(ln); err != nil && err != http.ErrServerClosed {
 		panic(fmt.Errorf("http.Server Serve: %s", err))
 	}
