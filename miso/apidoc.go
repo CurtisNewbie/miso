@@ -63,6 +63,7 @@ func init() {
 			rail.Debugf("Failed to open API doc file, %v, %v", outf, err)
 			return nil
 		}
+		f.Truncate(0)
 		defer f.Close()
 
 		httpRouteDoc := buildHttpRouteDoc(GetHttpRoutes())
