@@ -498,7 +498,7 @@ func serveApiDocTmpl(rail Rail) error {
 		Desc("Serve the generated API documentation webpage").
 		Public()
 
-	rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", GetPropInt(PropServerPort))
+	rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", GetPropInt(PropServerActualPort))
 	return nil
 }
 
@@ -564,7 +564,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 			qp += "&"
 		}
 	}
-	sl.Printlnf("curl -X %s 'http://localhost:%s%s%s'", d.Method, GetPropStr(PropServerPort), d.Url, qp)
+	sl.Printlnf("curl -X %s 'http://localhost:%s%s%s'", d.Method, GetPropStr(PropServerActualPort), d.Url, qp)
 	sl.LinePrefix = "  "
 
 	for _, h := range d.Headers {
