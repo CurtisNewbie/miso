@@ -1,34 +1,18 @@
 package miso
 
 import (
-	"net"
-	"strings"
+	"github.com/curtisnewbie/miso/util"
 )
 
+// Deprecated, use util.* instead.
 const (
-	LOOPBACK_LOCALHOST = "localhost"
-	LOOPBACK_127       = "127.0.0.1"
-	LOCAL_IP_ANY       = "0.0.0.0"
+	LOOPBACK_LOCALHOST = util.LoopbackLocalHost
+	LOOPBACK_127       = util.Loopback127
+	LOCAL_IP_ANY       = util.LocalIpAny
 )
 
-// Get local ipv4 address (excluding loopback address)
-func GetLocalIPV4() string {
-	// src: https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return ""
-	}
-	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return ""
-}
-
-// Check whether the address is local (localhost/127.0.0.1)
-func IsLocalAddress(address string) bool {
-	return address == LOOPBACK_127 || strings.ToLower(address) == LOOPBACK_LOCALHOST
-}
+// Deprecated, use util.* instead.
+var (
+	GetLocalIPV4   = util.GetLocalIPV4
+	IsLocalAddress = util.IsLocalAddress
+)

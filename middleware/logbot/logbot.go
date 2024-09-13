@@ -27,7 +27,7 @@ var (
 func EnableLogbotErrLogReport() {
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 		app := miso.GetPropStr(miso.PropAppName)
-		node := fmt.Sprintf("%v-%v", app, miso.GetLocalIPV4())
+		node := fmt.Sprintf("%v-%v", app, util.GetLocalIPV4())
 		ok := miso.SetErrLogHandler(func(el *miso.ErrorLog) {
 			reportLogPipeline.Send(rail, errorLog{
 				Node:     node,

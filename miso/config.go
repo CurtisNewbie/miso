@@ -380,8 +380,8 @@ func IsProdMode() bool {
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
 func ResolveServerHost(address string) string {
-	if util.IsBlankStr(address) || address == LOCAL_IP_ANY {
-		address = GetLocalIPV4()
+	if util.IsBlankStr(address) || address == util.LocalIpAny {
+		address = util.GetLocalIPV4()
 	}
 	return address
 }
