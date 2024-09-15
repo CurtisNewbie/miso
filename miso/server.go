@@ -602,7 +602,7 @@ func BootstrapServer(args []string) {
 		took := time.Since(start)
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)
 		if took >= 5*time.Second {
-			rail.Infof("'%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
+			rail.Warnf("Component '%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
 		}
 	}
 	serverBootrapCallbacks = nil
