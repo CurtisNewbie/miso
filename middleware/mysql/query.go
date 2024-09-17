@@ -158,13 +158,37 @@ func (q *Query) Offset(n int) *Query {
 }
 
 // LIKE '%?'
+func (q *Query) LikeLeftIf(cond bool, col string, val string) *Query {
+	if cond {
+		return q.LikeLeft(col, val)
+	}
+	return q
+}
+
+// LIKE '%?'
 func (q *Query) LikeLeft(col string, val string) *Query {
 	return q.Where(col+" LIKE ?", "%"+val)
 }
 
 // LIKE '?%'
+func (q *Query) LikeRightIf(cond bool, col string, val string) *Query {
+	if cond {
+		return q.LikeRight(col, val)
+	}
+	return q
+}
+
+// LIKE '?%'
 func (q *Query) LikeRight(col string, val string) *Query {
 	return q.Where(col+" LIKE ?", val+"%")
+}
+
+// LIKE '%?%'
+func (q *Query) LikeIf(cond bool, col string, val string) *Query {
+	if cond {
+		return q.Like(col, val)
+	}
+	return q
 }
 
 // LIKE '%?%'
