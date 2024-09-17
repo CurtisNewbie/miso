@@ -12,6 +12,7 @@ import (
 var (
 	// Global handle to the redis
 	redisp = &redisHolder{client: nil}
+	Nil    = redis.Nil
 )
 
 type redisHolder struct {
@@ -168,4 +169,8 @@ func RedisBootstrap(rail miso.Rail) error {
 
 func RedisBootstrapCondition(rail miso.Rail) (bool, error) {
 	return IsRedisEnabled(), nil
+}
+
+func IsNil(err error) bool {
+	return errors.Is(err, Nil)
 }
