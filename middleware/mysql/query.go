@@ -7,6 +7,8 @@ import (
 type Query struct {
 	_db *gorm.DB
 	tx  *gorm.DB
+
+	updateColumns map[string]any
 }
 
 func (q *Query) cloneNew() *Query {
@@ -116,6 +118,10 @@ func (q *Query) Between(col string, args ...any) *Query {
 func (q *Query) WhereFunc(f func(*Query) *Query) *Query {
 	q.tx = q.tx.Where(f(q.cloneNew()).tx)
 	return q
+}
+
+func (q *Query) And(f func(*Query) *Query) *Query {
+	return q.WhereFunc(f)
 }
 
 func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
@@ -232,10 +238,32 @@ func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	return
 }
 
+func (q *Query) Update() (rowsAffected int64, err error) {
+	if len(q.updateColumns) < 1 {
+		return 0, nil
+	}
+	tx := q.tx.Updates(q.updateColumns)
+	rowsAffected = tx.RowsAffected
+	err = tx.Error
+	return
+}
+
+func (q *Query) Set(col string, arg any) *Query {
+	q.updateColumns[col] = arg
+	return q
+}
+
+func (q *Query) SetIf(cond bool, col string, arg any) *Query {
+	if cond {
+		return q.Set(col, arg)
+	}
+	return q
+}
+
 func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
 
 func NewQuery(db *gorm.DB) *Query {
-	return &Query{tx: db, _db: db}
+	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 }
