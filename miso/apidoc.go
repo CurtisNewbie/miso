@@ -346,6 +346,9 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []JsonDesc, indent int) {
 
 func BuildJsonDesc(v reflect.Value) []JsonDesc {
 	t := v.Type()
+	if t.Kind() != reflect.Struct {
+		return []JsonDesc{}
+	}
 	jds := make([]JsonDesc, 0, 5)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -511,6 +514,9 @@ func parseQueryDoc(t reflect.Type) []ParamDoc {
 	if t == nil {
 		return nil
 	}
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
 	pds := []ParamDoc{}
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -533,6 +539,9 @@ func parseQueryDoc(t reflect.Type) []ParamDoc {
 
 func parseHeaderDoc(t reflect.Type) []ParamDoc {
 	if t == nil {
+		return nil
+	}
+	if t.Kind() != reflect.Struct {
 		return nil
 	}
 	pds := []ParamDoc{}
