@@ -19,6 +19,7 @@ const (
 func init() {
 	miso.SetProp("app.name", "demo")
 	miso.SetProp("redis.enabled", true) // for distributed task
+	miso.SetProp("server.generate-endpoint-doc.file", "api-doc.md")
 }
 
 func main() {
@@ -182,5 +183,20 @@ func api11(inb *miso.Inbound, req *api.ApiReq, db *gorm.DB) ([]PostRes, error) {
 
 // misoapi-http: POST /api/v12
 func api12(inb *miso.Inbound, req []api.ApiReq, db *gorm.DB) ([]PostRes, error) {
+	return nil, nil
+}
+
+// misoapi-http: POST /api/v13
+func api13(inb *miso.Inbound, req []api.ApiReq, db *gorm.DB) (any, error) {
+	return nil, nil
+}
+
+// misoapi-http: POST /api/v14
+func api14(inb *miso.Inbound, req api.ApiReq, db *gorm.DB) ([]PostRes, error) {
+	return nil, nil
+}
+
+// misoapi-http: GET /api/v15
+func api15(inb *miso.Inbound, db *gorm.DB) ([]PostRes, error) {
 	return nil, nil
 }
