@@ -12,6 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
+type DemoEvent struct {
+	Value string
+}
+
+var (
+	MyPipeline = rabbit.NewEventPipeline[[]DemoEvent]("demo:pipeline").
+		Document("DemoPipeline", "This is a demo pipeline", "demo")
+)
+
 const (
 	demoEventBusName = "event.bus.demo"
 )

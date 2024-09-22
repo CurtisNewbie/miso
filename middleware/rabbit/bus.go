@@ -181,7 +181,7 @@ func buildPipelineDoc(epd []EventPipelineDesc) []miso.PipelineDoc {
 		}
 		if pd.PayloadVal != nil {
 			rv := reflect.ValueOf(pd.PayloadVal)
-			d.PayloadDesc = miso.BuildJsonDesc(rv)
+			d.PayloadDesc, _ = miso.BuildJsonPayloadDesc(rv)
 		}
 		docs = append(docs, d)
 	}

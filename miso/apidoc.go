@@ -311,11 +311,14 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 				b.WriteString("`")
 			}
 
-			if len(p.PayloadDesc) > 0 {
+			if len(p.PayloadDesc.Fields) > 0 {
 				b.WriteRune('\n')
 				b.WriteString(util.Spaces(2))
 				b.WriteString("- Event Payload:")
-				appendJsonPayloadDoc(&b, p.PayloadDesc, 2)
+				if p.PayloadDesc.IsSlice {
+					b.WriteString(" (array)")
+				}
+				appendJsonPayloadDoc(&b, p.PayloadDesc.Fields, 2)
 			}
 			b.WriteString("\n")
 		}
@@ -334,25 +337,28 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []JsonDesc, indent int) {
 	}
 }
 
+// Parse value's type information to build json style description.
+//
+// Only supports struct and slice.
 func BuildJsonPayloadDesc(v reflect.Value) (jpd JsonPayloadDesc, typeName string) {
 	typeName = v.Type().Name()
 	switch v.Kind() {
 	case reflect.Struct:
-		jpd = JsonPayloadDesc{Fields: BuildJsonDesc(v)}
+		jpd = JsonPayloadDesc{Fields: buildJsonDesc(v)}
 		return
 	case reflect.Slice:
 		et := v.Type().Elem()
 		if et.Kind() == reflect.Struct {
 			typeName = et.Name()
 			ev := reflect.New(et).Elem()
-			jpd = JsonPayloadDesc{IsSlice: true, Fields: BuildJsonDesc(ev)}
+			jpd = JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev)}
 			return
 		}
 	}
 	return
 }
 
-func BuildJsonDesc(v reflect.Value) []JsonDesc {
+func buildJsonDesc(v reflect.Value) []JsonDesc {
 	t := v.Type()
 	if t.Kind() != reflect.Struct {
 		return []JsonDesc{}
@@ -430,17 +436,17 @@ func BuildJsonDesc(v reflect.Value) []JsonDesc {
 
 func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []JsonDesc) []JsonDesc {
 	if t.Kind() == reflect.Struct {
-		fields = append(fields, BuildJsonDesc(v)...)
+		fields = append(fields, buildJsonDesc(v)...)
 	} else if t.Kind() == reflect.Slice {
 		et := t.Elem()
 		if et.Kind() == reflect.Struct {
 			ev := reflect.New(et).Elem()
-			fields = append(fields, BuildJsonDesc(ev)...)
+			fields = append(fields, buildJsonDesc(ev)...)
 		}
 	} else if t.Kind() == reflect.Pointer {
 		ev := reflect.New(t.Elem()).Elem()
 		if ev.Kind() == reflect.Struct {
-			fields = append(fields, BuildJsonDesc(ev)...)
+			fields = append(fields, buildJsonDesc(ev)...)
 		}
 	} else if t.Kind() == reflect.Interface {
 		if !v.IsZero() && !v.IsNil() {
@@ -1016,7 +1022,7 @@ type PipelineDoc struct {
 	Exchange    string
 	RoutingKey  string
 	Queue       string
-	PayloadDesc []JsonDesc
+	PayloadDesc JsonPayloadDesc
 }
 
 // Register func to supply PipelineDoc.

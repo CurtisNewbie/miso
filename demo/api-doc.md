@@ -942,3 +942,13 @@
         }
       });
     ```
+
+# Event Pipelines
+
+- DemoPipeline
+  - Description: This is a demo pipeline
+  - RabbitMQ Queue: `demo:pipeline`
+  - RabbitMQ Exchange: `demo:pipeline`
+  - RabbitMQ RoutingKey: `#`
+  - Event Payload: (array)
+    - "value": (string) 
