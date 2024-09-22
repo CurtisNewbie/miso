@@ -1,4 +1,0 @@
-go 1.20
-
-use .
-replace github.com/curtisnewbie/miso => ../
