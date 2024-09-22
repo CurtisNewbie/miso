@@ -255,3 +255,19 @@ func SplitKV(s string, token string) (string, string, bool) {
 	}
 	return k, v, ok
 }
+
+func SAddLineIndent(s string, indentChar string) string {
+	b := strings.Builder{}
+	sp := strings.Split(s, "\n")
+	for k, spt := range sp {
+		if spt == "" {
+			b.WriteString(spt)
+		} else {
+			b.WriteString(indentChar + spt)
+		}
+		if k < len(sp)-1 {
+			b.WriteRune('\n')
+		}
+	}
+	return b.String()
+}

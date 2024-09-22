@@ -229,11 +229,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2))
 			b.WriteString("- cURL:\n")
 			b.WriteString(util.Spaces(4) + "```sh\n")
-			sp := strings.Split(r.Curl, "\n")
-			for _, spt := range sp {
-				b.WriteString(util.Spaces(4) + spt)
-				b.WriteRune('\n')
-			}
+			b.WriteString(util.SAddLineIndent(r.Curl, util.Spaces(4)))
 			b.WriteString(util.Spaces(4) + "```\n")
 		}
 
@@ -242,11 +238,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 		// 	b.WriteString(util.Spaces(2))
 		// 	b.WriteString("- Miso HTTP Client:\n")
 		// 	b.WriteString(util.Spaces(4) + "```go\n")
-		// 	sp := strings.Split(r.MisoTClientDemo, "\n")
-		// 	for _, spt := range sp {
-		// 		b.WriteString(util.Spaces(4) + spt)
-		// 		b.WriteRune('\n')
-		// 	}
+		// 	b.WriteString(util.SAddLineIndent(r.MisoTClientDemo, util.Spaces(4)))
 		// 	b.WriteString(util.Spaces(4) + "```\n")
 		// }
 
@@ -255,16 +247,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Request Object In TypeScript:\n")
 			b.WriteString(util.Spaces(4) + "```ts\n")
-			sp := strings.Split(r.JsonReqTsDef, "\n")
-			for k, spt := range sp {
-				if spt == "" {
-					continue
-				}
-				b.WriteString(util.Spaces(4) + spt)
-				if k < len(sp)-1 {
-					b.WriteRune('\n')
-				}
-			}
+			b.WriteString(util.SAddLineIndent(r.JsonReqTsDef, util.Spaces(4)))
 			b.WriteString(util.Spaces(4) + "```\n")
 		}
 
@@ -273,16 +256,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Response Object In TypeScript:\n")
 			b.WriteString(util.Spaces(4) + "```ts\n")
-			sp := strings.Split(r.JsonRespTsDef, "\n")
-			for k, spt := range sp {
-				if spt == "" {
-					continue
-				}
-				b.WriteString(util.Spaces(4) + spt)
-				if k < len(sp)-1 {
-					b.WriteRune('\n')
-				}
-			}
+			b.WriteString(util.SAddLineIndent(r.JsonRespTsDef, util.Spaces(4)))
 			b.WriteString(util.Spaces(4) + "```\n")
 		}
 
@@ -291,15 +265,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2))
 			b.WriteString("- Angular HttpClient Demo:\n")
 			b.WriteString(util.Spaces(4) + "```ts\n")
-			sp := strings.Split(r.NgHttpClientDemo, "\n")
-			for _, spt := range sp {
-				if spt == "" {
-					b.WriteRune('\n')
-					continue
-				}
-				b.WriteString(util.Spaces(4) + spt)
-				b.WriteRune('\n')
-			}
+			b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(4)))
 			b.WriteString(util.Spaces(4) + "```\n")
 		}
 	}
@@ -639,6 +605,7 @@ func genRouteCurl(d HttpRouteDoc) string {
 			}
 		}
 	}
+	sl.WriteString("\n")
 	return sl.String()
 }
 
@@ -893,7 +860,7 @@ func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string
 	sl.Printlnf(util.Spaces(6) + "console.log(err)")
 	sl.Printlnf(util.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
 	sl.Printlnf(util.Spaces(4) + "}")
-	sl.Printlnf(util.Spaces(2) + "});")
+	sl.Printlnf(util.Spaces(2) + "});\n")
 	return sl.String()
 }
 

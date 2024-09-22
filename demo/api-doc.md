@@ -31,6 +31,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -83,6 +84,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -134,6 +136,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -185,6 +188,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -237,6 +241,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -288,6 +293,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -527,6 +533,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes[]
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -578,6 +585,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes[]
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -675,6 +683,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes[]
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -727,6 +736,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes[]
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -793,6 +803,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
@@ -862,6 +873,7 @@
       error?: boolean                // whether the request was successful
       data?: PostRes
     }
+
     export interface PostRes {
       resultId?: string
     }
