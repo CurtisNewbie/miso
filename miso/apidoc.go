@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -273,6 +274,7 @@ func genMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 	if len(pd) > 0 {
 
 		b.WriteString("\n# Event Pipelines\n")
+		sort.Slice(pd, func(i, j int) bool { return pd[i].Queue < pd[j].Queue })
 
 		for _, p := range pd {
 			b.WriteString("\n- ")
