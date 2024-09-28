@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -33,7 +34,7 @@ type HttpProxy struct {
 //
 // e.g., to create proxy path for /proxy/** and redirect all requests to localhost:8081.
 //
-//	_ = miso.NewHttpProxy("/proxy/*proxyPath", func(relPath string) (string, error) {
+//	_ = miso.NewHttpProxy("/proxy", func(relPath string) (string, error) {
 //		return "http://localhost:8081" + relPath, nil
 //	})
 func NewHttpProxy(proxiedPath string, targetResolver func(relPath string) (string, error)) *HttpProxy {
@@ -45,7 +46,7 @@ func NewHttpProxy(proxiedPath string, targetResolver func(relPath string) (strin
 		filterLock: &sync.RWMutex{},
 	}
 	p.resolveTarget = targetResolver
-	RawAny(proxiedPath, p.proxyRequestHandler)
+	RawAny(proxiedPath+"/*proxyPath", p.proxyRequestHandler)
 	return p
 }
 
@@ -63,6 +64,8 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	}
 
 	pc := newProxyContext(rail, inb)
+	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
+	pc.SetAttr("PROXY_PATH", proxyPath)
 
 	h.filterLock.RLock()
 	defer h.filterLock.RUnlock()
