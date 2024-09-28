@@ -57,16 +57,18 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	// parse the request path, extract service name, and the relative url for the backend server
 	path, err := h.resolveTarget(r.URL.Path)
 	if err != nil {
-		rail.Warnf("Invalid request, %v", err)
+		rail.Warnf("Resolve target failed, path: %v, %v", r.URL.Path, err)
 		w.WriteHeader(404)
 		return
 	}
 
 	pc := newProxyContext(rail, inb)
-	filters := h.GetFilters()
 
-	for i := range filters {
-		fr, err := filters[i].FilterFunc(pc)
+	h.filterLock.RLock()
+	defer h.filterLock.RUnlock()
+
+	for i := range h.filters {
+		fr, err := h.filters[i].FilterFunc(pc)
 		if err != nil || !fr.Next {
 			rail.Debugf("request filtered, err: %v, ok: %v", err, fr)
 			if err != nil {
@@ -124,13 +126,8 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	}
 
 	if tr.Err != nil {
-		rail.Debugf("post proxy request, request failed, err: %v", tr.Err)
-		// TODO:
-		// if errors.Is(tr.Err, ErrServiceInstanceNotFound) {
-		// 	w.WriteHeader(404)
-		// 	return
-		// }
-		inb.HandleResult(WrapResp(rail, nil, tr.Err, r.RequestURI), nil)
+		rail.Warnf("proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
+		w.WriteHeader(http.StatusBadGateway)
 		return
 	}
 	defer tr.Close()
@@ -210,12 +207,4 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 	defer h.filterLock.Unlock()
 	h.filters = append(h.filters, f)
 	sort.Slice(h.filters, func(i, j int) bool { return h.filters[i].Order < h.filters[j].Order })
-}
-
-func (h *HttpProxy) GetFilters() []ProxyFilter {
-	h.filterLock.RLock()
-	defer h.filterLock.RUnlock()
-	copied := make([]ProxyFilter, len(h.filters))
-	copy(copied, h.filters)
-	return copied
 }
