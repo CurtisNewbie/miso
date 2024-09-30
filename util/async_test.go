@@ -149,3 +149,15 @@ func TestPoolPanic(t *testing.T) {
 	})
 	wg.Wait()
 }
+
+func TestAsyncPoolStop(t *testing.T) {
+	pool := NewAsyncPool(1, 10)
+	for i := 0; i < 10; i++ {
+		v := i
+		pool.Go(func() {
+			time.Sleep(time.Second)
+			Printlnf("v: %v", v)
+		})
+	}
+	pool.StopAndWait()
+}

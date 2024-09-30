@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -141,8 +142,11 @@ func NewSubmitAsyncFunc[T any](pool *AsyncPool) func(task func() (T, error)) Fut
 // AsyncPool internally maintains a task queue with limited size and limited number of workers. If the task queue is full,
 // the caller of *AsyncPool.Go is blocked indefinitively.
 type AsyncPool struct {
-	tasks   chan func()
-	workers chan struct{}
+	stopped      int32
+	stopOnce     *sync.Once
+	drainTasksWg *sync.WaitGroup
+	tasks        chan func()
+	workers      chan struct{}
 }
 
 // Create a bounded pool of goroutines.
@@ -159,21 +163,56 @@ func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
 		maxWorkers = 1
 	}
 	return &AsyncPool{
-		tasks:   make(chan func(), maxTasks),
-		workers: make(chan struct{}, maxWorkers),
+		tasks:        make(chan func(), maxTasks),
+		workers:      make(chan struct{}, maxWorkers),
+		stopped:      0,
+		stopOnce:     &sync.Once{},
+		drainTasksWg: &sync.WaitGroup{},
 	}
+}
+
+// Stop the pool.
+//
+// Once the pool is stopped, new tasks submitted are executed directly by the caller.
+func (p *AsyncPool) Stop() {
+	atomic.StoreInt32(&p.stopped, 1)
+}
+
+// Stop the pool and wait until existing workers drain all the remaining tasks.
+//
+// Once the pool is stopped, new tasks submitted are executed directly by the caller.
+func (p *AsyncPool) StopAndWait() {
+	atomic.StoreInt32(&p.stopped, 1)
+	p.drainTasksWg.Wait()
+}
+
+func (p *AsyncPool) isStopped() bool {
+	return atomic.LoadInt32(&p.stopped) == 1
 }
 
 // Submit task to the pool.
 //
 // If the task queue is full, the caller is blocked.
 //
-// If the pool is closed, return ErrAsyncPoolClosed.
+// If the pool is closed, caller will execute the submitted task directly.
 func (p *AsyncPool) Go(f func()) {
+
+	if p.isStopped() {
+		p.stopOnce.Do(func() { close(p.tasks) })
+		f() // caller runs the task
+		return
+	}
+
+	p.drainTasksWg.Add(1)
+	wrp := func() {
+		defer p.drainTasksWg.Done()
+		f()
+	}
+
 	select {
 	case p.workers <- struct{}{}:
-		go p.spawn(f)
-	case p.tasks <- f:
+		go p.spawn(wrp)
+	case p.tasks <- wrp:
 		// channel select is completely random
 		// extra select is to make sure that we have at least one worker running
 		// or else tasks may be put straight into the task queue without any worker
