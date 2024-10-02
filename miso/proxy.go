@@ -24,20 +24,27 @@ func init() {
 	proxyClient.Transport = transport
 }
 
+// Resolve proxy target path.
+//
+// Proxy path may be empty string if root path is requested, otherwise, it should guarantee to contain a prefix slash.
+//
+// returns ProxyHttpStatusError to respond a specific http status code.
+type ProxyTargetResolver func(proxyPath string) (string, error)
+
 type HttpProxy struct {
 	filterLock    *sync.RWMutex
 	filters       []ProxyFilter
-	resolveTarget func(relPath string) (string, error)
+	resolveTarget ProxyTargetResolver
 }
 
 // Create HTTP proxy for specific path.
 //
 // e.g., to create proxy path for /proxy/** and redirect all requests to localhost:8081.
 //
-//	_ = miso.NewHttpProxy("/proxy", func(relPath string) (string, error) {
-//		return "http://localhost:8081" + relPath, nil
+//	_ = miso.NewHttpProxy("/proxy", func(proxyPath string) (string, error) {
+//		return "http://localhost:8081" + proxyPath, nil
 //	})
-func NewHttpProxy(proxiedPath string, targetResolver func(relPath string) (string, error)) *HttpProxy {
+func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpProxy {
 	if targetResolver == nil {
 		panic("targetResolver cannot be nil")
 	}
@@ -46,58 +53,64 @@ func NewHttpProxy(proxiedPath string, targetResolver func(relPath string) (strin
 		filterLock: &sync.RWMutex{},
 	}
 	p.resolveTarget = targetResolver
+	RawAny(proxiedPath, p.proxyRequestHandler)
 	RawAny(proxiedPath+"/*proxyPath", p.proxyRequestHandler)
 	return p
 }
 
 func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
-	rail := inb.Rail()
-	w, r := inb.Unwrap()
-	rail.Debugf("Request: %v %v, headers: %v", r.Method, r.URL.Path, r.Header)
+	_rail := inb.Rail()
+	pc := newProxyContext(&_rail, inb)
 
-	// parse the request path, extract service name, and the relative url for the backend server
-	path, err := h.resolveTarget(r.URL.Path)
+	// proxy path
+	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
+
+	w, r := inb.Unwrap()
+	pc.Rail.Debugf("Request: %v %v, headers: %v, proxyPath: %v", r.Method, r.URL.Path, r.Header, proxyPath)
+
+	// resolve proxy target path, in most case, it's another backend server.
+	path, err := h.resolveTarget(proxyPath)
 	if err != nil {
-		rail.Warnf("Resolve target failed, path: %v, %v", r.URL.Path, err)
-		w.WriteHeader(404)
+		pc.Rail.Warnf("Resolve target failed, path: %v, %v", proxyPath, err)
+
+		status := 0
+		if hse, ok := err.(ProxyHttpStatusError); ok {
+			status = hse.Status()
+		}
+		if status == 0 {
+			status = 404
+		}
+		w.WriteHeader(status)
 		return
 	}
-
-	pc := newProxyContext(rail, inb)
-	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
-	pc.SetAttr("PROXY_PATH", proxyPath)
 
 	h.filterLock.RLock()
 	defer h.filterLock.RUnlock()
 
+	// filter request
 	for i := range h.filters {
 		fr, err := h.filters[i].FilterFunc(pc)
 		if err != nil || !fr.Next {
-			rail.Debugf("request filtered, err: %v, ok: %v", err, fr)
+			pc.Rail.Debugf("request filtered, err: %v, ok: %v", err, fr)
 			if err != nil {
-				inb.HandleResult(WrapResp(rail, nil, err, r.RequestURI), nil)
+				inb.HandleResult(WrapResp(*pc.Rail, nil, err, r.RequestURI), nil)
 				return
 			}
-
 			return // discontinue, the filter should write the response itself, e.g., returning a 403 status code
 		}
-		pc = fr.ProxyContext // replace the ProxyContext, trace may be set
 	}
-
-	// continue propagating the trace
-	rail = pc.Rail
 
 	if r.URL.RawQuery != "" {
 		path += "?" + r.URL.RawQuery
 	}
-	cli := NewTClient(rail, path).
+	cli := NewTClient(*pc.Rail, path).
 		UseClient(proxyClient).
 		EnableTracing()
 
+	// propagate all headers to client, except the headers for tracing
 	propagationKeys := util.NewSet[string]()
 	propagationKeys.AddAll(GetPropagationKeys())
 
-	// propagate all headers to client
 	for k, arr := range r.Header {
 		// the inbound request may contain headers that are one of our propagation keys
 		// this can be a security problem
@@ -129,13 +142,13 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	}
 
 	if tr.Err != nil {
-		rail.Warnf("proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
+		pc.Rail.Warnf("Proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
 		w.WriteHeader(http.StatusBadGateway)
 		return
 	}
 	defer tr.Close()
 
-	rail.Debugf("post proxy request, proxied response headers: %v, status: %v", tr.RespHeader, tr.StatusCode)
+	pc.Rail.Debugf("Proxy response headers: %v, status: %v", tr.RespHeader, tr.StatusCode)
 
 	// headers from proxied servers
 	for k, v := range tr.RespHeader {
@@ -143,24 +156,24 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			w.Header().Add(k, hv)
 		}
 	}
+
 	if IsDebugLevel() {
-		rail.Debug(w.Header())
+		pc.Rail.Debug(w.Header())
 	}
 
-	w.WriteHeader(tr.StatusCode)
-
 	// write data from proxied to client
+	w.WriteHeader(tr.StatusCode)
 	if tr.Resp.Body != nil {
 		if _, err = io.Copy(w, tr.Resp.Body); err != nil {
-			rail.Warnf("Failed to write proxy response, %v", err)
+			pc.Rail.Warnf("Failed to write proxy response, %v", err)
 		}
 	}
 
-	rail.Debugf("proxy request handled")
+	pc.Rail.Debugf("Proxy request processed")
 }
 
 type ProxyContext struct {
-	Rail Rail
+	Rail *Rail
 	Inb  *Inbound
 
 	attr map[string]any // attributes, it's lazy, only initialized on write
@@ -183,7 +196,7 @@ func (pc *ProxyContext) GetAttr(key string) (any, bool) {
 	return v, ok
 }
 
-func newProxyContext(rail Rail, inb *Inbound) ProxyContext {
+func newProxyContext(rail *Rail, inb *Inbound) ProxyContext {
 	return ProxyContext{
 		Rail: rail,
 		attr: nil,
@@ -197,12 +210,7 @@ type ProxyFilter struct {
 }
 
 type FilterResult struct {
-	ProxyContext ProxyContext
-	Next         bool
-}
-
-func NewFilterResult(pc ProxyContext, next bool) FilterResult {
-	return FilterResult{ProxyContext: pc, Next: next}
+	Next bool
 }
 
 func (h *HttpProxy) AddFilter(f ProxyFilter) {
@@ -210,4 +218,8 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 	defer h.filterLock.Unlock()
 	h.filters = append(h.filters, f)
 	sort.Slice(h.filters, func(i, j int) bool { return h.filters[i].Order < h.filters[j].Order })
+}
+
+type ProxyHttpStatusError interface {
+	Status() int
 }
