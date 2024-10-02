@@ -210,6 +210,9 @@ type ProxyFilter struct {
 }
 
 type FilterResult struct {
+	// should we continue processing the request.
+	//
+	// if Next=false, the filter should write proper response itself.
 	Next bool
 }
 
