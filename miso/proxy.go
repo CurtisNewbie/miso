@@ -226,8 +226,8 @@ func (pc *ProxyContext) GetAttr(key string) (any, bool) {
 	return v, ok
 }
 
-func newProxyContext(rail *Rail, inb *Inbound) ProxyContext {
-	return ProxyContext{
+func newProxyContext(rail *Rail, inb *Inbound) *ProxyContext {
+	return &ProxyContext{
 		Rail: rail,
 		attr: nil,
 		Inb:  inb,
@@ -235,8 +235,8 @@ func newProxyContext(rail *Rail, inb *Inbound) ProxyContext {
 }
 
 type ProxyFilter struct {
-	PreRequest  func(proxyContext ProxyContext) (FilterResult, error)
-	PostRequest func(proxyContext ProxyContext)
+	PreRequest  func(pc *ProxyContext) (FilterResult, error)
+	PostRequest func(pc *ProxyContext)
 	Order       int // ascending order
 }
 
