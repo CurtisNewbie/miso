@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,7 +30,7 @@ func init() {
 // Proxy path may be empty string if root path is requested, otherwise, it should guarantee to contain a prefix slash.
 //
 // returns ProxyHttpStatusError to respond a specific http status code.
-type ProxyTargetResolver func(proxyPath string) (string, error)
+type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 
 type HttpProxy struct {
 	filterLock    *sync.RWMutex
@@ -53,8 +54,15 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 		filterLock: &sync.RWMutex{},
 	}
 	p.resolveTarget = targetResolver
-	RawAny(proxiedPath, p.proxyRequestHandler)
-	RawAny(proxiedPath+"/*proxyPath", p.proxyRequestHandler)
+	if proxiedPath != "/" {
+		RawAny(proxiedPath, p.proxyRequestHandler)
+	}
+	wildcardPath := proxiedPath
+	if !strings.HasSuffix(wildcardPath, "/") {
+		wildcardPath += "/"
+	}
+	wildcardPath += "*proxyPath"
+	RawAny(wildcardPath, p.proxyRequestHandler)
 	return p
 }
 
@@ -64,12 +72,13 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 
 	// proxy path
 	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
+	pc.ProxyPath = proxyPath
 
 	w, r := inb.Unwrap()
 	pc.Rail.Debugf("Request: %v %v, headers: %v, proxyPath: %v", r.Method, r.URL.Path, r.Header, proxyPath)
 
 	// resolve proxy target path, in most case, it's another backend server.
-	path, err := h.resolveTarget(proxyPath)
+	path, err := h.resolveTarget(*pc.Rail, proxyPath)
 	if err != nil {
 		pc.Rail.Warnf("Resolve target failed, path: %v, %v", proxyPath, err)
 
@@ -88,8 +97,11 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	defer h.filterLock.RUnlock()
 
 	// filter request
-	for i := range h.filters {
-		fr, err := h.filters[i].FilterFunc(pc)
+	for _, f := range h.filters {
+		if f.PreRequest == nil {
+			continue
+		}
+		fr, err := f.PreRequest(pc)
 		if err != nil || !fr.Next {
 			pc.Rail.Debugf("request filtered, err: %v, ok: %v", err, fr)
 			if err != nil {
@@ -99,6 +111,15 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			return // discontinue, the filter should write the response itself, e.g., returning a 403 status code
 		}
 	}
+
+	defer func() {
+		for _, f := range h.filters {
+			if f.PostRequest == nil {
+				continue
+			}
+			f.PostRequest(pc)
+		}
+	}()
 
 	if r.URL.RawQuery != "" {
 		path += "?" + r.URL.RawQuery
@@ -137,7 +158,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	case http.MethodOptions:
 		tr = cli.Options()
 	default:
-		w.WriteHeader(404)
+		w.WriteHeader(404) // not gonna happen
 		return
 	}
 
@@ -173,8 +194,9 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 }
 
 type ProxyContext struct {
-	Rail *Rail
-	Inb  *Inbound
+	Rail      *Rail
+	Inb       *Inbound
+	ProxyPath string
 
 	attr map[string]any // attributes, it's lazy, only initialized on write
 }
@@ -185,6 +207,14 @@ func (pc *ProxyContext) SetAttr(key string, val any) {
 	}
 
 	pc.attr[key] = val
+}
+
+func (pc *ProxyContext) DelAttr(key string) {
+	if pc.attr == nil {
+		pc.attr = map[string]any{}
+	}
+
+	delete(pc.attr, key)
 }
 
 func (pc *ProxyContext) GetAttr(key string) (any, bool) {
@@ -205,8 +235,9 @@ func newProxyContext(rail *Rail, inb *Inbound) ProxyContext {
 }
 
 type ProxyFilter struct {
-	FilterFunc func(proxyContext ProxyContext) (FilterResult, error) // filtering function
-	Order      int                                                   // ascending order
+	PreRequest  func(proxyContext ProxyContext) (FilterResult, error)
+	PostRequest func(proxyContext ProxyContext)
+	Order       int // ascending order
 }
 
 type FilterResult struct {
