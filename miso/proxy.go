@@ -103,7 +103,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		}
 		fr, err := f.PreRequest(pc)
 		if err != nil || !fr.Next {
-			pc.Rail.Debugf("request filtered, err: %v, ok: %v", err, fr)
+			pc.Rail.Debugf("request filtered, err: %v, fr: %v", err, fr)
 			if err != nil {
 				inb.HandleResult(WrapResp(*pc.Rail, nil, err, r.RequestURI), nil)
 				return
