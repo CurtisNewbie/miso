@@ -72,3 +72,17 @@ func DefaultHealthCheck(ctx *gin.Context) {
 	rail.Debugf("Service healthcheck pass")
 	ctx.String(http.StatusOK, ServiceStatusUp)
 }
+
+// Check health status, return true if all health check pass
+func IsHealthcheckPass(rail Rail) bool {
+	hs := CheckHealth(rail)
+	for i := range hs {
+		s := hs[i]
+		if !s.Healthy {
+			rail.Warnf("Component %s is down, healthcheck failed", s.Name)
+			return false
+		}
+	}
+	rail.Debugf("Service healthcheck pass")
+	return true
+}
