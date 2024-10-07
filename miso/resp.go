@@ -102,7 +102,7 @@ func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 		}
 
 		// not a MisoErr, just return some generic msg
-		rail.Errorf("Unknown error, %v", err)
+		rail.Errorf("'%s' returned unknown error, %v", url, err)
 		return ErrorResp("Unknown system error, please try again later")
 	}
 
