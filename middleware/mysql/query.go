@@ -281,7 +281,7 @@ type PageQuery[V any] struct {
 }
 
 func NewPagedQuery[V any](db *gorm.DB) *PageQuery[V] {
-	return &PageQuery[V]{}
+	return &PageQuery[V]{db: db}
 }
 
 func (pq *PageQuery[V]) WithSelectQuery(qry ChainedPageQuery) *PageQuery[V] {
