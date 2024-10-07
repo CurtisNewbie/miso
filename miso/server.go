@@ -107,11 +107,14 @@ var (
 		DispatchJson(c, resultBodyBuilder.OkJsonBuilder())
 	}
 
-	// enable pprof manually
-	manualRegisterPprof = false
-	noRouteHandler      = func(ctx *gin.Context, rail Rail) {
+	// pprof endpoint register disabled
+	pprofRegisterDisabled = false
+	noRouteHandler        = func(ctx *gin.Context, rail Rail) {
 		ctx.AbortWithStatus(404)
 	}
+
+	// default health check handler disabled
+	defaultHealthCheckHandlerDisabled = false
 )
 
 type HttpRoute struct {
@@ -960,7 +963,7 @@ func WebServerBootstrap(rail Rail) error {
 	}
 	ginPreProcessors = nil
 
-	if !manualRegisterPprof && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
+	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
 			RawGet("", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
 			RawGet("/:name", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
@@ -975,11 +978,11 @@ func WebServerBootstrap(rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if GetPropBool(PropConsulEnabled) && GetPropBool(PropConsulRegisterDefaultHealthcheck) {
+	if GetPropBool(PropConsulEnabled) && GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
-	if !IsProdMode() && GetPropBool(PropServerGenerateEndpointDocEnabled) {
+	if !IsProdMode() {
 		if err := serveApiDocTmpl(rail); err != nil {
 			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
 		}
@@ -1185,9 +1188,9 @@ func BaseRoute(baseUrl string) *RoutingGroup {
 	return &RoutingGroup{Base: baseUrl}
 }
 
-// Registrer pprof debug endpoint manually.
-func ManualPprofRegister() {
-	manualRegisterPprof = true
+// Disable pprof debug endpoint handler.
+func DisablePProfEndpointRegister() {
+	pprofRegisterDisabled = true
 }
 
 // Preprocessor of *gin.Engine.
@@ -1336,4 +1339,9 @@ func EnableBasicAuth(f func(username string, password string, url string, method
 			}
 		})
 	})
+}
+
+// Disable the default health check endpoint handler.
+func DisableDefaultHealthCheckHandler() {
+	defaultHealthCheckHandlerDisabled = true
 }

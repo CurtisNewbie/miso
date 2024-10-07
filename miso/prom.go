@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	manualBootstrapProm = false
+	prometheusBootstrapDisabled = false
 )
 
 func init() {
@@ -92,7 +92,6 @@ func PrometheusBootstrapCondition(rail Rail) (bool, error) {
 }
 
 func PrometheusBootstrap(rail Rail) error {
-	handler := PrometheusHandler()
 
 	if GetPropBool(PropMetricsAuthEnabled) {
 		if util.IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
@@ -102,7 +101,8 @@ func PrometheusBootstrap(rail Rail) error {
 		rail.Info("Enabled metrics authorization")
 	}
 
-	if !manualBootstrapProm {
+	if !prometheusBootstrapDisabled {
+		handler := PrometheusHandler()
 		RawGet(GetPropStr(PropMetricsRoute),
 			func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) }).
 			Desc("Collect prometheus metrics information").
@@ -111,11 +111,9 @@ func PrometheusBootstrap(rail Rail) error {
 	return nil
 }
 
-// Caller wants to bootstrap prometheus manually.
-//
-// This is mainly used for gateway that implements handler for all endpoints.
-func ManualBootstrapPrometheus() {
-	manualBootstrapProm = true
+// Disable prometheus endpoint handler bootstrap.
+func DisablePrometheusBootstrap() {
+	prometheusBootstrapDisabled = true
 }
 
 // Timer based on prometheus.HistogramVec.

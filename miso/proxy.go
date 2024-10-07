@@ -40,8 +40,14 @@ type HttpProxy struct {
 
 // Create HTTP proxy for specific path.
 //
+// If proxiedPath is '/', then the default health check endpoint handler,
+// promethues endpoint handler, pprof endpoint handler, and apidoc endpoint handler are all disabled to avoid path conflicts.
+//
+// This func must be called before server bootstraps.
+//
 // e.g., to create proxy path for /proxy/** and redirect all requests to localhost:8081.
 //
+//	// proxy all requests to /proxy* to server localhost:8081
 //	_ = miso.NewHttpProxy("/proxy", func(proxyPath string) (string, error) {
 //		return "http://localhost:8081" + proxyPath, nil
 //	})
@@ -49,6 +55,18 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	if targetResolver == nil {
 		panic("targetResolver cannot be nil")
 	}
+	proxiedPath = strings.TrimSpace(proxiedPath)
+	if proxiedPath == "" {
+		proxiedPath = "/"
+	}
+
+	if proxiedPath == "/" {
+		DisableDefaultHealthCheckHandler() // disable the default health check endpoint to avoid conflicts
+		DisablePrometheusBootstrap()       // bootstrap metrics and prometheus stuff manually
+		DisablePProfEndpointRegister()     // handle pprof endpoints manually
+		DisableApidocEndpointRegister()    // do not generate apidoc
+	}
+
 	p := &HttpProxy{
 		filters:    make([]ProxyFilter, 0),
 		filterLock: &sync.RWMutex{},

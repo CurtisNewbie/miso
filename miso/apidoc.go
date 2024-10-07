@@ -28,6 +28,7 @@ var (
 		"*miso.ETime": "int64",
 		"*util.ETime": "int64",
 	}
+	apiDocEndpointDisabled = false
 
 	ignoredJsonDocTag = []string{"form", "header"}
 
@@ -52,7 +53,7 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 
 	PostServerBootstrapped(func(rail Rail) error {
-		if !GetPropBool(PropServerGenerateEndpointDocEnabled) {
+		if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
 			return nil
 		}
 		outf := GetPropStr(PropServerGenerateEndpointDocFile)
@@ -473,6 +474,11 @@ var (
 )
 
 func serveApiDocTmpl(rail Rail) error {
+
+	if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
+		return nil
+	}
+
 	var err error
 	buildApiDocTmplOnce.Do(func() {
 		t, er := template.New("").Parse(apidocTemplate)
@@ -1071,4 +1077,9 @@ var singleLineRegex = regexp.MustCompile(` *[\t\n]+`)
 func singleLine(v string) string {
 	v = strings.TrimSpace(v)
 	return singleLineRegex.ReplaceAllString(v, " ")
+}
+
+// Disable apidoc endpoint handler.
+func DisableApidocEndpointRegister() {
+	apiDocEndpointDisabled = true
 }
