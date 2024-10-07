@@ -20,28 +20,39 @@ type Future[T any] interface {
 
 type future[T any] struct {
 	ch chan func() (T, error)
+
+	getOnce *sync.Once
+	res     T
+	err     error
 }
 
 // Get from Future indefinitively
 func (f *future[T]) Get() (T, error) {
-	getResult := <-f.ch
-	return getResult()
+	f.getOnce.Do(func() {
+		getResult := <-f.ch
+		f.res, f.err = getResult()
+	})
+	return f.res, f.err
 }
 
 // Get from Future with timeout (in milliseconds)
 func (f *future[T]) TimedGet(timeout int) (T, error) {
-	select {
-	case obtainResult := <-f.ch:
-		return obtainResult()
-	case <-time.After(time.Duration(timeout) * time.Millisecond):
-		var t T
-		return t, ErrGetTimeout
-	}
+	f.getOnce.Do(func() {
+		select {
+		case obtainResult := <-f.ch:
+			f.res, f.err = obtainResult()
+		case <-time.After(time.Duration(timeout) * time.Millisecond):
+			f.err = ErrGetTimeout
+		}
+	})
+	return f.res, f.err
 }
 
 func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
-	fut := future[T]{}
-	fut.ch = make(chan func() (T, error), 1)
+	fut := future[T]{
+		getOnce: &sync.Once{},
+		ch:      make(chan func() (T, error), 1),
+	}
 	wrp := func() {
 		defer func() {
 			if v := recover(); v != nil {

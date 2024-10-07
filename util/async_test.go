@@ -65,8 +65,6 @@ func TestRunAsyncPool(t *testing.T) {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
 	t.Logf("sum: %v, time: %v", sum, time.Since(start))
-
-	time.Sleep(time.Second * 5)
 }
 
 func TestRunAsyncWithPanic(t *testing.T) {
@@ -160,4 +158,19 @@ func TestAsyncPoolStop(t *testing.T) {
 		})
 	}
 	pool.StopAndWait()
+}
+
+func TestAsyncOnce(t *testing.T) {
+	f := RunAsync(func() (int, error) {
+		Printlnf("async ran")
+		return 1, nil
+	})
+	r, err := f.Get()
+	t.Logf("1. r: %v, err: %v", r, err)
+
+	r, err = f.Get()
+	t.Logf("2. r: %v, err: %v", r, err)
+
+	r, err = f.TimedGet(100)
+	t.Logf("3. r: %v, err: %v", r, err)
 }
