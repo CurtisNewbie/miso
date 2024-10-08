@@ -9,6 +9,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/middleware/task"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +29,7 @@ const (
 func init() {
 	miso.SetProp("app.name", "demo")
 	miso.SetProp("redis.enabled", true) // for distributed task
+	miso.SetProp("mode.production", false)
 	miso.SetProp("server.generate-endpoint-doc.file", "api-doc.md")
 }
 
@@ -127,6 +129,7 @@ type PostReq struct {
 }
 type PostRes struct {
 	ResultId string
+	Time     util.ETime
 }
 
 func doSomethingEndpoint(inb *miso.Inbound, req PostReq) (PostRes, error) {

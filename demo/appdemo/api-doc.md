@@ -9,6 +9,7 @@
     - "error": (bool) whether the request was successful
     - "data": (PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/api/v1' \
@@ -34,6 +35,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -65,15 +67,27 @@
     ```
 
 - POST /api/v2
+  - JSON Request:
+    - "requestId": (string) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
     - "data": (PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v2'
+    curl -X POST 'http://localhost:8080/api/v2' \
+      -H 'Content-Type: application/json' \
+      -d '{"requestId":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface PostReq {
+      requestId?: string
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -87,6 +101,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -100,7 +115,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v2`)
+    let req: PostReq | null = null;
+    this.http.post<any>(`/demo/api/v2`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -117,15 +133,27 @@
     ```
 
 - POST /api/v3
+  - JSON Request:
+    - "requestId": (string) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
     - "data": (*main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v3'
+    curl -X POST 'http://localhost:8080/api/v3' \
+      -H 'Content-Type: application/json' \
+      -d '{"requestId":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface PostReq {
+      requestId?: string
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -139,6 +167,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -152,7 +181,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v3`)
+    let req: PostReq | null = null;
+    this.http.post<any>(`/demo/api/v3`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -179,6 +209,7 @@
     - "error": (bool) whether the request was successful
     - "data": (*main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/api/v4' \
@@ -209,6 +240,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -240,15 +272,34 @@
     ```
 
 - POST /api/v5
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
     - "data": (*main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v5'
+    curl -X POST 'http://localhost:8080/api/v5' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -262,6 +313,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -275,7 +327,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v5`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v5`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -292,15 +345,34 @@
     ```
 
 - POST /api/v6
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
     - "data": (*main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v6'
+    curl -X POST 'http://localhost:8080/api/v6' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -314,6 +386,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -327,7 +400,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v6`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v6`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -344,6 +418,10 @@
     ```
 
 - POST /api/v7
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
@@ -351,7 +429,21 @@
     - "data": (ApiRes) response data
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v7'
+    curl -X POST 'http://localhost:8080/api/v7' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -374,7 +466,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v7`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v7`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -391,6 +484,10 @@
     ```
 
 - POST /api/v8
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
@@ -398,7 +495,21 @@
     - "data": (*api.ApiRes) response data
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v8'
+    curl -X POST 'http://localhost:8080/api/v8' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -421,7 +532,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v8`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v8`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -438,6 +550,10 @@
     ```
 
 - POST /api/v9
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
@@ -445,7 +561,21 @@
     - "data": (*[]api.ApiRes) response data
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v9'
+    curl -X POST 'http://localhost:8080/api/v9' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -468,7 +598,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v9`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v9`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -485,6 +616,10 @@
     ```
 
 - POST /api/v10
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
@@ -492,7 +627,21 @@
     - "data": ([]api.ApiRes) response data
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v10'
+    curl -X POST 'http://localhost:8080/api/v10' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -515,7 +664,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v10`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v10`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -532,15 +682,34 @@
     ```
 
 - POST /api/v11
+  - JSON Request:
+    - "name": (string) 
+    - "extras": ([]api.ApiReqExtra) 
+      - "special": (bool) 
   - JSON Response:
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
     - "data": ([]main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
-    curl -X POST 'http://localhost:8080/api/v11'
+    curl -X POST 'http://localhost:8080/api/v11' \
+      -H 'Content-Type: application/json' \
+      -d '{"extras":{"special":false},"name":""}'
+    ```
+
+  - JSON Request Object In TypeScript:
+    ```ts
+    export interface ApiReq {
+      name?: string
+      extras?: ApiReqExtra[]
+    }
+
+    export interface ApiReqExtra {
+      special?: boolean
+    }
     ```
 
   - JSON Response Object In TypeScript:
@@ -554,6 +723,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -567,7 +737,8 @@
       private http: HttpClient
     ) {}
 
-    this.http.post<any>(`/demo/api/v11`)
+    let req: ApiReq | null = null;
+    this.http.post<any>(`/demo/api/v11`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {
@@ -594,6 +765,7 @@
     - "error": (bool) whether the request was successful
     - "data": ([]main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/api/v12' \
@@ -624,6 +796,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -728,6 +901,7 @@
     - "error": (bool) whether the request was successful
     - "data": ([]main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/api/v14' \
@@ -758,6 +932,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -795,6 +970,7 @@
     - "error": (bool) whether the request was successful
     - "data": ([]main.PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X GET 'http://localhost:8080/api/v15'
@@ -811,6 +987,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -852,6 +1029,7 @@
         - "total": (int) total count
       - "payload": ([]main.PostRes) payload values in current page
         - "resultId": (string) 
+        - "time": (int64) 
   - cURL:
     ```sh
     curl -X GET 'http://localhost:8080/api/v16'
@@ -879,6 +1057,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -920,6 +1099,7 @@
     - "error": (bool) whether the request was successful
     - "data": (PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/open/api/demo/grouped/open/api/demo/post' \
@@ -946,6 +1126,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 
@@ -991,6 +1172,7 @@
     - "error": (bool) whether the request was successful
     - "data": (PostRes) response data
       - "resultId": (string) 
+      - "time": (int64) 
   - cURL:
     ```sh
     curl -X POST 'http://localhost:8080/open/api/demo/grouped/subgroup/post1' \
@@ -1016,6 +1198,7 @@
 
     export interface PostRes {
       resultId?: string
+      time?: number
     }
     ```
 

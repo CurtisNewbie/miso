@@ -346,10 +346,14 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []JsonDesc, indent int) {
 
 // Parse value's type information to build json style description.
 //
-// Only supports struct and slice.
+// Only supports struct, pointer and slice.
 func BuildJsonPayloadDesc(v reflect.Value) (jpd JsonPayloadDesc, typeName string) {
 	typeName = v.Type().Name()
 	switch v.Kind() {
+	case reflect.Pointer:
+		v = reflect.New(v.Type().Elem()).Elem()
+		jpd, typeName = BuildJsonPayloadDesc(v)
+		return
 	case reflect.Struct:
 		jpd = JsonPayloadDesc{Fields: buildJsonDesc(v)}
 		return
@@ -398,18 +402,22 @@ func buildJsonDesc(v reflect.Value) []JsonDesc {
 			name = encoding.LowercaseNamingStrategy(f.Name)
 		}
 
-		typeName := util.TypeName(f.Type)
-		typeAlias, typeAliasMatched := ApiDocTypeAlias[typeName]
+		originTypeName := util.TypeName(f.Type)
+		typeAlias, typeAliasMatched := ApiDocTypeAlias[originTypeName]
+		var typeName string
 		if typeAliasMatched {
 			typeName = typeAlias
+		} else {
+			typeName = originTypeName
 		}
 
 		jd := JsonDesc{
-			FieldName: f.Name,
-			Name:      name,
-			TypeName:  typeName,
-			Desc:      getTagDesc(f.Tag),
-			Fields:    []JsonDesc{},
+			FieldName:      f.Name,
+			Name:           name,
+			TypeName:       typeName,
+			OriginTypeName: originTypeName,
+			Desc:           getTagDesc(f.Tag),
+			Fields:         []JsonDesc{},
 		}
 
 		if typeAliasMatched {
@@ -467,11 +475,12 @@ func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []JsonDesc) [
 }
 
 type JsonDesc struct {
-	FieldName string
-	Name      string
-	TypeName  string
-	Desc      string
-	Fields    []JsonDesc
+	FieldName      string
+	Name           string
+	TypeName       string
+	OriginTypeName string
+	Desc           string
+	Fields         []JsonDesc
 }
 
 var (
@@ -770,8 +779,7 @@ func guessGoTypName(n string) string {
 
 func genNgTableDemo(d HttpRouteDoc, respTypeName string) string {
 	sl := new(util.SLPinter)
-	sl.Printlnf(`<div class="mt-3 mb-5">`)
-	sl.Println(util.Tabs(1) + `<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
+	sl.Println(`<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
 
 	var cols []string
 
@@ -789,14 +797,14 @@ func genNgTableDemo(d HttpRouteDoc, respTypeName string) string {
 				})
 				if hasPayload {
 					for _, f := range pl.Fields {
-						sl.Printlnf(util.Tabs(2)+"<ng-container matColumnDef=\"%v\">", f.Name)
-						sl.Printlnf(util.Tabs(3)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.FieldName)
-						if f.TypeName == "ETime" || f.TypeName == "*ETime" || f.TypeName == "util.ETime" || f.TypeName == "*util.ETime" {
-							sl.Printlnf(util.Tabs(3)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.Name)
+						sl.Printlnf(util.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.Name)
+						sl.Printlnf(util.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.FieldName)
+						if f.OriginTypeName == "ETime" || f.OriginTypeName == "*ETime" || f.OriginTypeName == "util.ETime" || f.OriginTypeName == "*util.ETime" {
+							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.Name)
 						} else {
-							sl.Printlnf(util.Tabs(3)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.Name)
+							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.Name)
 						}
-						sl.Printlnf(util.Tabs(2) + "</ng-container>")
+						sl.Printlnf(util.Tabs(1) + "</ng-container>")
 						cols = append(cols, "'"+f.Name+"'")
 					}
 				}
@@ -805,9 +813,8 @@ func genNgTableDemo(d HttpRouteDoc, respTypeName string) string {
 	}
 
 	colstr := "[" + strings.Join(cols, ",") + "]"
-	sl.Printlnf(util.Tabs(2)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
-	sl.Printlnf(util.Tabs(1) + `</table>`)
-	sl.Printlnf(`</div>`)
+	sl.Printlnf(util.Tabs(1)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
+	sl.Printlnf(`</table>`)
 	return sl.String()
 }
 
