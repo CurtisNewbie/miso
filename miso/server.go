@@ -543,16 +543,16 @@ To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
 
 It's also possible to register callbacks that are triggered before/after server bootstrap
 
-	server.PreServerBootstrap(func(c Rail) error {
+	miso.PreServerBootstrap(func(c Rail) error {
 		// do something right after configuration being loaded, but server hasn't been bootstraped yet
 	});
 
-	server.PostServerBootstrapped(func(c Rail) error {
+	miso.PostServerBootstrapped(func(c Rail) error {
 		// do something after the server bootstrap
 	});
 
 	// start the server
-	server.BootstrapServer(os.Args)
+	miso.BootstrapServer(os.Args)
 */
 func BootstrapServer(args []string) {
 	osSigQuit := make(chan os.Signal, 2)
