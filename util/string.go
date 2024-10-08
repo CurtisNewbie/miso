@@ -86,6 +86,16 @@ func (s *SLPinter) Printf(st string, args ...any) {
 	s.Builder.WriteString(fmt.Sprintf(st, args...))
 }
 
+func (s *SLPinter) Println(st string) {
+	if s.Builder == nil {
+		s.Builder = &strings.Builder{}
+	}
+	if s.Builder.Len() > 0 {
+		s.Builder.WriteString(s.LineSuffix + "\n")
+	}
+	s.Builder.WriteString(s.LinePrefix + st)
+}
+
 func (s *SLPinter) Printlnf(st string, args ...any) {
 	if s.Builder == nil {
 		s.Builder = &strings.Builder{}

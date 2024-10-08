@@ -101,6 +101,7 @@ type HttpRouteDoc struct {
 	JsonReqTsDef     string          // json request type def in ts
 	JsonRespTsDef    string          // json response type def in ts
 	NgHttpClientDemo string          // angular http client demo
+	NgTableDemo      string          // angular table demo
 	MisoTClientDemo  string          // miso TClient demo
 }
 
@@ -144,6 +145,11 @@ func buildHttpRouteDoc(hr []HttpRoute) []HttpRouteDoc {
 
 		// ng http client
 		d.NgHttpClientDemo = genNgHttpClientDemo(d, reqTypeName, respTypeName)
+
+		// ng table demo
+		if r.GenNgTable {
+			d.NgTableDemo = genNgTableDemo(d, respTypeName)
+		}
 
 		// miso http TClient
 		d.MisoTClientDemo = genTClientDemo(d, reqTypeName, respTypeName)
@@ -760,6 +766,49 @@ func guessGoTypName(n string) string {
 		return "[]" + tsTypeName
 	}
 	return tsTypeName
+}
+
+func genNgTableDemo(d HttpRouteDoc, respTypeName string) string {
+	sl := new(util.SLPinter)
+	sl.Printlnf(`<div class="mt-3 mb-5">`)
+	sl.Println(util.Tabs(1) + `<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
+
+	var cols []string
+
+	if respTypeName != "" {
+		respTypeName = guessTsItfName(respTypeName)
+
+		// Resp.Data -> PageRes -> PageRes.Payload
+		if respTypeName == "Resp" {
+			pl, hasData := util.SliceFilterFirst(d.JsonResponseDesc.Fields, func(j JsonDesc) bool {
+				return j.FieldName == "Data"
+			})
+			if hasData {
+				pl, hasPayload := util.SliceFilterFirst(pl.Fields, func(j JsonDesc) bool {
+					return j.FieldName == "Payload"
+				})
+				if hasPayload {
+					for _, f := range pl.Fields {
+						sl.Printlnf(util.Tabs(2)+"<ng-container matColumnDef=\"%v\">", f.Name)
+						sl.Printlnf(util.Tabs(3)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.FieldName)
+						if f.TypeName == "ETime" || f.TypeName == "*ETime" || f.TypeName == "util.ETime" || f.TypeName == "*util.ETime" {
+							sl.Printlnf(util.Tabs(3)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.Name)
+						} else {
+							sl.Printlnf(util.Tabs(3)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.Name)
+						}
+						sl.Printlnf(util.Tabs(2) + "</ng-container>")
+						cols = append(cols, "'"+f.Name+"'")
+					}
+				}
+			}
+		}
+	}
+
+	colstr := "[" + strings.Join(cols, ",") + "]"
+	sl.Printlnf(util.Tabs(2)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
+	sl.Printlnf(util.Tabs(1) + `</table>`)
+	sl.Printlnf(`</div>`)
+	return sl.String()
 }
 
 func genNgHttpClientDemo(d HttpRouteDoc, reqTypeName string, respTypeName string) string {

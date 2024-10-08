@@ -49,6 +49,7 @@ const (
 	ExtraHeaderParam  = "miso-HeaderParam"
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
+	ExtraNgTable      = "miso-NgTable"
 
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
@@ -128,6 +129,7 @@ type HttpRoute struct {
 	QueryParams     []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
 	JsonRequestVal  any        // the documented json request value that is expected by the endpoint (metadata).
 	JsonResponseVal any        // the documented json response value that will be returned by the endpoint (metadata).
+	GenNgTable      bool
 }
 
 type ComponentBootstrap struct {
@@ -256,6 +258,10 @@ func recordHttpServerRoute(url string, method string, extra ...util.StrPair) {
 	if l, ok := extras[ExtraJsonResponse]; ok && len(l) > 0 {
 		r.JsonResponseVal = l[0]
 	}
+	if _, ok := extras[ExtraNgTable]; ok {
+		r.GenNgTable = true
+	}
+
 	serverHttpRoutes = append(serverHttpRoutes, r)
 }
 

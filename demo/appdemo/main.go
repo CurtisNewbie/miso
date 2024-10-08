@@ -209,3 +209,9 @@ func api14(inb *miso.Inbound, req api.ApiReq, db *gorm.DB) ([]PostRes, error) {
 func api15(inb *miso.Inbound, db *gorm.DB) ([]PostRes, error) {
 	return nil, nil
 }
+
+// misoapi-http: GET /api/v16
+// misoapi-ngtable
+func api16(inb *miso.Inbound, db *gorm.DB) (miso.PageRes[PostRes], error) {
+	return miso.PageRes[PostRes]{}, nil
+}

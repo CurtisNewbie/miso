@@ -37,15 +37,21 @@ const (
 	tagRes       = "resource"
 	tagQueryDoc  = "query-doc"
 	tagHeaderDoc = "header-doc"
+	tagNgTable   = "ngtable"
 )
 
 var (
 	refPat = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
+	flags  = util.NewSet[string]()
 )
 
 var (
 	Debug = flag.Bool("debug", false, "Enable debug log")
 )
+
+func init() {
+	flags.Add(tagNgTable)
+}
 
 func main() {
 	flag.Usage = func() {
@@ -60,6 +66,7 @@ func main() {
 		util.Printlnf("  misoapi-header-doc: Authorization: bearer authorization token")
 		util.Printlnf("  misoapi-scope: PROTECTED")
 		util.Printlnf("  misoapi-resource: document:read")
+		util.Printlnf("  misoapi-ngtable")
 		util.Printlnf("")
 	}
 	flag.Parse()
@@ -311,6 +318,7 @@ type ApiDecl struct {
 	FuncName    string
 	FuncParams  []ParamMeta
 	FuncResults []ParamMeta
+	Flags       util.Set[string]
 }
 
 func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (util.Set[string], string, error) {
@@ -432,6 +440,10 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.NoLbWritef("})")
 			}
 		}
+		if d.Flags.Has(tagNgTable) {
+			w.NoIndWritef(".\n")
+			w.Writef("Extra(miso.ExtraNgTable, true)")
+		}
 		if d.Desc != "" {
 			w.NoIndWritef(".\n")
 			if d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
@@ -497,7 +509,9 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 }
 
 func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
-	ad := ApiDecl{}
+	ad := ApiDecl{
+		Flags: util.NewSet[string](),
+	}
 	for _, t := range tags {
 		switch t.Command {
 		case tagHttp:
@@ -523,6 +537,8 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 			if ok {
 				ad.Header = append(ad.Header, kv)
 			}
+		case tagNgTable:
+			ad.Flags.Add(tagNgTable)
 		}
 	}
 	return ad, !util.IsBlankStr(ad.Method) && !util.IsBlankStr(ad.Url)
@@ -551,7 +567,6 @@ func (m *MisoApiTag) BodyKV() (Pair, bool) {
 
 func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 	t := []MisoApiTag{}
-	currIsDesc := false
 	for _, s := range start {
 		s, _ = strings.CutPrefix(s, "//")
 		s := strings.TrimSpace(s)
@@ -563,26 +578,17 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 					util.Printlnf("[DEBUG] parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
 				pre = strings.TrimSpace(pre)
-				currIsDesc = pre == tagDesc
 				t = append(t, MisoApiTag{
 					Command: pre,
 					Body:    strings.TrimSpace(m),
 				})
 			} else {
-				currIsDesc = false
+				if flags.Has(m) {
+					t = append(t, MisoApiTag{
+						Command: m,
+					})
+				}
 				continue
-			}
-		} else {
-			if s == "" {
-				currIsDesc = false
-				continue
-			}
-
-			// multi-lines misoapi-desc
-			if currIsDesc && len(t) > 0 && t[len(t)-1].Command == tagDesc {
-				last := t[len(t)-1]
-				last.Body += " " + s
-				t[len(t)-1] = last
 			}
 		}
 	}

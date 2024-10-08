@@ -10,6 +10,13 @@
 </ul>
 {{end}}
 
+{{define "unpackJsonPayload"}}
+<ul>
+{{if .IsSlice}} ([]Array) {{end}}
+{{template "unpackJsonDesc" .Fields}}
+</ul>
+{{end}}
+
 {{define "apiDocTempl"}}
 <!DOCTYPE html>
 <html lang="en">
@@ -80,7 +87,7 @@
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Request:</i></b>
                     </div>
-                    {{template "unpackJsonDesc" .JsonRequestDesc}}
+                    {{template "unpackJsonPayload" .JsonRequestDesc}}
                 </p>
             {{end}}
 
@@ -89,7 +96,7 @@
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Response:</i></b>
                     </div>
-                    {{template "unpackJsonDesc" .JsonResponseDesc}}
+                    {{template "unpackJsonPayload" .JsonResponseDesc}}
                 </p>
             {{end}}
 
@@ -126,6 +133,15 @@
                         <b><i>Angular HttpClient Demo:</i></b>
                     </div>
                     <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.NgHttpClientDemo}}</code></pre></p>
+                </p>
+            {{end}}
+
+            {{if .NgTableDemo}}
+                <p>
+                    <div style="text-indent:8px;border-left: 4px solid #757575;">
+                        <b><i>Angular Material Table Demo:</i></b>
+                    </div>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-html">{{.NgTableDemo}}</code></pre></p>
                 </p>
             {{end}}
 
@@ -187,7 +203,7 @@
                         <div style="text-indent:8px;border-left: 4px solid #757575;">
                             <b><i>Event JSON Payload:</i></b>
                         </div>
-                        {{template "unpackJsonDesc" .PayloadDesc}}
+                        {{template "unpackJsonPayload" .PayloadDesc}}
                     </p>
                 {{end}}
                 </div>
