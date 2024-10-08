@@ -442,7 +442,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		}
 		if d.Flags.Has(tagNgTable) {
 			w.NoIndWritef(".\n")
-			w.Writef("Extra(miso.ExtraNgTable, true)")
+			if d.Desc != "" || d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
+				w.NoLbWritef("Extra(miso.ExtraNgTable, true)")
+			} else {
+				w.Writef("Extra(miso.ExtraNgTable, true)")
+			}
 		}
 		if d.Desc != "" {
 			w.NoIndWritef(".\n")
