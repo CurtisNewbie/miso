@@ -118,18 +118,20 @@ var (
 	defaultHealthCheckHandlerDisabled = false
 )
 
+type ParamDoc struct {
+	Name string
+	Desc string
+}
+
 type HttpRoute struct {
-	Url             string
-	Method          string
-	Extra           map[string][]any
-	Desc            string     // description of the route (metadata).
-	Scope           string     // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource        string     // the documented resource that the route should be bound to (metadata).
-	Headers         []ParamDoc // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams     []ParamDoc // the documented query parameters that will used by the endpoint (metadata).
-	JsonRequestVal  any        // the documented json request value that is expected by the endpoint (metadata).
-	JsonResponseVal any        // the documented json response value that will be returned by the endpoint (metadata).
-	GenNgTable      bool
+	Url         string           // http request url.
+	Method      string           // http method.
+	Extra       map[string][]any // extra metadata kv store.
+	Desc        string           // description of the route (metadata).
+	Scope       string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource    string           // the documented resource that the route should be bound to (metadata).
+	Headers     []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
 }
 
 type ComponentBootstrap struct {
@@ -252,16 +254,6 @@ func recordHttpServerRoute(url string, method string, extra ...util.StrPair) {
 			}
 		}
 	}
-	if l, ok := extras[ExtraJsonRequest]; ok && len(l) > 0 {
-		r.JsonRequestVal = l[0]
-	}
-	if l, ok := extras[ExtraJsonResponse]; ok && len(l) > 0 {
-		r.JsonResponseVal = l[0]
-	}
-	if _, ok := extras[ExtraNgTable]; ok {
-		r.GenNgTable = true
-	}
-
 	serverHttpRoutes = append(serverHttpRoutes, r)
 }
 
