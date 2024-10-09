@@ -3,7 +3,7 @@ package redis
 import (
 	"fmt"
 
-	"github.com/curtisnewbie/miso/encoding"
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 )
 
@@ -21,7 +21,7 @@ func (j JsonSerializer) Serialize(t any) (string, error) {
 		return v, nil
 	}
 
-	b, err := encoding.WriteJson(t)
+	b, err := json.WriteJson(t)
 	if err != nil {
 		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}
@@ -34,7 +34,7 @@ func (j JsonSerializer) Deserialize(ptr any, v string) error {
 		return nil
 	}
 
-	err := encoding.ParseJson(util.UnsafeStr2Byt(v), ptr)
+	err := json.ParseJson(util.UnsafeStr2Byt(v), ptr)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal from string, %v", err)
 	}

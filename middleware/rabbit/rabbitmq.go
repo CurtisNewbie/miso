@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/encoding"
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -138,7 +138,7 @@ func (m JsonMsgListener[T]) Queue() string {
 
 func (m JsonMsgListener[T]) Handle(rail miso.Rail, payload string) error {
 	var t T
-	if e := encoding.ParseJson(util.UnsafeStr2Byt(payload), &t); e != nil {
+	if e := json.ParseJson(util.UnsafeStr2Byt(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -190,7 +190,7 @@ func PublishJson(c miso.Rail, obj any, exchange string, routingKey string) error
 
 // Publish json message with headers and confirmation
 func PublishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
-	j, err := encoding.WriteJson(obj)
+	j, err := json.WriteJson(obj)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message body, %w", err)
 	}

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/encoding"
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 	jsoniter "github.com/json-iterator/go"
 )
@@ -413,7 +413,7 @@ func buildJsonDesc(v reflect.Value) []FieldDesc {
 			}
 			name = v
 		} else {
-			name = encoding.LowercaseNamingStrategy(f.Name)
+			name = json.LowercaseNamingStrategy(f.Name)
 		}
 
 		originTypeName := util.TypeName(f.Type)
@@ -630,7 +630,7 @@ func genRouteCurl(d httpRouteDoc) string {
 
 		jm := map[string]any{}
 		genJsonReqMap(jm, d.JsonRequestDesc.Fields)
-		sj, err := encoding.CustomSWriteJson(apiDocJsoniterConfig, jm)
+		sj, err := json.CustomSWriteJson(apiDocJsoniterConfig, jm)
 		if err == nil {
 			if d.JsonRequestDesc.IsSlice {
 				sl.Printlnf("-d '[ %s ]'", sj)

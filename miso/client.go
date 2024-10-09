@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/miso/encoding"
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/cast"
 )
@@ -131,7 +131,7 @@ func (tr *TResponse) Json(ptr any) error {
 		return e
 	}
 
-	if e = encoding.ParseJson(body, ptr); e != nil {
+	if e = json.ParseJson(body, ptr); e != nil {
 		s := util.UnsafeByt2Str(body)
 		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
 		tr.Rail.Error(errMsg)
@@ -282,7 +282,7 @@ func (t *TClient) PostForm(data url.Values) *TResponse {
 //
 // Use simple types like struct instad of pointer for body.
 func (t *TClient) PostJson(body any) *TResponse {
-	jsonBody, e := encoding.WriteJson(body)
+	jsonBody, e := json.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}
@@ -315,7 +315,7 @@ func (t *TClient) PostBytes(body []byte) *TResponse {
 
 // Send PUT request with JSON
 func (t *TClient) PutJson(body any) *TResponse {
-	jsonBody, e := encoding.WriteJson(body)
+	jsonBody, e := json.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
 	}
