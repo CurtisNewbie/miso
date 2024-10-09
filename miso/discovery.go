@@ -34,7 +34,7 @@ var (
 	// Map of ServerChangeListeners
 	serverChangeListeners = ServerChangeListenerMap{
 		Listeners: map[string][]func(){},
-		Pool:      util.NewAsyncPool(500, 4),
+		Pool:      util.NewCpuAsyncPool(),
 	}
 
 	// Get ServerList implementation

@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
@@ -180,6 +181,20 @@ func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
 		stopOnce:     &sync.Once{},
 		drainTasksWg: &sync.WaitGroup{},
 	}
+}
+
+// Create AsyncPool with number of workers equals to number of cpu cores and a task queue of size 500.
+func NewCpuAsyncPool() *AsyncPool {
+	c := runtime.NumCPU()
+	if c < 2 {
+		c = 2 // at least 2
+	}
+	return NewAsyncPool(500, c)
+}
+
+// Create AsyncPool with number of workers equals to two times of the number of cpu cores and a task queue of size 500.
+func NewIOAsyncPool() *AsyncPool {
+	return NewAsyncPool(500, runtime.NumCPU()*2)
 }
 
 // Stop the pool.
