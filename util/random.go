@@ -126,6 +126,15 @@ func RandRune(n int, set []rune) string {
 	return string(b)
 }
 
+// invoke one of the funcs randomly
+func RandOp(ops ...func()) {
+	n := len(ops)
+	if n < 1 {
+		return
+	}
+	ops[rand.Intn(n)]()
+}
+
 // pick random rune from the slice
 func Pick(set []rune) rune {
 	return set[rand.Intn(len(set))]

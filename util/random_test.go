@@ -38,3 +38,17 @@ func BenchmarkRandLowerAlphaNumeric(b *testing.B) {
 		}
 	})
 }
+
+func TestRandOp(t *testing.T) {
+	m := map[string]int{}
+	for i := 0; i < 1000; i++ {
+		RandOp(func() {
+			m["1"]++
+		}, func() {
+			m["2"]++
+		}, func() {
+			m["3"]++
+		})
+	}
+	t.Log(m)
+}
