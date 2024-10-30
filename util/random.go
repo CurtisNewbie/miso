@@ -167,3 +167,7 @@ func ERand(len int) string {
 	}
 	return base64.RawStdEncoding.EncodeToString(b)
 }
+
+func RandPick[T any](s []T) T {
+	return s[rand.Intn(len(s))]
+}
