@@ -167,15 +167,15 @@ func RandPick[T any](s []T) T {
 	return s[rand.IntN(len(s))]
 }
 
-func WeightedRandPick[T interface{ Weight() float64 }](s []T) T {
+func WeightedRandPick[T interface{ GetWeight() float64 }](s []T) T {
 	var totalWeight float64 = 0
 	for _, v := range s {
-		totalWeight += v.Weight()
+		totalWeight += v.GetWeight()
 	}
 	i := 0
 	r := rand.Float64() * totalWeight
 	for ; i < len(s)-1; i++ {
-		r -= s[i].Weight()
+		r -= s[i].GetWeight()
 		if r <= 0.0 {
 			break
 		}
@@ -184,10 +184,10 @@ func WeightedRandPick[T interface{ Weight() float64 }](s []T) T {
 }
 
 type WeightedItem[T any] struct {
-	Value T
-	n     float64
+	Value  T
+	Weight float64
 }
 
-func (w WeightedItem[T]) Weight() float64 {
-	return w.n
+func (w WeightedItem[T]) GetWeight() float64 {
+	return w.Weight
 }
