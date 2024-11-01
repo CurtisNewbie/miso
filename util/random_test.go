@@ -52,3 +52,15 @@ func TestRandOp(t *testing.T) {
 	}
 	t.Log(m)
 }
+
+func TestWeightedRandPick(t *testing.T) {
+	arr := []WeightedItem[string]{{"apple", 10}, {"juice", 10}, {"orange", 10}}
+	for j := 0; j < 3; j++ {
+		m := map[string]int{}
+		for i := 0; i < 100_000; i++ {
+			p := WeightedRandPick(arr)
+			m[p.Value]++
+		}
+		t.Log(m)
+	}
+}

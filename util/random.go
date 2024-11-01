@@ -4,9 +4,8 @@ import (
 	cr "crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
+	rand "math/rand/v2"
 	"sync"
-	"time"
 )
 
 var (
@@ -30,10 +29,6 @@ func init() {
 const (
 	DEFAULT_LEN = 35
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func ShuffleStr(letters string, times int) string {
 	return string(ShuffleRunes([]rune(letters), times))
@@ -110,7 +105,7 @@ func RandLowerAlphaNumeric16() string {
 func doRand16(set []rune) string {
 	b := rune16Pool.Get().(*[]rune)
 	for i := 0; i < 16; i++ {
-		(*b)[i] = set[rand.Intn(16)]
+		(*b)[i] = set[rand.IntN(16)]
 	}
 	s := string(*b)
 	rune16Pool.Put(b)
@@ -121,7 +116,7 @@ func doRand16(set []rune) string {
 func RandRune(n int, set []rune) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = set[rand.Intn(len(set))]
+		b[i] = set[rand.IntN(len(set))]
 	}
 	return string(b)
 }
@@ -132,12 +127,12 @@ func RandOp(ops ...func()) {
 	if n < 1 {
 		return
 	}
-	ops[rand.Intn(n)]()
+	ops[rand.IntN(n)]()
 }
 
 // pick random rune from the slice
 func Pick(set []rune) rune {
-	return set[rand.Intn(len(set))]
+	return set[rand.IntN(len(set))]
 }
 
 // generate a random sequence number with specified prefix
@@ -169,5 +164,30 @@ func ERand(len int) string {
 }
 
 func RandPick[T any](s []T) T {
-	return s[rand.Intn(len(s))]
+	return s[rand.IntN(len(s))]
+}
+
+func WeightedRandPick[T interface{ Weight() float64 }](s []T) T {
+	var totalWeight float64 = 0
+	for _, v := range s {
+		totalWeight += v.Weight()
+	}
+	i := 0
+	r := rand.Float64() * totalWeight
+	for ; i < len(s)-1; i++ {
+		r -= s[i].Weight()
+		if r <= 0.0 {
+			break
+		}
+	}
+	return s[i]
+}
+
+type WeightedItem[T any] struct {
+	Value T
+	n     float64
+}
+
+func (w WeightedItem[T]) Weight() float64 {
+	return w.n
 }
