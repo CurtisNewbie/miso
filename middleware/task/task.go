@@ -53,7 +53,7 @@ func IsTaskSchedulingDisabled() bool {
 	return !miso.GetPropBool(PropTaskSchedulingEnabled)
 }
 
-func registerTasks(rail miso.Rail, tasks []miso.Job) error {
+func registerTasks(tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
@@ -75,7 +75,7 @@ func prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) error {
 	}
 	nodeId = util.ERand(30)
 
-	if err := registerTasks(rail, tasks); err != nil {
+	if err := registerTasks(tasks); err != nil {
 		return err
 	}
 	rail.Infof("Scheduled %d distributed tasks, current node id: '%s', group: '%s'", len(tasks), nodeId, group)
