@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
 )
 
@@ -33,12 +34,7 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	globalApp *MisoApp = &MisoApp{
-		manualSigQuit: make(chan int, 1),
-		rail:          EmptyRail(),
-		configLoaded:  false,
-		shuttingDown:  false,
-	}
+	globalApp *MisoApp = newApp()
 )
 
 type MisoApp struct {
@@ -57,11 +53,37 @@ type MisoApp struct {
 	serverBootrapCallbacks      []ComponentBootstrap
 	preServerBootstrapListener  []func(r Rail) error
 	postServerBootstrapListener []func(r Rail) error
+
+	store *util.RWMap[string, any]
 }
 
 // Get global miso app.
 func App() *MisoApp {
 	return globalApp
+}
+
+func newApp() *MisoApp {
+	return &MisoApp{
+		manualSigQuit: make(chan int, 1),
+		rail:          EmptyRail(),
+		configLoaded:  false,
+		shuttingDown:  false,
+		store:         util.NewRWMap[string, any](),
+	}
+}
+
+func (a *MisoApp) Get(k string) any {
+	v, _ := a.store.Get(k)
+	return v
+}
+
+func (a *MisoApp) GetElse(k string, elseFunc func(k string) any) any {
+	v, _ := a.store.GetElse(k, elseFunc)
+	return v
+}
+
+func (a *MisoApp) Put(k string, v any) {
+	a.store.Put(k, v)
 }
 
 // Bootstrap miso app.
