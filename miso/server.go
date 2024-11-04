@@ -32,8 +32,6 @@ const (
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
 
-	defShutdownOrder = 5
-
 	TagQueryParam  = "form"
 	TagHeaderParam = "header"
 )
@@ -111,7 +109,6 @@ func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "0.0.0.0")
 	SetDefProp(PropServerPort, 8080)
-	SetDefProp(PropServerGracefulShutdownTimeSec, 5)
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
@@ -422,27 +419,22 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 	}
 }
 
-/*
-shutdown http server, including gracefull shutdown within certain duration of time
-
-This func looks for following prop:
-
-	"server.gracefulShutdownTimeSec"
-*/
 func shutdownHttpServer(server *http.Server) {
-	Info("Shutting down http server gracefully")
-
-	// set timeout for graceful shutdown
+	Info("Shutting down http server")
 	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
-	if timeout <= 0 {
-		timeout = 30
+	if timeout > 0 {
+		dur := (time.Duration(timeout) / 2)
+		if dur > 0 {
+			// http server also has a timeout to avoid blocking the graceful shutdown period the whole time.
+			c, cancel := context.WithTimeout(context.Background(), dur*time.Second)
+			defer cancel()
+			server.Shutdown(c)
+		} else {
+			server.Shutdown(context.Background())
+		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
-	defer cancel()
-
-	// shutdown web server with the timeout
-	server.Shutdown(ctx)
+	server.Shutdown(context.Background())
 	Infof("Http server exited")
 }
 

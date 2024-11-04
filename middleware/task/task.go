@@ -254,7 +254,7 @@ func tryTaskMaster(rail miso.Rail) bool {
 }
 
 func DistriTaskBootstrap(rail miso.Rail) error {
-	miso.AddShutdownHook(func() { StopTaskScheduler() })
+	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { StopTaskScheduler() })
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()
 	if err := prepareTaskScheduling(rail, dtasks); err != nil {

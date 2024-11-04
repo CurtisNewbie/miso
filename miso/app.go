@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/signal"
@@ -14,6 +15,9 @@ import (
 )
 
 const (
+	// Default shutdown hook execution order.
+	DefShutdownOrder = 5
+
 	// Components like database that are essential and must be ready before anything else.
 	BootstrapOrderL1 = -20
 
@@ -36,6 +40,10 @@ var (
 
 	globalApp *MisoApp = newApp()
 )
+
+func init() {
+	SetDefProp(PropServerGracefulShutdownTimeSec, 0)
+}
 
 type MisoApp struct {
 	rail         Rail
@@ -93,7 +101,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
 
-	a.addOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
+	a.AddOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
 	var rail Rail = a.rail
 
 	start := time.Now().UnixMilli()
@@ -178,16 +186,34 @@ func (a *MisoApp) LoadConfig(args []string) {
 
 // Trigger shutdown hook
 func (a *MisoApp) triggerShutdownHook() {
-	a.shmu.Lock()
-	defer a.shmu.Unlock()
+	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
 
-	sort.Slice(a.shutdownHook, func(i, j int) bool { return a.shutdownHook[i].Order < a.shutdownHook[j].Order })
-	for _, hook := range a.shutdownHook {
-		hook.Hook()
+	f := util.RunAsync(func() (any, error) {
+		a.shmu.Lock()
+		defer a.shmu.Unlock()
+
+		sort.Slice(a.shutdownHook, func(i, j int) bool { return a.shutdownHook[i].Order < a.shutdownHook[j].Order })
+		for _, hook := range a.shutdownHook {
+			hook.Hook()
+		}
+		return nil, nil
+	})
+	if timeout > 0 {
+		timeoutDur := time.Duration(timeout * int(time.Second))
+		_, err := f.TimedGet(int(timeoutDur / time.Millisecond))
+		if errors.Is(err, util.ErrGetTimeout) {
+			a.rail.Infof("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
+		}
+	} else {
+		_, err := f.Get()
+		if err != nil {
+			a.rail.Infof("Unexpected error occurred while executing shutdown hooks, %v", err)
+		}
 	}
+
 }
 
-func (a *MisoApp) addOrderedShutdownHook(order int, hook func()) {
+func (a *MisoApp) AddOrderedShutdownHook(order int, hook func()) {
 	a.shmu.Lock()
 	defer a.shmu.Unlock()
 	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
@@ -344,7 +370,11 @@ func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 
 // Register shutdown hook, hook should never panic
 func AddShutdownHook(hook func()) {
-	App().addOrderedShutdownHook(defShutdownOrder, hook)
+	App().AddOrderedShutdownHook(DefShutdownOrder, hook)
+}
+
+func AddOrderedShutdownHook(order int, hook func()) {
+	App().AddOrderedShutdownHook(order, hook)
 }
 
 type OrderedShutdownHook struct {
