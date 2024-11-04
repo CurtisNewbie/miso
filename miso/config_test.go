@@ -188,7 +188,7 @@ func BenchmarkGetProbool(b *testing.B) {
 	SetProp("correct_type", true)
 
 	slowGetPropBool := func(prop string) bool {
-		return returnWithReadLock(globalConfig, func() bool { return globalConfig.vp.GetBool(prop) })
+		return returnWithReadLock(globalConfig(), func() bool { return globalConfig().vp.GetBool(prop) })
 	}
 
 	b.Run("GetPropBool_correct_type", func(b *testing.B) {

@@ -62,7 +62,8 @@ type MisoApp struct {
 	preServerBootstrapListener  []func(r Rail) error
 	postServerBootstrapListener []func(r Rail) error
 
-	store *util.RWMap[string, any]
+	store  *appStore
+	config *appConfig
 }
 
 // Get global miso app.
@@ -76,22 +77,17 @@ func newApp() *MisoApp {
 		rail:          EmptyRail(),
 		configLoaded:  false,
 		shuttingDown:  false,
-		store:         util.NewRWMap[string, any](),
+		store:         &appStore{store: util.NewRWMap[string, any]()},
+		config:        newAppConfig(),
 	}
 }
 
-func (a *MisoApp) Get(k string) any {
-	v, _ := a.store.Get(k)
-	return v
+func (a *MisoApp) Config() *appConfig {
+	return a.config
 }
 
-func (a *MisoApp) GetElse(k string, elseFunc func(k string) any) any {
-	v, _ := a.store.GetElse(k, elseFunc)
-	return v
-}
-
-func (a *MisoApp) Put(k string, v any) {
-	a.store.Put(k, v)
+func (a *MisoApp) Store() *appStore {
+	return a.store
 }
 
 // Bootstrap miso app.
@@ -380,4 +376,20 @@ func AddOrderedShutdownHook(order int, hook func()) {
 type OrderedShutdownHook struct {
 	Hook  func()
 	Order int
+}
+
+type appStore struct {
+	store *util.RWMap[string, any]
+}
+
+func (a *appStore) Get(k string) (any, bool) {
+	return a.store.Get(k)
+}
+
+func (a *appStore) GetElse(k string, elseFunc func(k string) any) (any, bool) {
+	return a.store.GetElse(k, elseFunc)
+}
+
+func (a *appStore) Put(k string, v any) {
+	a.store.Put(k, v)
 }

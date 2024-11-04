@@ -17,8 +17,6 @@ import (
 var (
 	// regex for arg expansion
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
-
-	globalConfig *appConfig = newAppConfig()
 )
 
 func init() {
@@ -33,13 +31,13 @@ type appConfig struct {
 	fastBoolCache *util.RWMap[string, bool]
 }
 
-func (a *appConfig) doWithWriteLock(f func()) {
+func (a *appConfig) _appConfigDoWithWLock(f func()) {
 	a.rwmu.Lock()
 	defer a.rwmu.Unlock()
 	f()
 }
 
-func (a *appConfig) doWithReadLock(f func() any) any {
+func (a *appConfig) _appConfigDoWithRLock(f func() any) any {
 	a.rwmu.RLock()
 	defer a.rwmu.RUnlock()
 	return f()
@@ -111,12 +109,7 @@ e.g, for "name" : "${secretName}".
 This func will attempt to resolve the actual value for '${secretName}'.
 */
 func (a *appConfig) GetPropStr(prop string) string {
-	return a.ResolveArg(a._getPropString(prop))
-}
-
-// Get prop as string (with lock)
-func (a *appConfig) _getPropString(prop string) string {
-	return returnWithReadLock(a, func() string { return a.vp.GetString(prop) })
+	return a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) }))
 }
 
 // Unmarshal configuration.
@@ -309,61 +302,61 @@ func newAppConfig() *appConfig {
 
 // Set value for the prop
 func SetProp(prop string, val any) {
-	globalConfig.SetProp(prop, val)
+	globalConfig().SetProp(prop, val)
 }
 
 // Set default value for the prop
 func SetDefProp(prop string, defVal any) {
-	globalConfig.SetDefProp(prop, defVal)
+	globalConfig().SetDefProp(prop, defVal)
 }
 
 // Check whether the prop exists
 //
 // deprecated: use HasProp(..) instead.
 func ContainsProp(prop string) bool {
-	return globalConfig.HasProp(prop)
+	return globalConfig().HasProp(prop)
 }
 
 // Check whether the prop exists
 func HasProp(prop string) bool {
-	return globalConfig.HasProp(prop)
+	return globalConfig().HasProp(prop)
 }
 
 // Get prop as int slice
 //
 // deprecated: use GetPropIntSlice(..) instead.
 func GetConfIntSlice(prop string) []int {
-	return globalConfig.GetPropIntSlice(prop)
+	return globalConfig().GetPropIntSlice(prop)
 }
 
 // Get prop as int slice
 func GetPropIntSlice(prop string) []int {
-	return globalConfig.GetPropIntSlice(prop)
+	return globalConfig().GetPropIntSlice(prop)
 }
 
 // Get prop as string slice
 func GetPropStrSlice(prop string) []string {
-	return globalConfig.GetPropStrSlice(prop)
+	return globalConfig().GetPropStrSlice(prop)
 }
 
 // Get prop as int
 func GetPropInt(prop string) int {
-	return globalConfig.GetPropInt(prop)
+	return globalConfig().GetPropInt(prop)
 }
 
 // Get prop as string based map.
 func GetPropStrMap(prop string) map[string]string {
-	return globalConfig.GetPropStrMap(prop)
+	return globalConfig().GetPropStrMap(prop)
 }
 
 // Get prop as time.Duration
 func GetPropDur(prop string, unit time.Duration) time.Duration {
-	return globalConfig.GetPropDur(prop, unit)
+	return globalConfig().GetPropDur(prop, unit)
 }
 
 // Get prop as bool
 func GetPropBool(prop string) bool {
-	return globalConfig.GetPropBool(prop)
+	return globalConfig().GetPropBool(prop)
 }
 
 /*
@@ -376,22 +369,22 @@ e.g, for "name" : "${secretName}".
 This func will attempt to resolve the actual value for '${secretName}'.
 */
 func GetPropStr(prop string) string {
-	return globalConfig.GetPropStr(prop)
+	return globalConfig().GetPropStr(prop)
 }
 
 // Unmarshal configuration.
 func UnmarshalFromProp(ptr any) {
-	globalConfig.UnmarshalFromProp(ptr)
+	globalConfig().UnmarshalFromProp(ptr)
 }
 
 // Unmarshal configuration from a speicific key.
 func UnmarshalFromPropKey(key string, ptr any) {
-	globalConfig.UnmarshalFromPropKey(key, ptr)
+	globalConfig().UnmarshalFromPropKey(key, ptr)
 }
 
 // Overwrite existing conf using environment and cli args.
 func OverwriteConf(args []string) {
-	globalConfig.OverwriteConf(args)
+	globalConfig().OverwriteConf(args)
 }
 
 /*
@@ -406,7 +399,7 @@ You can also use ReadConfig to load your custom configFile. This func is essenti
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
 func DefaultReadConfig(args []string, rail Rail) {
-	globalConfig.DefaultReadConfig(args, rail)
+	globalConfig().DefaultReadConfig(args, rail)
 }
 
 // Load config from io Reader.
@@ -415,42 +408,42 @@ func DefaultReadConfig(args []string, rail Rail) {
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromReader(reader io.Reader, r Rail) error {
-	return globalConfig.LoadConfigFromReader(reader, r)
+	return globalConfig().LoadConfigFromReader(reader, r)
 }
 
 // Load config from string.
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromStr(s string, r Rail) error {
-	return globalConfig.LoadConfigFromStr(s, r)
+	return globalConfig().LoadConfigFromStr(s, r)
 }
 
 // Load config from file.
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromFile(configFile string, r Rail) error {
-	return globalConfig.LoadConfigFromFile(configFile, r)
+	return globalConfig().LoadConfigFromFile(configFile, r)
 }
 
 // Check whether we are running in production mode
 func IsProdMode() bool {
-	return globalConfig.IsProdMode()
+	return globalConfig().IsProdMode()
 }
 
 // Resolve '${someArg}' style variables.
 func ResolveArg(arg string) string {
-	return globalConfig.ResolveArg(arg)
+	return globalConfig().ResolveArg(arg)
 }
 
 // call with viper lock
 func doWithWriteLock(a *appConfig, f func()) {
-	a.doWithWriteLock(func() {
+	a._appConfigDoWithWLock(func() {
 		f()
 	})
 }
 
 func returnWithReadLock[T any](a *appConfig, f func() T) T {
-	v := a.doWithReadLock(func() any {
+	v := a._appConfigDoWithRLock(func() any {
 		return f()
 	})
 	if v == nil {
@@ -461,7 +454,7 @@ func returnWithReadLock[T any](a *appConfig, f func() T) T {
 }
 
 func doWithReadLock(a *appConfig, f func()) {
-	a.doWithReadLock(func() any {
+	a._appConfigDoWithRLock(func() any {
 		f()
 		return nil
 	})
@@ -547,4 +540,8 @@ func ExtractArgValue(args []string, predicate util.Predicate[string]) string {
 		}
 	}
 	return ""
+}
+
+func globalConfig() *appConfig {
+	return App().config
 }
