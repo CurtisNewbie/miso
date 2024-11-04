@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 func TestParseArg(t *testing.T) {
@@ -189,7 +188,7 @@ func BenchmarkGetProbool(b *testing.B) {
 	SetProp("correct_type", true)
 
 	slowGetPropBool := func(prop string) bool {
-		return doWithViperReadLock(func() bool { return viper.GetBool(prop) })
+		return returnWithReadLock(globalConfig, func() bool { return globalConfig.vp.GetBool(prop) })
 	}
 
 	b.Run("GetPropBool_correct_type", func(b *testing.B) {

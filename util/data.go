@@ -258,6 +258,12 @@ func (r *RWMap[K, V]) Del(k K) {
 	delete(r.storage, k)
 }
 
+func (r *RWMap[K, V]) Clear() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	clear(r.storage)
+}
+
 func (r *RWMap[K, V]) GetElse(k K, elseFunc func(k K) V) (V, bool) {
 	r.mu.RLock()
 	if v, ok := r.storage[k]; ok {

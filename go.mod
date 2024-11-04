@@ -1,6 +1,6 @@
 module github.com/curtisnewbie/miso
 
-go 1.20
+go 1.21
 
 require (
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e

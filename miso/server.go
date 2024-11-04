@@ -360,7 +360,7 @@ func createHttpServer(router http.Handler) *http.Server {
 func ConfigureLogging(rail Rail) error {
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if ContainsProp(PropLoggingRollingFile) {
+	if HasProp(PropLoggingRollingFile) {
 		logFile := GetPropStr(PropLoggingRollingFile)
 		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
 			Filename:   logFile,
