@@ -12,7 +12,7 @@ func init() {
 
 func main() {
 
-	_ = miso.NewHttpProxy("/proxy", func(relPath string) (string, error) {
+	_ = miso.NewHttpProxy("/proxy", func(rail miso.Rail, relPath string) (string, error) {
 		return "http://localhost:8081" + relPath, nil
 	})
 

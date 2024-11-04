@@ -3,23 +3,16 @@ package miso
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"net/url"
-	"os"
-	"os/signal"
 	"reflect"
 	"regexp"
-	"sort"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
-	"github.com/curtisnewbie/miso/version"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
@@ -27,21 +20,6 @@ import (
 )
 
 const (
-	// Components like database that are essential and must be ready before anything else.
-	BootstrapOrderL1 = -20
-
-	// Components that are bootstraped before the web server, such as metrics stuff.
-	BootstrapOrderL2 = -15
-
-	// The web server or anything similar, bootstraping web server doesn't really mean that we will receive inbound requests.
-	BootstrapOrderL3 = -10
-
-	// Components that introduce inbound requests or job scheduling.
-	//
-	// When these components bootstrap, the server is considered truly running.
-	// For example, service registration (for service discovery), MQ broker connection and so on.
-	BootstrapOrderL4 = -5
-
 	ExtraDesc         = "miso-Desc"
 	ExtraScope        = "miso-Scope"
 	ExtraResource     = "miso-Resource"
@@ -61,24 +39,11 @@ const (
 )
 
 var (
-	loggerOut    io.Writer = os.Stdout
-	loggerErrOut io.Writer = os.Stderr
-
 	lazyRouteRegistars []*LazyRouteDecl
 	routeRegistars     []routesRegistar
 
 	serverHttpRoutes []HttpRoute
 	ginPreProcessors []GinPreProcessor
-
-	shuttingDown   bool         = false
-	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
-
-	shutdownHook []OrderedShutdownHook
-	shmu         sync.Mutex // mutex for shutdownHook
-
-	serverBootrapCallbacks      []ComponentBootstrap
-	preServerBootstrapListener  []func(r Rail) error
-	postServerBootstrapListener []func(r Rail) error
 
 	// all http methods
 	anyHttpMethods = []string{
@@ -86,9 +51,6 @@ var (
 		http.MethodHead, http.MethodOptions, http.MethodDelete, http.MethodConnect,
 		http.MethodTrace,
 	}
-
-	// channel for signaling server shutdown
-	manualSigQuit = make(chan int, 1)
 
 	resultBodyBuilder = ResultBodyBuilder{
 		ErrJsonBuilder:     func(rail Rail, url string, err error) any { return WrapResp(rail, nil, err, url) },
@@ -185,36 +147,6 @@ type ResultBodyBuilder struct {
 func SetResultBodyBuilder(rbb ResultBodyBuilder) error {
 	resultBodyBuilder = rbb
 	return nil
-}
-
-// Register shutdown hook, hook should never panic
-func AddShutdownHook(hook func()) {
-	addOrderedShutdownHook(defShutdownOrder, hook)
-}
-
-type OrderedShutdownHook struct {
-	Hook  func()
-	Order int
-}
-
-func addOrderedShutdownHook(order int, hook func()) {
-	shmu.Lock()
-	defer shmu.Unlock()
-	shutdownHook = append(shutdownHook, OrderedShutdownHook{
-		Order: order,
-		Hook:  hook,
-	})
-}
-
-// Trigger shutdown hook
-func triggerShutdownHook() {
-	shmu.Lock()
-	defer shmu.Unlock()
-
-	sort.Slice(shutdownHook, func(i, j int) bool { return shutdownHook[i].Order < shutdownHook[j].Order })
-	for _, hook := range shutdownHook {
-		hook.Hook()
-	}
 }
 
 // Record server route
@@ -465,172 +397,6 @@ func ConfigureLogging(rail Rail) error {
 	return nil
 }
 
-func callPostServerBootstrapListeners(rail Rail) error {
-	i := 0
-	for i < len(postServerBootstrapListener) {
-		if e := postServerBootstrapListener[i](rail); e != nil {
-			return e
-		}
-		i++
-	}
-	postServerBootstrapListener = nil
-	return nil
-}
-
-// Add listener that is invoked when server is finally bootstrapped
-//
-// This usually means all server components are started, such as MySQL connection, Redis Connection and so on.
-//
-// Caller is free to call PostServerBootstrapped inside another PostServerBootstrapped callback.
-func PostServerBootstrapped(callback func(rail Rail) error) {
-	if callback == nil {
-		return
-	}
-	postServerBootstrapListener = append(postServerBootstrapListener, callback)
-}
-
-// Add listener that is invoked before the server is fully bootstrapped
-//
-// This usually means that the configuration is loaded, and the logging is configured, but the server components are not yet initialized.
-//
-// Caller is free to call PostServerBootstrapped or PreServerBootstrap inside another PreServerBootstrap callback.
-func PreServerBootstrap(callback func(rail Rail) error) {
-	if callback == nil {
-		return
-	}
-	preServerBootstrapListener = append(preServerBootstrapListener, callback)
-}
-
-func callPreServerBootstrapListeners(rail Rail) error {
-	i := 0
-	for i < len(preServerBootstrapListener) {
-		if e := preServerBootstrapListener[i](rail); e != nil {
-			return e
-		}
-		i++
-	}
-	preServerBootstrapListener = nil
-	return nil
-}
-
-// Register server component bootstrap callback
-//
-// When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
-// and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
-func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
-	serverBootrapCallbacks = append(serverBootrapCallbacks, bootstrapComponent)
-}
-
-/*
-Bootstrap server
-
-This func will attempt to create http server, connect to MySQL, Redis or Consul based on the configuration loaded.
-
-It also handles service registration/de-registration on Consul before Gin bootstraped and after
-SIGTERM/INTERRUPT signals are received.
-
-Graceful shutdown for the http server is also enabled and can be configured through props.
-
-To configure server, MySQL, Redis, Consul and so on, see PROPS_* in prop.go.
-
-It's also possible to register callbacks that are triggered before/after server bootstrap
-
-	miso.PreServerBootstrap(func(c Rail) error {
-		// do something right after configuration being loaded, but server hasn't been bootstraped yet
-	});
-
-	miso.PostServerBootstrapped(func(c Rail) error {
-		// do something after the server bootstrap
-	});
-
-	// start the server
-	miso.BootstrapServer(os.Args)
-*/
-func BootstrapServer(args []string) {
-	osSigQuit := make(chan os.Signal, 2)
-	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
-
-	addOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
-	var rail Rail = EmptyRail()
-
-	start := time.Now().UnixMilli()
-	defer triggerShutdownHook()
-
-	// default way to load configuration
-	DefaultReadConfig(args, rail)
-
-	// configure logging
-	if err := ConfigureLogging(rail); err != nil {
-		rail.Errorf("Configure logging failed, %v", err)
-		return
-	}
-
-	appName := GetPropStr(PropAppName)
-	if appName == "" {
-		rail.Fatalf("Property '%s' is required", PropAppName)
-	}
-
-	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
-	rail.Infof("Miso Version: %s", version.Version)
-	rail.Infof("Production Mode: %v", GetPropBool(PropProdMode))
-
-	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	if e := callPreServerBootstrapListeners(rail); e != nil {
-		rail.Errorf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
-		return
-	}
-
-	// bootstrap components, these are sorted by their orders
-	sort.Slice(serverBootrapCallbacks, func(i, j int) bool { return serverBootrapCallbacks[i].Order < serverBootrapCallbacks[j].Order })
-	Debugf("serverBootrapCallbacks: %+v", serverBootrapCallbacks)
-	for _, sbc := range serverBootrapCallbacks {
-		if sbc.Condition != nil {
-			ok, ce := sbc.Condition(rail)
-			if ce != nil {
-				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
-				return
-			}
-			if !ok {
-				continue
-			}
-		}
-
-		start := time.Now()
-		if e := sbc.Bootstrap(rail); e != nil {
-			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
-			return
-		}
-		took := time.Since(start)
-		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)
-		if took >= 5*time.Second {
-			rail.Warnf("Component '%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
-		}
-	}
-	serverBootrapCallbacks = nil
-
-	end := time.Now().UnixMilli()
-	rail.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
-
-	// invoke listener for serverBootstraped event
-	if e := callPostServerBootstrapListeners(rail); e != nil {
-		rail.Errorf("Error occurred while invoking post server bootstrap callbacks, %v", e)
-		return
-	}
-
-	// wait for Interrupt or SIGTERM, and shutdown gracefully
-	select {
-	case sig := <-osSigQuit:
-		rail.Infof("Received OS signal: %v, exiting", sig)
-	case <-manualSigQuit: // or wait for maunal shutdown signal
-		rail.Infof("Received manual shutdown signal, exiting")
-	}
-}
-
-// Shutdown server
-func Shutdown() {
-	manualSigQuit <- 1
-}
-
 // Register http routes on gin.Engine
 func registerServerRoutes(c Rail, engine *gin.Engine) {
 	// no route
@@ -701,20 +467,6 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 	}
 
 	endpointResultHandler(c, rail, nil, NewErrf("Unknown error, please try again later"))
-}
-
-// check if the server is shutting down
-func IsShuttingDown() bool {
-	shutingDownRwm.RLock()
-	defer shutingDownRwm.RUnlock()
-	return shuttingDown
-}
-
-// mark that the server is shutting down
-func MarkServerShuttingDown() {
-	shutingDownRwm.Lock()
-	defer shutingDownRwm.Unlock()
-	shuttingDown = true
 }
 
 // Tracing Middleware

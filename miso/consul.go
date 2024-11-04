@@ -457,7 +457,7 @@ func ConsulBootstrap(rail Rail) error {
 
 	// deregister on shutdown, we specify the order explicitly to make sure the service
 	// is deregistered before shutting down the web server
-	addOrderedShutdownHook(defShutdownOrder-1, func() {
+	App().addOrderedShutdownHook(defShutdownOrder-1, func() {
 		rail := EmptyRail()
 
 		if IsConsulServiceRegistered() {

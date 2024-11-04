@@ -56,7 +56,7 @@ func PrepareServer(rail miso.Rail) error {
 		Name:                   "MyDistributedTask",
 		LogJobExec:             true,
 		TriggeredOnBoostrapped: false,
-		Run: func(miso miso.Rail) error {
+		Run: func(rail miso.Rail) error {
 			rail.Infof("MyDistributedTask running, now: %v", time.Now())
 			return nil
 		},
