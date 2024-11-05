@@ -45,7 +45,8 @@ func TestInitClient(t *testing.T) {
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-first-queue", RoutingKey: "myKey1", Exchange: "my-exchange-one"})
 	RegisterRabbitBinding(BindingRegistration{Queue: "my-second-queue", RoutingKey: "myKey2", Exchange: "my-exchange-two"})
 
-	_, e := initRabbitClient(rail)
+	m := rabbitModule()
+	_, e := m.initRabbitClient(rail)
 	if e != nil {
 		t.Fatal(e)
 	}

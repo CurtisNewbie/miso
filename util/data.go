@@ -252,6 +252,17 @@ func (r *RWMap[K, V]) Put(k K, v V) {
 	r.storage[k] = v
 }
 
+func (r *RWMap[K, V]) PutIfAbsent(k K, f func() V) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, ok := r.storage[k]
+	if ok {
+		return
+	}
+	r.storage[k] = f()
+}
+
 func (r *RWMap[K, V]) Del(k K) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
