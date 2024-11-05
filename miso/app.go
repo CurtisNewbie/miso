@@ -38,7 +38,10 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	globalApp *MisoApp = newApp()
+	globalApp                         *MisoApp = newApp()
+	globalBootstrapComponents         []ComponentBootstrap
+	globalPreServerBootstrapListener  []func(r Rail) error
+	globalPostServerBootstrapListener []func(r Rail) error
 )
 
 func init() {
@@ -90,9 +93,22 @@ func (a *MisoApp) Store() *appStore {
 	return a.store
 }
 
+func (a *MisoApp) prepareBootstrapComponents() {
+	for _, c := range globalBootstrapComponents {
+		a.RegisterBootstrapCallback(c)
+	}
+	for _, c := range globalPreServerBootstrapListener {
+		a.PreServerBootstrap(c)
+	}
+	for _, c := range globalPostServerBootstrapListener {
+		a.PostServerBootstrapped(c)
+	}
+}
+
 // Bootstrap miso app.
 func (a *MisoApp) Bootstrap(args []string) {
 	a.LoadConfig(args)
+	a.prepareBootstrapComponents()
 
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
@@ -343,7 +359,7 @@ func Shutdown() {
 //
 // Caller is free to call PostServerBootstrapped inside another PostServerBootstrapped callback.
 func PostServerBootstrapped(callback func(rail Rail) error) {
-	App().PostServerBootstrapped(callback)
+	globalPostServerBootstrapListener = append(globalPostServerBootstrapListener, callback)
 }
 
 // Add listener that is invoked before the server is fully bootstrapped
@@ -352,8 +368,7 @@ func PostServerBootstrapped(callback func(rail Rail) error) {
 //
 // Caller is free to call PostServerBootstrapped or PreServerBootstrap inside another PreServerBootstrap callback.
 func PreServerBootstrap(callback func(rail Rail) error) {
-	App().PreServerBootstrap(callback)
-
+	globalPreServerBootstrapListener = append(globalPreServerBootstrapListener, callback)
 }
 
 // Register server component bootstrap callback
@@ -361,7 +376,7 @@ func PreServerBootstrap(callback func(rail Rail) error) {
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
-	App().RegisterBootstrapCallback(bootstrapComponent)
+	globalBootstrapComponents = append(globalBootstrapComponents, bootstrapComponent)
 }
 
 // Register shutdown hook, hook should never panic
