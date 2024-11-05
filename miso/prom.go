@@ -87,11 +87,11 @@ func NewPromCounter(name string) prometheus.Counter {
 	return counter
 }
 
-func PrometheusBootstrapCondition(rail Rail) (bool, error) {
+func PrometheusBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
 	return GetPropBool(PropMetricsEnabled) && GetPropBool(PropServerEnabled), nil
 }
 
-func PrometheusBootstrap(rail Rail) error {
+func PrometheusBootstrap(app *MisoApp, rail Rail) error {
 
 	if GetPropBool(PropMetricsAuthEnabled) {
 		if util.IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {

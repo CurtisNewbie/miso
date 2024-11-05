@@ -423,7 +423,7 @@ func IsConsulClientInitialized() bool {
 	return consulp.consul != nil
 }
 
-func ConsulBootstrap(rail Rail) error {
+func ConsulBootstrap(app *MisoApp, rail Rail) error {
 
 	if GetPropBool(PropConsulEnableDeregisterUrl) {
 		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
@@ -487,6 +487,6 @@ func ConsulBootstrap(rail Rail) error {
 	return nil
 }
 
-func ConsulBootstrapCondition(rail Rail) (bool, error) {
+func ConsulBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
 	return GetPropBool(PropConsulEnabled), nil
 }

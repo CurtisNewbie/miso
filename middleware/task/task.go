@@ -40,7 +40,7 @@ func init() {
 	// run before SchedulerBootstrap
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name: "Bootstrap Distributed Task Scheduler",
-		Condition: func(rail miso.Rail) (bool, error) {
+		Condition: func(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 			return !IsTaskSchedulingDisabled() && len(dtasks) > 0, nil
 		},
 		Bootstrap: DistriTaskBootstrap,
@@ -253,7 +253,7 @@ func tryTaskMaster(rail miso.Rail) bool {
 	return isMaster
 }
 
-func DistriTaskBootstrap(rail miso.Rail) error {
+func DistriTaskBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { StopTaskScheduler() })
 	dtaskMut.Lock()
 	defer dtaskMut.Unlock()

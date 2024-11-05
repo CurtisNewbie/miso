@@ -45,7 +45,7 @@ var (
 func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Cron Scheduler",
-		Condition: func(rail Rail) (bool, error) { return HasScheduledJobs(), nil },
+		Condition: func(app *MisoApp, rail Rail) (bool, error) { return HasScheduledJobs(), nil },
 		Bootstrap: SchedulerBootstrap,
 	})
 }
@@ -196,7 +196,7 @@ func PostJobExec(hook PostJobHook) {
 	postJobHooks = append(postJobHooks, hook)
 }
 
-func SchedulerBootstrap(rail Rail) error {
+func SchedulerBootstrap(app *MisoApp, rail Rail) error {
 	StartSchedulerAsync()
 	rail.Info("Cron Scheduler started")
 	AddShutdownHook(func() { StopScheduler() })

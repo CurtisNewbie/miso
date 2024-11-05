@@ -98,9 +98,9 @@ type ComponentBootstrap struct {
 	// name of the component.
 	Name string
 	// the actual bootstrap function.
-	Bootstrap func(rail Rail) error
+	Bootstrap func(app *MisoApp, rail Rail) error
 	// check whether component should be bootstraped
-	Condition func(rail Rail) (bool, error)
+	Condition func(app *MisoApp, rail Rail) (bool, error)
 	// order of which the components are bootstraped, natural order, it's by default 15.
 	Order int
 }
@@ -671,11 +671,11 @@ func DispatchJson(c *gin.Context, body interface{}) {
 	DispatchJsonCode(c, http.StatusOK, body)
 }
 
-func WebServerBootstrapCondition(rail Rail) (bool, error) {
+func WebServerBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
 	return GetPropBool(PropServerEnabled), nil
 }
 
-func WebServerBootstrap(rail Rail) error {
+func WebServerBootstrap(app *MisoApp, rail Rail) error {
 	rail.Info("Starting HTTP server")
 
 	// Load propagation keys for tracing

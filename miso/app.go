@@ -140,7 +140,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
 	for _, sbc := range a.serverBootrapCallbacks {
 		if sbc.Condition != nil {
-			ok, ce := sbc.Condition(rail)
+			ok, ce := sbc.Condition(a, rail)
 			if ce != nil {
 				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
 				return
@@ -151,7 +151,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 		}
 
 		start := time.Now()
-		if e := sbc.Bootstrap(rail); e != nil {
+		if e := sbc.Bootstrap(a, rail); e != nil {
 			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
 			return
 		}

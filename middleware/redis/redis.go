@@ -149,7 +149,7 @@ func IsRedisClientInitialized() bool {
 	return redisp.client != nil
 }
 
-func RedisBootstrap(rail miso.Rail) error {
+func RedisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	if _, e := InitRedisFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to Redis, %w", e)
 	}
@@ -167,7 +167,7 @@ func RedisBootstrap(rail miso.Rail) error {
 	return nil
 }
 
-func RedisBootstrapCondition(rail miso.Rail) (bool, error) {
+func RedisBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return IsRedisEnabled(), nil
 }
 

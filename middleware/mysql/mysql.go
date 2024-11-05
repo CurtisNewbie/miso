@@ -201,7 +201,7 @@ func IsMySQLInitialized() bool {
 	return mysqlp.conn != nil
 }
 
-func MySQLBootstrap(rail miso.Rail) error {
+func MySQLBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	if e := InitMySQLFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
 	}
@@ -235,7 +235,7 @@ func MySQLBootstrap(rail miso.Rail) error {
 	return nil
 }
 
-func MySQLBootstrapCondition(rail miso.Rail) (bool, error) {
+func MySQLBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return IsMySqlEnabled(), nil
 }
 

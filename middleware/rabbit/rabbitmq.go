@@ -674,13 +674,13 @@ func newChan() (*amqp.Channel, error) {
 	return _conn.Channel()
 }
 
-func RabbitBootstrap(rail miso.Rail) error {
+func RabbitBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	if e := StartRabbitMqClient(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
 	return nil
 }
 
-func RabbitBootstrapCondition(rail miso.Rail) (bool, error) {
+func RabbitBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return RabbitMQEnabled(), nil
 }

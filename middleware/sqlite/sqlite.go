@@ -80,11 +80,11 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 	return db, nil
 }
 
-func sqliteBootstrap(rail miso.Rail) error {
+func sqliteBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	initOnce()
 	return nil
 }
 
-func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
+func sqliteBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
 }
