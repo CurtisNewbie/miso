@@ -275,7 +275,7 @@ func (m *rabbitMqModule) registerRabbitExchange(e ExchangeRegistration) {
 }
 
 // Declare queue using the provided channel immediately
-func DeclareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
+func (m *rabbitMqModule) declareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 	if e != nil {
 		return fmt.Errorf("failed to declare queue, %v, %w", queue.Name, e)
@@ -289,7 +289,7 @@ func redeliverQueue(exchange string, routingKey string) string {
 }
 
 // Declare binding using the provided channel immediately
-func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
+func (m *rabbitMqModule) declareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	if bind.RoutingKey == "" {
 		bind.RoutingKey = "#"
 	}
@@ -314,13 +314,13 @@ func DeclareRabbitBinding(ch *amqp.Channel, bind BindingRegistration) error {
 	if e != nil {
 		return fmt.Errorf("failed to declare redeliver queue '%v' for '%v', %w", rq, bind.Queue, e)
 	}
-	rabbitModule().redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
+	m.redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
 	miso.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
 	return nil
 }
 
 // Declare exchange using the provided channel immediately
-func DeclareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
+func (m *rabbitMqModule) declareRabbitExchange(ch *amqp.Channel, exchange ExchangeRegistration) error {
 	if exchange.Kind == "" {
 		exchange.Kind = "direct"
 	}
@@ -430,19 +430,19 @@ func (m *rabbitMqModule) decRabbitComp(ch *amqp.Channel) error {
 	}
 
 	for _, queue := range m.queueRegistration {
-		if err := DeclareRabbitQueue(ch, queue); err != nil {
+		if err := m.declareRabbitQueue(ch, queue); err != nil {
 			return err
 		}
 	}
 
 	for _, exchange := range m.exchangeRegistration {
-		if err := DeclareRabbitExchange(ch, exchange); err != nil {
+		if err := m.declareRabbitExchange(ch, exchange); err != nil {
 			return err
 		}
 	}
 
 	for _, bind := range m.bindingRegistration {
-		if err := DeclareRabbitBinding(ch, bind); err != nil {
+		if err := m.declareRabbitBinding(ch, bind); err != nil {
 			return err
 		}
 	}
