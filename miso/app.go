@@ -70,11 +70,13 @@ type MisoApp struct {
 }
 
 // Get global miso app.
+//
+// Only one MisoApp is supported, this func always returns the same app.
 func App() *MisoApp {
 	return globalApp
 }
 
-// TODO: only one MisoApp is supported for now.
+// only one MisoApp is supported for now.
 func newApp() *MisoApp {
 	return &MisoApp{
 		manualSigQuit: make(chan int, 1),
@@ -392,4 +394,20 @@ func (a *appStore) GetElse(k string, elseFunc func(k string) any) (any, bool) {
 
 func (a *appStore) Put(k string, v any) {
 	a.store.Put(k, v)
+}
+
+func (a *appStore) Del(k string) {
+	a.store.Del(k)
+}
+
+func AppStoreGet[V any](app *MisoApp, k string) V {
+	var vt V
+	v, ok := app.Store().Get(k)
+	if !ok {
+		return vt
+	}
+	if v != nil {
+		return v.(V)
+	}
+	return vt
 }
