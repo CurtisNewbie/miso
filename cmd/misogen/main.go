@@ -444,7 +444,7 @@ func main() {
 			writef(1, "")
 		}
 		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
-		writef(1, "miso.PostServerBootstrapped(PostServerBootstrap)")
+		writef(1, "miso.PostServerBootstrap(PostServerBootstrap)")
 		writef(1, "miso.BootstrapServer(os.Args)")
 		writef(0, "}")
 		writef(0, "")

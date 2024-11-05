@@ -123,7 +123,7 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 
-	PostServerBootstrapped(func(rail Rail) error {
+	PostServerBootstrap(func(rail Rail) error {
 		taggedJobs, err := getScheduler().FindJobsByTag(job.Name)
 		if err != nil {
 			rail.Warnf("Failed to FindJobsByTag, jobName: %v, %v", job.Name, err)

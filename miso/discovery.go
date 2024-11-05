@@ -42,7 +42,7 @@ var (
 )
 
 func init() {
-	PostServerBootstrapped(func(rail Rail) error {
+	PostServerBootstrap(func(rail Rail) error {
 		sl := GetServerList()
 		if sl == nil {
 			return nil

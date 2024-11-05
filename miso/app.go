@@ -74,6 +74,7 @@ func App() *MisoApp {
 	return globalApp
 }
 
+// TODO: only one MisoApp is supported for now.
 func newApp() *MisoApp {
 	return &MisoApp{
 		manualSigQuit: make(chan int, 1),
@@ -95,13 +96,13 @@ func (a *MisoApp) Store() *appStore {
 
 func (a *MisoApp) prepareBootstrapComponents() {
 	for _, c := range globalBootstrapComponents {
-		a.RegisterBootstrapCallback(c)
+		a.registerBootstrapCallback(c)
 	}
 	for _, c := range globalPreServerBootstrapListener {
-		a.PreServerBootstrap(c)
+		a.preServerBootstrap(c)
 	}
 	for _, c := range globalPostServerBootstrapListener {
-		a.PostServerBootstrapped(c)
+		a.postServerBootstrap(c)
 	}
 }
 
@@ -113,7 +114,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
 
-	a.AddOrderedShutdownHook(0, MarkServerShuttingDown) // the first hook to be called
+	a.AddOrderedShutdownHook(0, a.markServerShuttingDown) // the first hook to be called
 	var rail Rail = a.rail
 
 	start := time.Now().UnixMilli()
@@ -242,7 +243,7 @@ func (a *MisoApp) IsShuttingDown() bool {
 }
 
 // mark that the server is shutting down
-func (a *MisoApp) MarkServerShuttingDown() {
+func (a *MisoApp) markServerShuttingDown() {
 	a.shutingDownRwm.Lock()
 	defer a.shutingDownRwm.Unlock()
 	a.shuttingDown = true
@@ -277,32 +278,18 @@ func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
 	return nil
 }
 
-// Register server component bootstrap callback
-//
-// When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
-// and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
-func (a *MisoApp) RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
+func (a *MisoApp) registerBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	a.serverBootrapCallbacks = append(a.serverBootrapCallbacks, bootstrapComponent)
 }
 
-// Add listener that is invoked when server is finally bootstrapped
-//
-// This usually means all server components are started, such as MySQL connection, Redis Connection and so on.
-//
-// Caller is free to call PostServerBootstrapped inside another PostServerBootstrapped callback.
-func (a *MisoApp) PostServerBootstrapped(callback func(rail Rail) error) {
+func (a *MisoApp) postServerBootstrap(callback func(rail Rail) error) {
 	if callback == nil {
 		return
 	}
 	a.postServerBootstrapListener = append(a.postServerBootstrapListener, callback)
 }
 
-// Add listener that is invoked before the server is fully bootstrapped
-//
-// This usually means that the configuration is loaded, and the logging is configured, but the server components are not yet initialized.
-//
-// Caller is free to call PostServerBootstrapped or PreServerBootstrap inside another PreServerBootstrap callback.
-func (a *MisoApp) PreServerBootstrap(callback func(rail Rail) error) {
+func (a *MisoApp) preServerBootstrap(callback func(rail Rail) error) {
 	if callback == nil {
 		return
 	}
@@ -327,7 +314,7 @@ It's also possible to register callbacks that are triggered before/after server 
 		// do something right after configuration being loaded, but server hasn't been bootstraped yet
 	});
 
-	miso.PostServerBootstrapped(func(c Rail) error {
+	miso.PostServerBootstrap(func(c Rail) error {
 		// do something after the server bootstrap
 	});
 
@@ -343,22 +330,20 @@ func IsShuttingDown() bool {
 	return App().IsShuttingDown()
 }
 
-// mark that the server is shutting down
-func MarkServerShuttingDown() {
-	App().MarkServerShuttingDown()
-}
-
 // Shutdown server
 func Shutdown() {
 	App().Shutdown()
 }
 
+// deprecated: use PostServerBootstrap(...) instead.
+var PostServerBootstrapped = PostServerBootstrap
+
 // Add listener that is invoked when server is finally bootstrapped
 //
 // This usually means all server components are started, such as MySQL connection, Redis Connection and so on.
 //
-// Caller is free to call PostServerBootstrapped inside another PostServerBootstrapped callback.
-func PostServerBootstrapped(callback func(rail Rail) error) {
+// Caller is free to call PostServerBootstrap inside another PostServerBootstrap callback.
+func PostServerBootstrap(callback func(rail Rail) error) {
 	globalPostServerBootstrapListener = append(globalPostServerBootstrapListener, callback)
 }
 
@@ -366,7 +351,7 @@ func PostServerBootstrapped(callback func(rail Rail) error) {
 //
 // This usually means that the configuration is loaded, and the logging is configured, but the server components are not yet initialized.
 //
-// Caller is free to call PostServerBootstrapped or PreServerBootstrap inside another PreServerBootstrap callback.
+// Caller is free to call PostServerBootstrap or PreServerBootstrap inside another PreServerBootstrap callback.
 func PreServerBootstrap(callback func(rail Rail) error) {
 	globalPreServerBootstrapListener = append(globalPreServerBootstrapListener, callback)
 }

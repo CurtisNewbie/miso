@@ -38,7 +38,7 @@ func main() {
 	miso.PreServerBootstrap(PrepareServer)
 
 	// register callbacks that are invoked after server fully bootstrapped
-	miso.PostServerBootstrapped(TriggerWorkflowOnBootstrapped)
+	miso.PostServerBootstrap(TriggerWorkflowOnBootstrapped)
 
 	// start the bootstrap process
 	miso.BootstrapServer(os.Args)

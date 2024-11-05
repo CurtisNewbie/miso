@@ -52,7 +52,7 @@ var (
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 
-	PostServerBootstrapped(func(rail Rail) error {
+	PostServerBootstrap(func(rail Rail) error {
 		if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
 			return nil
 		}
@@ -542,7 +542,7 @@ func serveApiDocTmpl(rail Rail) error {
 		Desc("Serve the generated API documentation webpage").
 		Public()
 
-	PostServerBootstrapped(func(rail Rail) error {
+	PostServerBootstrap(func(rail Rail) error {
 		rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", GetPropInt(PropServerActualPort))
 		return nil
 	})
