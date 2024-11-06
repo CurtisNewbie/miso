@@ -41,9 +41,6 @@ var (
 
 	// server list polling subscription
 	consulServerListPoller *TickRunner = nil
-
-	// Api for Consul.
-	ConsulApi = ConsulApiImpl{}
 )
 
 type consulHolder struct {
@@ -81,10 +78,8 @@ func init() {
 	})
 }
 
-type ConsulApiImpl struct{}
-
 // Fetch registered service by name, this method always call Consul instead of reading from cache
-func (c ConsulApiImpl) CatalogFetchServiceNodes(rail Rail, name string) ([]*api.CatalogService, error) {
+func CatalogFetchServiceNodes(rail Rail, name string) ([]*api.CatalogService, error) {
 	defer DebugTimeOp(rail, time.Now(), "CatalogFetchServiceNodes")
 	client := GetConsulClient()
 
@@ -96,19 +91,19 @@ func (c ConsulApiImpl) CatalogFetchServiceNodes(rail Rail, name string) ([]*api.
 }
 
 // Fetch all registered services, this method always call Consul instead of reading from cache
-func (c ConsulApiImpl) CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
+func CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
 	client := GetConsulClient()
 	services, _, err := client.Catalog().Services(nil)
 	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
 	return services, err
 }
 
-func (c ConsulApiImpl) DeregisterService(serviceId string) error {
+func DeregisterService(serviceId string) error {
 	client := GetConsulClient()
 	return client.Agent().ServiceDeregister(serviceId)
 }
 
-func (c ConsulApiImpl) RegisterService(registration *api.AgentServiceRegistration) error {
+func RegisterService(registration *api.AgentServiceRegistration) error {
 	client := GetConsulClient()
 	if err := client.Agent().ServiceRegister(registration); err != nil {
 		return fmt.Errorf("failed to register consul service, registration: %+v, %w", registration, err)
@@ -124,7 +119,7 @@ type ConsulServerList struct {
 }
 
 func (s *ConsulServerList) PollInstances(rail Rail) error {
-	names, err := ConsulApi.CatalogFetchServiceNames(rail)
+	names, err := CatalogFetchServiceNames(rail)
 	if err != nil {
 		return fmt.Errorf("failed to CatalogFetchServiceNames, %w", err)
 	}
@@ -237,7 +232,7 @@ func (s *ConsulServerList) PollInstance(rail Rail, name string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	services, err := ConsulApi.CatalogFetchServiceNodes(rail, name)
+	services, err := CatalogFetchServiceNodes(rail, name)
 	if err != nil {
 		return fmt.Errorf("failed to FetchServicesByName, name: %v, %v", name, err)
 	}
@@ -274,7 +269,7 @@ func DeregisterConsulService() error {
 
 	Infof("Deregistering current instance on Consul, service_id: '%s'", consulRegistration.serviceId)
 
-	err := ConsulApi.DeregisterService(consulRegistration.serviceId)
+	err := DeregisterService(consulRegistration.serviceId)
 	if err == nil {
 		consulRegistration.serviceId = ServiceIdNil
 	}
@@ -351,7 +346,7 @@ func RegisterConsulService() error {
 		Meta: meta,
 	}
 
-	if err := ConsulApi.RegisterService(registration); err != nil {
+	if err := RegisterService(registration); err != nil {
 		return err
 	}
 	consulRegistration.serviceId = proposedServiceId

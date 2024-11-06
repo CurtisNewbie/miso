@@ -11,6 +11,10 @@ import (
 )
 
 var (
+	futurePtr Future[any] = (*future[any])(nil) //lint:ignore U1000 check interface
+)
+
+var (
 	ErrGetTimeout = errors.New("future.TimedGet timeout")
 )
 
