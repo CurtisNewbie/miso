@@ -63,7 +63,7 @@ type MisoApp struct {
 	postServerBootstrapListener []func(r Rail) error
 
 	store  *appStore
-	config *appConfig
+	config *AppConfig
 }
 
 // Get global miso app.
@@ -85,7 +85,7 @@ func newApp() *MisoApp {
 	}
 }
 
-func (a *MisoApp) Config() *appConfig {
+func (a *MisoApp) Config() *AppConfig {
 	return a.config
 }
 

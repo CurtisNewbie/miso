@@ -23,7 +23,7 @@ func init() {
 	SetDefProp(PropProdMode, true)
 }
 
-type appConfig struct {
+type AppConfig struct {
 	vp   *viper.Viper
 	rwmu *sync.RWMutex
 
@@ -31,20 +31,20 @@ type appConfig struct {
 	fastBoolCache *util.RWMap[string, bool]
 }
 
-func (a *appConfig) _appConfigDoWithWLock(f func()) {
+func (a *AppConfig) _appConfigDoWithWLock(f func()) {
 	a.rwmu.Lock()
 	defer a.rwmu.Unlock()
 	f()
 }
 
-func (a *appConfig) _appConfigDoWithRLock(f func() any) any {
+func (a *AppConfig) _appConfigDoWithRLock(f func() any) any {
 	a.rwmu.RLock()
 	defer a.rwmu.RUnlock()
 	return f()
 }
 
 // Set value for the prop
-func (a *appConfig) SetProp(prop string, val any) {
+func (a *AppConfig) SetProp(prop string, val any) {
 	doWithWriteLock(a, func() {
 		a.fastBoolCache.Del(prop)
 		a.vp.Set(prop, val)
@@ -52,7 +52,7 @@ func (a *appConfig) SetProp(prop string, val any) {
 }
 
 // Set default value for the prop
-func (a *appConfig) SetDefProp(prop string, defVal any) {
+func (a *AppConfig) SetDefProp(prop string, defVal any) {
 	doWithWriteLock(a, func() {
 		a.fastBoolCache.Del(prop)
 		a.vp.SetDefault(prop, defVal)
@@ -60,37 +60,37 @@ func (a *appConfig) SetDefProp(prop string, defVal any) {
 }
 
 // Check whether the prop exists
-func (a *appConfig) HasProp(prop string) bool {
+func (a *AppConfig) HasProp(prop string) bool {
 	return returnWithReadLock(a, func() bool { return a.vp.IsSet(prop) })
 }
 
 // Get prop as int slice
-func (a *appConfig) GetPropIntSlice(prop string) []int {
+func (a *AppConfig) GetPropIntSlice(prop string) []int {
 	return returnWithReadLock(a, func() []int { return a.vp.GetIntSlice(prop) })
 }
 
 // Get prop as string slice
-func (a *appConfig) GetPropStrSlice(prop string) []string {
+func (a *AppConfig) GetPropStrSlice(prop string) []string {
 	return returnWithReadLock(a, func() []string { return a.vp.GetStringSlice(prop) })
 }
 
 // Get prop as int
-func (a *appConfig) GetPropInt(prop string) int {
+func (a *AppConfig) GetPropInt(prop string) int {
 	return returnWithReadLock(a, func() int { return a.vp.GetInt(prop) })
 }
 
 // Get prop as string based map.
-func (a *appConfig) GetPropStrMap(prop string) map[string]string {
+func (a *AppConfig) GetPropStrMap(prop string) map[string]string {
 	return returnWithReadLock(a, func() map[string]string { return a.vp.GetStringMapString(prop) })
 }
 
 // Get prop as time.Duration
-func (a *appConfig) GetPropDur(prop string, unit time.Duration) time.Duration {
+func (a *AppConfig) GetPropDur(prop string, unit time.Duration) time.Duration {
 	return time.Duration(a.GetPropInt(prop)) * unit
 }
 
 // Get prop as bool
-func (a *appConfig) GetPropBool(prop string) bool {
+func (a *AppConfig) GetPropBool(prop string) bool {
 	return returnWithReadLock(a, func() bool {
 		v, _ := a.fastBoolCache.GetElse(prop, func(k string) bool {
 			return a.vp.GetBool(k)
@@ -108,12 +108,12 @@ e.g, for "name" : "${secretName}".
 
 This func will attempt to resolve the actual value for '${secretName}'.
 */
-func (a *appConfig) GetPropStr(prop string) string {
+func (a *AppConfig) GetPropStr(prop string) string {
 	return a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) }))
 }
 
 // Unmarshal configuration.
-func (a *appConfig) UnmarshalFromProp(ptr any) {
+func (a *AppConfig) UnmarshalFromProp(ptr any) {
 	doWithReadLock(a, func() {
 		if err := a.vp.Unmarshal(ptr); err != nil {
 			Warnf("failed to UnmarshalFromProp, %v", err)
@@ -122,7 +122,7 @@ func (a *appConfig) UnmarshalFromProp(ptr any) {
 }
 
 // Unmarshal configuration from a speicific key.
-func (a *appConfig) UnmarshalFromPropKey(key string, ptr any) {
+func (a *AppConfig) UnmarshalFromPropKey(key string, ptr any) {
 	doWithReadLock(a, func() {
 		if err := a.vp.UnmarshalKey(key, ptr); err != nil {
 			Warnf("failed to UnmarshalFromPropKey, %v", err)
@@ -131,7 +131,7 @@ func (a *appConfig) UnmarshalFromPropKey(key string, ptr any) {
 }
 
 // Overwrite existing conf using environment and cli args.
-func (a *appConfig) OverwriteConf(args []string) {
+func (a *AppConfig) OverwriteConf(args []string) {
 	// overwrite loaded configuration with environment variables
 	a.overwriteConf(ArgKeyVal(os.Environ()))
 	// overwrite the loaded configuration with cli arguments
@@ -149,7 +149,7 @@ You can also use ReadConfig to load your custom configFile. This func is essenti
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func (a *appConfig) DefaultReadConfig(args []string, rail Rail) {
+func (a *AppConfig) DefaultReadConfig(args []string, rail Rail) {
 	loaded := util.NewSet[string]()
 
 	defConfigFile := GuessConfigFilePath(args)
@@ -210,7 +210,7 @@ func (a *appConfig) DefaultReadConfig(args []string, rail Rail) {
 // It's the caller's responsibility to close the provided reader.
 //
 // Calling this method overides previously loaded config.
-func (a *appConfig) LoadConfigFromReader(reader io.Reader, r Rail) error {
+func (a *AppConfig) LoadConfigFromReader(reader io.Reader, r Rail) error {
 	var eo error
 
 	doWithWriteLock(a, func() {
@@ -229,7 +229,7 @@ func (a *appConfig) LoadConfigFromReader(reader io.Reader, r Rail) error {
 // Load config from string.
 //
 // Calling this method overides previously loaded config.
-func (a *appConfig) LoadConfigFromStr(s string, r Rail) error {
+func (a *AppConfig) LoadConfigFromStr(s string, r Rail) error {
 	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
 	return a.LoadConfigFromReader(sr, r)
 }
@@ -237,7 +237,7 @@ func (a *appConfig) LoadConfigFromStr(s string, r Rail) error {
 // Load config from file.
 //
 // Calling this method overides previously loaded config.
-func (a *appConfig) LoadConfigFromFile(configFile string, r Rail) error {
+func (a *AppConfig) LoadConfigFromFile(configFile string, r Rail) error {
 	if configFile == "" {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (a *appConfig) LoadConfigFromFile(configFile string, r Rail) error {
 	return nil
 }
 
-func (a *appConfig) overwriteConf(kvs map[string][]string) {
+func (a *AppConfig) overwriteConf(kvs map[string][]string) {
 	for k, v := range kvs {
 		if len(v) == 1 {
 			a.SetProp(k, v[0])
@@ -270,12 +270,12 @@ func (a *appConfig) overwriteConf(kvs map[string][]string) {
 }
 
 // Check whether we are running in production mode
-func (a *appConfig) IsProdMode() bool {
+func (a *AppConfig) IsProdMode() bool {
 	return a.GetPropBool(PropProdMode)
 }
 
 // Resolve argument, e.g., for arg like '${someArg}', it will in fact look for 'someArg' in os.Env
-func (a *appConfig) ResolveArg(arg string) string {
+func (a *AppConfig) ResolveArg(arg string) string {
 	return resolveArgRegexp.ReplaceAllStringFunc(arg, func(s string) string {
 		r := []rune(s)
 		key := string(r[2 : len(r)-1])
@@ -292,8 +292,8 @@ func (a *appConfig) ResolveArg(arg string) string {
 	})
 }
 
-func newAppConfig() *appConfig {
-	return &appConfig{
+func newAppConfig() *AppConfig {
+	return &AppConfig{
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
 		fastBoolCache: util.NewRWMap[string, bool](),
@@ -436,13 +436,13 @@ func ResolveArg(arg string) string {
 }
 
 // call with viper lock
-func doWithWriteLock(a *appConfig, f func()) {
+func doWithWriteLock(a *AppConfig, f func()) {
 	a._appConfigDoWithWLock(func() {
 		f()
 	})
 }
 
-func returnWithReadLock[T any](a *appConfig, f func() T) T {
+func returnWithReadLock[T any](a *AppConfig, f func() T) T {
 	v := a._appConfigDoWithRLock(func() any {
 		return f()
 	})
@@ -453,7 +453,7 @@ func returnWithReadLock[T any](a *appConfig, f func() T) T {
 	return v.(T)
 }
 
-func doWithReadLock(a *appConfig, f func()) {
+func doWithReadLock(a *AppConfig, f func()) {
 	a._appConfigDoWithRLock(func() any {
 		f()
 		return nil
@@ -542,6 +542,6 @@ func ExtractArgValue(args []string, predicate util.Predicate[string]) string {
 	return ""
 }
 
-func globalConfig() *appConfig {
+func globalConfig() *AppConfig {
 	return App().config
 }
