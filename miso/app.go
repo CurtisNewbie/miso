@@ -204,8 +204,12 @@ func (a *MisoApp) triggerShutdownHook() {
 	if timeout > 0 {
 		timeoutDur := time.Duration(timeout * int(time.Second))
 		_, err := f.TimedGet(int(timeoutDur / time.Millisecond))
-		if errors.Is(err, util.ErrGetTimeout) {
-			Warnf("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
+		if err != nil {
+			if errors.Is(err, util.ErrGetTimeout) {
+				Warnf("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
+			} else {
+				Errorf("Unexpected error occurred while executing shutdown hooks, %v", err)
+			}
 		}
 	} else {
 		_, err := f.Get()
