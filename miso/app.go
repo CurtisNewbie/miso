@@ -136,6 +136,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 			}
 		}
 
+		rail.Debugf("Starting to bootstrap component %-30s", sbc.Name)
 		start := time.Now()
 		if e := sbc.Bootstrap(a, rail); e != nil {
 			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)

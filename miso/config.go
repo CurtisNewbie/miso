@@ -551,5 +551,5 @@ func ExtractArgValue(args []string, predicate util.Predicate[string]) string {
 }
 
 func globalConfig() *AppConfig {
-	return App().config
+	return App().Config()
 }
