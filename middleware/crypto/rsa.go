@@ -11,23 +11,25 @@ import (
 	"github.com/curtisnewbie/miso/util"
 )
 
+const (
+	PubPemBegin = "-----BEGIN PUBLIC KEY-----"
+	pubPemEnd   = "-----END PUBLIC KEY-----"
+
+	PrivPemBegin = "-----BEGIN PRIVATE KEY-----"
+	PrivPemEnd   = "-----END PRIVATE KEY-----"
+)
+
 var (
-	PUB_PEM_BEGIN = "-----BEGIN PUBLIC KEY-----"
-	PUB_PEM_END   = "-----END PUBLIC KEY-----"
-
-	PRIV_PEM_BEGIN = "-----BEGIN PRIVATE KEY-----"
-	PRIV_PEM_END   = "-----END PRIVATE KEY-----"
-
 	ErrDecodePemFailed = errors.New("failed to decode public key pem")
 	ErrInvalidKey      = errors.New("invalid key")
 )
 
 func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
-	if !strings.HasPrefix(content, PRIV_PEM_BEGIN) {
-		content = PRIV_PEM_BEGIN + "\n" + content
+	if !strings.HasPrefix(content, PrivPemBegin) {
+		content = PrivPemBegin + "\n" + content
 	}
-	if !strings.HasSuffix(content, PRIV_PEM_END) {
-		content = content + "\n" + PRIV_PEM_END
+	if !strings.HasSuffix(content, PrivPemEnd) {
+		content = content + "\n" + PrivPemEnd
 	}
 
 	decodedPem, _ := pem.Decode(util.UnsafeStr2Byt(content))
@@ -49,11 +51,11 @@ func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
 }
 
 func LoadPubKey(content string) (*rsa.PublicKey, error) {
-	if !strings.HasPrefix(content, PUB_PEM_BEGIN) {
-		content = PUB_PEM_BEGIN + "\n" + content
+	if !strings.HasPrefix(content, PubPemBegin) {
+		content = PubPemBegin + "\n" + content
 	}
-	if !strings.HasSuffix(content, PUB_PEM_END) {
-		content = content + "\n" + PUB_PEM_END
+	if !strings.HasSuffix(content, pubPemEnd) {
+		content = content + "\n" + pubPemEnd
 	}
 
 	decodedPem, _ := pem.Decode(util.UnsafeStr2Byt(content))
