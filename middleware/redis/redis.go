@@ -33,6 +33,7 @@ func init() {
 type redisModule struct {
 	mu     *sync.RWMutex
 	client *redis.Client
+	app    *miso.MisoApp
 	conf   *miso.AppConfig
 }
 
@@ -116,17 +117,21 @@ func (m *redisModule) addHealthIndicator() {
 	})
 }
 
-func newModule(c *miso.AppConfig) *redisModule {
+func newModule(app *miso.MisoApp) *redisModule {
 	return &redisModule{
 		mu:   &sync.RWMutex{},
-		conf: c,
+		conf: app.Config(),
+		app:  app,
 	}
 }
 
 func module() *redisModule {
-	app := miso.App()
+	return appModule(miso.App())
+}
+
+func appModule(app *miso.MisoApp) *redisModule {
 	return miso.AppStoreGetElse(app, moduleKey, func() *redisModule {
-		return newModule(app.Config())
+		return newModule(app)
 	})
 }
 
@@ -135,6 +140,10 @@ func module() *redisModule {
 // Must call InitRedis(...) method before this method.
 func GetRedis() *redis.Client {
 	return module().redis()
+}
+
+func GetAppRedis(app *miso.MisoApp) *redis.Client {
+	return appModule(app).redis()
 }
 
 // Get String
