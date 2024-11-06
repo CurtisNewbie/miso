@@ -200,26 +200,41 @@ func (m MsgListener) String() string {
 
 // Publish json message with confirmation
 func PublishJson(c miso.Rail, obj any, exchange string, routingKey string) error {
-	return PublishJsonHeaders(c, obj, exchange, routingKey, nil)
+	return module().publishJson(c, obj, exchange, routingKey)
 }
 
 // Publish json message with headers and confirmation
 func PublishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
-	j, err := json.WriteJson(obj)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message body, %w", err)
-	}
-	return PublishMsg(c, j, exchange, routingKey, "application/json", headers)
+	return module().publishJsonHeaders(c, obj, exchange, routingKey, headers)
 }
 
 // Publish plain text message with confirmation
 func PublishText(c miso.Rail, msg string, exchange string, routingKey string) error {
-	return PublishMsg(c, util.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
+	return module().publishText(c, msg, exchange, routingKey)
 }
 
 // Publish message with confirmation
 func PublishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
-	m := module()
+	return module().publishMsg(c, msg, exchange, routingKey, contentType, headers)
+}
+
+func (m *rabbitMqModule) publishJson(c miso.Rail, obj any, exchange string, routingKey string) error {
+	return m.publishJsonHeaders(c, obj, exchange, routingKey, nil)
+}
+
+func (m *rabbitMqModule) publishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
+	j, err := json.WriteJson(obj)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message body, %w", err)
+	}
+	return m.publishMsg(c, j, exchange, routingKey, "application/json", headers)
+}
+
+func (m *rabbitMqModule) publishText(c miso.Rail, msg string, exchange string, routingKey string) error {
+	return m.publishMsg(c, util.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
+}
+
+func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
 	m.pubWg.Add(1)
 	defer m.pubWg.Done()
 
