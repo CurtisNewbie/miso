@@ -450,3 +450,15 @@ func AppStoreGetElse[V any](app *MisoApp, k string, f func() V) V {
 	}
 	return vt
 }
+
+func InitAppModuleFunc[V any](k string, initFunc func(app *MisoApp) V) (func(app *MisoApp) V, func() V) {
+	appModule := func(app *MisoApp) V {
+		return AppStoreGetElse[V](app, k, func() V {
+			return initFunc(app)
+		})
+	}
+	globalModule := func() V {
+		return appModule(App())
+	}
+	return appModule, globalModule
+}

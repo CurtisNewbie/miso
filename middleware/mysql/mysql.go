@@ -38,11 +38,18 @@ func init() {
 
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap MySQL",
-		Bootstrap: MySQLBootstrap,
-		Condition: MySQLBootstrapCondition,
+		Bootstrap: mysqlBootstrap,
+		Condition: mysqlBootstrapCondition,
 		Order:     miso.BootstrapOrderL1,
 	})
 }
+
+var appModule, module = miso.InitAppModuleFunc(moduleKey, func(app *miso.MisoApp) *mysqlModule {
+	return &mysqlModule{
+		mu:   &sync.RWMutex{},
+		conf: app.Config(),
+	}
+})
 
 type MySQLBootstrapCallback func(rail miso.Rail, db *gorm.DB) error
 
@@ -150,20 +157,6 @@ func (m *mysqlModule) registerHealthIndicator() {
 	})
 }
 
-func newModule(c *miso.AppConfig) *mysqlModule {
-	return &mysqlModule{
-		mu:   &sync.RWMutex{},
-		conf: c,
-	}
-}
-
-func module() *mysqlModule {
-	app := miso.App()
-	return miso.AppStoreGetElse(app, moduleKey, func() *mysqlModule {
-		return newModule(app.Config())
-	})
-}
-
 /*
 Init connection to mysql
 
@@ -255,8 +248,8 @@ func IsMySQLInitialized() bool {
 	return module().initialized()
 }
 
-func MySQLBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := module() // init module
+func mysqlBootstrap(app *miso.MisoApp, rail miso.Rail) error {
+	m := appModule(app)
 
 	if e := InitMySQLFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
@@ -271,7 +264,7 @@ func MySQLBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	return nil
 }
 
-func MySQLBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
+func mysqlBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return app.Config().GetPropBool(PropMySQLEnabled), nil
 }
 

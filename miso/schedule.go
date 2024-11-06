@@ -8,13 +8,32 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
+const (
+	scheduleModuleKey = "_miso:internal:schedule:module"
+)
+
+var appModule, module = InitAppModuleFunc(scheduleModuleKey, func(app *MisoApp) *scheduleMdoule {
+	return &scheduleMdoule{
+		scheduler: gocron.NewScheduler(time.Local),
+		app:       app,
+	}
+})
+
+func init() {
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Cron Scheduler",
+		Condition: schedulerBootstrapCondition,
+		Bootstrap: schedulerBootstrap,
+	})
+}
+
 type Job struct {
 	Name                   string           // name of the job.
 	Cron                   string           // cron expr.
 	CronWithSeconds        bool             // whether cron expr contains the second field.
 	Run                    func(Rail) error // actual job execution logic.
-	LogJobExec             bool             // whether job execution should be logged, error msg is always logged and is not affected by this option.
-	TriggeredOnBoostrapped bool             // whether job should be triggered when server is fully bootstrapped
+	LogJobExec             bool             // should job execution be logged, error msg is always logged regardless.
+	TriggeredOnBoostrapped bool             // should job be triggered when server is fully bootstrapped
 }
 
 // Hook triggered before job's execution.
@@ -34,44 +53,22 @@ type JobInf struct {
 	CronWithSeconds bool
 }
 
-var (
-	_scheduler     *gocron.Scheduler = nil
-	_schedulerOnce sync.Once
+type scheduleMdoule struct {
+	scheduler *gocron.Scheduler
 
-	preJobHooks  = []PreJobHook{}
-	postJobHooks = []PostJobHook{}
-)
+	preJobHooks  []PreJobHook
+	postJobHooks []PostJobHook
 
-func init() {
-	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:      "Bootstrap Cron Scheduler",
-		Condition: func(app *MisoApp, rail Rail) (bool, error) { return HasScheduledJobs(), nil },
-		Bootstrap: SchedulerBootstrap,
-	})
+	app *MisoApp
 }
 
-// Whether scheduler is initialized
-func HasScheduledJobs() bool {
-	return getScheduler().Len() > 0
+func (m *scheduleMdoule) stop() {
+	m.scheduler.Stop()
 }
 
-// Get the lazy-initialized, cached scheduler
-func getScheduler() *gocron.Scheduler {
-	_schedulerOnce.Do(func() {
-		_scheduler = newScheduler()
-		_scheduler.ChangeLocation(time.Local)
-	})
-	return _scheduler
-}
-
-// Create new Schedulr at UTC time, with default-mode
-func newScheduler() *gocron.Scheduler {
-	sche := gocron.NewScheduler(time.UTC)
-	return sche
-}
-
-func doScheduleCron(s *gocron.Scheduler, job Job) error {
+func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	var err error
+	s := m.scheduler
 
 	wrappedJob := func() {
 		rail := EmptyRail()
@@ -82,7 +79,7 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 			CronWithSeconds: job.CronWithSeconds,
 		}
 
-		for _, hook := range preJobHooks {
+		for _, hook := range m.preJobHooks {
 			if err := hook(rail, inf); err != nil {
 				rail.Errorf("PreJobHook returns err for job: %v, %v", job.Name, err)
 			}
@@ -103,9 +100,9 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
 		}
 
-		if len(postJobHooks) > 0 {
+		if len(m.postJobHooks) > 0 {
 			stats := JobExecStats{Time: took, Err: errRun}
-			for _, hook := range postJobHooks {
+			for _, hook := range m.postJobHooks {
 				if err := hook(rail, inf, stats); err != nil {
 					rail.Errorf("PostJobHook returns err for job: %v, %v", job.Name, err)
 				}
@@ -123,8 +120,8 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 
-	PostServerBootstrap(func(rail Rail) error {
-		taggedJobs, err := getScheduler().FindJobsByTag(job.Name)
+	m.app.PostServerBootstrap(func(rail Rail) error {
+		taggedJobs, err := m.scheduler.FindJobsByTag(job.Name)
 		if err != nil {
 			rail.Warnf("Failed to FindJobsByTag, jobName: %v, %v", job.Name, err)
 			return nil
@@ -135,7 +132,7 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 		}
 
 		if job.TriggeredOnBoostrapped {
-			if err := getScheduler().RunByTag(job.Name); err != nil {
+			if err := m.scheduler.RunByTag(job.Name); err != nil {
 				rail.Errorf("Failed to triggered immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
 			} else {
 				rail.Debugf("Job %v triggered on server bootstrapped", job.Name)
@@ -147,27 +144,58 @@ func doScheduleCron(s *gocron.Scheduler, job Job) error {
 	return nil
 }
 
+// Start scheduler and block current routine
+func (m *scheduleMdoule) startBlocking() {
+	m.scheduler.StartBlocking()
+}
+
+func (m *scheduleMdoule) startAsync() {
+	m.scheduler.StartAsync()
+}
+func (m *scheduleMdoule) preJobExec(hook PreJobHook) {
+	if m.scheduler.IsRunning() {
+		Warn("Ignored PreJobHook, cron scheduler is already running")
+		return
+	}
+	m.preJobHooks = append(m.preJobHooks, hook)
+}
+func (m *scheduleMdoule) postJobExec(hook PostJobHook) {
+	if m.scheduler.IsRunning() {
+		Warn("Ignored PostJobHook, cron scheduler is already running")
+		return
+	}
+	m.postJobHooks = append(m.postJobHooks, hook)
+}
+
+func (m *scheduleMdoule) hasScheduledJobs() bool {
+	return m.scheduler.Len() > 0
+}
+
+// Whether scheduler is initialized
+func HasScheduledJobs() bool {
+	return module().hasScheduledJobs()
+}
+
 // Stop scheduler
 func StopScheduler() {
-	getScheduler().Stop()
+	module().stop()
 }
 
 // Start scheduler and block current routine
 func StartSchedulerBlocking() {
-	getScheduler().StartBlocking()
+	module().startBlocking()
 }
 
 // Start scheduler asynchronously
 func StartSchedulerAsync() {
-	getScheduler().StartAsync()
+	module().startAsync()
 }
 
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
 func ScheduleCron(job Job) error {
-	s := getScheduler()
-	return doScheduleCron(s, job)
+	return module().doScheduleCron(job)
 }
 
 // Callback triggered before job execution.
@@ -176,11 +204,7 @@ func ScheduleCron(job Job) error {
 //
 // Callback will be ignored, if the scheduler is already running.
 func PreJobExec(hook PreJobHook) {
-	if getScheduler().IsRunning() {
-		Warn("Ignored PreJobHook, cron scheduler is already running")
-		return
-	}
-	preJobHooks = append(preJobHooks, hook)
+	module().preJobExec(hook)
 }
 
 // Callback triggered after job execution.
@@ -189,17 +213,18 @@ func PreJobExec(hook PreJobHook) {
 //
 // Callback will be ignored, if the scheduler is already running.
 func PostJobExec(hook PostJobHook) {
-	if getScheduler().IsRunning() {
-		Warn("Ignored PostJobHook, cron scheduler is already running")
-		return
-	}
-	postJobHooks = append(postJobHooks, hook)
+	module().postJobExec(hook)
 }
 
-func SchedulerBootstrap(app *MisoApp, rail Rail) error {
-	StartSchedulerAsync()
+func schedulerBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
+	return appModule(app).hasScheduledJobs(), nil
+}
+
+func schedulerBootstrap(app *MisoApp, rail Rail) error {
+	m := appModule(app)
+	m.startAsync()
 	rail.Info("Cron Scheduler started")
-	AddShutdownHook(func() { StopScheduler() })
+	AddShutdownHook(func() { m.stop() })
 	return nil
 }
 

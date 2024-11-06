@@ -24,14 +24,22 @@ func init() {
 
 	// run before SchedulerBootstrap
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
-		Name: "Bootstrap Distributed Task Scheduler",
-		Condition: func(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-			return module().enabled(), nil
-		},
+		Name:      "Bootstrap Distributed Task Scheduler",
+		Condition: distriTaskBootstrapCondition,
 		Bootstrap: distriTaskBootstrap,
 		Order:     miso.BootstrapOrderL4,
 	})
 }
+
+//lint:ignore U1000 for future use
+var appModule, module = miso.InitAppModuleFunc(moduleKey, func(app *miso.MisoApp) *taskModule {
+	return &taskModule{
+		dtaskMut: &sync.Mutex{},
+		group:    "default",
+		conf:     app.Config(),
+		app:      app,
+	}
+})
 
 type taskModule struct {
 	// mutex for core proerties (group, nodeId, states, and masterNode election)
@@ -242,22 +250,6 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 	return isMaster
 }
 
-func newModule(app *miso.MisoApp) *taskModule {
-	return &taskModule{
-		dtaskMut: &sync.Mutex{},
-		group:    "default",
-		conf:     app.Config(),
-		app:      app,
-	}
-}
-
-func module() *taskModule {
-	app := miso.App()
-	return miso.AppStoreGetElse(app, moduleKey, func() *taskModule {
-		return newModule(app)
-	})
-}
-
 func (m *taskModule) registerTasks(tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
@@ -315,8 +307,12 @@ func StopTaskScheduler() {
 	module().stop()
 }
 
+func distriTaskBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
+	return appModule(app).enabled(), nil
+}
+
 func distriTaskBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := module()
-	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
+	m := appModule(app)
+	app.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
 	return m.bootstrapAsComponent(rail)
 }
