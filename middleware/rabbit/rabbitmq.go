@@ -45,6 +45,10 @@ var (
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
 )
 
+var appModule, module = miso.InitAppModuleFunc(rabbitmqModuleKey, func(app *miso.MisoApp) *rabbitMqModule {
+	return newModule(app)
+})
+
 func init() {
 	miso.SetDefProp(PropRabbitMqEnabled, false)
 	miso.SetDefProp(PropRabbitMqHost, "localhost")
@@ -56,8 +60,8 @@ func init() {
 
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap RabbitMQ",
-		Bootstrap: RabbitBootstrap,
-		Condition: RabbitBootstrapCondition,
+		Bootstrap: rabbitBootstrap,
+		Condition: rabbitBootstrapCondition,
 		Order:     miso.BootstrapOrderL4,
 	})
 }
@@ -74,10 +78,15 @@ type rabbitMqModule struct {
 	bindingRegistration  []BindingRegistration
 	queueRegistration    []QueueRegistration
 	exchangeRegistration []ExchangeRegistration
+
+	app    *miso.MisoApp
+	config *miso.AppConfig
 }
 
-func newModule() *rabbitMqModule {
+func newModule(app *miso.MisoApp) *rabbitMqModule {
 	m := &rabbitMqModule{
+		app:               app,
+		config:            app.Config(),
 		redeliverQueueMap: &sync.Map{},
 		pubWg:             &sync.WaitGroup{},
 		mu:                &sync.Mutex{},
@@ -122,11 +131,6 @@ type ExchangeRegistration struct {
 	Kind       string
 	Durable    bool
 	Properties map[string]any
-}
-
-/* Is RabbitMQ Enabled */
-func RabbitMQEnabled() bool {
-	return miso.GetPropBool(PropRabbitMqEnabled)
 }
 
 // RabbitListener of Queue
@@ -215,7 +219,7 @@ func PublishText(c miso.Rail, msg string, exchange string, routingKey string) er
 
 // Publish message with confirmation
 func PublishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
-	m := rabbitModule()
+	m := module()
 	m.pubWg.Add(1)
 	defer m.pubWg.Done()
 
@@ -345,8 +349,10 @@ When connection is lost, it will attmpt to reconnect to recover, unless the give
 To register listener, please use 'AddListener' func.
 */
 func StartRabbitMqClient(rail miso.Rail) error {
-	m := rabbitModule()
+	return module().startClient(rail)
+}
 
+func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 	notifyCloseChan, err := m.initRabbitClient(rail)
 	if err != nil {
 		return err
@@ -407,11 +413,11 @@ func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error)
 	}
 
 	c := amqp.Config{}
-	username := miso.GetPropStr(PropRabbitMqUsername)
-	password := miso.GetPropStr(PropRabbitMqPassword)
-	vhost := miso.GetPropStr(PropRabbitMqVhost)
-	host := miso.GetPropStr(PropRabbitMqHost)
-	port := miso.GetPropInt(PropRabbitMqPort)
+	username := m.config.GetPropStr(PropRabbitMqUsername)
+	password := m.config.GetPropStr(PropRabbitMqPassword)
+	vhost := m.config.GetPropStr(PropRabbitMqVhost)
+	host := m.config.GetPropStr(PropRabbitMqHost)
+	port := m.config.GetPropInt(PropRabbitMqPort)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
@@ -498,7 +504,7 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 }
 
 func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
-	qos := miso.GetPropInt(PropRabbitMqConsumerQos)
+	qos := m.config.GetPropInt(PropRabbitMqConsumerQos)
 
 	for _, v := range m.listeners {
 		listener := v
@@ -673,44 +679,39 @@ func (m *rabbitMqModule) newChan() (*amqp.Channel, error) {
 	return m.conn.Channel()
 }
 
-func rabbitModule() *rabbitMqModule {
-	return miso.AppStoreGetElse(miso.App(), rabbitmqModuleKey, func() *rabbitMqModule {
-		return newModule()
-	})
-}
-
-func RabbitBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	if e := StartRabbitMqClient(rail); e != nil {
+func rabbitBootstrap(app *miso.MisoApp, rail miso.Rail) error {
+	m := appModule(app)
+	if e := m.startClient(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
 	return nil
 }
 
-func RabbitBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return RabbitMQEnabled(), nil
+func rabbitBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
+	return app.Config().GetPropBool(PropRabbitMqEnabled), nil
 }
 
 func RabbitConnected() bool {
-	return rabbitModule().rabbitConnected()
+	return module().rabbitConnected()
 }
 
 func RabbitDisconnect(rail miso.Rail) error {
-	return rabbitModule().disconnect(rail)
+	return module().disconnect(rail)
 }
 
 // Declare binding on client initialization
 func RegisterRabbitBinding(b BindingRegistration) {
-	rabbitModule().registerRabbitBinding(b)
+	module().registerRabbitBinding(b)
 }
 
 // Declare queue on client initialization
 func RegisterRabbitQueue(q QueueRegistration) {
-	rabbitModule().registerRabbitQueue(q)
+	module().registerRabbitQueue(q)
 }
 
 // Declare exchange on client initialization
 func RegisterRabbitExchange(e ExchangeRegistration) {
-	rabbitModule().registerRabbitExchange(e)
+	module().registerRabbitExchange(e)
 }
 
 // Register pending message listener.
@@ -720,5 +721,5 @@ func RegisterRabbitExchange(e ExchangeRegistration) {
 // For any message that the listener is unable to process (returning error), the message is redelivered indefinitively
 // with a delay of 10 seconds until the message is finally processed without error.
 func AddRabbitListener(listener RabbitListener) {
-	rabbitModule().AddRabbitListener(listener)
+	module().AddRabbitListener(listener)
 }
