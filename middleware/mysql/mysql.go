@@ -57,11 +57,14 @@ func (m *mysqlModule) init(rail miso.Rail, p MySQLConnParam) error {
 	if p.ConnParam == "" {
 		p.ConnParam = minimumConnParam
 	}
-	m.mu.Lock()
+	m.mu.RLock()
 	if m.conn != nil {
-		m.mu.Unlock()
+		m.mu.RUnlock()
 		return nil
 	}
+	m.mu.RUnlock()
+
+	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.conn != nil {
