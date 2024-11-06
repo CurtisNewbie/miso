@@ -2,6 +2,7 @@ package miso
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -46,7 +48,6 @@ func init() {
 }
 
 type MisoApp struct {
-	rail         Rail
 	configLoaded bool
 
 	// channel for signaling server shutdown
@@ -77,7 +78,6 @@ func App() *MisoApp {
 func newApp() *MisoApp {
 	return &MisoApp{
 		manualSigQuit: make(chan int, 1),
-		rail:          EmptyRail(),
 		configLoaded:  false,
 		shuttingDown:  false,
 		store:         &appStore{store: util.NewRWMap[string, any]()},
@@ -101,7 +101,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
 
 	a.AddOrderedShutdownHook(0, a.markServerShuttingDown) // the first hook to be called
-	var rail Rail = a.rail
+	rail := EmptyRail()
 
 	start := time.Now().UnixMilli()
 	defer a.triggerShutdownHook()
@@ -174,11 +174,14 @@ func (a *MisoApp) LoadConfig(args []string) {
 		return
 	}
 
-	// default way to load configuration
-	DefaultReadConfig(args, a.rail)
+	// setup default properties
+	runSetDefPropFuncs(a)
 
-	if err := ConfigureLogging(a.rail); err != nil {
-		a.rail.Errorf("Configure logging failed, %v", err)
+	// default way to load configuration
+	a.Config().DefaultReadConfig(args)
+
+	if err := ConfigureLogging(); err != nil {
+		panic(fmt.Errorf("configure logging failed, %v", err))
 	}
 	a.configLoaded = true
 }
@@ -193,7 +196,7 @@ func (a *MisoApp) triggerShutdownHook() {
 
 		sort.Slice(a.shutdownHook, func(i, j int) bool { return a.shutdownHook[i].Order < a.shutdownHook[j].Order })
 		for _, hook := range a.shutdownHook {
-			hook.Hook()
+			util.PanicSafeFunc(hook.Hook)() // hook can never panic
 		}
 		return nil, nil
 	})
@@ -201,12 +204,12 @@ func (a *MisoApp) triggerShutdownHook() {
 		timeoutDur := time.Duration(timeout * int(time.Second))
 		_, err := f.TimedGet(int(timeoutDur / time.Millisecond))
 		if errors.Is(err, util.ErrGetTimeout) {
-			a.rail.Infof("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
+			Warnf("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
 		}
 	} else {
 		_, err := f.Get()
 		if err != nil {
-			a.rail.Infof("Unexpected error occurred while executing shutdown hooks, %v", err)
+			Errorf("Unexpected error occurred while executing shutdown hooks, %v", err)
 		}
 	}
 
@@ -280,6 +283,44 @@ func (a *MisoApp) PreServerBootstrap(callback func(rail Rail) error) {
 		return
 	}
 	a.preServerBootstrapListener = append(a.preServerBootstrapListener, callback)
+}
+
+// Configure logging level and output target based on loaded configuration.
+func ConfigureLogging() error {
+
+	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
+	if HasProp(PropLoggingRollingFile) {
+		logFile := GetPropStr(PropLoggingRollingFile)
+		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
+			Filename:   logFile,
+			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
+			MaxAge:     GetPropInt(PropLoggingRollingFileMaxAge),  //days
+			MaxBackups: GetPropInt(PropLoggingRollingFileMaxBackups),
+		})
+		loggerOut = log
+		loggerErrOut = log
+
+		if GetPropBool(PropLoggingRollingFileRotateDaily) {
+			// schedule a job to rotate the log at 00:00:00
+			if err := ScheduleCron(Job{
+				Name:            "RotateLogJob",
+				Cron:            "0 0 0 * * ?",
+				CronWithSeconds: true,
+				Run:             func(r Rail) error { return log.Rotate() },
+			}); err != nil {
+				return fmt.Errorf("failed to register RotateLogJob, %v", err)
+			}
+		}
+	}
+
+	logrus.SetOutput(loggerOut)
+
+	if HasProp(PropLoggingLevel) {
+		if level, ok := ParseLogLevel(GetPropStr(PropLoggingLevel)); ok {
+			logrus.SetLevel(level)
+		}
+	}
+	return nil
 }
 
 /*

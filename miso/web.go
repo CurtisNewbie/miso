@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
-	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	jsoniter "github.com/json-iterator/go"
@@ -354,44 +353,6 @@ func createHttpServer(router http.Handler) *http.Server {
 		Handler: router,
 	}
 	return server
-}
-
-// Configure logging level and output target based on loaded configuration.
-func ConfigureLogging(rail Rail) error {
-
-	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if HasProp(PropLoggingRollingFile) {
-		logFile := GetPropStr(PropLoggingRollingFile)
-		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
-			Filename:   logFile,
-			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
-			MaxAge:     GetPropInt(PropLoggingRollingFileMaxAge),  //days
-			MaxBackups: GetPropInt(PropLoggingRollingFileMaxBackups),
-		})
-		loggerOut = log
-		loggerErrOut = log
-
-		if GetPropBool(PropLoggingRollingFileRotateDaily) {
-			// schedule a job to rotate the log at 00:00:00
-			if err := ScheduleCron(Job{
-				Name:            "RotateLogJob",
-				Cron:            "0 0 0 * * ?",
-				CronWithSeconds: true,
-				Run:             func(r Rail) error { return log.Rotate() },
-			}); err != nil {
-				return fmt.Errorf("failed to register RotateLogJob, %v", err)
-			}
-		}
-	}
-
-	logrus.SetOutput(loggerOut)
-
-	if HasProp(PropLoggingLevel) {
-		if level, ok := ParseLogLevel(GetPropStr(PropLoggingLevel)); ok {
-			logrus.SetLevel(level)
-		}
-	}
-	return nil
 }
 
 // Register http routes on gin.Engine

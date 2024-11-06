@@ -17,6 +17,8 @@ import (
 var (
 	// regex for arg expansion
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
+
+	setDefPropFuncs []func() (k string, defVal any)
 )
 
 func init() {
@@ -149,16 +151,16 @@ You can also use ReadConfig to load your custom configFile. This func is essenti
 
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
-func (a *AppConfig) DefaultReadConfig(args []string, rail Rail) {
+func (a *AppConfig) DefaultReadConfig(args []string) {
 	loaded := util.NewSet[string]()
 
 	defConfigFile := GuessConfigFilePath(args)
 	loaded.Add(defConfigFile)
 
-	if err := a.LoadConfigFromFile(defConfigFile, rail); err != nil {
-		rail.Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
+	if err := a.LoadConfigFromFile(defConfigFile); err != nil {
+		Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
 	} else {
-		rail.Infof("Loaded config file: %v", defConfigFile)
+		Infof("Loaded config file: %v", defConfigFile)
 	}
 
 	// the load config file may specifiy extra files to be loaded
@@ -173,17 +175,17 @@ func (a *AppConfig) DefaultReadConfig(args []string, rail Rail) {
 
 		if ok, err := util.FileExists(f); err != nil || !ok {
 			if err != nil {
-				rail.Warnf("Failed to open extra config file, %v, %v", f, err)
+				Warnf("Failed to open extra config file, %v, %v", f, err)
 			}
 
-			rail.Debugf("Extra config file %v not found", f)
+			Debugf("Extra config file %v not found", f)
 			continue
 		}
 
-		if err := a.LoadConfigFromFile(f, rail); err != nil {
-			rail.Warnf("Failed to load extra config file, %v, %v", f, err)
+		if err := a.LoadConfigFromFile(f); err != nil {
+			Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
-			rail.Infof("Loaded config file: %v", f)
+			Infof("Loaded config file: %v", f)
 		}
 	}
 
@@ -197,10 +199,10 @@ func (a *AppConfig) DefaultReadConfig(args []string, rail Rail) {
 			continue
 		}
 
-		if err := a.LoadConfigFromFile(f, rail); err != nil {
-			rail.Warnf("Failed to load extra config file, %v, %v", f, err)
+		if err := a.LoadConfigFromFile(f); err != nil {
+			Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
-			rail.Infof("Loaded extra config file: %v", f)
+			Infof("Loaded extra config file: %v", f)
 		}
 	}
 }
@@ -210,7 +212,7 @@ func (a *AppConfig) DefaultReadConfig(args []string, rail Rail) {
 // It's the caller's responsibility to close the provided reader.
 //
 // Calling this method overides previously loaded config.
-func (a *AppConfig) LoadConfigFromReader(reader io.Reader, r Rail) error {
+func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 	var eo error
 
 	doWithWriteLock(a, func() {
@@ -229,15 +231,15 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader, r Rail) error {
 // Load config from string.
 //
 // Calling this method overides previously loaded config.
-func (a *AppConfig) LoadConfigFromStr(s string, r Rail) error {
+func (a *AppConfig) LoadConfigFromStr(s string) error {
 	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
-	return a.LoadConfigFromReader(sr, r)
+	return a.LoadConfigFromReader(sr)
 }
 
 // Load config from file.
 //
 // Calling this method overides previously loaded config.
-func (a *AppConfig) LoadConfigFromFile(configFile string, r Rail) error {
+func (a *AppConfig) LoadConfigFromFile(configFile string) error {
 	if configFile == "" {
 		return nil
 	}
@@ -251,11 +253,11 @@ func (a *AppConfig) LoadConfigFromFile(configFile string, r Rail) error {
 	}
 	defer f.Close()
 
-	err = a.LoadConfigFromReader(f, r)
+	err = a.LoadConfigFromReader(f)
 	if err != nil {
 		return fmt.Errorf("failed to load config file: '%s', %v", configFile, err)
 	}
-	r.Debugf("Loaded config file: '%v'", configFile)
+	Debugf("Loaded config file: '%v'", configFile)
 	return nil
 }
 
@@ -307,7 +309,13 @@ func SetProp(prop string, val any) {
 
 // Set default value for the prop
 func SetDefProp(prop string, defVal any) {
-	globalConfig().SetDefProp(prop, defVal)
+	setDefPropFuncs = append(setDefPropFuncs, func() (string, any) { return prop, defVal })
+}
+
+func runSetDefPropFuncs(app *MisoApp) {
+	for _, f := range setDefPropFuncs {
+		app.config.SetDefProp(f())
+	}
 }
 
 // Check whether the prop exists
@@ -399,7 +407,7 @@ You can also use ReadConfig to load your custom configFile. This func is essenti
 Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
 */
 func DefaultReadConfig(args []string, rail Rail) {
-	globalConfig().DefaultReadConfig(args, rail)
+	globalConfig().DefaultReadConfig(args)
 }
 
 // Load config from io Reader.
@@ -408,21 +416,21 @@ func DefaultReadConfig(args []string, rail Rail) {
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromReader(reader io.Reader, r Rail) error {
-	return globalConfig().LoadConfigFromReader(reader, r)
+	return globalConfig().LoadConfigFromReader(reader)
 }
 
 // Load config from string.
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromStr(s string, r Rail) error {
-	return globalConfig().LoadConfigFromStr(s, r)
+	return globalConfig().LoadConfigFromStr(s)
 }
 
 // Load config from file.
 //
 // Calling this method overides previously loaded config.
 func LoadConfigFromFile(configFile string, r Rail) error {
-	return globalConfig().LoadConfigFromFile(configFile, r)
+	return globalConfig().LoadConfigFromFile(configFile)
 }
 
 // Check whether we are running in production mode
