@@ -47,10 +47,10 @@ func init() {
 type MySQLBootstrapCallback func(rail miso.Rail, db *gorm.DB) error
 
 type mysqlModule struct {
-	mu                      *sync.RWMutex
-	conn                    *gorm.DB
-	mysqlBootstrapCallbacks []MySQLBootstrapCallback
-	conf                    *miso.AppConfig
+	mu                 *sync.RWMutex
+	conn               *gorm.DB
+	bootstrapCallbacks []MySQLBootstrapCallback
+	conf               *miso.AppConfig
 }
 
 func (m *mysqlModule) init(rail miso.Rail, p MySQLConnParam) error {
@@ -98,7 +98,53 @@ func (m *mysqlModule) initialized() bool {
 }
 
 func (m *mysqlModule) addMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
-	m.mysqlBootstrapCallbacks = append(m.mysqlBootstrapCallbacks, cbk)
+	m.bootstrapCallbacks = append(m.bootstrapCallbacks, cbk)
+}
+
+func (m *mysqlModule) initFromProp(rail miso.Rail) error {
+	p := MySQLConnParam{
+		User:            m.conf.GetPropStr(PropMySQLUser),
+		Password:        m.conf.GetPropStr(PropMySQLPassword),
+		Schema:          m.conf.GetPropStr(PropMySQLSchema),
+		Host:            m.conf.GetPropStr(PropMySQLHost),
+		Port:            m.conf.GetPropInt(PropMySQLPort),
+		ConnParam:       strings.Join(m.conf.GetPropStrSlice(PropMySQLConnParam), "&"),
+		MaxOpenConns:    m.conf.GetPropInt(PropMySQLMaxOpenConns),
+		MaxIdleConns:    m.conf.GetPropInt(PropMySQLMaxIdleConns),
+		MaxConnLifetime: m.conf.GetPropDur(PropMySQLConnLifetime, time.Minute),
+	}
+	return m.init(rail, p)
+}
+
+func (m *mysqlModule) runBootstrapCallbacks(rail miso.Rail) error {
+	if len(m.bootstrapCallbacks) > 0 {
+		db := GetMySQL()
+		for _, cbk := range m.bootstrapCallbacks {
+			if err := cbk(rail, db); err != nil {
+				return fmt.Errorf("failed to execute MySQLBootstrapCallback, %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (m *mysqlModule) registerHealthIndicator() {
+	miso.AddHealthIndicator(miso.HealthIndicator{
+		Name: "MySQL Component",
+		CheckHealth: func(rail miso.Rail) bool {
+			db, err := m.mysql().DB()
+			if err != nil {
+				rail.Errorf("Failed to get MySQL DB, %v", err)
+				return false
+			}
+			err = db.Ping()
+			if err != nil {
+				rail.Errorf("Failed to ping MySQL, %v", err)
+				return false
+			}
+			return true
+		},
+	})
 }
 
 func newModule(c *miso.AppConfig) *mysqlModule {
@@ -131,21 +177,6 @@ This func looks for following props:
 */
 func InitMySQLFromProp(rail miso.Rail) error {
 	return module().initFromProp(rail)
-}
-
-func (m *mysqlModule) initFromProp(rail miso.Rail) error {
-	p := MySQLConnParam{
-		User:            m.conf.GetPropStr(PropMySQLUser),
-		Password:        m.conf.GetPropStr(PropMySQLPassword),
-		Schema:          m.conf.GetPropStr(PropMySQLSchema),
-		Host:            m.conf.GetPropStr(PropMySQLHost),
-		Port:            m.conf.GetPropInt(PropMySQLPort),
-		ConnParam:       strings.Join(m.conf.GetPropStrSlice(PropMySQLConnParam), "&"),
-		MaxOpenConns:    m.conf.GetPropInt(PropMySQLMaxOpenConns),
-		MaxIdleConns:    m.conf.GetPropInt(PropMySQLMaxIdleConns),
-		MaxConnLifetime: m.conf.GetPropDur(PropMySQLConnLifetime, time.Minute),
-	}
-	return m.init(rail, p)
 }
 
 type MySQLConnParam struct {
@@ -219,37 +250,6 @@ func GetMySQL() *gorm.DB {
 // Check whether mysql client is initialized
 func IsMySQLInitialized() bool {
 	return module().initialized()
-}
-
-func (m *mysqlModule) runBootstrapCallbacks(rail miso.Rail) error {
-	if len(m.mysqlBootstrapCallbacks) > 0 {
-		db := GetMySQL()
-		for _, cbk := range m.mysqlBootstrapCallbacks {
-			if err := cbk(rail, db); err != nil {
-				return fmt.Errorf("failed to execute MySQLBootstrapCallback, %w", err)
-			}
-		}
-	}
-	return nil
-}
-
-func (m *mysqlModule) registerHealthIndicator() {
-	miso.AddHealthIndicator(miso.HealthIndicator{
-		Name: "MySQL Component",
-		CheckHealth: func(rail miso.Rail) bool {
-			db, err := m.mysql().DB()
-			if err != nil {
-				rail.Errorf("Failed to get MySQL DB, %v", err)
-				return false
-			}
-			err = db.Ping()
-			if err != nil {
-				rail.Errorf("Failed to ping MySQL, %v", err)
-				return false
-			}
-			return true
-		},
-	})
 }
 
 func MySQLBootstrap(app *miso.MisoApp, rail miso.Rail) error {
