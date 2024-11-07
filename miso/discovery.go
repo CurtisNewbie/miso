@@ -43,7 +43,7 @@ var (
 
 func init() {
 	// TODO: change to bootstrap component
-	PostServerBootstrap(func(rail Rail) error {
+	App().PostServerBootstrap(func(rail Rail) error {
 		sl := GetServerList()
 		if sl == nil {
 			return nil

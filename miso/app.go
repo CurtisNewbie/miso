@@ -49,6 +49,17 @@ func init() {
 	SetDefProp(PropServerGracefulShutdownTimeSec, 0)
 }
 
+type ComponentBootstrap struct {
+	// name of the component.
+	Name string
+	// the actual bootstrap function.
+	Bootstrap func(app *MisoApp, rail Rail) error
+	// check whether component should be bootstraped
+	Condition func(app *MisoApp, rail Rail) (bool, error)
+	// order of which the components are bootstraped, natural order, it's by default 0.
+	Order int
+}
+
 type MisoApp struct {
 	configLoaded bool
 
@@ -122,7 +133,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 
 	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
 	rail.Infof("Miso Version: %s", version.Version)
-	rail.Infof("Production Mode: %v", GetPropBool(PropProdMode))
+	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	if e := a.callPreServerBootstrapListeners(rail); e != nil {
@@ -190,7 +201,7 @@ func (a *MisoApp) LoadConfig(args []string) {
 	// default way to load configuration
 	a.Config().DefaultReadConfig(args)
 
-	if err := ConfigureLogging(); err != nil {
+	if err := a.configureLogging(); err != nil {
 		panic(fmt.Errorf("configure logging failed, %v", err))
 	}
 	a.configLoaded = true
@@ -198,7 +209,7 @@ func (a *MisoApp) LoadConfig(args []string) {
 
 // Trigger shutdown hook
 func (a *MisoApp) triggerShutdownHook() {
-	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
+	timeout := a.Config().GetPropInt(PropServerGracefulShutdownTimeSec)
 
 	f := util.RunAsync(func() (any, error) {
 		a.shmu.Lock()
@@ -227,6 +238,11 @@ func (a *MisoApp) triggerShutdownHook() {
 		}
 	}
 
+}
+
+// Register shutdown hook, hook should never panic
+func (a *MisoApp) AddShutdownHook(hook func()) {
+	a.AddOrderedShutdownHook(DefShutdownOrder, hook)
 }
 
 func (a *MisoApp) AddOrderedShutdownHook(order int, hook func()) {
@@ -299,22 +315,22 @@ func (a *MisoApp) PreServerBootstrap(callback func(rail Rail) error) {
 	a.preServerBootstrapListener = append(a.preServerBootstrapListener, callback)
 }
 
-// Configure logging level and output target based on loaded configuration.
-func ConfigureLogging() error {
+func (a *MisoApp) configureLogging() error {
+	c := a.Config()
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if HasProp(PropLoggingRollingFile) {
-		logFile := GetPropStr(PropLoggingRollingFile)
+	if c.HasProp(PropLoggingRollingFile) {
+		logFile := c.GetPropStr(PropLoggingRollingFile)
 		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
 			Filename:   logFile,
-			MaxSize:    GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
-			MaxAge:     GetPropInt(PropLoggingRollingFileMaxAge),  //days
-			MaxBackups: GetPropInt(PropLoggingRollingFileMaxBackups),
+			MaxSize:    c.GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
+			MaxAge:     c.GetPropInt(PropLoggingRollingFileMaxAge),  //days
+			MaxBackups: c.GetPropInt(PropLoggingRollingFileMaxBackups),
 		})
 		loggerOut = log
 		loggerErrOut = log
 
-		if GetPropBool(PropLoggingRollingFileRotateDaily) {
+		if c.GetPropBool(PropLoggingRollingFileRotateDaily) {
 			// schedule a job to rotate the log at 00:00:00
 			if err := ScheduleCron(Job{
 				Name:            "RotateLogJob",
@@ -329,12 +345,17 @@ func ConfigureLogging() error {
 
 	logrus.SetOutput(loggerOut)
 
-	if HasProp(PropLoggingLevel) {
-		if level, ok := ParseLogLevel(GetPropStr(PropLoggingLevel)); ok {
+	if c.HasProp(PropLoggingLevel) {
+		if level, ok := ParseLogLevel(c.GetPropStr(PropLoggingLevel)); ok {
 			logrus.SetLevel(level)
 		}
 	}
 	return nil
+}
+
+// Configure logging level and output target based on loaded configuration.
+func ConfigureLogging() error {
+	return App().configureLogging()
 }
 
 /*
@@ -407,7 +428,7 @@ func RegisterBootstrapCallback(c ComponentBootstrap) {
 
 // Register shutdown hook, hook should never panic
 func AddShutdownHook(hook func()) {
-	App().AddOrderedShutdownHook(DefShutdownOrder, hook)
+	App().AddShutdownHook(hook)
 }
 
 func AddOrderedShutdownHook(order int, hook func()) {

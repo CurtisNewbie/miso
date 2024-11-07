@@ -420,8 +420,9 @@ func IsConsulClientInitialized() bool {
 
 func ConsulBootstrap(app *MisoApp, rail Rail) error {
 
-	if GetPropBool(PropConsulEnableDeregisterUrl) {
-		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
+	c := app.Config()
+	if c.GetPropBool(PropConsulEnableDeregisterUrl) {
+		deregisterUrl := c.GetPropStr(PropConsulDeregisterUrl)
 		if !util.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
@@ -483,5 +484,5 @@ func ConsulBootstrap(app *MisoApp, rail Rail) error {
 }
 
 func ConsulBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return GetPropBool(PropConsulEnabled), nil
+	return app.Config().GetPropBool(PropConsulEnabled), nil
 }

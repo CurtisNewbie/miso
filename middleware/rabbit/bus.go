@@ -104,7 +104,7 @@ func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 
 // Document EventPipline in the generated apidoc.
 func (ep *EventPipeline[T]) Document(name string, desc string, provider string) *EventPipeline[T] {
-	miso.PreServerBootstrap(func(rail miso.Rail) error {
+	miso.App().PreServerBootstrap(func(rail miso.Rail) error {
 		if miso.GetPropStr(miso.PropAppName) != provider {
 			return nil
 		}

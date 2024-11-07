@@ -52,11 +52,13 @@ var (
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 
-	PostServerBootstrap(func(rail Rail) error {
-		if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
+	app := App()
+	c := app.Config()
+	app.PostServerBootstrap(func(rail Rail) error {
+		if !c.GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
 			return nil
 		}
-		outf := GetPropStr(PropServerGenerateEndpointDocFile)
+		outf := c.GetPropStr(PropServerGenerateEndpointDocFile)
 		if outf == "" {
 			return nil
 		}
@@ -493,9 +495,9 @@ var (
 	apidocTemplate string
 )
 
-func serveApiDocTmpl(rail Rail) error {
+func serveApiDocTmpl(app *MisoApp, rail Rail) error {
 
-	if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
+	if !app.Config().GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
 		return nil
 	}
 
@@ -531,7 +533,7 @@ func serveApiDocTmpl(rail Rail) error {
 					PipelineDoc []PipelineDoc
 					Markdown    string
 				}{
-					App:         GetPropStr(PropAppName),
+					App:         app.Config().GetPropStr(PropAppName),
 					HttpDoc:     docs,
 					PipelineDoc: pipelineDoc,
 					Markdown:    markdown,
@@ -542,8 +544,8 @@ func serveApiDocTmpl(rail Rail) error {
 		Desc("Serve the generated API documentation webpage").
 		Public()
 
-	PostServerBootstrap(func(rail Rail) error {
-		rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", GetPropInt(PropServerActualPort))
+	app.PostServerBootstrap(func(rail Rail) error {
+		rail.Infof("Exposing API Documentation on http://localhost:%v/doc/api", app.Config().GetPropInt(PropServerActualPort))
 		return nil
 	})
 

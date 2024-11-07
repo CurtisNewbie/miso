@@ -28,10 +28,15 @@ func init() {
 
 // Default handler for prometheus metrics.
 func PrometheusHandler() http.Handler {
-	if !GetPropBool(PropMetricsAuthEnabled) {
+	return appPrometheusHandler(App())
+}
+
+// Default handler for prometheus metrics.
+func appPrometheusHandler(app *MisoApp) http.Handler {
+	if !app.Config().GetPropBool(PropMetricsAuthEnabled) {
 		return promhttp.Handler()
 	}
-	return BearerAuth(promhttp.Handler(), func() string { return GetPropStr(PropMetricsAuthBearer) })
+	return BearerAuth(promhttp.Handler(), func() string { return app.Config().GetPropStr(PropMetricsAuthBearer) })
 }
 
 // Timer based on prometheus.Histogram.
@@ -88,13 +93,14 @@ func NewPromCounter(name string) prometheus.Counter {
 }
 
 func PrometheusBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return GetPropBool(PropMetricsEnabled) && GetPropBool(PropServerEnabled), nil
+	return app.Config().GetPropBool(PropMetricsEnabled) && app.Config().GetPropBool(PropServerEnabled), nil
 }
 
 func PrometheusBootstrap(app *MisoApp, rail Rail) error {
 
-	if GetPropBool(PropMetricsAuthEnabled) {
-		if util.IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
+	c := app.Config()
+	if c.GetPropBool(PropMetricsAuthEnabled) {
+		if util.IsBlankStr(c.GetPropStr(PropMetricsAuthBearer)) {
 			return fmt.Errorf("metrics authorization enabled, but secret is missing, please configure property '%v'",
 				PropMetricsAuthBearer)
 		}
@@ -102,8 +108,8 @@ func PrometheusBootstrap(app *MisoApp, rail Rail) error {
 	}
 
 	if !prometheusBootstrapDisabled {
-		handler := PrometheusHandler()
-		RawGet(GetPropStr(PropMetricsRoute),
+		handler := appPrometheusHandler(app)
+		RawGet(c.GetPropStr(PropMetricsRoute),
 			func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) }).
 			Desc("Collect prometheus metrics information").
 			DocHeader("Authorization", "Basic authorization if enabled")

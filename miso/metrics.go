@@ -42,22 +42,26 @@ func init() {
 	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
 	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
 
-	PreServerBootstrap(func(rail Rail) error {
-		if !GetPropBool(PropMetricsEnableMemStatsLogJob) {
-			return nil
-		}
-		collector := NewMetricsCollector(DefaultMetricDesc(nil))
-		memStatsCollector = &collector
-		return ScheduleCron(Job{
-			Name:            "MetricsMemStatLogJob",
-			CronWithSeconds: true,
-			Cron:            GetPropStr(PropMetricsMemStatsLogJobCron),
-			Run: func(r Rail) error {
-				memStatsCollector.Read()
-				r.Infof("\n\n%s", SprintMemStats(memStatsCollector.MemStats()))
-				return nil
-			},
-		})
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:  "BootstrapMetrics",
+		Order: BootstrapOrderL4,
+		Condition: func(app *MisoApp, rail Rail) (bool, error) {
+			return app.Config().GetPropBool(PropMetricsEnableMemStatsLogJob), nil
+		},
+		Bootstrap: func(app *MisoApp, rail Rail) error {
+			collector := NewMetricsCollector(DefaultMetricDesc(nil))
+			memStatsCollector = &collector
+			return ScheduleCron(Job{
+				Name:            "MetricsMemStatLogJob",
+				CronWithSeconds: true,
+				Cron:            GetPropStr(PropMetricsMemStatsLogJobCron),
+				Run: func(r Rail) error {
+					memStatsCollector.Read()
+					r.Infof("\n\n%s", SprintMemStats(memStatsCollector.MemStats()))
+					return nil
+				},
+			})
+		},
 	})
 }
 
