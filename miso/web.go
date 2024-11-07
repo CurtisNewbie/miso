@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/encoding/json"
+
 	"github.com/curtisnewbie/miso/util"
 
 	"github.com/gin-gonic/gin"
-	jsoniter "github.com/json-iterator/go"
 )
 
 const (
@@ -599,7 +600,7 @@ func MustBind(rail Rail, c *gin.Context, ptr any) {
 
 	// we now use jsoniter
 	if c.Request.Method != http.MethodGet && c.ContentType() == gin.MIMEJSON {
-		if err := jsoniter.NewDecoder(c.Request.Body).Decode(ptr); err != nil {
+		if err := json.DecodeJson(c.Request.Body, ptr); err != nil {
 			onFailed(err)
 		}
 		return
@@ -616,7 +617,7 @@ func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	c.Status(code)
 	c.Header("Content-Type", applicationJson)
 
-	err := jsoniter.NewEncoder(c.Writer).Encode(body)
+	err := json.EncodeJson(c.Writer, body)
 	if err != nil {
 		panic(err)
 	}

@@ -41,7 +41,8 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	globalApp *MisoApp = newApp()
+	globalApp                       *MisoApp = newApp()
+	globalServerBootstrapComponents []ComponentBootstrap
 )
 
 func init() {
@@ -94,9 +95,16 @@ func (a *MisoApp) Store() *appStore {
 	return a.store
 }
 
+func (a *MisoApp) prepareBootstrapComponents() {
+	for _, c := range globalServerBootstrapComponents {
+		a.RegisterBootstrapCallback(c)
+	}
+}
+
 // Bootstrap miso app.
 func (a *MisoApp) Bootstrap(args []string) {
 	a.LoadConfig(args)
+	a.prepareBootstrapComponents()
 
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
@@ -394,7 +402,7 @@ func PreServerBootstrap(f func(rail Rail) error) {
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(c ComponentBootstrap) {
-	App().RegisterBootstrapCallback(c)
+	globalServerBootstrapComponents = append(globalServerBootstrapComponents, c)
 }
 
 // Register shutdown hook, hook should never panic

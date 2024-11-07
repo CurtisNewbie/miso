@@ -23,8 +23,8 @@ func init() {
 
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap Redis",
-		Bootstrap: RedisBootstrap,
-		Condition: RedisBootstrapCondition,
+		Bootstrap: redisBootstrap,
+		Condition: redisBootstrapCondition,
 		Order:     miso.BootstrapOrderL1,
 	})
 }
@@ -178,8 +178,8 @@ func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 	return module().init(rail, p)
 }
 
-func RedisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := module()
+func redisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
+	m := appModule(app)
 	if _, e := m.initFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to Redis, %w", e)
 	}
@@ -187,7 +187,7 @@ func RedisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	return nil
 }
 
-func RedisBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
+func redisBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
 	return app.Config().GetPropBool(PropRedisEnabled), nil
 }
 

@@ -22,6 +22,7 @@ var (
 )
 
 func init() {
+	// TODO:
 	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
 		return buildPipelineDoc(util.MapValues(pipelineDescMap))
 	})
