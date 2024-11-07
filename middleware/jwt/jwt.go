@@ -20,33 +20,44 @@ var (
 	ErrMissingPrivateKey  = errors.New("missing private key")
 	ErrMissingPublicKey   = errors.New("missing public key")
 	ErrExtractClaimFailed = errors.New("unable to extract claims from token")
-
-	privKeyRwmu sync.RWMutex
-	privKey     *rsa.PrivateKey
-
-	pubKeyRwmu sync.RWMutex
-	pubKey     *rsa.PublicKey
 )
 
-// --------------------------------------------------
+//lint:ignore U1000 for future use
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *jwtModule {
+	return &jwtModule{
+		privKeyRwmu: &sync.RWMutex{},
+		pubKeyRwmu:  &sync.RWMutex{},
+		app:         app,
+	}
+})
 
-func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
-	pk, err := loadPrivateKey()
+type jwtModule struct {
+	privKeyRwmu *sync.RWMutex
+	privKey     *rsa.PrivateKey
+
+	pubKeyRwmu *sync.RWMutex
+	pubKey     *rsa.PublicKey
+
+	app *miso.MisoApp
+}
+
+func (m *jwtModule) jwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
+	pk, err := m.loadPrivateKey()
 	if err != nil {
 		return "", err
 	}
 
-	claims["iss"] = miso.GetPropStr(PropJwtIssue)
+	claims["iss"] = m.app.Config().GetPropStr(PropJwtIssue)
 	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	return token.SignedString(pk)
 }
 
-func JwtDecode(token string) (ParsedJwt, error) {
+func (m *jwtModule) jwtDecode(token string) (ParsedJwt, error) {
 	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return loadPublicKey()
-	}, ValidateIssuer())
+		return m.loadPublicKey()
+	}, validateIssuer(m.app))
 
 	if err != nil {
 		return ParsedJwt{}, err
@@ -63,66 +74,75 @@ func JwtDecode(token string) (ParsedJwt, error) {
 	}
 }
 
-func loadPublicKey() (any, error) {
-	pubKeyRwmu.RLock()
-	if pubKey != nil {
-		defer pubKeyRwmu.RUnlock()
-		return pubKey, nil
+func (m *jwtModule) loadPublicKey() (any, error) {
+	m.pubKeyRwmu.RLock()
+	if m.pubKey != nil {
+		defer m.pubKeyRwmu.RUnlock()
+		return m.pubKey, nil
 	}
-	pubKeyRwmu.RUnlock()
+	m.pubKeyRwmu.RUnlock()
 
-	pubKeyRwmu.Lock()
-	defer pubKeyRwmu.Unlock()
+	m.pubKeyRwmu.Lock()
+	defer m.pubKeyRwmu.Unlock()
 
-	if !miso.HasProp(PropJwtPublicKey) {
+	conf := m.app.Config()
+	if !conf.HasProp(PropJwtPublicKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := miso.GetPropStr(PropJwtPublicKey)
+	k := conf.GetPropStr(PropJwtPublicKey)
 	pk, err := crypto.LoadPubKey(k)
 	if err != nil {
-		miso.EmptyRail().Errorf("Failed to load public key, %v", err)
+		miso.Errorf("Failed to load public key, %v", err)
 		return nil, err
 	}
 
-	pubKey = pk
-	return pubKey, nil
+	m.pubKey = pk
+	return m.pubKey, nil
 }
 
-func loadPrivateKey() (any, error) {
-	privKeyRwmu.RLock()
-	if privKey != nil {
-		defer privKeyRwmu.RUnlock()
-		return privKey, nil
+func (m *jwtModule) loadPrivateKey() (any, error) {
+	m.privKeyRwmu.RLock()
+	if m.privKey != nil {
+		defer m.privKeyRwmu.RUnlock()
+		return m.privKey, nil
 	}
-	privKeyRwmu.RUnlock()
+	m.privKeyRwmu.RUnlock()
 
-	privKeyRwmu.Lock()
-	defer privKeyRwmu.Unlock()
+	m.privKeyRwmu.Lock()
+	defer m.privKeyRwmu.Unlock()
 
-	if privKey != nil {
-		return privKey, nil
+	if m.privKey != nil {
+		return m.privKey, nil
 	}
 
-	if !miso.HasProp(PropJwtPrivateKey) {
+	if !m.app.Config().HasProp(PropJwtPrivateKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := miso.GetPropStr(PropJwtPrivateKey)
+	k := m.app.Config().GetPropStr(PropJwtPrivateKey)
 	pk, err := crypto.LoadPrivKey(k)
 	if err != nil {
-		miso.EmptyRail().Errorf("Failed to load private key, %v", err)
+		miso.Errorf("Failed to load private key, %v", err)
 		return nil, err
 	}
 
-	privKey = pk
-	return privKey, nil
+	m.privKey = pk
+	return m.privKey, nil
 }
 
-func ValidateIssuer() jwt.ParserOption {
-	iss := miso.GetPropStr(PropJwtIssue)
+func validateIssuer(app *miso.MisoApp) jwt.ParserOption {
+	iss := app.Config().GetPropStr(PropJwtIssue)
 	if iss == "" {
 		return func(p *jwt.Parser) {}
 	}
 	return jwt.WithIssuer(iss)
+}
+
+func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
+	return module().jwtEncode(claims, exp)
+}
+
+func JwtDecode(token string) (ParsedJwt, error) {
+	return module().jwtDecode(token)
 }

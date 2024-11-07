@@ -29,7 +29,6 @@ func init() {
 	})
 }
 
-//lint:ignore U1000 for future use
 var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *taskModule {
 	return &taskModule{
 		dtaskMut: &sync.Mutex{},
