@@ -2,20 +2,25 @@ package json
 
 import (
 	"io"
+	"strings"
 	"unicode"
 
 	"github.com/curtisnewbie/miso/util"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/json-iterator/go/extra"
+)
+
+var (
+	config                  = jsoniter.Config{EscapeHTML: true}.Froze()
+	NamingStrategyTranslate = LowercaseNamingStrategy
 )
 
 func init() {
-	extra.SetNamingStrategy(LowercaseNamingStrategy)
+	config.RegisterExtension(&namingStrategyExtension{jsoniter.DummyExtension{}})
 }
 
 // Parse json bytes.
 func ParseJson(body []byte, ptr any) error {
-	e := jsoniter.Unmarshal(body, ptr)
+	e := config.Unmarshal(body, ptr)
 	return e
 }
 
@@ -26,7 +31,7 @@ func SParseJson(body string, ptr any) error {
 
 // Write json as bytes.
 func WriteJson(body any) ([]byte, error) {
-	return jsoniter.Marshal(body)
+	return config.Marshal(body)
 }
 
 // Write json as string.
@@ -55,12 +60,12 @@ func CustomSWriteJson(c jsoniter.API, body any) (string, error) {
 
 // Decode json.
 func DecodeJson(reader io.Reader, ptr any) error {
-	return jsoniter.NewDecoder(reader).Decode(ptr)
+	return config.NewDecoder(reader).Decode(ptr)
 }
 
 // Encode json.
 func EncodeJson(writer io.Writer, body any) error {
-	return jsoniter.NewEncoder(writer).Encode(body)
+	return config.NewEncoder(writer).Encode(body)
 }
 
 // Change first rune to lower case.
@@ -71,4 +76,28 @@ func LowercaseNamingStrategy(name string) string {
 	}
 	ru[0] = unicode.ToLower(ru[0])
 	return string(ru)
+}
+
+type namingStrategyExtension struct {
+	jsoniter.DummyExtension
+}
+
+func (extension *namingStrategyExtension) UpdateStructDescriptor(structDescriptor *jsoniter.StructDescriptor) {
+	for _, binding := range structDescriptor.Fields {
+		if unicode.IsLower(rune(binding.Field.Name()[0])) || binding.Field.Name()[0] == '_' {
+			continue
+		}
+		tag, hastag := binding.Field.Tag().Lookup("json")
+		if hastag {
+			tagParts := strings.Split(tag, ",")
+			if tagParts[0] == "-" {
+				continue // hidden field
+			}
+			if tagParts[0] != "" {
+				continue // field explicitly named
+			}
+		}
+		binding.ToNames = []string{NamingStrategyTranslate(binding.Field.Name())}
+		binding.FromNames = []string{NamingStrategyTranslate(binding.Field.Name())}
+	}
 }
