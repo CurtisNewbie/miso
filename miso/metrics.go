@@ -45,10 +45,10 @@ func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:  "BootstrapMetrics",
 		Order: BootstrapOrderL4,
-		Condition: func(app *MisoApp, rail Rail) (bool, error) {
-			return app.Config().GetPropBool(PropMetricsEnableMemStatsLogJob), nil
+		Condition: func(rail Rail) (bool, error) {
+			return GetPropBool(PropMetricsEnableMemStatsLogJob), nil
 		},
-		Bootstrap: func(app *MisoApp, rail Rail) error {
+		Bootstrap: func(rail Rail) error {
 			collector := NewMetricsCollector(DefaultMetricDesc(nil))
 			memStatsCollector = &collector
 			return ScheduleCron(Job{

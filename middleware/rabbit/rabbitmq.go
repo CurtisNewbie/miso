@@ -44,9 +44,7 @@ var (
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
 )
 
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *rabbitMqModule {
-	return newModule(app)
-})
+var module = miso.InitAppModuleFunc(newModule)
 
 func init() {
 	miso.SetDefProp(PropRabbitMqEnabled, false)
@@ -77,15 +75,10 @@ type rabbitMqModule struct {
 	bindingRegistration  []BindingRegistration
 	queueRegistration    []QueueRegistration
 	exchangeRegistration []ExchangeRegistration
-
-	app    *miso.MisoApp
-	config *miso.AppConfig
 }
 
-func newModule(app *miso.MisoApp) *rabbitMqModule {
+func newModule() *rabbitMqModule {
 	m := &rabbitMqModule{
-		app:               app,
-		config:            app.Config(),
 		redeliverQueueMap: &sync.Map{},
 		pubWg:             &sync.WaitGroup{},
 		mu:                &sync.Mutex{},
@@ -427,11 +420,11 @@ func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error)
 	}
 
 	c := amqp.Config{}
-	username := m.config.GetPropStr(PropRabbitMqUsername)
-	password := m.config.GetPropStr(PropRabbitMqPassword)
-	vhost := m.config.GetPropStr(PropRabbitMqVhost)
-	host := m.config.GetPropStr(PropRabbitMqHost)
-	port := m.config.GetPropInt(PropRabbitMqPort)
+	username := miso.GetPropStr(PropRabbitMqUsername)
+	password := miso.GetPropStr(PropRabbitMqPassword)
+	vhost := miso.GetPropStr(PropRabbitMqVhost)
+	host := miso.GetPropStr(PropRabbitMqHost)
+	port := miso.GetPropInt(PropRabbitMqPort)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
@@ -518,7 +511,7 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 }
 
 func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
-	qos := m.config.GetPropInt(PropRabbitMqConsumerQos)
+	qos := miso.GetPropInt(PropRabbitMqConsumerQos)
 
 	for _, v := range m.listeners {
 		listener := v
@@ -693,16 +686,16 @@ func (m *rabbitMqModule) newChan() (*amqp.Channel, error) {
 	return m.conn.Channel()
 }
 
-func rabbitBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := appModule(app)
+func rabbitBootstrap(rail miso.Rail) error {
+	m := module()
 	if e := m.startClient(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
 	return nil
 }
 
-func rabbitBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return app.Config().GetPropBool(PropRabbitMqEnabled), nil
+func rabbitBootstrapCondition(rail miso.Rail) (bool, error) {
+	return miso.GetPropBool(PropRabbitMqEnabled), nil
 }
 
 func RabbitConnected() bool {

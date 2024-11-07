@@ -23,11 +23,10 @@ var (
 )
 
 //lint:ignore U1000 for future use
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *jwtModule {
+var module = miso.InitAppModuleFunc(func() *jwtModule {
 	return &jwtModule{
 		privKeyRwmu: &sync.RWMutex{},
 		pubKeyRwmu:  &sync.RWMutex{},
-		app:         app,
 	}
 })
 
@@ -37,8 +36,6 @@ type jwtModule struct {
 
 	pubKeyRwmu *sync.RWMutex
 	pubKey     *rsa.PublicKey
-
-	app *miso.MisoApp
 }
 
 func (m *jwtModule) jwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
@@ -47,7 +44,7 @@ func (m *jwtModule) jwtEncode(claims jwt.MapClaims, exp time.Duration) (string, 
 		return "", err
 	}
 
-	claims["iss"] = m.app.Config().GetPropStr(PropJwtIssue)
+	claims["iss"] = miso.GetPropStr(PropJwtIssue)
 	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -57,7 +54,7 @@ func (m *jwtModule) jwtEncode(claims jwt.MapClaims, exp time.Duration) (string, 
 func (m *jwtModule) jwtDecode(token string) (ParsedJwt, error) {
 	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return m.loadPublicKey()
-	}, validateIssuer(m.app))
+	}, validateIssuer())
 
 	if err != nil {
 		return ParsedJwt{}, err
@@ -85,12 +82,11 @@ func (m *jwtModule) loadPublicKey() (any, error) {
 	m.pubKeyRwmu.Lock()
 	defer m.pubKeyRwmu.Unlock()
 
-	conf := m.app.Config()
-	if !conf.HasProp(PropJwtPublicKey) {
+	if !miso.HasProp(PropJwtPublicKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := conf.GetPropStr(PropJwtPublicKey)
+	k := miso.GetPropStr(PropJwtPublicKey)
 	pk, err := crypto.LoadPubKey(k)
 	if err != nil {
 		miso.Errorf("Failed to load public key, %v", err)
@@ -116,11 +112,11 @@ func (m *jwtModule) loadPrivateKey() (any, error) {
 		return m.privKey, nil
 	}
 
-	if !m.app.Config().HasProp(PropJwtPrivateKey) {
+	if !miso.HasProp(PropJwtPrivateKey) {
 		return nil, ErrMissingPublicKey
 	}
 
-	k := m.app.Config().GetPropStr(PropJwtPrivateKey)
+	k := miso.GetPropStr(PropJwtPrivateKey)
 	pk, err := crypto.LoadPrivKey(k)
 	if err != nil {
 		miso.Errorf("Failed to load private key, %v", err)
@@ -131,8 +127,8 @@ func (m *jwtModule) loadPrivateKey() (any, error) {
 	return m.privKey, nil
 }
 
-func validateIssuer(app *miso.MisoApp) jwt.ParserOption {
-	iss := app.Config().GetPropStr(PropJwtIssue)
+func validateIssuer() jwt.ParserOption {
+	iss := miso.GetPropStr(PropJwtIssue)
 	if iss == "" {
 		return func(p *jwt.Parser) {}
 	}

@@ -29,15 +29,11 @@ func init() {
 	})
 }
 
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *redisModule {
-	return newModule(app)
-})
+var module = miso.InitAppModuleFunc(newModule)
 
 type redisModule struct {
 	mu     *sync.RWMutex
 	client *redis.Client
-	app    *miso.MisoApp
-	conf   *miso.AppConfig
 }
 
 func (m *redisModule) redis() *redis.Client {
@@ -66,11 +62,11 @@ func (m *redisModule) initFromProp(rail miso.Rail) (*redis.Client, error) {
 	return m.init(
 		rail,
 		RedisConnParam{
-			Address:  m.conf.GetPropStr(PropRedisAddress),
-			Port:     m.conf.GetPropStr(PropRedisPort),
-			Username: m.conf.GetPropStr(PropRedisUsername),
-			Password: m.conf.GetPropStr(PropRedisPassword),
-			Db:       m.conf.GetPropInt(PropRedisDatabase),
+			Address:  miso.GetPropStr(PropRedisAddress),
+			Port:     miso.GetPropStr(PropRedisPort),
+			Username: miso.GetPropStr(PropRedisUsername),
+			Password: miso.GetPropStr(PropRedisPassword),
+			Db:       miso.GetPropInt(PropRedisDatabase),
 		})
 }
 
@@ -120,11 +116,9 @@ func (m *redisModule) addHealthIndicator() {
 	})
 }
 
-func newModule(app *miso.MisoApp) *redisModule {
+func newModule() *redisModule {
 	return &redisModule{
-		mu:   &sync.RWMutex{},
-		conf: app.Config(),
-		app:  app,
+		mu: &sync.RWMutex{},
 	}
 }
 
@@ -133,10 +127,6 @@ func newModule(app *miso.MisoApp) *redisModule {
 // Must call InitRedis(...) method before this method.
 func GetRedis() *redis.Client {
 	return module().redis()
-}
-
-func AppGetRedis(app *miso.MisoApp) *redis.Client {
-	return appModule(app).redis()
 }
 
 // Get String
@@ -178,8 +168,8 @@ func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 	return module().init(rail, p)
 }
 
-func redisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := appModule(app)
+func redisBootstrap(rail miso.Rail) error {
+	m := module()
 	if _, e := m.initFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to Redis, %w", e)
 	}
@@ -187,8 +177,8 @@ func redisBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	return nil
 }
 
-func redisBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return app.Config().GetPropBool(PropRedisEnabled), nil
+func redisBootstrapCondition(rail miso.Rail) (bool, error) {
+	return miso.GetPropBool(PropRedisEnabled), nil
 }
 
 func IsNil(err error) bool {

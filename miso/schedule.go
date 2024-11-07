@@ -8,10 +8,9 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
-var appModule, module = InitAppModuleFunc(func(app *MisoApp) *scheduleMdoule {
+var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
 	return &scheduleMdoule{
 		scheduler: gocron.NewScheduler(time.Local),
-		app:       app,
 	}
 })
 
@@ -54,8 +53,6 @@ type scheduleMdoule struct {
 
 	preJobHooks  []PreJobHook
 	postJobHooks []PostJobHook
-
-	app *MisoApp
 }
 
 func (m *scheduleMdoule) stop() {
@@ -116,7 +113,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 
-	m.app.PostServerBootstrap(func(rail Rail) error {
+	PostServerBootstrap(func(rail Rail) error {
 		taggedJobs, err := m.scheduler.FindJobsByTag(job.Name)
 		if err != nil {
 			rail.Warnf("Failed to FindJobsByTag, jobName: %v, %v", job.Name, err)
@@ -169,29 +166,29 @@ func (m *scheduleMdoule) hasScheduledJobs() bool {
 
 // Whether scheduler is initialized
 func HasScheduledJobs() bool {
-	return module().hasScheduledJobs()
+	return scheduleModule().hasScheduledJobs()
 }
 
 // Stop scheduler
 func StopScheduler() {
-	module().stop()
+	scheduleModule().stop()
 }
 
 // Start scheduler and block current routine
 func StartSchedulerBlocking() {
-	module().startBlocking()
+	scheduleModule().startBlocking()
 }
 
 // Start scheduler asynchronously
 func StartSchedulerAsync() {
-	module().startAsync()
+	scheduleModule().startAsync()
 }
 
 // add a cron job to scheduler, note that the cron expression includes second, e.g., '*/1 * * * * *'
 //
 // this func doesn't start the scheduler
 func ScheduleCron(job Job) error {
-	return module().doScheduleCron(job)
+	return scheduleModule().doScheduleCron(job)
 }
 
 // Callback triggered before job execution.
@@ -200,7 +197,7 @@ func ScheduleCron(job Job) error {
 //
 // Callback will be ignored, if the scheduler is already running.
 func PreJobExec(hook PreJobHook) {
-	module().preJobExec(hook)
+	scheduleModule().preJobExec(hook)
 }
 
 // Callback triggered after job execution.
@@ -209,15 +206,15 @@ func PreJobExec(hook PreJobHook) {
 //
 // Callback will be ignored, if the scheduler is already running.
 func PostJobExec(hook PostJobHook) {
-	module().postJobExec(hook)
+	scheduleModule().postJobExec(hook)
 }
 
-func schedulerBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return appModule(app).hasScheduledJobs(), nil
+func schedulerBootstrapCondition(rail Rail) (bool, error) {
+	return scheduleModule().hasScheduledJobs(), nil
 }
 
-func schedulerBootstrap(app *MisoApp, rail Rail) error {
-	m := appModule(app)
+func schedulerBootstrap(rail Rail) error {
+	m := scheduleModule()
 	m.startAsync()
 	rail.Info("Cron Scheduler started")
 	AddShutdownHook(func() { m.stop() })

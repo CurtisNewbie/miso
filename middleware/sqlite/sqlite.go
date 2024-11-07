@@ -23,12 +23,10 @@ func init() {
 type sqliteModule struct {
 	sqliteDb   *gorm.DB
 	sqliteOnce *sync.Once
-	app        *miso.MisoApp
 }
 
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *sqliteModule {
+var module = miso.InitAppModuleFunc(func() *sqliteModule {
 	return &sqliteModule{
-		app:        app,
 		sqliteOnce: &sync.Once{},
 	}
 })
@@ -44,8 +42,7 @@ func (m *sqliteModule) sqlite() *gorm.DB {
 
 func (m *sqliteModule) initOnce() {
 	m.sqliteOnce.Do(func() {
-		c := m.app.Config()
-		sq, err := NewConn(c.GetPropStr(PropSqliteFile), c.GetPropBool(PropSqliteWalEnabled))
+		sq, err := NewConn(miso.GetPropStr(PropSqliteFile), miso.GetPropBool(PropSqliteWalEnabled))
 		if err != nil {
 			panic(err)
 		}
@@ -94,11 +91,11 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 	return db, nil
 }
 
-func sqliteBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	appModule(app).initOnce()
+func sqliteBootstrap(rail miso.Rail) error {
+	module().initOnce()
 	return nil
 }
 
-func sqliteBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return !util.IsBlankStr(app.Config().GetPropStr(PropSqliteFile)), nil
+func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
+	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
 }

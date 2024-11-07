@@ -20,23 +20,18 @@ func init() {
 
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Prometheus",
-		Bootstrap: PrometheusBootstrap,
-		Condition: PrometheusBootstrapCondition,
+		Bootstrap: prometheusBootstrap,
+		Condition: prometheusBootstrapCondition,
 		Order:     BootstrapOrderL2,
 	})
 }
 
 // Default handler for prometheus metrics.
 func PrometheusHandler() http.Handler {
-	return appPrometheusHandler(App())
-}
-
-// Default handler for prometheus metrics.
-func appPrometheusHandler(app *MisoApp) http.Handler {
-	if !app.Config().GetPropBool(PropMetricsAuthEnabled) {
+	if !GetPropBool(PropMetricsAuthEnabled) {
 		return promhttp.Handler()
 	}
-	return BearerAuth(promhttp.Handler(), func() string { return app.Config().GetPropStr(PropMetricsAuthBearer) })
+	return BearerAuth(promhttp.Handler(), func() string { return GetPropStr(PropMetricsAuthBearer) })
 }
 
 // Timer based on prometheus.Histogram.
@@ -92,15 +87,14 @@ func NewPromCounter(name string) prometheus.Counter {
 	return counter
 }
 
-func PrometheusBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return app.Config().GetPropBool(PropMetricsEnabled) && app.Config().GetPropBool(PropServerEnabled), nil
+func prometheusBootstrapCondition(rail Rail) (bool, error) {
+	return GetPropBool(PropMetricsEnabled) && GetPropBool(PropServerEnabled), nil
 }
 
-func PrometheusBootstrap(app *MisoApp, rail Rail) error {
+func prometheusBootstrap(rail Rail) error {
 
-	c := app.Config()
-	if c.GetPropBool(PropMetricsAuthEnabled) {
-		if util.IsBlankStr(c.GetPropStr(PropMetricsAuthBearer)) {
+	if GetPropBool(PropMetricsAuthEnabled) {
+		if util.IsBlankStr(GetPropStr(PropMetricsAuthBearer)) {
 			return fmt.Errorf("metrics authorization enabled, but secret is missing, please configure property '%v'",
 				PropMetricsAuthBearer)
 		}
@@ -108,8 +102,8 @@ func PrometheusBootstrap(app *MisoApp, rail Rail) error {
 	}
 
 	if !prometheusBootstrapDisabled {
-		handler := appPrometheusHandler(app)
-		RawGet(c.GetPropStr(PropMetricsRoute),
+		handler := PrometheusHandler()
+		RawGet(GetPropStr(PropMetricsRoute),
 			func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) }).
 			Desc("Collect prometheus metrics information").
 			DocHeader("Authorization", "Basic authorization if enabled")

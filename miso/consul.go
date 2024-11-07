@@ -27,6 +27,10 @@ const (
 )
 
 var (
+	_ ServerList = (*ConsulServerList)(nil)
+)
+
+var (
 	// Service registration
 	consulRegistration = &serviceRegistration{serviceId: ServiceIdNil}
 
@@ -67,13 +71,10 @@ func init() {
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
 
-	// setup api
-	GetServerList = func() ServerList { return consulServerList }
-
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Boostrap Consul",
-		Bootstrap: ConsulBootstrap,
-		Condition: ConsulBootstrapCondition,
+		Bootstrap: consulBootstrap,
+		Condition: consulBootstrapCondition,
 		Order:     BootstrapOrderL4,
 	})
 }
@@ -194,7 +195,7 @@ func (s *ConsulServerList) Subscribe(rail Rail, service string) error {
 				service, len(dat), len(instances), instances)
 			s.Unlock()
 
-			serverChangeListeners.TriggerListeners(service)
+			TriggerServerChangeListeners(service)
 		}
 	}
 
@@ -418,11 +419,14 @@ func IsConsulClientInitialized() bool {
 	return consulp.consul != nil
 }
 
-func ConsulBootstrap(app *MisoApp, rail Rail) error {
+func consulBootstrap(rail Rail) error {
 
-	c := app.Config()
-	if c.GetPropBool(PropConsulEnableDeregisterUrl) {
-		deregisterUrl := c.GetPropStr(PropConsulDeregisterUrl)
+	// setup api
+	ChangeGetServerList(func() ServerList { return consulServerList })
+	rail.Debug("Using Consul based GetServerList")
+
+	if GetPropBool(PropConsulEnableDeregisterUrl) {
+		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
 		if !util.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
@@ -453,7 +457,7 @@ func ConsulBootstrap(app *MisoApp, rail Rail) error {
 
 	// deregister on shutdown, we specify the order explicitly to make sure the service
 	// is deregistered before shutting down the web server
-	App().AddOrderedShutdownHook(DefShutdownOrder-1, func() {
+	AddOrderedShutdownHook(DefShutdownOrder-1, func() {
 		rail := EmptyRail()
 
 		if IsConsulServiceRegistered() {
@@ -477,12 +481,9 @@ func ConsulBootstrap(app *MisoApp, rail Rail) error {
 		return fmt.Errorf("failed to register on Consul, %w", e)
 	}
 
-	clientServiceRegistry = DynamicServiceRegistry // use ServerList as ServiceRegistry
-	rail.Debug("Using ConsulBasedServiceRegistry")
-
 	return nil
 }
 
-func ConsulBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return app.Config().GetPropBool(PropConsulEnabled), nil
+func consulBootstrapCondition(rail Rail) (bool, error) {
+	return GetPropBool(PropConsulEnabled), nil
 }

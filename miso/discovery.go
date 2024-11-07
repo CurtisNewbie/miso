@@ -11,50 +11,126 @@ import (
 )
 
 var (
-	// Select Server randomly.
-	RandomServerSelector ServerSelector = func(servers []Server) int {
-		return rand.Int() % len(servers)
-	}
+	_ ServiceRegistry = ServerListServiceRegistry{}
+	_ ServiceRegistry = hardcodedServiceRegistry{}
+)
 
+var (
+	ErrMissingServiceName      = errors.New("service name is required")
+	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
+	ErrServerListNotFound      = errors.New("fail to find ServerList implemnetation")
+)
+
+var discModule = InitAppModuleFunc(newModule)
+
+func init() {
+	RegisterBootstrapCallback(ComponentBootstrap{
+		Name:      "Bootstrap Service Discovery",
+		Condition: func(rail Rail) (bool, error) { return true, nil },
+		Bootstrap: func(rail Rail) error {
+			m := discModule()
+			sl := m.getServerList()
+			if sl == nil {
+				return nil
+			}
+			for _, s := range App().Config().GetPropStrSlice(PropSDSubscrbe) {
+				if err := sl.Subscribe(rail, s); err != nil {
+					rail.Warnf("Failed to subscrbe %v, %v", s, err)
+				}
+			}
+			return nil
+		},
+		Order: 5, // default is 0, runs after all default bootstrap components
+	})
+}
+
+type discoveryModule struct {
 	// Property based ServiceRegistry
-	PropBasedServiceRegistry = HardcodedServiceRegistry{}
+	propBasedServiceRegistry hardcodedServiceRegistry
 
 	// ServerList based ServiceRegistry
 	//
 	// Server selection can be customized by replacing the Rule.
-	DynamicServiceRegistry = ServerListServiceRegistry{Rule: RandomServerSelector}
-
-	ErrMissingServiceName      = errors.New("service name is required")
-	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
-	ErrServerListNotFound      = errors.New("fail to find ServerList implemnetation")
-
-	// ServiceRegistry that is currently in use.
-	clientServiceRegistry ServiceRegistry = nil
+	dynamicServiceRegistry ServerListServiceRegistry
 
 	// Map of ServerChangeListeners
-	serverChangeListeners = ServerChangeListenerMap{
-		Listeners: map[string][]func(){},
-		Pool:      util.NewCpuAsyncPool(),
-	}
+	serverChangeListeners ServerChangeListenerMap
 
 	// Get ServerList implementation
-	GetServerList func() ServerList
-)
+	getServerList func() ServerList
+}
 
-func init() {
-	// TODO: change to bootstrap component
-	App().PostServerBootstrap(func(rail Rail) error {
-		sl := GetServerList()
-		if sl == nil {
-			return nil
-		}
-		for _, s := range GetPropStrSlice(PropSDSubscrbe) {
-			if err := sl.Subscribe(rail, s); err != nil {
-				rail.Warnf("Failed to subscrbe %v, %v", s, err)
+func newModule() *discoveryModule {
+	return &discoveryModule{
+		propBasedServiceRegistry: hardcodedServiceRegistry{},
+		dynamicServiceRegistry:   ServerListServiceRegistry{Rule: RandomServerSelector},
+		serverChangeListeners: ServerChangeListenerMap{
+			Listeners: map[string][]func(){},
+			Pool:      util.NewCpuAsyncPool(),
+		},
+		getServerList: func() ServerList { return nil },
+	}
+}
+
+func (m *discoveryModule) changeGetServerList(f func() ServerList) {
+	if f == nil {
+		panic("getServerList(..) cannot be nil")
+	}
+	m.getServerList = f
+}
+
+func (m *discoveryModule) selectAnyServer(rail Rail, name string) (Server, error) {
+	return m.selectServer(rail, name, RandomServerSelector)
+}
+
+func (m *discoveryModule) selectServer(rail Rail, name string, selector func(servers []Server) int) (Server, error) {
+	serverList := m.getServerList()
+	var servers []Server
+	if serverList != nil {
+		servers = serverList.ListServers(rail, name)
+		if len(servers) < 1 {
+			if !serverList.IsSubscribed(rail, name) {
+				if err := serverList.Subscribe(rail, name); err != nil {
+					return Server{}, fmt.Errorf("failed to subscribe service, service not avaliable, %w", err)
+				}
+				if err := serverList.PollInstance(rail, name); err != nil {
+					return Server{}, fmt.Errorf("failed to poll service instance, service not available, %w", err)
+				}
+				return m.selectServer(rail, name, selector)
 			}
 		}
-		return nil
-	})
+	}
+	if len(servers) < 1 {
+		servers, _ = m.propBasedServiceRegistry.ListServers(rail, name)
+	}
+	if len(servers) < 1 {
+		return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+	}
+	selected := selector(servers)
+	if selected >= 0 && selected < len(servers) {
+		return servers[selected], nil
+	}
+	return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+}
+
+func (m *discoveryModule) getServiceRegistry() ServiceRegistry {
+	return m.dynamicServiceRegistry
+}
+
+func (m *discoveryModule) subscribeServerChanges(rail Rail, name string, cbk func()) error {
+	sl := m.getServerList()
+	if sl == nil {
+		return ErrServerListNotFound
+	}
+	if err := sl.Subscribe(rail, name); err != nil {
+		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
+	}
+	m.serverChangeListeners.SubscribeChange(name, cbk)
+	return nil
+}
+
+func (m *discoveryModule) triggerServerChangeListeners(service string) {
+	m.serverChangeListeners.TriggerListeners(service)
 }
 
 type ServerList interface {
@@ -102,17 +178,14 @@ type ServiceRegistry interface {
 //
 // Service registry initialization is lazy, don't store the retunred value in global var.
 func GetServiceRegistry() ServiceRegistry {
-	if clientServiceRegistry != nil {
-		return clientServiceRegistry
-	}
-	return PropBasedServiceRegistry
+	return discModule().getServiceRegistry()
 }
 
 // Service registry backed by loaded configuration.
-type HardcodedServiceRegistry struct {
+type hardcodedServiceRegistry struct {
 }
 
-func (r HardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
+func (r hardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
 	if util.IsBlankStr(service) {
 		return "", ErrMissingServiceName
 	}
@@ -127,7 +200,7 @@ func (r HardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relative
 	return httpProto + fmt.Sprintf("%s:%d", host, port) + relativeUrl, nil
 }
 
-func (r HardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
+func (r hardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
 	if util.IsBlankStr(service) {
 		return []Server{}, ErrMissingServiceName
 	}
@@ -142,14 +215,14 @@ func (r HardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Serv
 	return []Server{{Address: service, Port: port, Meta: map[string]string{}}}, nil
 }
 
-func (r HardcodedServiceRegistry) serverHostFromProp(name string) string {
+func (r hardcodedServiceRegistry) serverHostFromProp(name string) string {
 	if name == "" {
 		return ""
 	}
 	return GetPropStr("client.addr." + name + ".host")
 }
 
-func (r HardcodedServiceRegistry) serverPortFromProp(name string) int {
+func (r hardcodedServiceRegistry) serverPortFromProp(name string) int {
 	if name == "" {
 		return 0
 	}
@@ -184,54 +257,13 @@ func (s *ServerChangeListenerMap) SubscribeChange(name string, cbk func()) {
 	}
 }
 
-// Select one Server based on the provided selector.
-//
-// GetServerList() is internally called to obtain current ServerList implementation.
-//
-// If none is found and the service is not subscribed yet in the ServerList, this func subscribes to the service and polls the service instances immediately.
-//
-// If ServerList indeed doesn't find any available instance for the service, ErrServiceInstanceNotFound is returned.
-func SelectServer(rail Rail, name string, selector func(servers []Server) int) (Server, error) {
-	serverList := GetServerList()
-	if serverList == nil {
-		return Server{}, ErrServerListNotFound
-	}
-	servers := serverList.ListServers(rail, name)
-	if len(servers) < 1 {
-		if !serverList.IsSubscribed(rail, name) {
-			if err := serverList.Subscribe(rail, name); err != nil {
-				return Server{}, fmt.Errorf("failed to subscribe service, service not avaliable, %w", err)
-			}
-			if err := serverList.PollInstance(rail, name); err != nil {
-				return Server{}, fmt.Errorf("failed to poll service instance, service not available, %w", err)
-			}
-			return SelectServer(rail, name, selector)
-		}
-		servers, _ = PropBasedServiceRegistry.ListServers(rail, name)
-		if len(servers) < 1 {
-			return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
-		}
-	}
-	selected := selector(servers)
-	if selected >= 0 && selected < len(servers) {
-		return servers[selected], nil
-	}
-	return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
-}
-
-// Select one Server randomly.
-//
-// This func internally calls SelectServer with RandomServerSelector.
-func SelectAnyServer(rail Rail, name string) (Server, error) {
-	return SelectServer(rail, name, RandomServerSelector)
-}
-
 type ServerListServiceRegistry struct {
 	Rule ServerSelector
 }
 
 func (c ServerListServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
-	server, err := SelectServer(rail, service, c.Rule)
+	m := discModule()
+	server, err := m.selectServer(rail, service, c.Rule)
 	if err != nil {
 		return "", err
 	}
@@ -240,28 +272,52 @@ func (c ServerListServiceRegistry) ResolveUrl(rail Rail, service string, relativ
 }
 
 func (c ServerListServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
-	sl := GetServerList()
+	m := discModule()
+	sl := m.getServerList()
 	if sl == nil {
 		return nil, ErrServerListNotFound
 	}
 	servers := sl.ListServers(rail, service)
 	if len(servers) < 1 {
-		return PropBasedServiceRegistry.ListServers(rail, service)
+		return m.propBasedServiceRegistry.ListServers(rail, service)
 	}
 	return servers, nil
 }
 
 // Subscribe to changes to service instances.
-//
-// Callback is triggered asynchronously.
 func SubscribeServerChanges(rail Rail, name string, cbk func()) error {
-	sl := GetServerList()
-	if sl == nil {
-		return ErrServerListNotFound
+	return discModule().subscribeServerChanges(rail, name, cbk)
+}
+
+// Trigger service changes listeners.
+func TriggerServerChangeListeners(service string) {
+	discModule().triggerServerChangeListeners(service)
+}
+
+// Select one Server based on the provided selector algorithm.
+func SelectServer(rail Rail, name string, selector func(servers []Server) int) (Server, error) {
+	return discModule().selectServer(rail, name, selector)
+}
+
+// Select one Server randomly.
+func SelectAnyServer(rail Rail, name string) (Server, error) {
+	return discModule().selectAnyServer(rail, name)
+}
+
+// Select Server randomly.
+func RandomServerSelector(servers []Server) int {
+	if len(servers) < 1 {
+		return -1
 	}
-	if err := sl.Subscribe(rail, name); err != nil {
-		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
-	}
-	serverChangeListeners.SubscribeChange(name, cbk)
-	return nil
+	return rand.Int() % len(servers)
+}
+
+// Get ServerList, may return nil.
+func GetServerList() ServerList {
+	return discModule().getServerList()
+}
+
+// Change GetServiceList implmentation.
+func ChangeGetServerList(f func() ServerList) {
+	discModule().changeGetServerList(f)
 }

@@ -17,8 +17,6 @@ import (
 var (
 	// regex for arg expansion
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
-
-	setDefPropFuncs []func() (k string, defVal any)
 )
 
 func init() {
@@ -309,13 +307,7 @@ func SetProp(prop string, val any) {
 
 // Set default value for the prop
 func SetDefProp(prop string, defVal any) {
-	setDefPropFuncs = append(setDefPropFuncs, func() (string, any) { return prop, defVal })
-}
-
-func runSetDefPropFuncs(app *MisoApp) {
-	for _, f := range setDefPropFuncs {
-		app.config.SetDefProp(f())
-	}
+	App().Config().SetDefProp(prop, defVal)
 }
 
 // Check whether the prop exists

@@ -41,8 +41,7 @@ var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 
-	globalApp                       *MisoApp = newApp()
-	globalServerBootstrapComponents []ComponentBootstrap
+	globalApp *MisoApp = newApp()
 )
 
 func init() {
@@ -53,9 +52,9 @@ type ComponentBootstrap struct {
 	// name of the component.
 	Name string
 	// the actual bootstrap function.
-	Bootstrap func(app *MisoApp, rail Rail) error
+	Bootstrap func(rail Rail) error
 	// check whether component should be bootstraped
-	Condition func(app *MisoApp, rail Rail) (bool, error)
+	Condition func(rail Rail) (bool, error)
 	// order of which the components are bootstraped, natural order, it's by default 0.
 	Order int
 }
@@ -106,16 +105,9 @@ func (a *MisoApp) Store() *appStore {
 	return a.store
 }
 
-func (a *MisoApp) prepareBootstrapComponents() {
-	for _, c := range globalServerBootstrapComponents {
-		a.RegisterBootstrapCallback(c)
-	}
-}
-
 // Bootstrap miso app.
 func (a *MisoApp) Bootstrap(args []string) {
 	a.LoadConfig(args)
-	a.prepareBootstrapComponents()
 
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
@@ -146,7 +138,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
 	for _, sbc := range a.serverBootrapCallbacks {
 		if sbc.Condition != nil {
-			ok, ce := sbc.Condition(a, rail)
+			ok, ce := sbc.Condition(rail)
 			if ce != nil {
 				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
 				return
@@ -158,7 +150,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 
 		rail.Debugf("Starting to bootstrap component %-30s", sbc.Name)
 		start := time.Now()
-		if e := sbc.Bootstrap(a, rail); e != nil {
+		if e := sbc.Bootstrap(rail); e != nil {
 			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
 			return
 		}
@@ -194,9 +186,6 @@ func (a *MisoApp) LoadConfig(args []string) {
 	if a.configLoaded {
 		return
 	}
-
-	// setup default properties
-	runSetDefPropFuncs(a)
 
 	// default way to load configuration
 	a.Config().DefaultReadConfig(args)
@@ -423,7 +412,7 @@ func PreServerBootstrap(f func(rail Rail) error) {
 // When such callback is invoked, configuration should be fully loaded, the callback is free to read the loaded configuration
 // and decide whether or not the server component should be initialized, e.g., by checking if the enable flag is true.
 func RegisterBootstrapCallback(c ComponentBootstrap) {
-	globalServerBootstrapComponents = append(globalServerBootstrapComponents, c)
+	App().RegisterBootstrapCallback(c)
 }
 
 // Register shutdown hook, hook should never panic
@@ -481,19 +470,17 @@ func AppStoreGetElse[V any](app *MisoApp, k string, f func() V) V {
 	return vt
 }
 
-func InitAppModuleFunc[V any](initFunc func(app *MisoApp) V) (func(app *MisoApp) V, func() V) {
+func InitAppModuleFunc[V any](initFunc func() V) func() V {
 	t := reflect.TypeOf(util.NewVar[V]())
 	k := util.TypeName(t)
 	if k == "" {
 		panic(fmt.Errorf("cannot obtain type name of %v, unable to create InitAppModuleFunc", t))
 	}
-	appModule := func(app *MisoApp) V {
+	appModule := func() V {
+		app := App()
 		return AppStoreGetElse[V](app, k, func() V {
-			return initFunc(app)
+			return initFunc()
 		})
 	}
-	globalModule := func() V {
-		return appModule(App())
-	}
-	return appModule, globalModule
+	return appModule
 }

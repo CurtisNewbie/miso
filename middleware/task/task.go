@@ -29,12 +29,10 @@ func init() {
 	})
 }
 
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *taskModule {
+var module = miso.InitAppModuleFunc(func() *taskModule {
 	return &taskModule{
 		dtaskMut: &sync.Mutex{},
 		group:    "default",
-		conf:     app.Config(),
-		app:      app,
 	}
 })
 
@@ -53,20 +51,17 @@ type taskModule struct {
 
 	// ticker for refreshing master node lock
 	masterTicker *time.Ticker
-
-	app  *miso.MisoApp
-	conf *miso.AppConfig
 }
 
 func (m *taskModule) enabled() bool {
-	return m.conf.GetPropBool(PropTaskSchedulingEnabled) && len(m.dtasks) > 0
+	return miso.GetPropBool(PropTaskSchedulingEnabled) && len(m.dtasks) > 0
 }
 
 func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
-	proposedGroup := m.conf.GetPropStr(PropTaskSchedulingGroup)
+	proposedGroup := miso.GetPropStr(PropTaskSchedulingGroup)
 	if proposedGroup != "" {
 		m.group = proposedGroup
 	}
@@ -193,7 +188,7 @@ func (m *taskModule) startTaskMasterLockTicker() {
 }
 
 func (m *taskModule) releaseMasterNodeLock() {
-	cmd := redis.AppGetRedis(m.app).Eval(`
+	cmd := redis.GetRedis().Eval(`
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -222,7 +217,7 @@ func (m *taskModule) stopTaskMasterLockTicker() {
 
 // Refresh master lock key ttl
 func (m *taskModule) refreshTaskMasterLock() error {
-	return redis.AppGetRedis(m.app).Expire(m.getTaskMasterKey(), defMstLockTtl).Err()
+	return redis.GetRedis().Expire(m.getTaskMasterKey(), defMstLockTtl).Err()
 }
 
 // Try to become master node
@@ -231,7 +226,7 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 		return true
 	}
 
-	bcmd := redis.AppGetRedis(m.app).SetNX(m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
+	bcmd := redis.GetRedis().SetNX(m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
 		rail.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false
@@ -304,12 +299,12 @@ func StopTaskScheduler() {
 	module().stop()
 }
 
-func distriTaskBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return appModule(app).enabled(), nil
+func distriTaskBootstrapCondition(rail miso.Rail) (bool, error) {
+	return module().enabled(), nil
 }
 
-func distriTaskBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := appModule(app)
-	app.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
+func distriTaskBootstrap(rail miso.Rail) error {
+	m := module()
+	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
 	return m.bootstrapAsComponent(rail)
 }

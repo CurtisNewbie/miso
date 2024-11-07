@@ -43,10 +43,9 @@ func init() {
 	})
 }
 
-var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *mysqlModule {
+var module = miso.InitAppModuleFunc(func() *mysqlModule {
 	return &mysqlModule{
-		mu:   &sync.RWMutex{},
-		conf: app.Config(),
+		mu: &sync.RWMutex{},
 	}
 })
 
@@ -56,7 +55,6 @@ type mysqlModule struct {
 	mu                 *sync.RWMutex
 	conn               *gorm.DB
 	bootstrapCallbacks []MySQLBootstrapCallback
-	conf               *miso.AppConfig
 }
 
 func (m *mysqlModule) init(rail miso.Rail, p MySQLConnParam) error {
@@ -112,15 +110,15 @@ func (m *mysqlModule) addMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 
 func (m *mysqlModule) initFromProp(rail miso.Rail) error {
 	p := MySQLConnParam{
-		User:            m.conf.GetPropStr(PropMySQLUser),
-		Password:        m.conf.GetPropStr(PropMySQLPassword),
-		Schema:          m.conf.GetPropStr(PropMySQLSchema),
-		Host:            m.conf.GetPropStr(PropMySQLHost),
-		Port:            m.conf.GetPropInt(PropMySQLPort),
-		ConnParam:       strings.Join(m.conf.GetPropStrSlice(PropMySQLConnParam), "&"),
-		MaxOpenConns:    m.conf.GetPropInt(PropMySQLMaxOpenConns),
-		MaxIdleConns:    m.conf.GetPropInt(PropMySQLMaxIdleConns),
-		MaxConnLifetime: m.conf.GetPropDur(PropMySQLConnLifetime, time.Minute),
+		User:            miso.GetPropStr(PropMySQLUser),
+		Password:        miso.GetPropStr(PropMySQLPassword),
+		Schema:          miso.GetPropStr(PropMySQLSchema),
+		Host:            miso.GetPropStr(PropMySQLHost),
+		Port:            miso.GetPropInt(PropMySQLPort),
+		ConnParam:       strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
+		MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
+		MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
+		MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
 	}
 	return m.init(rail, p)
 }
@@ -247,8 +245,8 @@ func IsMySQLInitialized() bool {
 	return module().initialized()
 }
 
-func mysqlBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	m := appModule(app)
+func mysqlBootstrap(rail miso.Rail) error {
+	m := module()
 
 	if e := InitMySQLFromProp(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to MySQL, %w", e)
@@ -263,8 +261,8 @@ func mysqlBootstrap(app *miso.MisoApp, rail miso.Rail) error {
 	return nil
 }
 
-func mysqlBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return app.Config().GetPropBool(PropMySQLEnabled), nil
+func mysqlBootstrapCondition(rail miso.Rail) (bool, error) {
+	return miso.GetPropBool(PropMySQLEnabled), nil
 }
 
 func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {

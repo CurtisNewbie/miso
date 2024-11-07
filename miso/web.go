@@ -622,13 +622,12 @@ func DispatchJson(c *gin.Context, body interface{}) {
 	DispatchJsonCode(c, http.StatusOK, body)
 }
 
-func webServerBootstrapCondition(app *MisoApp, rail Rail) (bool, error) {
-	return app.Config().GetPropBool(PropServerEnabled), nil
+func webServerBootstrapCondition(rail Rail) (bool, error) {
+	return GetPropBool(PropServerEnabled), nil
 }
 
-func webServerBootstrap(app *MisoApp, rail Rail) error {
+func webServerBootstrap(rail Rail) error {
 	rail.Info("Starting HTTP server")
-	config := app.Config()
 
 	// Load propagation keys for tracing
 	LoadPropagationKeys(rail)
@@ -644,11 +643,11 @@ func webServerBootstrap(app *MisoApp, rail Rail) error {
 	engine := gin.New()
 	engine.Use(TraceMiddleware())
 
-	if !config.IsProdMode() && IsDebugLevel() {
+	if !IsProdMode() && IsDebugLevel() {
 		engine.Use(gin.Logger()) // gin's default logger for debugging
 	}
 
-	if config.GetPropBool(PropServerPerfEnabled) {
+	if GetPropBool(PropServerPerfEnabled) {
 		engine.Use(PerfMiddleware())
 	}
 
@@ -657,7 +656,7 @@ func webServerBootstrap(app *MisoApp, rail Rail) error {
 	}
 	ginPreProcessors = nil
 
-	if !pprofRegisterDisabled && (!config.IsProdMode() || config.GetPropBool(PropServerPprofEnabled)) {
+	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
 			RawGet("", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
 			RawGet("/:name", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
@@ -672,12 +671,12 @@ func webServerBootstrap(app *MisoApp, rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if config.GetPropBool(PropConsulEnabled) && config.GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
+	if GetPropBool(PropConsulEnabled) && GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
-	if !config.IsProdMode() {
-		if err := serveApiDocTmpl(app, rail); err != nil {
+	if !IsProdMode() {
+		if err := serveApiDocTmpl(rail); err != nil {
 			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
 		}
 	}
@@ -689,7 +688,7 @@ func webServerBootstrap(app *MisoApp, rail Rail) error {
 	server := createHttpServer(engine)
 	go startHttpServer(rail, server)
 
-	app.AddShutdownHook(func() { shutdownHttpServer(server) })
+	AddShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
 }
 
