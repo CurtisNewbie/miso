@@ -51,7 +51,7 @@ func ExposeResourceInfo(res []Resource) {
 		return
 	}
 
-	miso.App().PreServerBootstrap(func(rail miso.Rail) error {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
 
 		// resources and paths are polled by uservault
 		miso.Get("/auth/resource", ServeResourceInfo()).

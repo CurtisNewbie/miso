@@ -16,16 +16,24 @@ const (
 
 var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
-	declaredBus     sync.Map
-
-	pipelineDescMap map[string]EventPipelineDesc = nil
 )
 
 func init() {
-	// TODO:
 	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
-		return buildPipelineDoc(util.MapValues(pipelineDescMap))
+		return buildPipelineDoc(util.MapValues(busModule().pipelineDescMap))
 	})
+}
+
+var busModule = miso.InitAppModuleFunc(func() *eventBusModule {
+	return &eventBusModule{
+		declaredBus:     &sync.Map{},
+		pipelineDescMap: map[string]EventPipelineDesc{},
+	}
+})
+
+type eventBusModule struct {
+	declaredBus     *sync.Map
+	pipelineDescMap map[string]EventPipelineDesc
 }
 
 // Send msg to event bus.
@@ -56,7 +64,8 @@ func NewEventBus(name string) {
 	if name == "" {
 		panic("event bus name is empty")
 	}
-	if _, ok := declaredBus.Load(name); ok {
+	m := busModule()
+	if _, ok := m.declaredBus.Load(name); ok {
 		return // race condition is harmless, don't worry
 	}
 
@@ -64,7 +73,7 @@ func NewEventBus(name string) {
 	RegisterRabbitQueue(QueueRegistration{Name: name, Durable: true})
 	RegisterRabbitBinding(BindingRegistration{Queue: name, RoutingKey: BusRoutingKey, Exchange: name})
 	RegisterRabbitExchange(ExchangeRegistration{Name: name, Durable: true, Kind: BusExchangeKind})
-	declaredBus.Store(name, true)
+	m.declaredBus.Store(name, true)
 }
 
 // Subscribe to event bus.
@@ -104,15 +113,12 @@ func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 
 // Document EventPipline in the generated apidoc.
 func (ep *EventPipeline[T]) Document(name string, desc string, provider string) *EventPipeline[T] {
-	miso.App().PreServerBootstrap(func(rail miso.Rail) error {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
 		if miso.GetPropStr(miso.PropAppName) != provider {
 			return nil
 		}
-
-		if pipelineDescMap == nil {
-			pipelineDescMap = map[string]EventPipelineDesc{}
-		}
-		pipelineDescMap[ep.name] = EventPipelineDesc{
+		m := busModule()
+		m.pipelineDescMap[ep.name] = EventPipelineDesc{
 			Name:       name,
 			Desc:       desc,
 			RoutingKey: BusRoutingKey,

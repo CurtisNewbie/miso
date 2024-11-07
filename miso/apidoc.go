@@ -52,13 +52,11 @@ var (
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 
-	app := App()
-	c := app.Config()
-	app.PostServerBootstrap(func(rail Rail) error {
-		if !c.GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
+	PostServerBootstrap(func(rail Rail) error {
+		if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
 			return nil
 		}
-		outf := c.GetPropStr(PropServerGenerateEndpointDocFile)
+		outf := GetPropStr(PropServerGenerateEndpointDocFile)
 		if outf == "" {
 			return nil
 		}
