@@ -31,7 +31,7 @@ func EnableSchemaMigrate(fs embed.FS, baseDir string, startVersion string) {
 
 // Enable auto schema migration on production mode.
 func EnableSchemaMigrateOnProd(fs embed.FS, baseDir string, startVersion string) {
-	miso.App().PreServerBootstrap(func(rail miso.Rail) error {
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
 		if miso.IsProdMode() {
 			EnableSchemaMigrate(fs, baseDir, startVersion)
 		}
