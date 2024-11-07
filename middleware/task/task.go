@@ -14,8 +14,6 @@ import (
 const (
 	// default ttl for master lock key in redis (1 min)
 	defMstLockTtl = 1 * time.Minute
-
-	moduleKey = "_miso:internal:task:module"
 )
 
 func init() {
@@ -32,7 +30,7 @@ func init() {
 }
 
 //lint:ignore U1000 for future use
-var appModule, module = miso.InitAppModuleFunc(moduleKey, func(app *miso.MisoApp) *taskModule {
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *taskModule {
 	return &taskModule{
 		dtaskMut: &sync.Mutex{},
 		group:    "default",
@@ -196,7 +194,7 @@ func (m *taskModule) startTaskMasterLockTicker() {
 }
 
 func (m *taskModule) releaseMasterNodeLock() {
-	cmd := redis.GetAppRedis(m.app).Eval(`
+	cmd := redis.AppGetRedis(m.app).Eval(`
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -225,7 +223,7 @@ func (m *taskModule) stopTaskMasterLockTicker() {
 
 // Refresh master lock key ttl
 func (m *taskModule) refreshTaskMasterLock() error {
-	return redis.GetAppRedis(m.app).Expire(m.getTaskMasterKey(), defMstLockTtl).Err()
+	return redis.AppGetRedis(m.app).Expire(m.getTaskMasterKey(), defMstLockTtl).Err()
 }
 
 // Try to become master node
@@ -234,7 +232,7 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 		return true
 	}
 
-	bcmd := redis.GetAppRedis(m.app).SetNX(m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
+	bcmd := redis.AppGetRedis(m.app).SetNX(m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
 		rail.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false

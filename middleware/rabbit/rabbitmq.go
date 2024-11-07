@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	redeliverDelay    = 5000 // redeliver delay, changing it will also create a new queue for redelivery
-	defaultExchange   = ""   // default exchange that routes based on queue name using routing key
-	rabbitmqModuleKey = "_miso:internal:rabbitmq:module"
+	redeliverDelay  = 5000 // redeliver delay, changing it will also create a new queue for redelivery
+	defaultExchange = ""   // default exchange that routes based on queue name using routing key
 )
 
 const (
@@ -45,7 +44,7 @@ var (
 	errMsgNotPublished = errors.New("message not published, server failed to confirm")
 )
 
-var appModule, module = miso.InitAppModuleFunc(rabbitmqModuleKey, func(app *miso.MisoApp) *rabbitMqModule {
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *rabbitMqModule {
 	return newModule(app)
 })
 

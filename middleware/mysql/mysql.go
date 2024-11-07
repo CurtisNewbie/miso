@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	moduleKey        = "_miso:internal:mysql:module"
 	minimumConnParam = "parseTime=True&loc=Local"
 )
 
@@ -44,7 +43,7 @@ func init() {
 	})
 }
 
-var appModule, module = miso.InitAppModuleFunc(moduleKey, func(app *miso.MisoApp) *mysqlModule {
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *mysqlModule {
 	return &mysqlModule{
 		mu:   &sync.RWMutex{},
 		conf: app.Config(),

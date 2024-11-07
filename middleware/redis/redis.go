@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	moduleKey = "_miso:internal:redis:module"
-	Nil       = redis.Nil
+	Nil = redis.Nil
 )
 
 func init() {
@@ -29,6 +28,10 @@ func init() {
 		Order:     miso.BootstrapOrderL1,
 	})
 }
+
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *redisModule {
+	return newModule(app)
+})
 
 type redisModule struct {
 	mu     *sync.RWMutex
@@ -125,16 +128,6 @@ func newModule(app *miso.MisoApp) *redisModule {
 	}
 }
 
-func module() *redisModule {
-	return appModule(miso.App())
-}
-
-func appModule(app *miso.MisoApp) *redisModule {
-	return miso.AppStoreGetElse(app, moduleKey, func() *redisModule {
-		return newModule(app)
-	})
-}
-
 // Get Redis client
 //
 // Must call InitRedis(...) method before this method.
@@ -142,7 +135,7 @@ func GetRedis() *redis.Client {
 	return module().redis()
 }
 
-func GetAppRedis(app *miso.MisoApp) *redis.Client {
+func AppGetRedis(app *miso.MisoApp) *redis.Client {
 	return appModule(app).redis()
 }
 

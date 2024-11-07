@@ -8,11 +8,7 @@ import (
 	"github.com/go-co-op/gocron"
 )
 
-const (
-	scheduleModuleKey = "_miso:internal:schedule:module"
-)
-
-var appModule, module = InitAppModuleFunc(scheduleModuleKey, func(app *MisoApp) *scheduleMdoule {
+var appModule, module = InitAppModuleFunc(func(app *MisoApp) *scheduleMdoule {
 	return &scheduleMdoule{
 		scheduler: gocron.NewScheduler(time.Local),
 		app:       app,

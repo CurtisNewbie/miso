@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"reflect"
 	"sort"
 	"sync"
 	"syscall"
@@ -451,7 +452,12 @@ func AppStoreGetElse[V any](app *MisoApp, k string, f func() V) V {
 	return vt
 }
 
-func InitAppModuleFunc[V any](k string, initFunc func(app *MisoApp) V) (func(app *MisoApp) V, func() V) {
+func InitAppModuleFunc[V any](initFunc func(app *MisoApp) V) (func(app *MisoApp) V, func() V) {
+	t := reflect.TypeOf(util.NewVar[V]())
+	k := util.TypeName(t)
+	if k == "" {
+		panic(fmt.Errorf("cannot obtain type name of %v, unable to create InitAppModuleFunc", t))
+	}
 	appModule := func(app *MisoApp) V {
 		return AppStoreGetElse[V](app, k, func() V {
 			return initFunc(app)
