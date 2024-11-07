@@ -10,11 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var (
-	sqliteDb   *gorm.DB = nil
-	sqliteOnce sync.Once
-)
-
 func init() {
 	miso.SetDefProp(PropSqliteWalEnabled, true)
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
@@ -25,23 +20,42 @@ func init() {
 	})
 }
 
-// Get SQLite client.
-func GetDB() *gorm.DB {
-	initOnce()
-	if miso.IsDebugLevel() {
-		return sqliteDb.Debug()
-	}
-	return sqliteDb
+type sqliteModule struct {
+	sqliteDb   *gorm.DB
+	sqliteOnce *sync.Once
+	app        *miso.MisoApp
 }
 
-func initOnce() {
-	sqliteOnce.Do(func() {
-		sq, err := NewConn(miso.GetPropStr(PropSqliteFile), miso.GetPropBool(PropSqliteWalEnabled))
+var appModule, module = miso.InitAppModuleFunc(func(app *miso.MisoApp) *sqliteModule {
+	return &sqliteModule{
+		app:        app,
+		sqliteOnce: &sync.Once{},
+	}
+})
+
+// Get SQLite client.
+func (m *sqliteModule) sqlite() *gorm.DB {
+	m.initOnce()
+	if miso.IsDebugLevel() {
+		return m.sqliteDb.Debug()
+	}
+	return m.sqliteDb
+}
+
+func (m *sqliteModule) initOnce() {
+	m.sqliteOnce.Do(func() {
+		c := m.app.Config()
+		sq, err := NewConn(c.GetPropStr(PropSqliteFile), c.GetPropBool(PropSqliteWalEnabled))
 		if err != nil {
 			panic(err)
 		}
-		sqliteDb = sq
+		m.sqliteDb = sq
 	})
+}
+
+// Get SQLite client.
+func GetDB() *gorm.DB {
+	return module().sqlite()
 }
 
 // Create new SQLite connection.
@@ -81,10 +95,10 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 }
 
 func sqliteBootstrap(app *miso.MisoApp, rail miso.Rail) error {
-	initOnce()
+	appModule(app).initOnce()
 	return nil
 }
 
 func sqliteBootstrapCondition(app *miso.MisoApp, rail miso.Rail) (bool, error) {
-	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
+	return !util.IsBlankStr(app.Config().GetPropStr(PropSqliteFile)), nil
 }
