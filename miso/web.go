@@ -37,6 +37,8 @@ const (
 )
 
 var (
+	interceptors []func(c *gin.Context) (next bool)
+
 	lazyRouteRegistars []*LazyRouteDecl
 	routeRegistars     []routesRegistar
 
@@ -190,22 +192,22 @@ func RawAny(url string, handler RawTRouteHandler, extra ...util.StrPair) {
 
 // Register GET request route (raw version)
 func RawGet(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, newRawTRouteHandler(handler))
+	return newLazyRouteDecl(url, http.MethodGet, newRawTRouteHandler(handler))
 }
 
 // Register POST request route (raw version)
 func RawPost(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, newRawTRouteHandler(handler))
+	return newLazyRouteDecl(url, http.MethodPost, newRawTRouteHandler(handler))
 }
 
 // Register PUT request route (raw version)
 func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, newRawTRouteHandler(handler))
+	return newLazyRouteDecl(url, http.MethodPut, newRawTRouteHandler(handler))
 }
 
 // Register DELETE request route (raw version)
 func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, newRawTRouteHandler(handler))
+	return newLazyRouteDecl(url, http.MethodDelete, newRawTRouteHandler(handler))
 }
 
 // Register GET request.
@@ -213,7 +215,7 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodGet, newTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodGet, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
@@ -222,7 +224,7 @@ func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, newTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodPost, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
@@ -231,7 +233,7 @@ func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, newTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodPut, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
@@ -240,7 +242,7 @@ func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodDelete, newTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodDelete, newTRouteHandler(handler)).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
 
@@ -255,7 +257,7 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPost, newMappedTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodPost, newMappedTRouteHandler(handler)).
 		DocJsonReq(util.NewVar[Req]()).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
@@ -272,7 +274,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // and generate an API documentation describing the endpoint.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var r Req
-	return NewLazyRouteDecl(url, http.MethodGet, newMappedTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodGet, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
@@ -290,7 +292,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // and generate an API documentation describing the endpoint.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	var r Req
-	return NewLazyRouteDecl(url, http.MethodDelete, newMappedTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodDelete, newMappedTRouteHandler(handler)).
 		DocQueryReq(r).
 		DocHeaderReq(r).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
@@ -307,7 +309,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return NewLazyRouteDecl(url, http.MethodPut, newMappedTRouteHandler(handler)).
+	return newLazyRouteDecl(url, http.MethodPut, newMappedTRouteHandler(handler)).
 		DocJsonReq(util.NewVar[Req]()).
 		DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(util.NewVar[Res]()))
 }
@@ -837,11 +839,11 @@ func extraFilterOneParamDocByName() extraMatchCond {
 	}
 }
 
-func NewLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {
+func newLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *LazyRouteDecl {
 	dec := &LazyRouteDecl{
 		Url:     url,
 		Method:  method,
-		Handler: handler,
+		Handler: interceptedHandler(handler),
 		Extras:  []util.StrPair{},
 	}
 	lazyRouteRegistars = append(lazyRouteRegistars, dec)
@@ -1037,4 +1039,32 @@ func EnableBasicAuth(f func(username string, password string, url string, method
 // Disable the default health check endpoint handler.
 func DisableDefaultHealthCheckHandler() {
 	defaultHealthCheckHandlerDisabled = true
+}
+
+// Add request interceptor.
+//
+// For requests that are rejected, interceptor should set appropriate http status and return false.
+func AddInterceptor(f func(c *gin.Context) (next bool)) {
+	if f == nil {
+		panic("interceptor is nil")
+	}
+	interceptors = append(interceptors, f)
+}
+
+func runInterceptors(c *gin.Context) (next bool) {
+	for _, itc := range interceptors {
+		if !itc(c) {
+			return false
+		}
+	}
+	return true
+}
+
+func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		if !runInterceptors(c) {
+			return
+		}
+		f(c)
+	}
 }
