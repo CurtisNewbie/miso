@@ -31,13 +31,15 @@ const (
 	importGorm       = "gorm.io/gorm"
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 
-	tagHttp      = "http"
-	tagDesc      = "desc"
-	tagScope     = "scope"
-	tagRes       = "resource"
-	tagQueryDoc  = "query-doc"
-	tagHeaderDoc = "header-doc"
-	tagNgTable   = "ngtable"
+	tagHttp        = "http"
+	tagDesc        = "desc"
+	tagScope       = "scope"
+	tagRes         = "resource"
+	tagQueryDocV1  = "query-doc"
+	tagHeaderDocV1 = "header-doc"
+	tagQueryDocV2  = "query"
+	tagHeaderDocV2 = "header"
+	tagNgTable     = "ngtable"
 )
 
 var (
@@ -67,6 +69,19 @@ func main() {
 		util.Printlnf("  misoapi-scope: PROTECTED")
 		util.Printlnf("  misoapi-resource: document:read")
 		util.Printlnf("  misoapi-ngtable")
+		util.Printlnf("")
+		util.Printlnf("Tips:")
+		util.Printlnf("")
+		util.Printlnf("`misoapi-desc` supports multiple lines description, append \\ at the beginning of the new line.")
+		util.Printlnf("")
+		util.Printlnf("e.g.,")
+		util.Printlnf("")
+		util.Printlnf(" // misoapi-desc: this is a very very")
+		util.Printlnf(" // \\ long description")
+		util.Printlnf("")
+		util.Printlnf("will becomes:")
+		util.Printlnf("")
+		util.Printlnf(" Desc(\"this is a very very long description\")")
 		util.Printlnf("")
 	}
 	flag.Parse()
@@ -531,12 +546,12 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 			ad.Scope = t.Body
 		case tagRes:
 			ad.Resource = t.Body
-		case tagQueryDoc:
+		case tagQueryDocV1, tagQueryDocV2:
 			kv, ok := t.BodyKV()
 			if ok {
 				ad.Query = append(ad.Query, kv)
 			}
-		case tagHeaderDoc:
+		case tagHeaderDocV1, tagHeaderDocV2:
 			kv, ok := t.BodyKV()
 			if ok {
 				ad.Header = append(ad.Header, kv)
@@ -571,6 +586,7 @@ func (m *MisoApiTag) BodyKV() (Pair, bool) {
 
 func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 	t := []MisoApiTag{}
+	currIsDesc := false
 	for _, s := range start {
 		s, _ = strings.CutPrefix(s, "//")
 		s := strings.TrimSpace(s)
@@ -582,17 +598,31 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 					util.Printlnf("[DEBUG] parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
 				pre = strings.TrimSpace(pre)
+				currIsDesc = pre == tagDesc
 				t = append(t, MisoApiTag{
 					Command: pre,
 					Body:    strings.TrimSpace(m),
 				})
 			} else {
-				if flags.Has(m) {
-					t = append(t, MisoApiTag{
-						Command: m,
-					})
-				}
+				currIsDesc = false
 				continue
+			}
+		} else {
+			if s == "" {
+				currIsDesc = false
+				continue
+			}
+
+			// multi-lines misoapi-desc
+			if currIsDesc && len(t) > 0 && t[len(t)-1].Command == tagDesc {
+				last := t[len(t)-1]
+				s, cut := strings.CutPrefix(s, "\\")
+				if cut {
+					s = strings.TrimSpace(s)
+				}
+
+				last.Body += " " + s
+				t[len(t)-1] = last
 			}
 		}
 	}
