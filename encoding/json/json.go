@@ -46,6 +46,17 @@ func SWriteJson(body any) (string, error) {
 	return util.UnsafeByt2Str(buf), nil
 }
 
+func SWriteIndent(body any) (string, error) {
+	if v, ok := body.(string); ok {
+		return v, nil
+	}
+	buf, err := config.MarshalIndent(body, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return util.UnsafeByt2Str(buf), nil
+}
+
 // Write json as string using customized jsoniter.Config.
 func CustomSWriteJson(c jsoniter.API, body any) (string, error) {
 	if v, ok := body.(string); ok {
