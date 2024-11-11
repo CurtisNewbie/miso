@@ -590,8 +590,8 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 	for _, s := range start {
 		s, _ = strings.CutPrefix(s, "//")
 		s := strings.TrimSpace(s)
-		if m, ok := strings.CutPrefix(s, MisoApiPrefix); ok {
-			if pi := strings.Index(m, ":"); pi > -1 {
+		if m, ok := strings.CutPrefix(s, MisoApiPrefix); ok { // e.g., misoapi-http
+			if pi := strings.Index(m, ":"); pi > -1 { // e.g., "misoapi-http: POST /api/doc"
 				pre := m[:pi]
 				m = m[pi+1:]
 				if *Debug {
@@ -603,11 +603,16 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 					Command: pre,
 					Body:    strings.TrimSpace(m),
 				})
-			} else {
+			} else { // e.g., "misoapi-ngtable"
 				currIsDesc = false
+				trimmed := strings.TrimSpace(m)
+				t = append(t, MisoApiTag{
+					Command: trimmed,
+					Body:    trimmed,
+				})
 				continue
 			}
-		} else {
+		} else { // not related to misoapi.
 			if s == "" {
 				currIsDesc = false
 				continue
