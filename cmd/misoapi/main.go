@@ -70,19 +70,6 @@ func main() {
 		util.Printlnf("  misoapi-resource: document:read")
 		util.Printlnf("  misoapi-ngtable")
 		util.Printlnf("")
-		util.Printlnf("Tips:")
-		util.Printlnf("")
-		util.Printlnf("`misoapi-desc` supports multiple lines description, append \\ at the beginning of the new line.")
-		util.Printlnf("")
-		util.Printlnf("e.g.,")
-		util.Printlnf("")
-		util.Printlnf(" // misoapi-desc: this is a very very")
-		util.Printlnf(" // \\ long description")
-		util.Printlnf("")
-		util.Printlnf("will becomes:")
-		util.Printlnf("")
-		util.Printlnf(" Desc(\"this is a very very long description\")")
-		util.Printlnf("")
 	}
 	flag.Parse()
 
@@ -588,8 +575,11 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 	t := []MisoApiTag{}
 	currIsDesc := false
 	for _, s := range start {
+		s = strings.TrimSpace(s)
 		s, _ = strings.CutPrefix(s, "//")
-		s := strings.TrimSpace(s)
+		s = strings.TrimSpace(s)
+		s, _ = strings.CutPrefix(s, "-")
+		s = strings.TrimSpace(s)
 		if m, ok := strings.CutPrefix(s, MisoApiPrefix); ok { // e.g., misoapi-http
 			if pi := strings.Index(m, ":"); pi > -1 { // e.g., "misoapi-http: POST /api/doc"
 				pre := m[:pi]
