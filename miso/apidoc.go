@@ -456,7 +456,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
 					jd.TypeName = util.TypeName(et)
-					if !seen.Add(et) {
+					if !seen.Has(et) {
 						jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields, seen)
 					}
 				}
@@ -487,6 +487,7 @@ func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, 
 			fields = append(fields, buildJsonDesc(ev, seen)...)
 		}
 	} else if t.Kind() == reflect.Pointer {
+		seen.Add(t)
 		ev := reflect.New(t.Elem()).Elem()
 		if ev.Kind() == reflect.Struct {
 			fields = append(fields, buildJsonDesc(ev, seen)...)
