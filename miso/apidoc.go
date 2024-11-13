@@ -751,9 +751,9 @@ func guessTsPrimiTypeName(typeName string) string {
 		tname = "boolean"
 	default:
 		if v, ok := strings.CutPrefix(typeName, "[]"); ok {
-			tname = guessTsPrimiTypeName(v) + "[]"
+			tname = guessTsItfName(v) + "[]"
 		} else {
-			tname = typeName
+			tname = guessTsItfName(typeName)
 		}
 	}
 	return tname
