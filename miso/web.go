@@ -37,7 +37,7 @@ const (
 )
 
 var (
-	interceptors []func(c *gin.Context) (next bool)
+	interceptors []func(c *gin.Context, next func())
 
 	lazyRouteRegistars []*LazyRouteDecl
 	routeRegistars     []routesRegistar
@@ -1043,28 +1043,41 @@ func DisableDefaultHealthCheckHandler() {
 
 // Add request interceptor.
 //
-// For requests that are rejected, interceptor should set appropriate http status and return false.
-func AddInterceptor(f func(c *gin.Context) (next bool)) {
+// For requests to be processed, next func must be called, otherwise the request is dropped (i.e., rejected).
+//
+// For requests that are rejected, interceptor should set appropriate http status.
+func AddInterceptor(f func(inb *gin.Context, next func())) {
 	if f == nil {
 		panic("interceptor is nil")
 	}
 	interceptors = append(interceptors, f)
 }
 
-func runInterceptors(c *gin.Context) (next bool) {
-	for _, itc := range interceptors {
-		if !itc(c) {
-			return false
-		}
+type interceptor struct {
+	idx          int
+	c            *gin.Context
+	interceptors []func(c *gin.Context, next func())
+}
+
+func (it *interceptor) next() {
+	it.idx++
+	if it.idx < len(it.interceptors) {
+		it.interceptors[it.idx](it.c, it.next)
 	}
-	return true
+}
+
+func newInterceptor(c *gin.Context, handler func(c *gin.Context)) *interceptor {
+	copy := util.SliceCopy(interceptors)
+	return &interceptor{
+		idx:          -1,
+		c:            c,
+		interceptors: append(copy, func(c *gin.Context, next func()) { handler(c) }),
+	}
 }
 
 func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		if !runInterceptors(c) {
-			return
-		}
-		f(c)
+		interceptors := newInterceptor(c, f)
+		interceptors.next()
 	}
 }
