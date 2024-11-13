@@ -24,6 +24,7 @@ const (
 	typeMisoInboundPtr = "*miso.Inbound"
 	typeMisoRail       = "miso.Rail"
 	typeGormDbPtr      = "*gorm.DB"
+	typeMySqlQryPtr    = "*mysql.Query"
 	typeCommonUser     = "common.User"
 
 	importCommonUser = "github.com/curtisnewbie/miso/middleware/user-vault/common"
@@ -338,7 +339,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			case typeCommonUser:
 				imports.Add(importCommonUser)
 				continue
-			case typeGormDbPtr:
+			case typeGormDbPtr, typeMySqlQryPtr:
 				imports.Add(importMySQL)
 				continue
 			default:
@@ -390,6 +391,8 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						v = "inb"
 					case typeMisoRail:
 						v = "inb.Rail()"
+					case typeMySqlQryPtr:
+						v = "mysql.NewQuery(mysql.GetMySQL())"
 					case typeGormDbPtr:
 						v = "mysql.GetMySQL()"
 					case typeCommonUser:
@@ -426,6 +429,8 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 							v = "inb"
 						case typeMisoRail:
 							v = "inb.Rail()"
+						case typeMySqlQryPtr:
+							v = "mysql.NewQuery(mysql.GetMySQL())"
 						case typeGormDbPtr:
 							v = "mysql.GetMySQL()"
 						case typeCommonUser:
