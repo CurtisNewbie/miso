@@ -369,22 +369,32 @@ func BuildJsonPayloadDesc(v reflect.Value) (jpd JsonPayloadDesc, typeName string
 		jpd, typeName = BuildJsonPayloadDesc(v)
 		return
 	case reflect.Struct:
-		jpd = JsonPayloadDesc{Fields: buildJsonDesc(v)}
+		jpd = JsonPayloadDesc{Fields: buildJsonDesc(v, nil)}
 		return
 	case reflect.Slice:
 		et := v.Type().Elem()
 		if et.Kind() == reflect.Struct {
 			typeName = et.Name()
 			ev := reflect.New(et).Elem()
-			jpd = JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev)}
+			jpd = JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil)}
 			return
 		}
 	}
 	return
 }
 
-func buildJsonDesc(v reflect.Value) []FieldDesc {
+func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
+	if seen == nil {
+		st := util.NewSet[reflect.Type]()
+		seen = &st
+	}
+
 	t := v.Type()
+	seen.Add(t)
+	if t.Kind() == reflect.Pointer {
+		seen.Add(reflect.New(t.Elem()).Elem().Type())
+	}
+
 	if t.Kind() != reflect.Struct {
 		return []FieldDesc{}
 	}
@@ -446,14 +456,18 @@ func buildJsonDesc(v reflect.Value) []FieldDesc {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
 					jd.TypeName = util.TypeName(et)
-					jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields)
+					if !seen.Add(et) {
+						jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields, seen)
+					}
 				}
 			} else {
 				appendable = false // e.g., the any field in GnResp[any]{}
 				Debugf("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
 			}
 		} else {
-			jd.Fields = reflectAppendJsonDesc(f.Type, fv, jd.Fields)
+			if !seen.Has(f.Type) {
+				jd.Fields = reflectAppendJsonDesc(f.Type, fv, jd.Fields, seen)
+			}
 		}
 
 		if appendable {
@@ -463,25 +477,25 @@ func buildJsonDesc(v reflect.Value) []FieldDesc {
 	return jds
 }
 
-func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc) []FieldDesc {
+func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, seen *util.Set[reflect.Type]) []FieldDesc {
 	if t.Kind() == reflect.Struct {
-		fields = append(fields, buildJsonDesc(v)...)
+		fields = append(fields, buildJsonDesc(v, seen)...)
 	} else if t.Kind() == reflect.Slice {
 		et := t.Elem()
 		if et.Kind() == reflect.Struct {
 			ev := reflect.New(et).Elem()
-			fields = append(fields, buildJsonDesc(ev)...)
+			fields = append(fields, buildJsonDesc(ev, seen)...)
 		}
 	} else if t.Kind() == reflect.Pointer {
 		ev := reflect.New(t.Elem()).Elem()
 		if ev.Kind() == reflect.Struct {
-			fields = append(fields, buildJsonDesc(ev)...)
+			fields = append(fields, buildJsonDesc(ev, seen)...)
 		}
 	} else if t.Kind() == reflect.Interface {
 		if !v.IsZero() && !v.IsNil() {
 			if ele := v.Elem(); ele.IsValid() {
 				et := ele.Type()
-				fields = reflectAppendJsonDesc(et, ele, fields)
+				fields = reflectAppendJsonDesc(et, ele, fields, seen)
 			}
 		}
 	}
