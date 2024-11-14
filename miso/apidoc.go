@@ -714,7 +714,7 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 			if strings.HasPrefix(d.TypeName, "[]") {
 				n += "[]"
 			}
-			writef(indentc, "%s?: %s", d.Name, n)
+			writef(indentc, "%s?: %s;", d.Name, n)
 
 			*deferred = append(*deferred, func() {
 				writef(0, "export interface %s {", tsTypeName)
@@ -728,9 +728,9 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 			if d.Desc != "" {
 				comment = " // " + d.Desc
 				fieldDec := fmt.Sprintf("%s?: %s", d.Name, tname)
-				writef(indentc, "%-30s%s", fieldDec, comment)
+				writef(indentc, "%-30s%s", fieldDec+";", comment)
 			} else {
-				writef(indentc, "%s?: %s", d.Name, tname)
+				writef(indentc, "%s?: %s;", d.Name, tname)
 			}
 		}
 	}
