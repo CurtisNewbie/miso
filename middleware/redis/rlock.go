@@ -14,7 +14,7 @@ type Runnable func() error
 type LRunnable[T any] func() (T, error)
 
 const (
-	defaultBackoffSteps = 1000 // default backoff steps, 1000 (5ms) = 5s
+	defaultBackoffSteps = 6_000 // default backoff steps, 6_000 (5ms) = 30s
 )
 
 var (
