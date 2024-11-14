@@ -407,6 +407,10 @@ func (s *Stack[T]) Empty() bool {
 	return s.p < 0
 }
 
+func (s *Stack[T]) Len() int {
+	return s.p
+}
+
 func (s Stack[T]) String() string {
 	return fmt.Sprintf("%+v", s.st)
 }
