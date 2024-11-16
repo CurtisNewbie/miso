@@ -305,6 +305,7 @@ func (a *MisoApp) PreServerBootstrap(callback func(rail Rail) error) {
 }
 
 func (a *MisoApp) configureLogging() error {
+	util.PanicLog = Errorf
 	c := a.Config()
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)

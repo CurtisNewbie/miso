@@ -12,6 +12,8 @@ import (
 
 var (
 	futurePtr Future[any] = (*future[any])(nil) //lint:ignore U1000 check interface
+
+	PanicLog func(pat string, args ...any) = Printlnf
 )
 
 var (
@@ -61,7 +63,7 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 	wrp := func() {
 		defer func() {
 			if v := recover(); v != nil {
-				Printlnf("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 				var t T
 				if err, ok := v.(error); ok {
 					fut.ch <- func() (T, error) { return t, err }
@@ -273,7 +275,7 @@ func PanicSafeFunc(op func()) func() {
 	return func() {
 		defer func() {
 			if v := recover(); v != nil {
-				Printlnf("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 			}
 		}()
 		op()
