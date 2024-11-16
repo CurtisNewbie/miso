@@ -13,7 +13,7 @@ type Query struct {
 	updateColumns map[string]any
 }
 
-func (q *Query) cloneNew() *Query {
+func (q *Query) CopyNew() *Query {
 	return NewQuery(q._db)
 }
 
@@ -118,7 +118,7 @@ func (q *Query) Between(col string, args ...any) *Query {
 }
 
 func (q *Query) WhereFunc(f func(*Query) *Query) *Query {
-	q.tx = q.tx.Where(f(q.cloneNew()).tx)
+	q.tx = q.tx.Where(f(q.CopyNew()).tx)
 	return q
 }
 
@@ -222,7 +222,7 @@ func (q *Query) Or(query string, args ...any) *Query {
 }
 
 func (q *Query) OrFunc(f func(*Query) *Query) *Query {
-	q.tx = q.tx.Or(f(q.cloneNew()).tx)
+	q.tx = q.tx.Or(f(q.CopyNew()).tx)
 	return q
 }
 
