@@ -126,6 +126,13 @@ func (q *Query) And(f func(*Query) *Query) *Query {
 	return q.WhereFunc(f)
 }
 
+func (q *Query) If(cond bool, f func(*Query) *Query) *Query {
+	if cond {
+		return f(q)
+	}
+	return q
+}
+
 func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 	if addWhere {
 		return q.Where(query, args...)
