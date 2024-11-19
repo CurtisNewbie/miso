@@ -34,7 +34,7 @@ var module = miso.InitAppModuleFunc(func() *sqliteModule {
 // Get SQLite client.
 func (m *sqliteModule) sqlite() *gorm.DB {
 	m.initOnce()
-	if miso.IsDebugLevel() {
+	if miso.IsDebugLevel() || !miso.IsProdMode() {
 		return m.sqliteDb.Debug()
 	}
 	return m.sqliteDb

@@ -91,7 +91,7 @@ func (m *mysqlModule) mysql() *gorm.DB {
 		panic("MySQL Connection hasn't been initialized yet")
 	}
 
-	if miso.IsDebugLevel() {
+	if miso.IsDebugLevel() || !miso.IsProdMode() {
 		return m.conn.Debug()
 	}
 
