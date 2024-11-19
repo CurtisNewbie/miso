@@ -1,0 +1,16 @@
+{
+  "misoapi": {
+    "prefix": "misoapi",
+    "body": [
+      "// $1",
+      "//",
+      "// \t - misoapi-http: ",
+      "// \t - misoapi-desc: ",
+      "// \t - misoapi-query: ",
+      "// \t - misoapi-header: ",
+      "// \t - misoapi-scope: ",
+      "// \t - misoapi-resource: ref()"
+    ],
+    "description": "Generate misoapi comments"
+  }
+}
