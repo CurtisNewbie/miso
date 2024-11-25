@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	futurePtr Future[any] = (*future[any])(nil) //lint:ignore U1000 check interface
+	_ Future[any] = (*future[any])(nil)
 
 	PanicLog func(pat string, args ...any) = Printlnf
 )
@@ -23,6 +23,7 @@ var (
 type Future[T any] interface {
 	Get() (T, error)
 	TimedGet(timeout int) (T, error)
+	Then(tf func(T, error))
 }
 
 type future[T any] struct {
@@ -31,6 +32,35 @@ type future[T any] struct {
 	getOnce *sync.Once
 	res     T
 	err     error
+
+	thenMu   *sync.Mutex
+	then     func(T, error)
+	thenDone int32 // future completed including then callback.
+}
+
+func (f *future[T]) callThen() {
+	if f.then == nil {
+		return
+	}
+	f.then(f.Get())
+}
+
+func (f *future[T]) Then(tf func(T, error)) {
+	if tf == nil {
+		panic("Future.Then callback cannot be nil")
+	}
+
+	f.thenMu.Lock()
+	defer f.thenMu.Unlock()
+	f.then = func(t T, err error) {
+		defer recoverPanic()
+		tf(t, err)
+	}
+
+	// .Then() called after actual task's completion
+	if atomic.LoadInt32(&f.thenDone) == 1 {
+		f.callThen()
+	}
 }
 
 // Get from Future indefinitively
@@ -57,20 +87,30 @@ func (f *future[T]) TimedGet(timeout int) (T, error) {
 
 func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 	fut := future[T]{
-		getOnce: &sync.Once{},
-		ch:      make(chan func() (T, error), 1),
+		thenDone: 0,
+		thenMu:   &sync.Mutex{},
+		getOnce:  &sync.Once{},
+		ch:       make(chan func() (T, error), 1),
 	}
 	wrp := func() {
 		defer func() {
 			if v := recover(); v != nil {
 				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 				var t T
+				var ferr error
+
 				if err, ok := v.(error); ok {
-					fut.ch <- func() (T, error) { return t, err }
+					ferr = err
 				} else {
-					fut.ch <- func() (T, error) { return t, fmt.Errorf("%v", v) }
+					ferr = fmt.Errorf("%v", v)
 				}
+				fut.ch <- func() (T, error) { return t, ferr }
 			}
+
+			fut.thenMu.Lock()
+			defer fut.thenMu.Unlock()
+			fut.callThen()
+			atomic.StoreInt32(&fut.thenDone, 1)
 		}()
 
 		t, err := task()
@@ -279,5 +319,11 @@ func PanicSafeFunc(op func()) func() {
 			}
 		}()
 		op()
+	}
+}
+
+func recoverPanic() {
+	if v := recover(); v != nil {
+		PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 	}
 }

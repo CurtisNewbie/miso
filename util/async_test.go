@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -173,4 +174,113 @@ func TestAsyncOnce(t *testing.T) {
 
 	r, err = f.TimedGet(100)
 	t.Logf("3. r: %v, err: %v", r, err)
+}
+
+func TestFutureBeforeThen(t *testing.T) {
+	f := RunAsync(func() (int, error) {
+		t.Logf("async ran")
+		return 1, nil
+	})
+	time.Sleep(time.Millisecond * 100)
+	var cnt int32 = 0
+
+	f.Then(func(i int, err error) {
+		atomic.AddInt32(&cnt, 1)
+		t.Logf("1. r: %v, err: %v", i, err)
+	})
+
+	if atomic.LoadInt32(&cnt) < 1 {
+		t.Fatalf("cnt should be 1, then callback not invoked")
+	}
+}
+
+func TestFutureAfterThen(t *testing.T) {
+	var cnt int32 = 0
+	f := RunAsync(func() (int, error) {
+		t.Logf("async ran start")
+		time.Sleep(time.Millisecond * 100)
+		t.Logf("async ran end")
+		return 1, nil
+	})
+	time.Sleep(time.Millisecond * 50)
+
+	f.Then(func(i int, err error) {
+		atomic.AddInt32(&cnt, 1)
+		t.Logf("1. r: %v, err: %v", i, err)
+	})
+	t.Log("added Then")
+
+	time.Sleep(time.Millisecond * 200)
+
+	if atomic.LoadInt32(&cnt) < 1 {
+		t.Fatalf("cnt should be 1, then callback not invoked")
+	}
+}
+
+func TestFutureThenAndGet(t *testing.T) {
+	var cnt int32 = 0
+	f := RunAsync(func() (int, error) {
+		t.Logf("async ran")
+		return 1, nil
+	})
+
+	f.Then(func(i int, err error) {
+		atomic.AddInt32(&cnt, 1)
+		t.Logf("1. r: %v, err: %v", i, err)
+	})
+
+	time.Sleep(time.Millisecond * 50)
+
+	i, err := f.Get()
+	t.Logf("2. r: %v, err: %v", i, err)
+
+	if atomic.LoadInt32(&cnt) < 1 {
+		t.Fatalf("cnt should be 1, then callback not invoked")
+	}
+}
+
+func TestFutureGetAndThen(t *testing.T) {
+	var cnt int32 = 0
+	f := RunAsync(func() (int, error) {
+		t.Logf("async ran")
+		return 1, nil
+	})
+
+	i, err := f.Get()
+	t.Logf("1. r: %v, err: %v", i, err)
+
+	f.Then(func(i int, err error) {
+		atomic.AddInt32(&cnt, 1)
+		t.Logf("2. r: %v, err: %v", i, err)
+	})
+
+	time.Sleep(time.Millisecond * 50)
+
+	if atomic.LoadInt32(&cnt) < 1 {
+		t.Fatalf("cnt should be 1, then callback not invoked")
+	}
+}
+
+func TestFutureThenPanic(t *testing.T) {
+	var cnt int32 = 0
+	f := RunAsync(func() (int, error) {
+		t.Logf("async ran")
+		return 1, nil
+	})
+
+	i, err := f.Get()
+	t.Logf("1. r: %v, err: %v", i, err)
+
+	f.Then(func(i int, err error) {
+		atomic.AddInt32(&cnt, 1)
+		t.Logf("2. r: %v, err: %v", i, err)
+
+		panic("no no no")
+	})
+
+	time.Sleep(time.Millisecond * 50)
+
+	if atomic.LoadInt32(&cnt) < 1 {
+		t.Fatalf("cnt should be 1, then callback not invoked")
+	}
 }
