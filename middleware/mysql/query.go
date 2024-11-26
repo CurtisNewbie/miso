@@ -237,6 +237,10 @@ func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	tx := q.tx.Scan(ptr)
 	rowsAffected = tx.RowsAffected
 	err = tx.Error
+
+	if v, ok := ptr.(Nilable); ok && v != nil {
+		v.MarkZero(rowsAffected < 1)
+	}
 	return
 }
 
@@ -351,4 +355,25 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 
 	res = miso.PageRes[V]{Payload: payload, Page: miso.RespPage(reqPage, total)}
 	return res, nil
+}
+
+type Nilable interface {
+	IsZero() bool
+	MarkZero(isZero bool)
+}
+
+var (
+	_ Nilable = (*NilableValue)(nil)
+)
+
+type NilableValue struct {
+	zero bool
+}
+
+func (n *NilableValue) IsZero() bool {
+	return n.zero
+}
+
+func (n *NilableValue) MarkZero(isZero bool) {
+	n.zero = isZero
 }
