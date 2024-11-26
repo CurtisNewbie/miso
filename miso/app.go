@@ -89,7 +89,7 @@ func App() *MisoApp {
 // only one MisoApp is supported for now.
 func newApp() *MisoApp {
 	return &MisoApp{
-		manualSigQuit: make(chan int, 1),
+		manualSigQuit: make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:  false,
 		shuttingDown:  false,
 		store:         &appStore{store: util.NewRWMap[string, any]()},
