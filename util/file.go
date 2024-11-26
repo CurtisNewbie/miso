@@ -10,6 +10,10 @@ import (
 const (
 	// Default File Mode
 	DefFileMode = 0666
+
+	GbUnit uint64 = MbUnit * 1024
+	MbUnit uint64 = KbUnit * 1024
+	KbUnit uint64 = 1024
 )
 
 // Check if file exists
