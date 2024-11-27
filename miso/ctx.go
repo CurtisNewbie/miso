@@ -14,6 +14,18 @@ type Rail struct {
 	ctx context.Context
 }
 
+func (r Rail) ErrorIf(op string, err error, args ...any) {
+	if err != nil {
+		r.Errorf(fmt.Sprintf("%v - %v, %v", getCallerFn(), op, err), args...)
+	}
+}
+
+func (r Rail) WarnIf(op string, err error, args ...any) {
+	if err != nil {
+		r.Warnf(fmt.Sprintf("%v - %v, %v", getCallerFn(), op, err), args...)
+	}
+}
+
 func (r Rail) IsDone() bool {
 	return r.ctx.Err() != nil
 }
