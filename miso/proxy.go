@@ -3,9 +3,7 @@ package miso
 import (
 	"io"
 	"net/http"
-	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
@@ -33,7 +31,6 @@ func init() {
 type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 
 type HttpProxy struct {
-	filterLock    *sync.RWMutex
 	filters       []ProxyFilter
 	resolveTarget ProxyTargetResolver
 }
@@ -68,8 +65,7 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	}
 
 	p := &HttpProxy{
-		filters:    make([]ProxyFilter, 0),
-		filterLock: &sync.RWMutex{},
+		filters: make([]ProxyFilter, 0),
 	}
 	p.resolveTarget = targetResolver
 	if proxiedPath != "/" {
@@ -110,105 +106,85 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		w.WriteHeader(status)
 		return
 	}
+	defer pc.Rail.Debugf("Proxy request processed")
 
-	h.filterLock.RLock()
-	defer h.filterLock.RUnlock()
+	handler := func(pc *ProxyContext) {
 
-	// filter request
-	for _, f := range h.filters {
-		if f.PreRequest == nil {
-			continue
+		if r.URL.RawQuery != "" {
+			path += "?" + r.URL.RawQuery
 		}
-		fr, err := f.PreRequest(pc)
-		if err != nil || !fr.Next {
-			pc.Rail.Debugf("request filtered, err: %v, fr: %v", err, fr)
-			if err != nil {
-				inb.HandleResult(WrapResp(*pc.Rail, nil, err, r.RequestURI), nil)
-				return
-			}
-			return // discontinue, the filter should write the response itself, e.g., returning a 403 status code
-		}
-	}
+		cli := NewTClient(*pc.Rail, path).
+			UseClient(proxyClient).
+			EnableTracing()
 
-	defer func() {
-		for _, f := range h.filters {
-			if f.PostRequest == nil {
+		// propagate all headers to client, except the headers for tracing
+		propagationKeys := util.NewSet[string]()
+		propagationKeys.AddAll(GetPropagationKeys())
+
+		for k, arr := range r.Header {
+			// the inbound request may contain headers that are one of our propagation keys
+			// this can be a security problem
+			if propagationKeys.Has(k) {
 				continue
 			}
-			f.PostRequest(pc)
+			for _, v := range arr {
+				cli.AddHeader(k, v)
+			}
 		}
-	}()
 
-	if r.URL.RawQuery != "" {
-		path += "?" + r.URL.RawQuery
-	}
-	cli := NewTClient(*pc.Rail, path).
-		UseClient(proxyClient).
-		EnableTracing()
-
-	// propagate all headers to client, except the headers for tracing
-	propagationKeys := util.NewSet[string]()
-	propagationKeys.AddAll(GetPropagationKeys())
-
-	for k, arr := range r.Header {
-		// the inbound request may contain headers that are one of our propagation keys
-		// this can be a security problem
-		if propagationKeys.Has(k) {
-			continue
+		var tr *TResponse
+		switch r.Method {
+		case http.MethodGet:
+			tr = cli.Get()
+		case http.MethodPut:
+			tr = cli.Put(r.Body)
+		case http.MethodPost:
+			tr = cli.Post(r.Body)
+		case http.MethodDelete:
+			tr = cli.Delete()
+		case http.MethodHead:
+			tr = cli.Head()
+		case http.MethodOptions:
+			tr = cli.Options()
+		default:
+			w.WriteHeader(404) // not gonna happen
+			return
 		}
-		for _, v := range arr {
-			cli.AddHeader(k, v)
+
+		if tr.Err != nil {
+			pc.Rail.Warnf("Proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
+			w.WriteHeader(http.StatusBadGateway)
+			return
 		}
-	}
+		defer tr.Close()
 
-	var tr *TResponse
-	switch r.Method {
-	case http.MethodGet:
-		tr = cli.Get()
-	case http.MethodPut:
-		tr = cli.Put(r.Body)
-	case http.MethodPost:
-		tr = cli.Post(r.Body)
-	case http.MethodDelete:
-		tr = cli.Delete()
-	case http.MethodHead:
-		tr = cli.Head()
-	case http.MethodOptions:
-		tr = cli.Options()
-	default:
-		w.WriteHeader(404) // not gonna happen
-		return
-	}
+		pc.Rail.Debugf("Proxy response headers: %v, status: %v", tr.RespHeader, tr.StatusCode)
 
-	if tr.Err != nil {
-		pc.Rail.Warnf("Proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
-	defer tr.Close()
+		// headers from proxied servers
+		for k, v := range tr.RespHeader {
+			for _, hv := range v {
+				w.Header().Add(k, hv)
+			}
+		}
 
-	pc.Rail.Debugf("Proxy response headers: %v, status: %v", tr.RespHeader, tr.StatusCode)
+		if IsDebugLevel() {
+			pc.Rail.Debug(w.Header())
+		}
 
-	// headers from proxied servers
-	for k, v := range tr.RespHeader {
-		for _, hv := range v {
-			w.Header().Add(k, hv)
+		// write data from proxied to client
+		w.WriteHeader(tr.StatusCode)
+		if tr.Resp.Body != nil {
+			if _, err = io.Copy(w, tr.Resp.Body); err != nil {
+				pc.Rail.Warnf("Failed to write proxy response, %v", err)
+			}
 		}
 	}
+	pi := newProxyFilters(pc, h.filters, handler)
+	pi.next()
+}
 
-	if IsDebugLevel() {
-		pc.Rail.Debug(w.Header())
-	}
-
-	// write data from proxied to client
-	w.WriteHeader(tr.StatusCode)
-	if tr.Resp.Body != nil {
-		if _, err = io.Copy(w, tr.Resp.Body); err != nil {
-			pc.Rail.Warnf("Failed to write proxy response, %v", err)
-		}
-	}
-
-	pc.Rail.Debugf("Proxy request processed")
+func (h *HttpProxy) AddFilter(f ProxyFilter) {
+	h.filters = append(h.filters, f)
 }
 
 type ProxyContext struct {
@@ -252,26 +228,30 @@ func newProxyContext(rail *Rail, inb *Inbound) *ProxyContext {
 	}
 }
 
-type ProxyFilter struct {
-	PreRequest  func(pc *ProxyContext) (FilterResult, error)
-	PostRequest func(pc *ProxyContext)
-	Order       int // ascending order
-}
-
-type FilterResult struct {
-	// should we continue processing the request.
-	//
-	// if Next=false, the filter should write proper response itself.
-	Next bool
-}
-
-func (h *HttpProxy) AddFilter(f ProxyFilter) {
-	h.filterLock.Lock()
-	defer h.filterLock.Unlock()
-	h.filters = append(h.filters, f)
-	sort.Slice(h.filters, func(i, j int) bool { return h.filters[i].Order < h.filters[j].Order })
-}
-
 type ProxyHttpStatusError interface {
 	Status() int
+}
+
+type ProxyFilter = func(pc *ProxyContext, next func())
+
+type proxyFilters struct {
+	idx     int
+	c       *ProxyContext
+	filters []ProxyFilter
+}
+
+func (it *proxyFilters) next() {
+	it.idx++
+	if it.idx < len(it.filters) {
+		it.filters[it.idx](it.c, it.next)
+	}
+}
+
+func newProxyFilters(c *ProxyContext, pi []ProxyFilter, handler func(pc *ProxyContext)) *proxyFilters {
+	copy := util.SliceCopy(pi)
+	return &proxyFilters{
+		idx:     -1,
+		c:       c,
+		filters: append(copy, func(pc *ProxyContext, next func()) { handler(c) }),
+	}
 }
