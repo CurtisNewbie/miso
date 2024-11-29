@@ -14,7 +14,6 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -333,12 +332,10 @@ func (a *MisoApp) configureLogging() error {
 		}
 	}
 
-	logrus.SetOutput(loggerOut)
+	SetLogOutput(loggerOut)
 
 	if c.HasProp(PropLoggingLevel) {
-		if level, ok := ParseLogLevel(c.GetPropStr(PropLoggingLevel)); ok {
-			logrus.SetLevel(level)
-		}
+		SetLogLevel(c.GetPropStr(PropLoggingLevel))
 	}
 	return nil
 }

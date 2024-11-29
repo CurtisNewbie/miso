@@ -2,6 +2,7 @@ package miso
 
 import (
 	"context"
+	"io"
 	"runtime"
 	"strings"
 	"sync"
@@ -15,13 +16,6 @@ import (
 const (
 	callerField = "caller"
 )
-
-func init() {
-	logrus.SetReportCaller(false) // it's now set manually using Rail
-
-	// for convenience
-	logrus.SetFormatter(CustomFormatter())
-}
 
 const (
 	traceSpanIdWidth = 16
@@ -39,8 +33,14 @@ var (
 	errLogPool                       = sync.Pool{
 		New: func() any { return new(ErrorLog) },
 	}
-	errLogRoutineCancel func() = nil
+	errLogRoutineCancel func()         = nil
+	logger              *logrus.Logger = logrus.New()
 )
+
+func init() {
+	logger.SetReportCaller(false) // caller is handled by CTFormatter
+	logger.SetFormatter(CustomFormatter())
+}
 
 type ErrorLog struct {
 	Time     time.Time
@@ -182,12 +182,12 @@ func PreConfiguredFormatter() logrus.Formatter {
 
 // Return logger with tracing infomation
 func TraceLogger(ctx context.Context) *logrus.Entry {
-	return logrus.WithFields(logrus.Fields{XSpanId: ctx.Value(XSpanId), XTraceId: ctx.Value(XTraceId)})
+	return logger.WithFields(logrus.Fields{XSpanId: ctx.Value(XSpanId), XTraceId: ctx.Value(XTraceId)})
 }
 
 // Check whether current log level is DEBUG
 func IsDebugLevel() bool {
-	return logrus.GetLevel() == logrus.DebugLevel
+	return logger.GetLevel() == logrus.DebugLevel
 }
 
 // Parse log level
@@ -213,77 +213,77 @@ func ParseLogLevel(logLevel string) (logrus.Level, bool) {
 }
 
 func Tracef(format string, args ...interface{}) {
-	logrus.WithField(callerField, getCallerFn()).Tracef(format, args...)
+	logger.WithField(callerField, getCallerFn()).Tracef(format, args...)
 }
 
 func Debugf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if !logger.IsLevelEnabled(logrus.DebugLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Debugf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Debugf(format, args...)
 }
 
 func Infof(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+	if !logger.IsLevelEnabled(logrus.InfoLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Infof(format, args...)
+	logger.WithField(callerField, getCallerFn()).Infof(format, args...)
 }
 
 func Warnf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Warnf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Warnf(format, args...)
 }
 
 func Errorf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Errorf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Errorf(format, args...)
 }
 
 func Fatalf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Fatalf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Fatalf(format, args...)
 }
 
 func Debug(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if !logger.IsLevelEnabled(logrus.DebugLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Debug(args...)
+	logger.WithField(callerField, getCallerFn()).Debug(args...)
 }
 
 func Info(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+	if !logger.IsLevelEnabled(logrus.InfoLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Info(args...)
+	logger.WithField(callerField, getCallerFn()).Info(args...)
 }
 
 func Warn(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Warn(args...)
+	logger.WithField(callerField, getCallerFn()).Warn(args...)
 }
 
 func Error(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Error(args...)
+	logger.WithField(callerField, getCallerFn()).Error(args...)
 }
 
 func Fatal(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithField(callerField, getCallerFn()).Fatal(args...)
+	logger.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
 func SetLogLevel(level string) {
@@ -291,7 +291,7 @@ func SetLogLevel(level string) {
 	if !ok {
 		return
 	}
-	logrus.SetLevel(ll)
+	logger.SetLevel(ll)
 }
 
 // reduce alloc, logger calls getCallerFn very frequently, we have to optimize it as much as possible.
@@ -379,4 +379,12 @@ func SetErrLogHandler(handler ErrorLogHandler) bool {
 		set = true
 	})
 	return set
+}
+
+func SetLogOutput(out io.Writer) {
+	logger.SetOutput(out)
+}
+
+func GetLogrusLogger() *logrus.Logger {
+	return logger
 }

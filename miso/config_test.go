@@ -3,8 +3,6 @@ package miso
 import (
 	"bytes"
 	"testing"
-
-	"github.com/sirupsen/logrus"
 )
 
 func TestParseArg(t *testing.T) {
@@ -139,28 +137,28 @@ func TestResolveArgForParsedConf(t *testing.T) {
 }
 
 func TestResolveArg(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
+	SetLogLevel("debug")
 	SetEnv("abc", "123")
 	resolved := ResolveArg("${abc}")
 	if resolved != "123" {
 		t.Errorf("resolved is not '%s' but '%s'", "123", resolved)
 		return
 	}
-	logrus.Infof("resolved: %s", resolved)
+	Infof("resolved: %s", resolved)
 
 	resolved = ResolveArg("${abc}.com")
 	if resolved != "123.com" {
 		t.Errorf("resolved is not '%s' but '%s'", "123.com", resolved)
 		return
 	}
-	logrus.Infof("resolved: %s", resolved)
+	Infof("resolved: %s", resolved)
 
 	resolved = ResolveArg("abc.${abc}.com")
 	if resolved != "abc.123.com" {
 		t.Errorf("resolved is not '%s' but '%s'", "abc.123.com", resolved)
 		return
 	}
-	logrus.Infof("resolved: %s", resolved)
+	Infof("resolved: %s", resolved)
 }
 
 func TestArgKeyVal(t *testing.T) {

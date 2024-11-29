@@ -5,12 +5,11 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
-	"github.com/sirupsen/logrus"
 )
 
 func TestBootstrapServer(t *testing.T) {
 	args := make([]string, 2)
-	logrus.SetLevel(logrus.DebugLevel)
+	SetLogLevel("debug")
 
 	SetProp(PropAppName, "test-app")
 

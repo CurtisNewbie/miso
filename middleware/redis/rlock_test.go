@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/sirupsen/logrus"
 )
 
 func TestRLockCallbacks(t *testing.T) {
@@ -53,7 +52,7 @@ func TestRLockCallbacks(t *testing.T) {
 }
 
 func TestRLock(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
+	miso.SetLogLevel("debug")
 
 	rail := miso.EmptyRail()
 	miso.LoadConfigFromFile("../conf_dev.yml", rail)
@@ -103,7 +102,7 @@ func TestRLock(t *testing.T) {
 }
 
 func TestRLockCount(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
+	miso.SetLogLevel("debug")
 
 	lockRefreshTime = time.Millisecond
 

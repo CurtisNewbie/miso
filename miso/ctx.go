@@ -61,178 +61,178 @@ func (r Rail) SpanId() string {
 }
 
 func (r Rail) Tracef(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.TraceLevel) {
+	if !logger.IsLevelEnabled(logrus.TraceLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Tracef(format, args...)
 }
 
 func (r Rail) Debugf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if !logger.IsLevelEnabled(logrus.DebugLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Debugf(format, args...)
 }
 
 func (r Rail) Infof(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+	if !logger.IsLevelEnabled(logrus.InfoLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Infof(format, args...)
 }
 
 func (r Rail) Warnf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Warnf(format, args...)
 }
 
 func (r Rail) Errorf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Errorf(format, args...)
 }
 
 func (r Rail) Fatalf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Fatalf(format, args...)
 }
 
 func (r Rail) Panicf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Panicf(format, args...)
 }
 
 func (r Rail) Printf(format string, args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Printf(format, args...)
 }
 
 func (r Rail) Debug(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if !logger.IsLevelEnabled(logrus.DebugLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Debug(args...)
 }
 
 func (r Rail) Info(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+	if !logger.IsLevelEnabled(logrus.InfoLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Info(args...)
 }
 
 func (r Rail) Warn(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Warn(args...)
 }
 
 func (r Rail) Error(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Error(args...)
 }
 
 func (r Rail) Fatal(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Fatal(args...)
 }
 
 func (r Rail) Panic(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Panic(args...)
 }
 
 func (r Rail) Print(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Print(args...)
 }
 
 func (r Rail) Debugln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if !logger.IsLevelEnabled(logrus.DebugLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Debugln(args...)
 }
 
 func (r Rail) Infoln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.InfoLevel) {
+	if !logger.IsLevelEnabled(logrus.InfoLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Infoln(args...)
 }
 
 func (r Rail) Warnln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.WarnLevel) {
+	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Warnln(args...)
 }
 
 func (r Rail) Errorln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.ErrorLevel) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Errorln(args...)
 }
 
 func (r Rail) Fatalln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Fatalln(args...)
 }
 
 func (r Rail) Panicln(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Panicln(args...)
 }
 
 func (r Rail) Println(args ...interface{}) {
-	if !logrus.IsLevelEnabled(logrus.FatalLevel) {
+	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
 	}
-	logrus.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Println(args...)
 }
 
