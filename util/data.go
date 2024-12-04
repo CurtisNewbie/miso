@@ -105,7 +105,7 @@ func (s *Set[T]) Size() int {
 }
 
 // To string
-func (s *Set[T]) String() string {
+func (s Set[T]) String() string {
 	var ks []T = MapKeys(s.Keys)
 	lks := len(ks)
 	st := "{ "
@@ -131,6 +131,13 @@ func (s *Set[T]) CopyKeys() []T {
 // Create new Set
 func NewSet[T comparable]() Set[T] {
 	return Set[T]{Keys: map[T]Void{}}
+}
+
+// Create new Set from slice
+func NewSetFromSlice[T comparable](ts []T) Set[T] {
+	s := Set[T]{Keys: map[T]Void{}}
+	s.AddAll(ts)
+	return s
 }
 
 // Select one from the slice that matches the condition.

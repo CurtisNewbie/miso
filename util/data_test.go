@@ -50,7 +50,18 @@ func TestSet(t *testing.T) {
 	if s.Has("juice") {
 		t.Fatal("set shouldn't contain juice")
 	}
-	t.Logf("Set: %s", s.String())
+	t.Logf("Set: %v", s)
+}
+
+func TestSet2(t *testing.T) {
+	s := NewSetFromSlice[string]([]string{"a", "b", "c"})
+	if !s.Has("a") {
+		t.Fatal("set should have a")
+	}
+	if s.Size() != 3 {
+		t.Fatal("set's size should be 3")
+	}
+	t.Logf("set: %v", s)
 }
 
 func TestDistinct(t *testing.T) {
