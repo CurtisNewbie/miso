@@ -112,3 +112,11 @@ func (extension *namingStrategyExtension) UpdateStructDescriptor(structDescripto
 		binding.FromNames = []string{NamingStrategyTranslate(binding.Field.Name())}
 	}
 }
+
+func IsValidJson(s []byte) bool {
+	return config.Valid(s)
+}
+
+func IsValidJsonStr(s string) bool {
+	return IsValidJson(util.UnsafeStr2Byt(s))
+}
