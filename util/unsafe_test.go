@@ -22,7 +22,7 @@ func TestUnsafeStrConvert(t *testing.T) {
 	s := "abc"
 	byt := UnsafeStr2Byt(s)
 	t.Logf("1. s: %v, byt: %s, len(byt): %v", s, byt, len(byt))
-	byt[0] = 'd' // will panic
+	// byt[0] = 'd' // will panic
 
 	byt = []byte("abc") // one alloc for "abc" -> []byte
 	s = UnsafeByt2Str(byt)
