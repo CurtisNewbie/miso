@@ -177,12 +177,18 @@ func TestAsyncOnce(t *testing.T) {
 
 	r, err = f.Get()
 	t.Logf("2. r: %v, err: %v", r, err)
+	if err != nil {
+		t.Fatal("should not err")
+	}
 	if r != 1 {
 		t.Fatal("should be 1")
 	}
 
 	r, err = f.Get()
 	t.Logf("3. r: %v, err: %v", r, err)
+	if err != nil {
+		t.Fatal("should not err")
+	}
 	if r != 1 {
 		t.Fatal("should be 1")
 	}
