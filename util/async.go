@@ -39,7 +39,7 @@ type Future[T any] interface {
 type future[T any] struct {
 	res  T
 	err  error
-	done context.Context
+	done *SignalOnce
 
 	// mutex mainly used to sync between .Then() and the task func
 	//
@@ -59,8 +59,7 @@ func (f *future[T]) Then(tf func(T, error)) {
 		tf(t, err)
 	}
 
-	// .Then() maybe called after actual task's completion, we check if the context is done
-	if f.done.Err() != nil {
+	if f.done.Closed() {
 		doThen := f.then
 		f.thenMu.Unlock()
 		doThen(f.Get())
@@ -78,14 +77,8 @@ func (f *future[T]) Get() (T, error) {
 }
 
 func (f *future[T]) wait(timeout int) error {
-	if timeout < 1 {
-		<-f.done.Done()
-	} else {
-		select {
-		case <-f.done.Done():
-		case <-time.After(time.Duration(timeout) * time.Millisecond):
-			f.err = ErrGetTimeout
-		}
+	if f.done.TimedWait(time.Duration(timeout) * time.Millisecond) {
+		return ErrGetTimeout
 	}
 	return nil
 }
@@ -99,10 +92,10 @@ func (f *future[T]) TimedGet(timeout int) (T, error) {
 }
 
 func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
-	ctx, cancel := context.WithCancel(context.Background())
+	sig := NewSignalOnce()
 	fut := future[T]{
 		thenMu: &sync.Mutex{},
-		done:   ctx,
+		done:   sig,
 	}
 	wrp := func() {
 		var t T
@@ -123,7 +116,7 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 			fut.thenMu.Lock()
 			fut.res = t
 			fut.err = err
-			cancel()
+			sig.Notify()
 
 			if fut.then != nil {
 				doThen := fut.then
@@ -345,5 +338,45 @@ func PanicSafeFunc(op func()) func() {
 func recoverPanic() {
 	if v := recover(); v != nil {
 		PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+	}
+}
+
+type SignalOnce struct {
+	c      context.Context
+	cancel func()
+}
+
+func (s *SignalOnce) Closed() bool {
+	return s.c.Err() != nil
+}
+
+func (s *SignalOnce) Wait() {
+	s.TimedWait(0)
+}
+
+func (s *SignalOnce) TimedWait(timeout time.Duration) (isTimeout bool) {
+	isTimeout = false
+	if timeout < 1 {
+		<-s.c.Done()
+	} else {
+		select {
+		case <-s.c.Done():
+		case <-time.After(timeout):
+			isTimeout = true
+			return
+		}
+	}
+	return
+}
+
+func (s *SignalOnce) Notify() {
+	s.cancel()
+}
+
+func NewSignalOnce() *SignalOnce {
+	c, f := context.WithCancel(context.Background())
+	return &SignalOnce{
+		c:      c,
+		cancel: f,
 	}
 }
