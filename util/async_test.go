@@ -13,10 +13,11 @@ func TestRunAsync(t *testing.T) {
 	start := time.Now()
 	var futures []Future[int]
 
-	for i := 1; i < 1001; i++ {
+	n := 1000
+	for i := 1; i < n+1; i++ {
 		j := i
 		futures = append(futures, RunAsync(func() (int, error) {
-			time.Sleep(50 * time.Millisecond)
+			// time.Sleep(50 * time.Millisecond)
 			t.Logf("%v is done", j)
 			return j, nil
 		}))
@@ -30,7 +31,7 @@ func TestRunAsync(t *testing.T) {
 		}
 		sum += res
 	}
-	expected := (1000 * (1000 + 1)) / 2
+	expected := (n * (n + 1)) / 2
 	if sum != expected {
 		t.Fatalf("expected: %v, actual: %v", expected, sum)
 	}
@@ -164,16 +165,27 @@ func TestAsyncPoolStop(t *testing.T) {
 func TestAsyncOnce(t *testing.T) {
 	f := RunAsync(func() (int, error) {
 		Printlnf("async ran")
+		time.Sleep(time.Millisecond * 500)
 		return 1, nil
 	})
-	r, err := f.Get()
+
+	r, err := f.TimedGet(100)
 	t.Logf("1. r: %v, err: %v", r, err)
+	if err == nil {
+		t.Fatal("should timeout")
+	}
 
 	r, err = f.Get()
 	t.Logf("2. r: %v, err: %v", r, err)
+	if r != 1 {
+		t.Fatal("should be 1")
+	}
 
-	r, err = f.TimedGet(100)
+	r, err = f.Get()
 	t.Logf("3. r: %v, err: %v", r, err)
+	if r != 1 {
+		t.Fatal("should be 1")
+	}
 }
 
 func TestFutureBeforeThen(t *testing.T) {

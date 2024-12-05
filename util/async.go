@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -20,29 +21,31 @@ var (
 	ErrGetTimeout = errors.New("future.TimedGet timeout")
 )
 
+// Result of a asynchronous task.
 type Future[T any] interface {
+
+	// Get result without timeout.
 	Get() (T, error)
+
+	// Get result with timeout, returns ErrGetTimeout if timeout exceeded.
 	TimedGet(timeout int) (T, error)
+
+	// Then callback to be invoked when the Future is completed.
+	//
+	// Then callback should only be set once for every Future.
 	Then(tf func(T, error))
 }
 
 type future[T any] struct {
-	ch chan func() (T, error)
+	res  T
+	err  error
+	done context.Context
 
-	getOnce *sync.Once
-	res     T
-	err     error
-
-	thenMu   *sync.Mutex
-	then     func(T, error)
-	thenDone int32 // future completed including then callback.
-}
-
-func (f *future[T]) callThen() {
-	if f.then == nil {
-		return
-	}
-	f.then(f.Get())
+	// mutex mainly used to sync between .Then() and the task func
+	//
+	// the future's res, err doesn't really need mutex
+	thenMu *sync.Mutex
+	then   func(T, error)
 }
 
 func (f *future[T]) Then(tf func(T, error)) {
@@ -51,70 +54,87 @@ func (f *future[T]) Then(tf func(T, error)) {
 	}
 
 	f.thenMu.Lock()
-	defer f.thenMu.Unlock()
 	f.then = func(t T, err error) {
 		defer recoverPanic()
 		tf(t, err)
 	}
 
-	// .Then() called after actual task's completion
-	if atomic.LoadInt32(&f.thenDone) == 1 {
-		f.callThen()
+	// .Then() maybe called after actual task's completion, we check if the context is done
+	if f.done.Err() != nil {
+		doThen := f.then
+		f.thenMu.Unlock()
+		doThen(f.Get())
+	} else {
+		f.thenMu.Unlock()
 	}
 }
 
 // Get from Future indefinitively
 func (f *future[T]) Get() (T, error) {
-	f.getOnce.Do(func() {
-		getResult := <-f.ch
-		f.res, f.err = getResult()
-	})
+	if err := f.wait(0); err != nil {
+		return f.res, err
+	}
 	return f.res, f.err
+}
+
+func (f *future[T]) wait(timeout int) error {
+	if timeout < 1 {
+		<-f.done.Done()
+	} else {
+		select {
+		case <-f.done.Done():
+		case <-time.After(time.Duration(timeout) * time.Millisecond):
+			f.err = ErrGetTimeout
+		}
+	}
+	return nil
 }
 
 // Get from Future with timeout (in milliseconds)
 func (f *future[T]) TimedGet(timeout int) (T, error) {
-	f.getOnce.Do(func() {
-		select {
-		case obtainResult := <-f.ch:
-			f.res, f.err = obtainResult()
-		case <-time.After(time.Duration(timeout) * time.Millisecond):
-			f.err = ErrGetTimeout
-		}
-	})
+	if err := f.wait(timeout); err != nil {
+		return f.res, err
+	}
 	return f.res, f.err
 }
 
 func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
+	ctx, cancel := context.WithCancel(context.Background())
 	fut := future[T]{
-		thenDone: 0,
-		thenMu:   &sync.Mutex{},
-		getOnce:  &sync.Once{},
-		ch:       make(chan func() (T, error), 1),
+		thenMu: &sync.Mutex{},
+		done:   ctx,
 	}
 	wrp := func() {
+		var t T
+		var err error
+
 		defer func() {
+
+			// task() panicked, change err
 			if v := recover(); v != nil {
 				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
-				var t T
-				var ferr error
-
-				if err, ok := v.(error); ok {
-					ferr = err
+				if verr, ok := v.(error); ok {
+					err = verr
 				} else {
-					ferr = fmt.Errorf("%v", v)
+					err = fmt.Errorf("%v", v)
 				}
-				fut.ch <- func() (T, error) { return t, ferr }
 			}
 
 			fut.thenMu.Lock()
-			defer fut.thenMu.Unlock()
-			fut.callThen()
-			atomic.StoreInt32(&fut.thenDone, 1)
+			fut.res = t
+			fut.err = err
+			cancel()
+
+			if fut.then != nil {
+				doThen := fut.then
+				fut.thenMu.Unlock()
+				doThen(fut.res, fut.err)
+			} else {
+				fut.thenMu.Unlock()
+			}
 		}()
 
-		t, err := task()
-		fut.ch <- func() (T, error) { return t, err }
+		t, err = task()
 	}
 	return &fut, wrp
 }
