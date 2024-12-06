@@ -100,6 +100,14 @@ func (r Rail) Errorf(format string, args ...interface{}) {
 		Errorf(format, args...)
 }
 
+func (r Rail) NoRelayErrorf(format string, args ...interface{}) {
+	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
+		return
+	}
+	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn(), noRelayField: true}).
+		Errorf(format, args...)
+}
+
 func (r Rail) Fatalf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.FatalLevel) {
 		return
