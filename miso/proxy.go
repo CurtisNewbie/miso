@@ -11,17 +11,8 @@ import (
 )
 
 var (
-	proxyClient *http.Client
+	defaultProxyClient *http.Client = newProxyClient()
 )
-
-func init() {
-	proxyClient = &http.Client{Timeout: 0}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConns = 1500
-	transport.MaxIdleConnsPerHost = 1000
-	transport.IdleConnTimeout = time.Minute * 10 // make sure that we can maximize the re-use of connnections
-	proxyClient.Transport = transport
-}
 
 // Resolve proxy target path.
 //
@@ -31,6 +22,7 @@ func init() {
 type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 
 type HttpProxy struct {
+	client        *http.Client
 	filters       []ProxyFilter
 	resolveTarget ProxyTargetResolver
 }
@@ -65,6 +57,7 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	}
 
 	p := &HttpProxy{
+		client:  defaultProxyClient,
 		filters: make([]ProxyFilter, 0),
 	}
 	p.resolveTarget = targetResolver
@@ -114,7 +107,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			path += "?" + r.URL.RawQuery
 		}
 		cli := NewTClient(*pc.Rail, path).
-			UseClient(proxyClient).
+			UseClient(h.client).
 			EnableTracing()
 
 		// propagate all headers to client, except the headers for tracing
@@ -187,6 +180,13 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 	h.filters = append(h.filters, f)
 }
 
+func (h *HttpProxy) ChangeClient(c *http.Client) {
+	if c == nil {
+		panic("*http.Client cannot be nil")
+	}
+	h.client = c
+}
+
 type ProxyContext struct {
 	Rail      *Rail
 	Inb       *Inbound
@@ -254,4 +254,14 @@ func newProxyFilters(c *ProxyContext, pi []ProxyFilter, handler func(pc *ProxyCo
 		c:       c,
 		filters: append(copy, func(pc *ProxyContext, next func()) { handler(c) }),
 	}
+}
+
+func newProxyClient() *http.Client {
+	c := &http.Client{Timeout: 0}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 0
+	transport.MaxIdleConnsPerHost = 1000
+	transport.IdleConnTimeout = time.Minute * 5
+	c.Transport = transport
+	return c
 }
