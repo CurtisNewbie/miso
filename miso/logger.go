@@ -316,6 +316,20 @@ func getCallerFn() string {
 	return ""
 }
 
+func getCallerFnUpOne() string {
+	pcs := callerUintptrPool.Get().(*[]uintptr)
+	defer putCallerUintptrPool(pcs)
+
+	depth := runtime.Callers(4, *pcs)
+	frames := runtime.CallersFrames((*pcs)[:depth])
+
+	// we only need the first frame
+	for f, next := frames.Next(); next; {
+		return unsafeGetShortFnName(f.Function)
+	}
+	return ""
+}
+
 func putCallerUintptrPool(pcs *[]uintptr) {
 	for i := range *pcs {
 		(*pcs)[i] = 0 // zero the values, just in case
