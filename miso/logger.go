@@ -417,3 +417,10 @@ func SetLogOutput(out io.Writer) {
 func GetLogrusLogger() *logrus.Logger {
 	return logger
 }
+
+type PlainStrFormatter struct {
+}
+
+func (p PlainStrFormatter) Format(e *logrus.Entry) ([]byte, error) {
+	return []byte(e.Message), nil
+}
