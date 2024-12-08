@@ -893,6 +893,7 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 		}
 	}
 
+	lmethod := strings.ToLower(d.Method)
 	reqVar := ""
 	if reqTypeName != "" {
 		reqTypeName = guessTsItfName(reqTypeName)
@@ -906,11 +907,15 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 
 		reqVar = ", req"
 	}
+	if (lmethod == "post" || lmethod == "put") && reqVar == "" {
+		reqVar = ", null"
+	}
+
 	n := "any"
 	if respTypeName != "" && !isBuiltinResp {
 		n = respTypeName
 	}
-	sl.Printlnf("this.http.%s<%s>(%s%s", strings.ToLower(d.Method), n, url, reqVar)
+	sl.Printlnf("this.http.%s<%s>(%s%s", lmethod, n, url, reqVar)
 
 	if len(d.Headers) > 0 {
 		sl.Printf(",")
