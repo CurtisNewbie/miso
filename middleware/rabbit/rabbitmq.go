@@ -87,7 +87,7 @@ func newModule() *rabbitMqModule {
 		New: func() any {
 			c, err := m.newPubChan()
 			if err != nil {
-				miso.Errorf("Failed to create new publishing channel, %v", err)
+				miso.NoRelayErrorf("Failed to create new publishing channel, %v", err)
 				return nil
 			}
 
@@ -375,7 +375,7 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 			} else {
 				notifyCloseChan, err = m.initRabbitClient(rail)
 				if err != nil {
-					miso.Errorf("Error connecting to RabbitMQ: %v", err)
+					miso.NoRelayErrorf("Error connecting to RabbitMQ: %v", err)
 					time.Sleep(time.Second * 5)
 					continue
 				}
@@ -535,7 +535,7 @@ func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
 			}
 			msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 			if err != nil {
-				miso.Errorf("Failed to listen to '%s', err: %v", qname, err)
+				miso.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
 			}
 			m.startListening(msgCh, listener, ic)
 		}
