@@ -88,6 +88,21 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 		}
 	}
 
+	miso.Debug("Setting SQLite Cache")
+	if err := db.Exec("PRAGMA cache_size = -20000").Error; err != nil { // -20000 = 20mb
+		miso.Warnf("Failed to setup SQLite cache, %v", err)
+	}
+
+	miso.Debug("Setting SQLite auto_vacuum to INCREMENTAL mode")
+	if err := db.Exec("PRAGMA auto_vacuum = INCREMENTAL").Error; err != nil {
+		miso.Warnf("Failed to change SQLite auto_vacuum mode to INCREMENTAL, %v", err)
+	}
+
+	miso.Debug("Setting SQLite temp_store to MEMORY")
+	if err := db.Exec("PRAGMA temp_store = MEMORY").Error; err != nil {
+		miso.Warnf("Failed to change SQLite temp_store to MEMORY, %v", err)
+	}
+
 	return db, nil
 }
 
