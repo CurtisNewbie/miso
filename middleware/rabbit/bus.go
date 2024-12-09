@@ -36,6 +36,17 @@ type eventBusModule struct {
 	pipelineDescMap map[string]EventPipelineDesc
 }
 
+// Send msg to event bus with "miso-rabbitmq-max-retry" header.
+//
+// Notice that redelivery mechanism is implemented on the consumer side (by miso).
+//
+// It's identical to sending a message to an exchange identified by the name using routing key '#'.
+//
+// Before calling this method, the NewEventBus(...) should be called at least once to create the necessary components.
+func PubRetryEventBus(rail miso.Rail, eventObject any, name string, retry int) error {
+	return PubEventBusHeaders(rail, eventObject, name, map[string]any{HeaderRabbitMaxRetry: retry})
+}
+
 // Send msg to event bus.
 //
 // It's identical to sending a message to an exchange identified by the name using routing key '#'.
@@ -142,7 +153,7 @@ func (ep *EventPipeline[T]) MaxRetry(n int) *EventPipeline[T] {
 // Call PubEventBus.
 func (ep *EventPipeline[T]) Send(rail miso.Rail, event T) error {
 	if ep.maxRetry > -1 {
-		return PubEventBusHeaders(rail, event, ep.name, map[string]any{HeaderRabbitMaxRetry: ep.maxRetry})
+		return PubRetryEventBus(rail, event, ep.name, ep.maxRetry)
 	}
 	return PubEventBus(rail, event, ep.name)
 }
