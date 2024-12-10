@@ -133,9 +133,9 @@ func (a *AppConfig) UnmarshalFromPropKey(key string, ptr any) {
 // Overwrite existing conf using environment and cli args.
 func (a *AppConfig) OverwriteConf(args []string) {
 	// overwrite loaded configuration with environment variables
-	a.overwriteConf(ArgKeyVal(os.Environ()))
+	a.overwriteConf(ArgKeyVal(os.Environ()), "Environment Variables")
 	// overwrite the loaded configuration with cli arguments
-	a.overwriteConf(ArgKeyVal(args))
+	a.overwriteConf(ArgKeyVal(args), "CLI Args")
 }
 
 /*
@@ -259,12 +259,16 @@ func (a *AppConfig) LoadConfigFromFile(configFile string) error {
 	return nil
 }
 
-func (a *AppConfig) overwriteConf(kvs map[string][]string) {
+func (a *AppConfig) overwriteConf(kvs map[string][]string, src string) {
 	for k, v := range kvs {
+		var vv any = v
 		if len(v) == 1 {
-			a.SetProp(k, v[0])
-		} else {
-			a.SetProp(k, v)
+			vv = v[0]
+		}
+		prevSet := a.HasProp(k)
+		a.SetProp(k, vv)
+		if prevSet {
+			Infof("Overwrote config: '%v', source: %v", k, src)
 		}
 	}
 }
