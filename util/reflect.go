@@ -170,3 +170,28 @@ func WalkTagShallow(ptr any, callbacks ...WalkTagCallback) error {
 	}
 	return nil
 }
+
+// Construct Struct/Interface/Pointer values to map[string]any.
+//
+// This method doesn't convert recursively.
+func ReflectGenMap(t any) map[string]any {
+	v := reflect.ValueOf(t)
+	rt := v.Type()
+
+	switch v.Kind() {
+	case reflect.Struct:
+		m := map[string]any{}
+		for i := 0; i < rt.NumField(); i++ {
+			f := rt.Field(i)
+			if f.IsExported() {
+				m[f.Name] = v.Field(i).Interface()
+			}
+		}
+		return m
+	case reflect.Interface, reflect.Pointer:
+		ele := v.Elem()
+		return ReflectGenMap(ele.Interface())
+	default:
+		return map[string]any{}
+	}
+}

@@ -200,11 +200,7 @@ func LastNStr(s string, n int) string {
 	return string(ru[len(ru)-n:])
 }
 
-// Format message using named args.
-//
-// Equivalent to NamedFmt(pat).Sprintf(p).
-//
-// e.g., '${startTime} ${message}'
+// Format message using named args, e.g., '${startTime} ${message}'
 func NamedSprintf(pat string, p map[string]any) string {
 	return namedFmtPat.ReplaceAllStringFunc(pat, func(s string) string {
 		key := s[2 : len(s)-1]
@@ -214,6 +210,15 @@ func NamedSprintf(pat string, p map[string]any) string {
 		}
 		return cast.ToString(v)
 	})
+}
+
+// Format message using fields in struct, e.g., '${startTime} ${message}'
+//
+// Equivalent to following code:
+//
+//	NamedSprintf(pat, ReflectGenMap(myStruct))
+func NamedSprintfv(pat string, v any) string {
+	return NamedSprintf(pat, ReflectGenMap(v))
 }
 
 func FmtFloat(f float64, width int, precision int) string {
