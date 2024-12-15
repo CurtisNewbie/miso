@@ -384,6 +384,8 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 			select {
 			// block until connection is closed, then reconnect, thus continue
 			case <-notifyCloseChan:
+				miso.Infof("RabbitMq connection notifyCloseChan received, reconnecting")
+				time.Sleep(time.Second * 1)
 				continue
 			// context is done, close the connection, and exit
 			case <-doneCh:
@@ -522,22 +524,24 @@ func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
 			concurrency = 1
 		}
 
+		ch, e := conn.Channel()
+		if e != nil {
+			return e
+		}
+
+		e = ch.Qos(qos, 0, false)
+		if e != nil {
+			return e
+		}
+		msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
+
 		for i := 0; i < concurrency; i++ {
 			ic := i
-			ch, e := conn.Channel()
-			if e != nil {
-				return e
-			}
-
-			e = ch.Qos(qos, 0, false)
-			if e != nil {
-				return e
-			}
-			msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 			if err != nil {
 				miso.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
+				return err
 			}
-			m.startListening(msgCh, listener, ic)
+			m.startListening(ch, msgCh, listener, ic)
 		}
 	}
 
@@ -545,9 +549,14 @@ func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func (m *rabbitMqModule) startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
+func (m *rabbitMqModule) startListening(ch *amqp.Channel, msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
-		miso.Debugf("%d-%v started", routineNo, listener)
+		defer ch.Close()
+
+		name := fmt.Sprintf("[%d-%v]", routineNo, listener)
+		defer miso.Infof("%v stopped", name)
+		miso.Infof("%v started", name)
+
 		for msg := range msgCh {
 
 			// read trace from headers
@@ -624,7 +633,7 @@ func (m *rabbitMqModule) startListening(msgCh <-chan amqp.Delivery, listener Rab
 			msg.Nack(false, true)
 			rail.Debugf("Nacked message: %v", msg.MessageId)
 		}
-		miso.Debugf("%d-%v stopped", routineNo, listener)
+
 	}()
 }
 
