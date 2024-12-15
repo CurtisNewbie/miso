@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 var (
 	_ RabbitListener = (*JsonMsgListener[any])(nil)
 	_ RabbitListener = (*MsgListener)(nil)
+	_ RabbitListener = (*wrappingListener)(nil)
 )
 
 const (
@@ -286,7 +288,7 @@ func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, ro
 func (m *rabbitMqModule) AddRabbitListener(listener RabbitListener) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.listeners = append(m.listeners, listener)
+	m.listeners = append(m.listeners, newWrappingListener(listener))
 }
 
 func (m *rabbitMqModule) registerRabbitBinding(b BindingRegistration) {
@@ -758,4 +760,39 @@ func RegisterRabbitExchange(e ExchangeRegistration) {
 // with a delay of 10 seconds until the message is finally processed without error.
 func AddRabbitListener(listener RabbitListener) {
 	module().AddRabbitListener(listener)
+}
+
+// Wrapping RabbitListener that makes sure Handle(..) doesn't panic
+type wrappingListener struct {
+	delegate RabbitListener
+}
+
+func (w wrappingListener) Queue() string {
+	return w.delegate.Queue()
+}
+
+func (w wrappingListener) Handle(rail miso.Rail, payload string) (err error) {
+	defer func() {
+		if v := recover(); v != nil {
+			util.PanicLog("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+			err = fmt.Errorf("listener panic recovered, %v", v)
+		}
+	}()
+
+	err = w.delegate.Handle(rail, payload)
+	return
+}
+
+func (w wrappingListener) Concurrency() int {
+	return w.delegate.Concurrency()
+}
+
+func (w wrappingListener) QosSpec() int {
+	return w.delegate.QosSpec()
+}
+
+func newWrappingListener(l RabbitListener) RabbitListener {
+	return wrappingListener{
+		delegate: l,
+	}
 }
