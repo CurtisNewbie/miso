@@ -16,6 +16,11 @@ import (
 	"github.com/spf13/cast"
 )
 
+var (
+	_ RabbitListener = (*JsonMsgListener[any])(nil)
+	_ RabbitListener = (*MsgListener)(nil)
+)
+
 const (
 	redeliverDelay  = 5000 // redeliver delay, changing it will also create a new queue for redelivery
 	defaultExchange = ""   // default exchange that routes based on queue name using routing key
@@ -130,6 +135,7 @@ type RabbitListener interface {
 	Queue() string                               // return name of the queue
 	Handle(rail miso.Rail, payload string) error // handle message
 	Concurrency() int
+	QosSpec() int
 }
 
 // Json Message Listener for Queue
@@ -137,6 +143,7 @@ type JsonMsgListener[T any] struct {
 	QueueName     string
 	Handler       func(rail miso.Rail, payload T) error
 	NumOfRoutines int
+	Qos           int
 }
 
 func (m JsonMsgListener[T]) Queue() string {
@@ -163,11 +170,16 @@ func (m JsonMsgListener[T]) String() string {
 	return fmt.Sprintf("Listener: '%s' --> '%s'", funcName, m.QueueName)
 }
 
+func (m JsonMsgListener[T]) QosSpec() int {
+	return m.Qos
+}
+
 // Message Listener for Queue
 type MsgListener struct {
 	QueueName     string
 	Handler       func(rail miso.Rail, payload string) error
 	NumOfRoutines int
+	Qos           int
 }
 
 func (m MsgListener) Queue() string {
@@ -188,6 +200,10 @@ func (m MsgListener) String() string {
 		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
 	}
 	return fmt.Sprintf("MsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
+}
+
+func (m MsgListener) QosSpec() int {
+	return m.Qos
 }
 
 // Publish json message with confirmation
@@ -513,7 +529,7 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 }
 
 func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
-	qos := miso.GetPropInt(PropRabbitMqConsumerQos)
+	global := miso.GetPropInt(PropRabbitMqConsumerQos)
 
 	for _, v := range m.listeners {
 		listener := v
@@ -527,6 +543,10 @@ func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
 		ch, e := conn.Channel()
 		if e != nil {
 			return e
+		}
+		qos := global
+		if v.QosSpec() > 0 {
+			qos = v.QosSpec()
 		}
 
 		e = ch.Qos(qos, 0, false)

@@ -91,6 +91,13 @@ func NewEventBus(name string) {
 //
 // Internally, it calls NewEventBus(...) and registers a listener for the queue identified by the bus name.
 func SubEventBus[T any](name string, concurrency int, listener func(rail miso.Rail, t T) error) {
+	SubEventBusQos[T](name, concurrency, 0, listener)
+}
+
+// Subscribe to event bus.
+//
+// Internally, it calls NewEventBus(...) and registers a listener for the queue identified by the bus name.
+func SubEventBusQos[T any](name string, concurrency int, qos int, listener func(rail miso.Rail, t T) error) {
 	if name == "" {
 		panic("event bus name is empty")
 	}
@@ -98,7 +105,7 @@ func SubEventBus[T any](name string, concurrency int, listener func(rail miso.Ra
 		concurrency = 1
 	}
 	NewEventBus(name)
-	AddRabbitListener(JsonMsgListener[T]{QueueName: name, Handler: listener, NumOfRoutines: concurrency})
+	AddRabbitListener(JsonMsgListener[T]{QueueName: name, Handler: listener, NumOfRoutines: concurrency, Qos: qos})
 }
 
 // EventPipeline is a thin wrapper of NewEventBus, SubEventBus and PubEventBus.
@@ -109,6 +116,7 @@ type EventPipeline[T any] struct {
 	name      string
 	logPaylod bool
 	maxRetry  int
+	qos       int
 }
 
 // Name of the pipeline.
@@ -158,9 +166,18 @@ func (ep *EventPipeline[T]) Send(rail miso.Rail, event T) error {
 	return PubEventBus(rail, event, ep.name)
 }
 
+// Specify QOS for listener, should be called before #Listen func.
+func (ep *EventPipeline[T]) ListenerQos(v int) *EventPipeline[T] {
+	if v < 0 {
+		return ep
+	}
+	ep.qos = v
+	return ep
+}
+
 // Call SubEventBus.
 func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail miso.Rail, t T) error) *EventPipeline[T] {
-	SubEventBus[T](ep.name, concurrency, func(rail miso.Rail, t T) error {
+	SubEventBusQos[T](ep.name, concurrency, ep.qos, func(rail miso.Rail, t T) error {
 		if ep.logPaylod {
 			rail.Infof("Pipeline %s receive %+v", ep.name, t)
 		}
