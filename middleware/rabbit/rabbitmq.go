@@ -422,6 +422,9 @@ func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error)
 	}
 
 	c := amqp.Config{}
+	c.Properties = map[string]any{
+		"connection_name": miso.GetPropStr(miso.PropAppName),
+	}
 	username := miso.GetPropStr(PropRabbitMqUsername)
 	password := miso.GetPropStr(PropRabbitMqPassword)
 	vhost := miso.GetPropStr(PropRabbitMqVhost)
