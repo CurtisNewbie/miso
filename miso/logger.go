@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	callerField  = "caller"
-	noRelayField = "noRelay"
+	callerField = "caller"
 )
 
 const (
@@ -114,23 +113,16 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteByte('\n')
 
 	if entry.Level == logrus.ErrorLevel && errLogPipe != nil {
-		var noRelay bool = false
-		if nr, ok := entry.Data[noRelayField]; ok {
-			noRelay = nr.(bool)
-		}
+		el := errLogPool.Get().(*ErrorLog)
+		el.Time = entry.Time
+		el.FuncName = fn
+		el.Message = entry.Message
+		el.SpanId = spanId
+		el.TraceId = traceId
 
-		if !noRelay {
-			el := errLogPool.Get().(*ErrorLog)
-			el.Time = entry.Time
-			el.FuncName = fn
-			el.Message = entry.Message
-			el.SpanId = spanId
-			el.TraceId = traceId
-
-			select {
-			case errLogPipe <- el:
-			default: // just in case the pipe is blocked
-			}
+		select {
+		case errLogPipe <- el:
+		default: // just in case the pipe is blocked
 		}
 	}
 
@@ -250,13 +242,6 @@ func Errorf(format string, args ...interface{}) {
 		return
 	}
 	logger.WithField(callerField, getCallerFn()).Errorf(format, args...)
-}
-
-func NoRelayErrorf(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
-		return
-	}
-	logger.WithFields(logrus.Fields{callerField: getCallerFn(), noRelayField: true}).Errorf(format, args...)
 }
 
 func Fatalf(format string, args ...interface{}) {
