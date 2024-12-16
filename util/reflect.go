@@ -195,3 +195,11 @@ func ReflectGenMap(t any) map[string]any {
 		return map[string]any{}
 	}
 }
+
+func ReflectFuncName(fun any) string {
+	var funcName string = "nil"
+	if fun != nil {
+		funcName = runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name()
+	}
+	return funcName
+}

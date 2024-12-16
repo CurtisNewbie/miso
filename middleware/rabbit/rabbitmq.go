@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sync"
@@ -71,11 +70,10 @@ func init() {
 }
 
 type rabbitMqModule struct {
-	mu *sync.Mutex
-
+	mu                *sync.Mutex
+	closed            bool
 	redeliverQueueMap *sync.Map
 	conn              *amqp.Connection // connection pointer, accessing it require obtaining 'mu' lock
-	pubWg             *sync.WaitGroup  // number of messages being published
 	pubChanPool       *sync.Pool       // pool of channel for publishing message
 
 	listeners            []RabbitListener
@@ -87,7 +85,6 @@ type rabbitMqModule struct {
 func newModule() *rabbitMqModule {
 	m := &rabbitMqModule{
 		redeliverQueueMap: &sync.Map{},
-		pubWg:             &sync.WaitGroup{},
 		mu:                &sync.Mutex{},
 	}
 	m.pubChanPool = &sync.Pool{
@@ -164,14 +161,6 @@ func (m JsonMsgListener[T]) Concurrency() int {
 	return m.NumOfRoutines
 }
 
-func (m JsonMsgListener[T]) String() string {
-	var funcName string = "nil"
-	if m.Handler != nil {
-		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
-	}
-	return fmt.Sprintf("Listener: '%s' --> '%s'", funcName, m.QueueName)
-}
-
 func (m JsonMsgListener[T]) QosSpec() int {
 	return m.Qos
 }
@@ -194,14 +183,6 @@ func (m MsgListener) Handle(rail miso.Rail, payload string) error {
 
 func (m MsgListener) Concurrency() int {
 	return m.NumOfRoutines
-}
-
-func (m MsgListener) String() string {
-	var funcName string = "nil"
-	if m.Handler != nil {
-		funcName = runtime.FuncForPC(reflect.ValueOf(m.Handler).Pointer()).Name()
-	}
-	return fmt.Sprintf("MsgListener{ QueueName: '%s', Handler: %s }", m.QueueName, funcName)
 }
 
 func (m MsgListener) QosSpec() int {
@@ -245,9 +226,6 @@ func (m *rabbitMqModule) publishText(c miso.Rail, msg string, exchange string, r
 }
 
 func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
-	m.pubWg.Add(1)
-	defer m.pubWg.Done()
-
 	pc, err := m.borrowPubChan()
 	if err != nil {
 		return fmt.Errorf("failed to obtain channel, unable to publish message, %w", err)
@@ -385,7 +363,7 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 
 	go func(notifyCloseChan chan *amqp.Error) {
 		isInitial := true
-		doneCh := rail.Context().Done()
+		doneCh := rail.Done()
 
 		for {
 			if isInitial {
@@ -397,6 +375,9 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 					time.Sleep(time.Second * 5)
 					continue
 				}
+				if notifyCloseChan == nil {
+					return
+				}
 			}
 
 			select {
@@ -407,7 +388,7 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 				continue
 			// context is done, close the connection, and exit
 			case <-doneCh:
-				if err := m.disconnect(rail); err != nil {
+				if err := m.close(rail); err != nil {
 					miso.Warnf("Failed to close connection to RabbitMQ: %v", err)
 				}
 				return
@@ -419,17 +400,18 @@ func (m *rabbitMqModule) startClient(rail miso.Rail) error {
 }
 
 // Disconnect from RabbitMQ server
-func (m *rabbitMqModule) disconnect(rail miso.Rail) error {
+func (m *rabbitMqModule) close(rail miso.Rail) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if m.conn == nil {
 		return nil
 	}
 
-	rail.Info("Disconnecting RabbitMQ Connection")
-	m.pubWg.Wait()
+	rail.Info("Closing RabbitMQ Connection")
 	err := m.conn.Close()
 	m.conn = nil
+	m.closed = true
 	return err
 }
 
@@ -498,6 +480,10 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if m.closed {
+		return nil, nil
+	}
+
 	// Establish connection if necessary
 	conn, err := m.tryConnRabbit(rail)
 	if err != nil {
@@ -545,11 +531,9 @@ func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
 	return nil
 }
 
-func (m *rabbitMqModule) startListening(ch *amqp.Channel, msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
+func (m *rabbitMqModule) startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
-		defer ch.Close()
-
-		name := fmt.Sprintf("[%d-%v]", routineNo, listener)
+		name := fmt.Sprintf("Listener [%d-%v]", routineNo, listener.Queue())
 		defer miso.Infof("%v stopped", name)
 		miso.Infof("%v started", name)
 
@@ -683,11 +667,9 @@ func (m *rabbitMqModule) newPubChan() (*amqp.Channel, error) {
 func (m *rabbitMqModule) newChan() (*amqp.Channel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	if m.conn == nil {
 		return nil, errors.New("rabbitmq connection is missing")
 	}
-
 	return m.conn.Channel()
 }
 
@@ -696,6 +678,11 @@ func rabbitBootstrap(rail miso.Rail) error {
 	if e := m.startClient(rail); e != nil {
 		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
 	}
+	miso.AddShutdownHook(func() {
+		if err := m.close(miso.EmptyRail()); err != nil {
+			miso.NoRelayErrorf("Failed to close rabbitmq connection, %v", err)
+		}
+	})
 	return nil
 }
 
@@ -708,7 +695,7 @@ func RabbitConnected() bool {
 }
 
 func RabbitDisconnect(rail miso.Rail) error {
-	return module().disconnect(rail)
+	return module().close(rail)
 }
 
 // Declare binding on client initialization
@@ -765,7 +752,17 @@ func (w wrappingListener) QosSpec() int {
 	return w.delegate.QosSpec()
 }
 
+func (w wrappingListener) String() string {
+	if ws, ok := w.delegate.(fmt.Stringer); ok {
+		return ws.String()
+	}
+	return fmt.Sprintf("%v", w.delegate)
+}
+
 func newWrappingListener(l RabbitListener) RabbitListener {
+	if l == nil {
+		panic(fmt.Errorf("RabbitListener is nil, unable to wrappingListener"))
+	}
 	return wrappingListener{
 		delegate: l,
 	}
@@ -784,6 +781,12 @@ func (r *rabbitManagedConsumer) start() error {
 	if concurrency < 1 {
 		concurrency = 1
 	}
+
+	if r.conn.IsClosed() {
+		miso.Warn("RabbitMQ connection has been closed, abort rabbitManagedConsumer.Start(), new *rabbitManagedConsumer will be created")
+		return nil
+	}
+
 	ch, e := r.conn.Channel()
 	if e != nil {
 		return e
@@ -793,23 +796,22 @@ func (r *rabbitManagedConsumer) start() error {
 		qos = r.listener.QosSpec()
 	}
 
-	e = ch.Qos(qos, 0, false)
-	if e != nil {
+	if e := ch.Qos(qos, 0, false); e != nil {
+		ch.Close()
 		return e
 	}
 
 	msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
-
-	for i := 0; i < concurrency; i++ {
-		ic := i
-		if err != nil {
-			miso.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
-			return err
-		}
-		r.m.startListening(ch, msgCh, r.listener, ic)
+	if err != nil {
+		miso.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
+		return err
 	}
 
+	for i := 0; i < concurrency; i++ {
+		r.m.startListening(msgCh, r.listener, i)
+	}
 	r.onNotifyCancelClose(ch)
+	miso.Infof("Bootstrapped consumer for '%v' with concurrency: %v", r.listener.Queue(), r.listener.Concurrency())
 
 	return nil
 }

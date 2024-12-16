@@ -34,6 +34,10 @@ func (r Rail) Context() context.Context {
 	return r.ctx
 }
 
+func (r Rail) Done() <-chan struct{} {
+	return r.ctx.Done()
+}
+
 func (r Rail) CtxValue(key string) any {
 	return r.ctx.Value(key)
 }
