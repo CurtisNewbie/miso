@@ -834,14 +834,14 @@ func (r *rabbitManagedConsumer) onNotifyCancelClose(ch *amqp.Channel) {
 		case err := <-notifyCloseChan:
 			if err != nil {
 				rail := miso.EmptyRail()
-				rail.NoRelayErrorf("receive from notifyCloseChan, reconnecting to amqp server, %v", err)
+				rail.NoRelayErrorf("receive from notifyCloseChan, ('%v') reconnecting to amqp server, %v", r.listener.Queue(), err)
 				r.retryStart(rail)
 				return
 			}
 			miso.Infof("receive from notifyCloseChan, consumer exiting")
 		case err := <-notifyCancelChan:
 			rail := miso.EmptyRail()
-			rail.NoRelayErrorf("receive from notifyCancelChan, reconnecting to amqp server, %v", err)
+			rail.NoRelayErrorf("receive from notifyCancelChan, ('%v') reconnecting to amqp server, %v", r.listener.Queue(), err)
 			r.retryStart(rail)
 		}
 	}()
