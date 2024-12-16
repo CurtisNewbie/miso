@@ -487,30 +487,26 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 		return nil, nil
 	}
 
-	// Establish connection if necessary
 	conn, err := m.tryConnRabbit(rail)
 	if err != nil {
 		return nil, err
 	}
-
-	notifyCloseChan := make(chan *amqp.Error)
-	conn.NotifyClose(notifyCloseChan)
+	notifyCloseChan := conn.NotifyClose(make(chan *amqp.Error))
 
 	rail.Debugf("Creating Channel to RabbitMQ")
 	ch, e := conn.Channel()
 	if e != nil {
 		return nil, fmt.Errorf("failed to create channel, %w", e)
 	}
+	defer ch.Close()
 
 	// queues, exchanges, bindings
-	e = m.decRabbitComp(ch)
-	if e != nil {
+	if e := m.decRabbitComp(ch); e != nil {
 		return nil, e
 	}
-	ch.Close()
 
 	// consumers
-	if e = m.startRabbitConsumers(conn); e != nil {
+	if e = m.startRabbitConsumers(rail, conn); e != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", e)
 		return nil, fmt.Errorf("failed to create consumer, %w", e)
 	}
@@ -519,26 +515,25 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, err
 	return notifyCloseChan, nil
 }
 
-func (m *rabbitMqModule) startRabbitConsumers(conn *amqp.Connection) error {
-	for _, v := range m.listeners {
-		listener := v
+func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connection) error {
+	for _, listener := range m.listeners {
 		rmc := rabbitManagedConsumer{
 			m:        m,
 			conn:     conn,
 			listener: listener,
 		}
-		rmc.start()
+		rmc.start(rail)
 	}
 
 	miso.Debug("RabbitMQ consumer initialization finished")
 	return nil
 }
 
-func (m *rabbitMqModule) startListening(msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
+func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
 	go func() {
 		name := fmt.Sprintf("Listener [%d-%v]", routineNo, listener.Queue())
-		defer miso.Infof("%v stopped", name)
-		miso.Infof("%v started", name)
+		defer rail.Debugf("%v stopped", name)
+		rail.Debugf("%v started", name)
 
 		for msg := range msgCh {
 
@@ -777,7 +772,7 @@ type rabbitManagedConsumer struct {
 	listener RabbitListener
 }
 
-func (r *rabbitManagedConsumer) start() error {
+func (r *rabbitManagedConsumer) start(rail miso.Rail) error {
 	global := miso.GetPropInt(PropRabbitMqConsumerQos)
 	qname := r.listener.Queue()
 	concurrency := r.listener.Concurrency()
@@ -786,7 +781,7 @@ func (r *rabbitManagedConsumer) start() error {
 	}
 
 	if r.conn.IsClosed() {
-		miso.Warn("RabbitMQ connection has been closed, abort rabbitManagedConsumer.Start(), new *rabbitManagedConsumer will be created")
+		rail.Warn("RabbitMQ connection has been closed, abort rabbitManagedConsumer.Start(), new *rabbitManagedConsumer will be created")
 		return nil
 	}
 
@@ -806,26 +801,26 @@ func (r *rabbitManagedConsumer) start() error {
 
 	msgCh, err := ch.Consume(qname, "", false, false, false, false, nil)
 	if err != nil {
-		miso.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
+		rail.NoRelayErrorf("Failed to listen to '%s', err: %v", qname, err)
 		return err
 	}
 
 	for i := 0; i < concurrency; i++ {
-		r.m.startListening(msgCh, r.listener, i)
+		r.m.startListening(rail, msgCh, r.listener, i)
 	}
 	r.onNotifyCancelClose(ch)
-	miso.Infof("Bootstrapped consumer for '%v' with concurrency: %v", r.listener.Queue(), r.listener.Concurrency())
+	rail.Infof("Bootstrapped consumer for '%v' with concurrency: %v", r.listener.Queue(), r.listener.Concurrency())
 
 	return nil
 }
 
-func (r *rabbitManagedConsumer) retryStart() {
+func (r *rabbitManagedConsumer) retryStart(rail miso.Rail) {
 	for {
-		err := r.start()
+		err := r.start(rail)
 		if err == nil {
 			return
 		}
-		miso.NoRelayErrorf("Failed to start rabbitManagedConsumer, retry, %v", err)
+		rail.NoRelayErrorf("Failed to start rabbitManagedConsumer, retry, %v", err)
 		time.Sleep(time.Second * 1)
 	}
 }
@@ -838,14 +833,16 @@ func (r *rabbitManagedConsumer) onNotifyCancelClose(ch *amqp.Channel) {
 		select {
 		case err := <-notifyCloseChan:
 			if err != nil {
-				miso.NoRelayErrorf("receive from notifyCloseChan, reconnecting to amqp server, %v", err)
-				r.retryStart()
+				rail := miso.EmptyRail()
+				rail.NoRelayErrorf("receive from notifyCloseChan, reconnecting to amqp server, %v", err)
+				r.retryStart(rail)
 				return
 			}
 			miso.Infof("receive from notifyCloseChan, consumer exiting")
 		case err := <-notifyCancelChan:
-			miso.NoRelayErrorf("receive from notifyCancelChan, reconnecting to amqp server, %v", err)
-			r.retryStart()
+			rail := miso.EmptyRail()
+			rail.NoRelayErrorf("receive from notifyCancelChan, reconnecting to amqp server, %v", err)
+			r.retryStart(rail)
 		}
 	}()
 }
