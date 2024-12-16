@@ -442,7 +442,7 @@ func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error)
 }
 
 // Declare Queus, Exchanges, and Bindings
-func (m *rabbitMqModule) decRabbitComp(ch *amqp.Channel) error {
+func (m *rabbitMqModule) declareComponents(ch *amqp.Channel) error {
 	if ch == nil {
 		return errMissingChannel
 	}
@@ -474,45 +474,44 @@ func (m *rabbitMqModule) rabbitConnected() bool {
 	return m.conn != nil
 }
 
-/*
-Init RabbitMQ Client
-
-return notifyCloseChannel for connection and error
-*/
-func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (chan *amqp.Error, error) {
+func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (notifyCloseChan chan *amqp.Error, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.closed {
-		return nil, nil
+		return
 	}
 
 	conn, err := m.tryConnRabbit(rail)
 	if err != nil {
-		return nil, err
+		rail.Errorf("Failed to connect RabbitMQ server, %v", err)
+		return
 	}
-	notifyCloseChan := conn.NotifyClose(make(chan *amqp.Error))
 
-	rail.Debugf("Creating Channel to RabbitMQ")
-	ch, e := conn.Channel()
-	if e != nil {
-		return nil, fmt.Errorf("failed to create channel, %w", e)
+	notifyCloseChan = conn.NotifyClose(make(chan *amqp.Error))
+	ch, err := conn.Channel()
+	if err != nil {
+		rail.Errorf("Failed to open RabbitMQ channel for components declaration, %v", err)
+		err = fmt.Errorf("failed to create channel, %w", err)
+		return
 	}
 	defer ch.Close()
 
 	// queues, exchanges, bindings
-	if e := m.decRabbitComp(ch); e != nil {
-		return nil, e
+	if err = m.declareComponents(ch); err != nil {
+		rail.Errorf("Failed to declare RabbitMQ components, %v", err)
+		return
 	}
 
 	// consumers
-	if e = m.startRabbitConsumers(rail, conn); e != nil {
-		rail.Errorf("Failed to bootstrap consumer: %v", e)
-		return nil, fmt.Errorf("failed to create consumer, %w", e)
+	if err = m.startRabbitConsumers(rail, conn); err != nil {
+		rail.Errorf("Failed to bootstrap consumer: %v", err)
+		err = fmt.Errorf("failed to create consumer, %w", err)
+		return
 	}
 
 	rail.Debugf("RabbitMQ client initialization finished")
-	return notifyCloseChan, nil
+	return
 }
 
 func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connection) error {
