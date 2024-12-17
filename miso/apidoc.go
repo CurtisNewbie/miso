@@ -255,14 +255,14 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(4) + "```\n")
 		}
 
-		// if r.MisoTClientDemo != "" {
-		// 	b.WriteRune('\n')
-		// 	b.WriteString(util.Spaces(2))
-		// 	b.WriteString("- Miso HTTP Client:\n")
-		// 	b.WriteString(util.Spaces(4) + "```go\n")
-		// 	b.WriteString(util.SAddLineIndent(r.MisoTClientDemo, util.Spaces(4)))
-		// 	b.WriteString(util.Spaces(4) + "```\n")
-		// }
+		if r.MisoTClientDemo != "" {
+			b.WriteRune('\n')
+			b.WriteString(util.Spaces(2))
+			b.WriteString("- Miso HTTP Client:\n")
+			b.WriteString(util.Spaces(4) + "```go\n")
+			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(4)))
+			b.WriteString(util.Spaces(4) + "```\n")
+		}
 
 		if r.JsonReqTsDef != "" {
 			b.WriteRune('\n')
