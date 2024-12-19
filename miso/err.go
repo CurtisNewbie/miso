@@ -3,6 +3,9 @@ package miso
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"strings"
+	"sync/atomic"
 
 	"github.com/curtisnewbie/miso/util"
 )
@@ -12,6 +15,8 @@ var (
 	//
 	// Use miso.IsNoneErr(err) to check if an error represents None.
 	NoneErr *MisoErr = NewErrf("none")
+
+	disableErrStack = atomic.Bool{}
 )
 
 var (
@@ -34,6 +39,7 @@ type MisoErr struct {
 	Code        string // error code.
 	Msg         string // error message returned to the client requested to the endpoint.
 	InternalMsg string // internal message that is only logged on server.
+	stack       string
 }
 
 func (e *MisoErr) Error() string {
@@ -82,10 +88,54 @@ func (e *MisoErr) WithInternalMsg(msg string, args ...any) *MisoErr {
 	return ne
 }
 
+func (e *MisoErr) withStack() *MisoErr {
+	if !disableErrStack.Load() {
+		e.stack = stack(3)
+	}
+	return e
+}
+
 // Create new MisoErr with message.
 func NewErrf(msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
-	return &MisoErr{Msg: msg, InternalMsg: ""}
+	me := &MisoErr{Msg: msg, InternalMsg: ""}
+	me.withStack()
+	return me
+}
+
+func UnwrapErrStack(err error) (string, bool) {
+	var ue error = err
+	for {
+		u := errors.Unwrap(ue)
+		if u == nil {
+			break
+		}
+		ue = u
+	}
+	if me, ok := ue.(*MisoErr); ok {
+		return me.stack, me.stack != ""
+	}
+	return "", false
+}
+
+func DisableErrStack() {
+	disableErrStack.Store(true)
+}
+
+func stack(n int) string {
+	stack := make([]uintptr, 50)
+	length := runtime.Callers(n, stack)
+	frames := runtime.CallersFrames(stack[:length])
+	b := strings.Builder{}
+
+	for {
+		f, next := frames.Next()
+		if !next {
+			break
+		}
+		b.WriteString(fmt.Sprintf("\n\t%v\n\t\t%v:%v", f.Function, f.File, f.Line))
+	}
+	return b.String()
 }

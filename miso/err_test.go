@@ -43,3 +43,26 @@ func TestErrReuse(t *testing.T) {
 	t.Logf("%#v", e1)
 	t.Logf("%#v", e2)
 }
+
+func TestUnwrapErrStack(t *testing.T) {
+	e := fmt.Errorf("something is wrong, %w", testUnwrapErrStack1())
+	stack, ok := UnwrapErrStack(e)
+	if !ok {
+		t.Fatal("not ok")
+	}
+	if stack == "" {
+		t.Fatal("stack is empty")
+	}
+	t.Log(e)
+	t.Log(stack)
+}
+
+func testUnwrapErrStack1() error {
+	st := NewErrf("oh no")
+	return fmt.Errorf("wrapping oh no, %w", st)
+}
+
+func TestStack(t *testing.T) {
+	s := stack(1)
+	t.Log(s)
+}
