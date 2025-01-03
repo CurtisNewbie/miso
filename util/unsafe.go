@@ -40,3 +40,8 @@ func UnsafeByt2Str(b []byte) string {
 func UnsafeStr2Byt(s string) (b []byte) {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
+
+// Get string's length in bytes
+func StrByteLen(s string) int {
+	return len(UnsafeStr2Byt(s))
+}
