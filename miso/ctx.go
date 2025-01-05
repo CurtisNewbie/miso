@@ -100,6 +100,21 @@ func (r Rail) Errorf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
+
+	var err error = nil
+	for i := len(args) - 1; i > -1; i-- {
+		ar := args[i]
+		if er, ok := ar.(error); ok {
+			err = er
+			break
+		}
+	}
+	if err != nil {
+		stackTrace, withStack := UnwrapErrStack(err)
+		if withStack {
+			format += stackTrace
+		}
+	}
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Errorf(format, args...)
 }

@@ -556,13 +556,8 @@ func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delive
 				continue
 			}
 
-			stackTrace, withStack := miso.UnwrapErrStack(e)
-			var stackTraceMsg string
-			if withStack {
-				stackTraceMsg = fmt.Sprintf(", StackTrace: %v", stackTrace)
-			}
-			rail.Errorf("Failed to handle message for queue: '%s', exchange: '%s', routingKey: '%s', payload: '%v', err: '%v', messageId: '%v'%v",
-				listener.Queue(), msg.Exchange, msg.RoutingKey, payload, e, msg.MessageId, stackTraceMsg)
+			rail.Errorf("Failed to handle message for queue: '%s', exchange: '%s', routingKey: '%s', payload: '%v', messageId: '%v', %v",
+				listener.Queue(), msg.Exchange, msg.RoutingKey, payload, msg.MessageId, e)
 
 			// before we nack the message, we check if it's possible to put the message in a persudo 'delayed' queue
 			//

@@ -52,3 +52,13 @@ func TestRailWarnIf(t *testing.T) {
 	r.WarnIf("Delete file failed, file_id: %v", errors.New("file not found"), "ABC123")
 	r.WarnIf("Delete file failed, file_id: %v", fmt.Errorf("failed to delete file, %w", errors.New("file not found")), "ABC123")
 }
+
+func TestErrorfStackTrace(t *testing.T) {
+	r := EmptyRail()
+	err := errors.New("local error")
+	r.Errorf("TestErrorfStackTrace err: %v, %v", err, testErrorfStackTrace1())
+}
+
+func testErrorfStackTrace1() error {
+	return NewErrf("NO!!!!!")
+}
