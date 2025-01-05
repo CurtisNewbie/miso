@@ -264,3 +264,31 @@ func TestSliceRemove(t *testing.T) {
 	b := SliceRemove(a, 1, 3)
 	t.Logf("a: %v, b: %v", a, b)
 }
+
+func TestHeap(t *testing.T) {
+	h := NewHeap[int](10, func(iv, jv int) bool {
+		return iv < jv
+	})
+	for i := 0; i < 10; i++ {
+		h.Push(10 - i)
+	}
+
+	t.Logf("peek: %v", h.heap.Peek())
+	n := h.Pop()
+	t.Logf("poped: %v", n)
+
+	for i := 0; i < 10; i++ {
+		h.Push(i)
+	}
+
+	prev := -1
+	for h.Len() > 0 {
+		t.Logf("peek: %v", h.Peek())
+		p := h.Pop()
+		t.Log(p)
+		if p < prev {
+			t.Fatal("Wrong order")
+		}
+		prev = p
+	}
+}
