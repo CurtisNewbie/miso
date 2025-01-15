@@ -40,6 +40,7 @@ type MisoErr struct {
 	Msg         string // error message returned to the client requested to the endpoint.
 	InternalMsg string // internal message that is only logged on server.
 	stack       string
+	errs        []error
 }
 
 func (e *MisoErr) Error() string {
@@ -95,12 +96,45 @@ func (e *MisoErr) withStack() *MisoErr {
 	return e
 }
 
+func (e *MisoErr) Unwrap() error {
+	l := len(e.errs)
+	if l < 1 {
+		return nil
+	}
+	if l == 1 {
+		return e.errs[0]
+	}
+	return &joinError{errs: util.SliceCopy(e.errs)}
+}
+
+type joinError struct {
+	errs []error
+}
+
+func (e *joinError) Error() string {
+	s := make([]string, 0, len(e.errs))
+	for _, er := range e.errs {
+		s = append(s, er.Error())
+	}
+	return strings.Join(s, ", ")
+}
+
+func (e *joinError) Unwrap() []error {
+	return e.errs
+}
+
 // Create new MisoErr with message.
 func NewErrf(msg string, args ...any) *MisoErr {
+	errs := []error{}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
+		for _, ar := range args {
+			if ae, ok := ar.(error); ok {
+				errs = append(errs, ae)
+			}
+		}
 	}
-	me := &MisoErr{Msg: msg, InternalMsg: ""}
+	me := &MisoErr{Msg: msg, InternalMsg: "", errs: errs}
 	me.withStack()
 	return me
 }
