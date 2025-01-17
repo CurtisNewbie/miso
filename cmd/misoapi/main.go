@@ -352,12 +352,14 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		// TODO: this code is terrible, have to fix it :(
 		var custResType string
 		var errorOnly bool = false
+		var noError bool = true
 		for _, p := range d.FuncResults {
 			switch p.Type {
 			case "error":
 				if len(d.FuncResults) == 1 {
 					errorOnly = true
 				}
+				noError = false
 				continue
 			case typeCommonUser:
 				if custResType == "" {
@@ -404,6 +406,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				}
 				if errorOnly { // TODO: refactor this
 					w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+				} else if len(d.FuncResults) < 1 {
+					w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					w.Writef("return nil, nil")
+				} else if noError {
+					w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
 				} else {
 					w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
 				}
@@ -440,6 +447,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					}
 					if errorOnly { // TODO: refactor this
 						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					} else if len(d.FuncResults) < 1 {
+						w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return nil, nil")
+					} else if noError {
+						w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
 					} else {
 						w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
 					}

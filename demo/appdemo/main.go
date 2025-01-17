@@ -218,3 +218,17 @@ func api15(inb *miso.Inbound, db *gorm.DB) ([]PostRes, error) {
 func api16(inb *miso.Inbound, db *gorm.DB) (miso.PageRes[PostRes], error) {
 	return miso.PageRes[PostRes]{}, nil
 }
+
+// misoapi-http: GET /api/v17
+func api17(inb *miso.Inbound, db *gorm.DB) []PostRes {
+	return []PostRes{}
+}
+
+// misoapi-http: POST /api/v18
+func api18(inb *miso.Inbound, db *gorm.DB) {
+}
+
+// misoapi-http: GET /api/v19
+func api19(inb *miso.Inbound, db *gorm.DB) error {
+	return nil
+}
