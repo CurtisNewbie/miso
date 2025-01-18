@@ -43,8 +43,17 @@ type MisoErr struct {
 	errs        []error
 }
 
+func (e *MisoErr) Wrap(cause error) *MisoErr {
+	e.errs = []error{cause}
+	return e
+}
+
 func (e *MisoErr) Error() string {
-	return e.Msg
+	uw := e.Unwrap()
+	if uw == nil {
+		return e.Msg
+	}
+	return e.Msg + ", " + uw.Error()
 }
 
 func (e *MisoErr) HasCode() bool {
@@ -140,18 +149,20 @@ func NewErrf(msg string, args ...any) *MisoErr {
 }
 
 func UnwrapErrStack(err error) (string, bool) {
+	var stack string
 	var ue error = err
 	for {
+		if me, ok := ue.(*MisoErr); ok {
+			stack = me.stack
+		}
 		u := errors.Unwrap(ue)
 		if u == nil {
 			break
 		}
 		ue = u
 	}
-	if me, ok := ue.(*MisoErr); ok {
-		return me.stack, me.stack != ""
-	}
-	return "", false
+
+	return stack, stack != ""
 }
 
 func DisableErrStack() {

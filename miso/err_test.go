@@ -83,3 +83,10 @@ func TestMultiErr(t *testing.T) {
 		t.Fatal("should not be err3")
 	}
 }
+
+func TestWrapErr(t *testing.T) {
+	ne := errors.New("something is wrong")
+	err := NewErrf("operation failed").Wrap(ne)
+	t.Logf("%v", err)
+	Errorf("%v", err)
+}
