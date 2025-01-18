@@ -43,8 +43,11 @@ var (
 )
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf("misogen, current miso version: %s\n\n", version.Version)
+		flag.PrintDefaults()
+	}
 	flag.Parse()
-	fmt.Printf("misogen, current miso version: %s\n\n", version.Version)
 
 	var initName string = *ModNameFlag
 	if initName != "" {
