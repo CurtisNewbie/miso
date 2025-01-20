@@ -45,7 +45,18 @@ type MisoErr struct {
 
 func (e *MisoErr) Wrap(cause error) *MisoErr {
 	e.errs = []error{cause}
+	e.withStack()
 	return e
+}
+
+func (e *MisoErr) WrapNew(cause error) *MisoErr {
+	n := new(MisoErr)
+	n.Code = e.Code
+	n.Msg = e.Msg
+	n.InternalMsg = e.InternalMsg
+	n.errs = []error{cause}
+	n.withStack()
+	return n
 }
 
 func (e *MisoErr) Error() string {
