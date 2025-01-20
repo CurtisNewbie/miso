@@ -159,6 +159,16 @@ func NewErrf(msg string, args ...any) *MisoErr {
 	return me
 }
 
+// Create new MisoErr with message.
+func NewWrapErrf(err error, msg string, args ...any) *MisoErr {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+	me := &MisoErr{Msg: msg, InternalMsg: "", errs: []error{}}
+	me.Wrap(err)
+	return me
+}
+
 func UnwrapErrStack(err error) (string, bool) {
 	var stack string
 	var ue error = err
