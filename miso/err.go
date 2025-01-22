@@ -40,11 +40,11 @@ type MisoErr struct {
 	Msg         string // error message returned to the client requested to the endpoint.
 	InternalMsg string // internal message that is only logged on server.
 	stack       string
-	errs        []error
+	err         error
 }
 
 func (e *MisoErr) Wrap(cause error) *MisoErr {
-	e.errs = []error{cause}
+	e.err = cause
 	e.withStack()
 	return e
 }
@@ -54,7 +54,7 @@ func (e *MisoErr) WrapNew(cause error) *MisoErr {
 	n.Code = e.Code
 	n.Msg = e.Msg
 	n.InternalMsg = e.InternalMsg
-	n.errs = []error{cause}
+	n.err = cause
 	n.withStack()
 	return n
 }
@@ -117,44 +117,12 @@ func (e *MisoErr) withStack() *MisoErr {
 }
 
 func (e *MisoErr) Unwrap() error {
-	l := len(e.errs)
-	if l < 1 {
-		return nil
-	}
-	if l == 1 {
-		return e.errs[0]
-	}
-	return &joinError{errs: util.SliceCopy(e.errs)}
-}
-
-type joinError struct {
-	errs []error
-}
-
-func (e *joinError) Error() string {
-	s := make([]string, 0, len(e.errs))
-	for _, er := range e.errs {
-		s = append(s, er.Error())
-	}
-	return strings.Join(s, ", ")
-}
-
-func (e *joinError) Unwrap() []error {
-	return e.errs
+	return e.err
 }
 
 // Create new MisoErr with message.
 func NewErrf(msg string, args ...any) *MisoErr {
-	errs := []error{}
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
-		for _, ar := range args {
-			if ae, ok := ar.(error); ok {
-				errs = append(errs, ae)
-			}
-		}
-	}
-	me := &MisoErr{Msg: msg, InternalMsg: "", errs: errs}
+	me := &MisoErr{Msg: msg, InternalMsg: "", err: nil}
 	me.withStack()
 	return me
 }
@@ -164,7 +132,7 @@ func NewWrapErrf(err error, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
-	me := &MisoErr{Msg: msg, InternalMsg: "", errs: []error{}}
+	me := &MisoErr{Msg: msg, InternalMsg: "", err: nil}
 	me.Wrap(err)
 	return me
 }
