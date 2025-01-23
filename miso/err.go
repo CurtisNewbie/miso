@@ -122,13 +122,20 @@ func (e *MisoErr) Unwrap() error {
 
 // Create new MisoErr with message.
 func NewErrf(msg string, args ...any) *MisoErr {
+	return Errf(msg, args...)
+}
+
+// Create new MisoErr with message.
+func Errf(msg string, args ...any) *MisoErr {
 	me := &MisoErr{Msg: msg, InternalMsg: "", err: nil}
 	me.withStack()
 	return me
 }
 
 // Create new MisoErr with message.
-func NewWrapErrf(err error, msg string, args ...any) *MisoErr {
+//
+// If the last argument is error, then the error is wrapped by *MisoErr.
+func WrapErrf(err error, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
