@@ -41,6 +41,10 @@ type MisoErr struct {
 	err         error
 }
 
+func (e *MisoErr) StackTrace() string {
+	return e.stack
+}
+
 func (e *MisoErr) Wrap(cause error) *MisoErr {
 	e.err = cause
 	e.withStack()
