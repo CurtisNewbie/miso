@@ -93,9 +93,9 @@ func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 				me.Code = ErrCodeGeneric
 			}
 			if me.InternalMsg != "" {
-				rail.Infof("'%s' returned error, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me.Code, me.Msg, me.InternalMsg, stackTraceMsg)
+				rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me, me.Code, me.Msg, me.InternalMsg, stackTraceMsg)
 			} else {
-				rail.Infof("'%s' returned error, code: '%v', msg: '%v'%v", url, me.Code, me.Msg, stackTraceMsg)
+				rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v'%v", url, me, me.Code, me.Msg, stackTraceMsg)
 			}
 			return ErrorRespWCode(me.Code, me.Msg)
 		}
