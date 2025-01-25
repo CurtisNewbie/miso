@@ -20,11 +20,9 @@ var (
 )
 
 var (
-	// Unknown Error
-	ErrUnknownError *MisoErr = NewErrf("Unknown Error")
-
-	// Not Permitted
-	ErrNotPermitted *MisoErr = NewErrf("Not Permitted")
+	ErrUnknownError    *MisoErr = NewErrf("Unknown Error")
+	ErrNotPermitted    *MisoErr = NewErrf("Not Permitted")
+	ErrIllegalArgument *MisoErr = NewErrf("Illegal Argument")
 )
 
 // Check if the error represents None
