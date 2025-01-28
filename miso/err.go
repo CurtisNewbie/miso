@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/curtisnewbie/miso/util"
@@ -162,10 +163,22 @@ func DisableErrStack() {
 	disableErrStack.Store(true)
 }
 
+var stackPool = sync.Pool{
+	New: func() any {
+		var v []uintptr = make([]uintptr, 50)
+		return &v
+	},
+}
+
 func stack(n int) string {
-	stack := make([]uintptr, 50)
-	length := runtime.Callers(n, stack)
-	frames := runtime.CallersFrames(stack[:length])
+	stack := stackPool.Get().(*[]uintptr)
+	defer func() {
+		clear(*stack)
+		stackPool.Put(stack)
+	}()
+
+	length := runtime.Callers(n, *stack)
+	frames := runtime.CallersFrames((*stack)[:length])
 	b := strings.Builder{}
 
 	for {

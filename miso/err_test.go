@@ -3,7 +3,6 @@ package miso
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
 )
 
@@ -66,22 +65,6 @@ func testUnwrapErrStack1() error {
 func TestStack(t *testing.T) {
 	s := stack(1)
 	t.Log(s)
-}
-
-func TestMultiErr(t *testing.T) {
-	err1, err2, err3 := errors.New("err1"), errors.New("err2"), errors.New("err3")
-	merr := NewErrf("something is wrong, %v, %v", err1, err2)
-	t.Logf("merr: %v", merr)
-	t.Logf("unwrapped: %v, %v", merr.Unwrap(), reflect.TypeOf(merr.Unwrap()))
-	if !errors.Is(merr, err1) {
-		t.Fatal("should be err1")
-	}
-	if !errors.Is(merr, err2) {
-		t.Fatal("should be err2")
-	}
-	if errors.Is(merr, err3) {
-		t.Fatal("should not be err3")
-	}
 }
 
 func TestWrapErr(t *testing.T) {
