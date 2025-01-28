@@ -46,7 +46,11 @@ func (e *MisoErr) StackTrace() string {
 	return e.stack
 }
 
+// Wrap cause error, if cause error is nil, return nil
 func (e *MisoErr) Wrap(cause error) *MisoErr {
+	if cause == nil {
+		return nil
+	}
 	e.err = cause
 	e.withStack()
 	return e
