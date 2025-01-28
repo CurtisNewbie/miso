@@ -132,29 +132,11 @@ func Errf(msg string, args ...any) *MisoErr {
 }
 
 // Wrap an error to create new MisoErr with message.
-//
-// Last argument must be error, and the error will wrapped internally by MisoErr. Call to MisoErr.Unwrap() will unwrap this error argument.
-//
-// The last argument (i.e., the wrapped error) will not be used as the argument for message formatting.
-//
-// E.g.,
-//
-//	var myId string = "123" // some context information
-//	var rootCauseErr error = someOp(myId)
-//	if rootCauseErr != nil {
-//		return miso.WrapErrf("someOp failed, id: %v", myId, rootCauseErr)
-//	}
-func WrapErrf(msg string, args ...any) *MisoErr {
-	var werr error = nil
+func WrapErrf(err error, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
-		if lerr, ok := args[len(args)-1].(error); ok {
-			werr = lerr
-			msg = fmt.Sprintf(msg, args[:len(args)-1]...)
-		} else {
-			msg = fmt.Sprintf(msg, args...)
-		}
+		msg = fmt.Sprintf(msg, args...)
 	}
-	me := &MisoErr{Msg: msg, InternalMsg: "", err: werr}
+	me := &MisoErr{Msg: msg, InternalMsg: "", err: err}
 	me.withStack()
 	return me
 }

@@ -93,10 +93,11 @@ func TestWrapErr(t *testing.T) {
 
 func TestWrapErrf(t *testing.T) {
 	ne := someOp()
-	err := WrapErrf("operation failed, %v", "someContext", ne)
+	err := WrapErrf(ne, "operation failed, %v", "someContext")
 	t.Logf("err: %v", err)
 	Errorf("%v", err)
 	t.Logf("Unwrapped: %v", err.Unwrap())
+	Errorf("wrap again: %v", WrapErrf(err, "warping err"))
 }
 
 func someOp() error {
