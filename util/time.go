@@ -12,7 +12,11 @@ import (
 const (
 	unixSecPersudoMax = 9999999999 // 2286-11-21, should be enough :D
 
-	SQLDateTimeFormat = "2006/01/02 15:04:05"
+	ClassicDateTimeLocaleFormat = "2006/01/02 15:04:05 (MST)"
+	ClassicDateTimeFormat       = "2006/01/02 15:04:05"
+	StdDateTimeFormat           = "2006-01-02 15:04:05"
+	StdDateTimeLocaleFormat     = "2006-01-02 15:04:05 (MST)"
+	SQLDateTimeFormat           = "2006-01-02 15:04:05.999999"
 )
 
 // ETime, same as time.Time but is serialized/deserialized in forms of unix epoch milliseconds.
@@ -66,11 +70,19 @@ func (t ETime) FormatDate() string {
 }
 
 func (t ETime) FormatClassic() string {
-	return t.ToTime().Format(SQLDateTimeFormat)
+	return t.ToTime().Format(ClassicDateTimeFormat)
 }
 
 func (t ETime) FormatClassicLocale() string {
-	return t.ToTime().Format("2006/01/02 15:04:05 (MST)")
+	return t.ToTime().Format(ClassicDateTimeLocaleFormat)
+}
+
+func (t ETime) FormatStd() string {
+	return t.ToTime().Format(StdDateTimeFormat)
+}
+
+func (t ETime) FormatStdLocale() string {
+	return t.ToTime().Format(StdDateTimeLocaleFormat)
 }
 
 // Implements driver.Valuer in database/sql.
@@ -108,15 +120,16 @@ func (et *ETime) Scan(value interface{}) error {
 	case time.Time:
 		*et = ToETime(v)
 	case []byte:
+		sv := string(v)
 		var t time.Time
-		t, err := time.Parse(SQLDateTimeFormat, string(v))
+		t, err := time.ParseInLocation(SQLDateTimeFormat, sv, time.Local)
 		if err != nil {
 			return err
 		}
 		*et = ToETime(t)
 	case string:
 		var t time.Time
-		t, err := time.Parse(SQLDateTimeFormat, v)
+		t, err := time.ParseInLocation(SQLDateTimeFormat, v, time.Local)
 		if err != nil {
 			return err
 		}
@@ -158,7 +171,7 @@ func FuzzParseTimeLoc(formats []string, value string, loc *time.Location) (time.
 	return t, fmt.Errorf("failed to parse time '%s'", value)
 }
 
-var classicDateTimeFmt = []string{time.DateTime, SQLDateTimeFormat}
+var classicDateTimeFmt = []string{SQLDateTimeFormat, ClassicDateTimeFormat}
 
 // Parse classic datetime format using patterns: "2006-01-02 15:04:05", "2006/01/02 15:04:05".
 func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {

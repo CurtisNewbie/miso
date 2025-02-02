@@ -179,7 +179,7 @@ ${code}
 }
 `, map[string]any{
 			"misoVersion": version.Version,
-			"nowTimeStr":  util.Now().FormatClassic(),
+			"nowTimeStr":  util.Now().FormatClassicLocale(),
 			"package":     v.Pkg,
 			"code":        code,
 			"importStr":   importSb.String(),
