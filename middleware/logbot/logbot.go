@@ -25,6 +25,11 @@ var (
 		MaxRetry(3)
 )
 
+// Deprecated: this is a very bad practice.
+// The error logs may not be sent to the pipeline when the app fails to
+// connect to rabbitmq broker, but the broker can be running just fine.
+//
+// Correct solution should be an agent tailing and parsing the logs produced by the app (i.e., logbot itself).
 func EnableLogbotErrLogReport() {
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 		app := miso.GetPropStr(miso.PropAppName)
