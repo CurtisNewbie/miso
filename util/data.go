@@ -441,6 +441,17 @@ func (s *Stack[T]) Slice() []T {
 	return slices.Clone(s.st)
 }
 
+func SliceFirst[T any](v []T) (t T, ok bool) {
+	if len(v) > 0 {
+		t = v[0]
+		ok = true
+		return
+	}
+
+	ok = false
+	return
+}
+
 func SliceCopy[T any](v []T) []T {
 	cp := make([]T, len(v))
 	copy(cp, v)

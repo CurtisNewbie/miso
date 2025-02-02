@@ -459,6 +459,16 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.NoLbWritef("})")
 			}
 		}
+
+		if d.FuncName != "" {
+			w.NoIndWritef(".\n")
+			if d.Flags.Has(tagNgTable) || d.Desc != "" || d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
+				w.NoLbWritef("Extra(miso.ExtraName, \"%s\")", d.FuncName)
+			} else {
+				w.Writef("Extra(miso.ExtraName, \"%s\")", d.FuncName)
+			}
+		}
+
 		if d.Flags.Has(tagNgTable) {
 			w.NoIndWritef(".\n")
 			if d.Desc != "" || d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {

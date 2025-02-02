@@ -82,6 +82,7 @@ func init() {
 type GetPipelineDocFunc func() []PipelineDoc
 
 type httpRouteDoc struct {
+	Name             string           // api func name
 	Url              string           // http request url
 	Method           string           // http method
 	Extra            map[string][]any // extra metadata
@@ -127,6 +128,12 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 			Resource:    r.Resource,
 			Headers:     r.Headers,
 			QueryParams: r.QueryParams,
+		}
+
+		if v, ok := util.SliceFirst(r.Extra[ExtraName]); ok {
+			if s, ok := v.(string); ok {
+				d.Name = s
+			}
 		}
 
 		var jsonRequestVal any
@@ -849,6 +856,17 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 	sl.Printlnf(") {}")
 	sl.Printlnf("")
 
+	var mn string = "sendRequest"
+	if d.Name != "" {
+		mn = util.CamelCase(d.Name)
+	} else if reqTypeName != "" {
+		if len(reqTypeName) > 1 {
+			mn = fmt.Sprintf("send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
+		}
+	}
+	sl.Printlnf("%s() {", mn)
+	sl.LinePrefix = "  "
+
 	var qp string
 	for i, q := range d.QueryParams {
 		cname := util.CamelCase(q.Name)
@@ -955,7 +973,11 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 	sl.Printlnf(util.Spaces(6) + "console.log(err)")
 	sl.Printlnf(util.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
 	sl.Printlnf(util.Spaces(4) + "}")
-	sl.Printlnf(util.Spaces(2) + "});\n")
+	sl.Printlnf(util.Spaces(2) + "});")
+
+	sl.LinePrefix = ""
+	sl.Printlnf("}\n")
+
 	return sl.String()
 }
 
@@ -993,11 +1015,16 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 		qh = ", " + strings.Join(qhp, ", ")
 	}
 
-	if reqTypeName != "" {
-		mn := "SendRequest"
+	var mn string = "SendRequest"
+	if d.Name != "" {
+		mn = d.Name
+	} else if reqTypeName != "" {
 		if len(reqTypeName) > 1 {
 			mn = fmt.Sprintf("Send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
 		}
+	}
+
+	if reqTypeName != "" {
 		reqn := reqTypeName
 		if d.JsonRequestDesc.IsSlice {
 			reqn = "[]" + reqn
@@ -1012,7 +1039,6 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respn)
 		}
 	} else {
-		mn := "SendRequest"
 		if respGeneName == "any" {
 			sl.Printlnf("func %s(rail miso.Rail%s) error {", mn, qh)
 		} else {

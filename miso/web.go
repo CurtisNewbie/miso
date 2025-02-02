@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	ExtraName         = "miso-Name"
 	ExtraDesc         = "miso-Desc"
 	ExtraScope        = "miso-Scope"
 	ExtraResource     = "miso-Resource"
