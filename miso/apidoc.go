@@ -858,7 +858,16 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 
 	var mn string = "sendRequest"
 	if d.Name != "" {
-		mn = util.CamelCase(d.Name)
+		if strings.HasPrefix(strings.ToLower(d.Name), "api") {
+			dr := []rune(d.Name)
+			if len(dr) > 3 {
+				mn = util.CamelCase(string(dr[3:]))
+			} else {
+				mn = util.CamelCase(d.Name)
+			}
+		} else {
+			mn = util.CamelCase(d.Name)
+		}
 	} else if reqTypeName != "" {
 		if len(reqTypeName) > 1 {
 			mn = fmt.Sprintf("send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
