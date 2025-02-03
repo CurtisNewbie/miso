@@ -54,6 +54,11 @@ func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }
 
+func TPrintlnf(pat string, args ...any) {
+	t := Now().FormatStdMilli()
+	fmt.Printf(t+" "+pat+"\n", args...)
+}
+
 func DebugPrintlnf(debug bool, pat string, args ...any) {
 	if debug {
 		fmt.Printf("[DEBUG] "+pat+"\n", args...)

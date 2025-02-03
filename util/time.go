@@ -15,6 +15,7 @@ const (
 	ClassicDateTimeLocaleFormat = "2006/01/02 15:04:05 (MST)"
 	ClassicDateTimeFormat       = "2006/01/02 15:04:05"
 	StdDateTimeFormat           = "2006-01-02 15:04:05"
+	StdDateTimeMilliFormat      = "2006-01-02 15:04:05.000"
 	StdDateTimeLocaleFormat     = "2006-01-02 15:04:05 (MST)"
 	SQLDateTimeFormat           = "2006-01-02 15:04:05.999999"
 )
@@ -79,6 +80,10 @@ func (t ETime) FormatClassicLocale() string {
 
 func (t ETime) FormatStd() string {
 	return t.ToTime().Format(StdDateTimeFormat)
+}
+
+func (t ETime) FormatStdMilli() string {
+	return t.ToTime().Format(StdDateTimeMilliFormat)
 }
 
 func (t ETime) FormatStdLocale() string {

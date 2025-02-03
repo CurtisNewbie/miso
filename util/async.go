@@ -260,14 +260,16 @@ func NewIOAsyncPool() *AsyncPool {
 //
 // Once the pool is stopped, new tasks submitted are executed directly by the caller.
 func (p *AsyncPool) Stop() {
-	atomic.StoreInt32(&p.stopped, 1)
+	if atomic.CompareAndSwapInt32(&p.stopped, 0, 1) {
+		p.stopOnce.Do(func() { close(p.tasks) })
+	}
 }
 
 // Stop the pool and wait until existing workers drain all the remaining tasks.
 //
 // Once the pool is stopped, new tasks submitted are executed directly by the caller.
 func (p *AsyncPool) StopAndWait() {
-	atomic.StoreInt32(&p.stopped, 1)
+	p.Stop()
 	p.drainTasksWg.Wait()
 }
 
@@ -283,7 +285,6 @@ func (p *AsyncPool) isStopped() bool {
 func (p *AsyncPool) Go(f func()) {
 
 	if p.isStopped() {
-		p.stopOnce.Do(func() { close(p.tasks) })
 		f() // caller runs the task
 		return
 	}

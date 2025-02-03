@@ -155,11 +155,25 @@ func TestAsyncPoolStop(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		v := i
 		pool.Go(func() {
+			start := Now().FormatStdMilli()
 			time.Sleep(time.Second)
-			Printlnf("v: %v", v)
+			TPrintlnf("start: %v, v: %v", start, v)
 		})
 	}
+	Printlnf("Test pre stop")
 	pool.StopAndWait()
+	Printlnf("Test post stop")
+
+	for i := 10; i < 15; i++ {
+		v := i
+		pool.Go(func() {
+			start := Now().FormatStdMilli()
+			time.Sleep(time.Second)
+			TPrintlnf("start: %v, v: %v", start, v)
+		})
+	}
+
+	t.Logf("Test end")
 }
 
 func TestAsyncOnce(t *testing.T) {
