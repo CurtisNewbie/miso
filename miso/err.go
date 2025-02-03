@@ -56,7 +56,11 @@ func (e *MisoErr) Wrap(cause error) *MisoErr {
 	return e
 }
 
+// Create new *MisoErr to wrap the cause error, if the cause error is nil, return nil
 func (e *MisoErr) WrapNew(cause error) *MisoErr {
+	if cause == nil {
+		return nil
+	}
 	n := new(MisoErr)
 	n.Code = e.Code
 	n.Msg = e.Msg
