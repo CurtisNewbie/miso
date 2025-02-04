@@ -5,10 +5,6 @@ import (
 	"fmt"
 )
 
-const (
-	ErrCodeGeneric = "XXXX"
-)
-
 type RespUnwrapper interface {
 	Unwrap() Resp
 }
@@ -89,15 +85,14 @@ func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 
 		me := &MisoErr{}
 		if errors.As(err, &me) {
+			var code string
 			if !me.HasCode() {
-				me.Code = ErrCodeGeneric
-			}
-			if me.InternalMsg != "" {
-				rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me, me.Code, me.Msg, me.InternalMsg, stackTraceMsg)
+				code = ErrCodeGeneric
 			} else {
-				rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v'%v", url, me, me.Code, me.Msg, stackTraceMsg)
+				code = me.Code()
 			}
-			return ErrorRespWCode(me.Code, me.Msg)
+			rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me, code, me.Msg(), me.InternalMsg(), stackTraceMsg)
+			return ErrorRespWCode(code, me.Msg())
 		}
 
 		ve := &ValidationError{}

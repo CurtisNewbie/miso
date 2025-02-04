@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/curtisnewbie/miso/util"
 )
@@ -16,14 +15,17 @@ var (
 	//
 	// Use miso.IsNoneErr(err) to check if an error represents None.
 	NoneErr *MisoErr = NewErrf("none")
-
-	disableErrStack = atomic.Bool{}
 )
 
 var (
-	ErrUnknownError    *MisoErr = NewErrf("Unknown Error")
-	ErrNotPermitted    *MisoErr = NewErrf("Not Permitted")
-	ErrIllegalArgument *MisoErr = NewErrf("Illegal Argument")
+	ErrCodeGeneric         string = "XXXX"
+	ErrCodeUnknownError    string = "UNKNOWN_ERROR"
+	ErrCodeNotPermitted    string = "NOT_PERMITTED"
+	ErrCodeIllegalArgument string = "ILLEGAL_ARGUMENT"
+
+	ErrUnknownError    *MisoErr = NewErrf("Unknown Error").WithCode(ErrCodeUnknownError)
+	ErrNotPermitted    *MisoErr = NewErrf("Not Permitted").WithCode(ErrCodeNotPermitted)
+	ErrIllegalArgument *MisoErr = NewErrf("Illegal Argument").WithCode(ErrCodeIllegalArgument)
 )
 
 // Check if the error represents None
@@ -35,56 +37,84 @@ func IsNoneErr(err error) bool {
 //
 //	Use NewErrf(...) to instantiate.
 type MisoErr struct {
-	Code        string // error code.
-	Msg         string // error message returned to the client requested to the endpoint.
-	InternalMsg string // internal message that is only logged on server.
+	code        string // error code.
+	msg         string // error message returned to the client requested to the endpoint.
+	internalMsg string // internal message that is only logged on server.
 	stack       string
 	err         error
+}
+
+func (e *MisoErr) Cause() error {
+	return e.err
+}
+
+func (e *MisoErr) InternalMsg() string {
+	return e.internalMsg
+}
+
+func (e *MisoErr) Msg() string {
+	return e.msg
+}
+
+func (e *MisoErr) Code() string {
+	return e.code
 }
 
 func (e *MisoErr) StackTrace() string {
 	return e.stack
 }
 
-// Wrap cause error, if cause error is nil, return nil
+// Create new *MisoErr to wrap the cause error, if the cause error is nil, return nil
 func (e *MisoErr) Wrap(cause error) *MisoErr {
 	if cause == nil {
 		return nil
 	}
-	e.err = cause
-	e.withStack()
-	return e
+	n := e.copyNew()
+	n.withStack()
+	return n
 }
 
 // Create new *MisoErr to wrap the cause error, if the cause error is nil, return nil
-func (e *MisoErr) WrapNew(cause error) *MisoErr {
+func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) *MisoErr {
 	if cause == nil {
 		return nil
 	}
-	n := new(MisoErr)
-	n.Code = e.Code
-	n.Msg = e.Msg
-	n.InternalMsg = e.InternalMsg
-	n.err = cause
+	n := e.copyNew()
 	n.withStack()
+	if len(args) > 0 {
+		n.internalMsg = fmt.Sprintf(internalMsg, args...)
+	} else {
+		n.internalMsg = internalMsg
+	}
+	return n
+}
+
+func (e *MisoErr) copyNew() *MisoErr {
+	n := new(MisoErr)
+	n.code = e.code
+	n.msg = e.msg
+	n.internalMsg = e.internalMsg
+	n.stack = e.stack
+	n.err = e.err
 	return n
 }
 
 func (e *MisoErr) Error() string {
 	uw := e.Unwrap()
 	if uw == nil {
-		return e.Msg
+		return e.msg
 	}
-	return e.Msg + ", " + uw.Error()
+	return e.msg + ", " + uw.Error()
 }
 
 func (e *MisoErr) HasCode() bool {
-	return !util.IsBlankStr(e.Code)
+	return !util.IsBlankStr(e.code)
 }
 
 func (e *MisoErr) WithCode(code string) *MisoErr {
-	e.Code = code
-	return e
+	n := e.copyNew()
+	n.code = code
+	return n
 }
 
 // Implements *MisoErr Is check.
@@ -102,28 +132,24 @@ func (e *MisoErr) WithCode(code string) *MisoErr {
 //	errors.Is(e1, ErrIllegalArgument)
 //	errors.Is(e2, ErrIllegalArgument)
 func (e *MisoErr) Is(target error) bool {
-	if tme, ok := target.(*MisoErr); ok && e.Code != "" && e.Code == tme.Code {
+	if tme, ok := target.(*MisoErr); ok && e.code != "" && e.code == tme.code {
 		return true
 	}
 	return false
 }
 
 func (e *MisoErr) WithInternalMsg(msg string, args ...any) *MisoErr {
-	ne := new(MisoErr)
-	ne.Code = e.Code
-	ne.Msg = e.Msg
+	ne := e.copyNew()
 	if len(args) > 0 {
-		ne.InternalMsg = fmt.Sprintf(msg, args...)
+		ne.internalMsg = fmt.Sprintf(msg, args...)
 	} else {
-		ne.InternalMsg = msg
+		ne.internalMsg = msg
 	}
 	return ne
 }
 
 func (e *MisoErr) withStack() *MisoErr {
-	if !disableErrStack.Load() {
-		e.stack = stack(3)
-	}
+	e.stack = stack(3)
 	return e
 }
 
@@ -135,7 +161,14 @@ var NewErrf = Errf
 
 // Create new MisoErr with message.
 func Errf(msg string, args ...any) *MisoErr {
-	me := &MisoErr{Msg: msg, InternalMsg: "", err: nil}
+	me := &MisoErr{msg: msg, internalMsg: "", err: nil}
+	me.withStack()
+	return me
+}
+
+// Create new MisoErr with message and error code.
+func ErrfCode(code string, msg string, args ...any) *MisoErr {
+	me := &MisoErr{msg: msg, internalMsg: "", err: nil, code: code}
 	me.withStack()
 	return me
 }
@@ -145,7 +178,17 @@ func WrapErrf(err error, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
-	me := &MisoErr{Msg: msg, InternalMsg: "", err: err}
+	me := &MisoErr{msg: msg, internalMsg: "", err: err}
+	me.withStack()
+	return me
+}
+
+// Wrap an error to create new MisoErr with message.
+func WrapErrfCode(err error, code string, msg string, args ...any) *MisoErr {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+	me := &MisoErr{msg: msg, internalMsg: "", err: err, code: code}
 	me.withStack()
 	return me
 }
@@ -165,10 +208,6 @@ func UnwrapErrStack(err error) (string, bool) {
 	}
 
 	return stack, stack != ""
-}
-
-func DisableErrStack() {
-	disableErrStack.Store(true)
 }
 
 var stackPool = sync.Pool{
