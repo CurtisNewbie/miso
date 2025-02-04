@@ -668,6 +668,30 @@ func webServerBootstrap(rail Rail) error {
 			RawGet("/symbol", func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) }),
 			RawGet("/trace", func(inb *Inbound) { pprof.Trace(inb.Unwrap()) }),
 		)
+		if GetPropBool(PropServerPprofAuthEnabled) {
+			bearer := GetPropStr(PropServerPprofAuthBearer)
+			if bearer == "" {
+				return Errf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
+			}
+
+			AddInterceptor(func(inb *gin.Context, next func()) {
+				url := inb.Request.RequestURI
+
+				if !strings.HasPrefix(url, "/debug/pprof") {
+					r := inb.Request
+					w := inb.Writer
+					authorization := inb.GetHeader("Authorization")
+					token, ok := ParseBearer(authorization)
+					if !ok || token != bearer {
+						Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
+						w.WriteHeader(http.StatusUnauthorized)
+						return
+					}
+				}
+
+				next()
+			})
+		}
 	}
 
 	// register customer recovery func

@@ -61,6 +61,8 @@ const (
 	PropServerPropagateInboundTrace      = "server.trace.inbound.propagate"
 	PropServerRequestValidateEnabled     = "server.validate.request.enabled"
 	PropServerPprofEnabled               = "server.pprof.enabled"
+	PropServerPprofAuthEnabled           = "server.pprof.auth.enabled"
+	PropServerPprofAuthBearer            = "server.pprof.auth.bearer"
 	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
 	PropServerGenerateEndpointDocFile    = "server.generate-endpoint-doc.file"
 	PropServerRequestAutoMapHeader       = "server.request.mapping.header"
