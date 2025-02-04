@@ -85,14 +85,16 @@ func WrapResp(rail Rail, data interface{}, err error, url string) Resp {
 
 		me := &MisoErr{}
 		if errors.As(err, &me) {
-			var code string
-			if !me.HasCode() {
+			var code string = me.Code()
+			var msg string = me.Msg()
+			if code == "" {
 				code = ErrCodeGeneric
-			} else {
-				code = me.Code()
 			}
-			rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me, code, me.Msg(), me.InternalMsg(), stackTraceMsg)
-			return ErrorRespWCode(code, me.Msg())
+			if msg == "" {
+				msg = "Unknown Error"
+			}
+			rail.Infof("'%s' returned error: %v, code: '%v', msg: '%v', internalMsg: '%v'%v", url, me, code, msg, me.InternalMsg(), stackTraceMsg)
+			return ErrorRespWCode(code, msg)
 		}
 
 		ve := &ValidationError{}
