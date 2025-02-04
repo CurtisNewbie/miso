@@ -17,7 +17,14 @@ func (q *Query) CopyNew() *Query {
 	return NewQuery(q._db)
 }
 
+// Same as *Query.Table().
+//
+// It was a mistake to call it From(), since we also use *Query to update tables :(
 func (q *Query) From(table string) *Query {
+	return q.Table(table)
+}
+
+func (q *Query) Table(table string) *Query {
 	q.tx = q.tx.Table(table)
 	return q
 }
