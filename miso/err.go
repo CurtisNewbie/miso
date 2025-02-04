@@ -175,6 +175,9 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 
 // Wrap an error to create new MisoErr with message.
 func WrapErrf(err error, msg string, args ...any) *MisoErr {
+	if err == nil {
+		return nil
+	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
