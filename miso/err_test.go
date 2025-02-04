@@ -86,3 +86,11 @@ func TestWrapErrf(t *testing.T) {
 func someOp() error {
 	return NewErrf("something is wrong")
 }
+
+func TestDirectWrapErr(t *testing.T) {
+	ne := someOp()
+	err := WrapErr(ne)
+	t.Logf("err: %v", err)
+	Errorf("%v", err)
+	t.Logf("Unwrapped: %v", err.Unwrap())
+}

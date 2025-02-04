@@ -104,6 +104,9 @@ func (e *MisoErr) Error() string {
 	if uw == nil {
 		return e.msg
 	}
+	if e.msg == "" {
+		return uw.Error()
+	}
 	return e.msg + ", " + uw.Error()
 }
 
@@ -173,7 +176,23 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 	return me
 }
 
+// Wrap an error to create new MisoErr without any extra context.
+//
+// This is usually used to add stacktrace to existing error.
+//
+// If the wrapped err is nil, nil is returned.
+func WrapErr(err error) *MisoErr {
+	if err == nil {
+		return nil
+	}
+	me := &MisoErr{msg: "", internalMsg: "", err: err}
+	me.withStack()
+	return me
+}
+
 // Wrap an error to create new MisoErr with message.
+//
+// If the wrapped err is nil, nil is returned.
 func WrapErrf(err error, msg string, args ...any) *MisoErr {
 	if err == nil {
 		return nil
@@ -187,7 +206,12 @@ func WrapErrf(err error, msg string, args ...any) *MisoErr {
 }
 
 // Wrap an error to create new MisoErr with message.
+//
+// If the wrapped err is nil, nil is returned.
 func WrapErrfCode(err error, code string, msg string, args ...any) *MisoErr {
+	if err == nil {
+		return nil
+	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
