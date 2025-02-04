@@ -677,11 +677,10 @@ func webServerBootstrap(rail Rail) error {
 			AddInterceptor(func(inb *gin.Context, next func()) {
 				url := inb.Request.RequestURI
 
-				if !strings.HasPrefix(url, "/debug/pprof") {
+				if strings.HasPrefix(url, "/debug/pprof") {
 					r := inb.Request
 					w := inb.Writer
-					authorization := inb.GetHeader("Authorization")
-					token, ok := ParseBearer(authorization)
+					token, ok := ParseBearer(inb.GetHeader("Authorization"))
 					if !ok || token != bearer {
 						Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
 						w.WriteHeader(http.StatusUnauthorized)
