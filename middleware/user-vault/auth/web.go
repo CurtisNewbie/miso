@@ -43,7 +43,7 @@ type ResourceInfoRes struct {
 }
 
 // Create endpoint to expose resources and endpoint paths to be collected by user-vault.
-func ExposeResourceInfo(res []Resource) {
+func ExposeResourceInfo(res []Resource, extraEndpoints ...Endpoint) {
 
 	registeredResources = append(registeredResources, res...)
 
@@ -54,7 +54,7 @@ func ExposeResourceInfo(res []Resource) {
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 
 		// resources and paths are polled by uservault
-		miso.Get("/auth/resource", ServeResourceInfo()).
+		miso.Get("/auth/resource", ServeResourceInfo(extraEndpoints...)).
 			Desc("Expose resource and endpoint information to other backend service for authorization.").
 			Protected().
 			DocJsonResp(miso.GnResp[ResourceInfoRes]{})
@@ -65,7 +65,7 @@ func ExposeResourceInfo(res []Resource) {
 	callbackRegistered = true
 }
 
-func ServeResourceInfo() func(inb *miso.Inbound) (any, error) {
+func ServeResourceInfo(extraEndpoints ...Endpoint) func(inb *miso.Inbound) (any, error) {
 	return func(inb *miso.Inbound) (any, error) {
 
 		// resources and paths are lazily loaded
@@ -102,6 +102,10 @@ func ServeResourceInfo() func(inb *miso.Inbound) (any, error) {
 					ResCode: route.Resource,
 				}
 				loadedPaths = append(loadedPaths, r)
+			}
+
+			if len(extraEndpoints) > 0 {
+				loadedPaths = append(loadedPaths, extraEndpoints...)
 			}
 		})
 
