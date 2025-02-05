@@ -3,6 +3,7 @@ module github.com/curtisnewbie/miso
 go 1.22
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.8.0
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
 	github.com/curtisnewbie/svc v0.0.8
 	github.com/dave/dst v0.27.3

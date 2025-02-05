@@ -263,3 +263,30 @@ func TestSplitKV(t *testing.T) {
 	}
 	logkv(k, v, ok)
 }
+
+func TestMatchPath(t *testing.T) {
+	v := MatchPath("/api/**", "/api/dothings")
+	if !v {
+		t.Fatal("should match")
+	}
+
+	v = MatchPath("/api/**", "/api/dothings/thatthing")
+	if !v {
+		t.Fatal("should match")
+	}
+
+	v = MatchPath("/api/*", "/api/dothings/thatthing")
+	if v {
+		t.Fatal("should not match")
+	}
+
+	v = MatchPath("/api", "/api/dothings")
+	if v {
+		t.Fatal("should not match")
+	}
+
+	v = MatchPath("[", "/api/dothings")
+	if v {
+		t.Fatal("should not match")
+	}
+}

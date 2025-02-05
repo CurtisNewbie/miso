@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	doublestar "github.com/bmatcuk/doublestar/v4"
 	"github.com/spf13/cast"
 )
 
@@ -285,4 +286,13 @@ func SAddLineIndent(s string, indentChar string) string {
 		}
 	}
 	return b.String()
+}
+
+func MatchPath(pattern, s string) bool {
+	ok, err := doublestar.Match(pattern, s)
+	if err != nil {
+		CliErrLog("Path Pattern is invalid, pattern: '%v', %v", pattern, err)
+		return false
+	}
+	return ok
 }
