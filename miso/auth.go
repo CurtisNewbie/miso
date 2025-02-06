@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	Bearer = "Bearer"
+	Bearer    = "Bearer"
+	bearerLen = 6
 )
 
 func ParseBearer(authorization string) (string, bool) {
@@ -14,10 +15,14 @@ func ParseBearer(authorization string) (string, bool) {
 	if authorization == "" {
 		return "", false
 	}
-	if !strings.HasPrefix(authorization, Bearer) {
+	if !strings.EqualFold(strings.ToLower(authorization[0:bearerLen]), Bearer) {
 		return "", false
 	}
-	return strings.TrimSpace(authorization[len(Bearer):]), true
+	v := strings.TrimSpace(authorization[bearerLen:])
+	if v == "" {
+		return "", false
+	}
+	return v, true
 }
 
 func BearerAuth(delegate http.Handler, getExpectedToken func() string) http.HandlerFunc {
