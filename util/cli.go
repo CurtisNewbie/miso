@@ -43,13 +43,16 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 	return p
 }
 
-func CliRun(ex string, args ...string) ([]byte, error) {
+// CLI runs command.
+//
+// If err is not nil, out may still contain output from the command.
+func CliRun(ex string, args ...string) (out []byte, err error) {
 	cmd := exec.Command(ex, args...)
-	cmdout, err := cmd.CombinedOutput()
+	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	return cmdout, nil
+	return out, nil
 }
 
 func Printlnf(pat string, args ...any) {
