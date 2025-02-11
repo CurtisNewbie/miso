@@ -33,9 +33,17 @@
 <body>
     <div style="margin:30px;">
         <h1>Generated {{.App}} API Documentation:</h1>
+
+        <h2>Content Page:</h2>
+        <ul>
+        {{range $i, $d := .HttpDoc}}
+            <li style="margin-bottom: 10px"><a style="background-color:#DBD5D4; padding: 5px; border-radius: 10px; border: none; text-decoration: none; color: black" href="#section_{{$i}}">{{.Method}} {{.Url}}</a></li>
+        {{end}}
+        </ul>
+
         <h2>1. HTML API DOC:</h2>
-        {{range .HttpDoc}}
-            <div style="background-color:#DBD5D4; margin-top:30px; margin-bottom:30px;
+        {{range $i, $d := .HttpDoc}}
+            <div id="section_{{$i}}" style="background-color:#DBD5D4; margin-top:30px; margin-bottom:30px;
                 padding-left:30px; padding-right:30px; padding-top:10px; padding-bottom:10px; border-radius: 20px;">
             <h3>{{.Method}} {{.Url}}</h3>
             {{if .Desc }}
