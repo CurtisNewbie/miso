@@ -86,12 +86,12 @@ type RLockConfig struct {
 	BackoffDuration time.Duration
 }
 
-// Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
+// Create new RLock with default backoff configuration (5ms backoff window, 6000 attempts, i.e., retry for 30s).
 func NewRLock(rail miso.Rail, key string) *RLock {
 	return NewCustomRLock(rail, key, RLockConfig{})
 }
 
-// Create new RLock with default backoff configuration (5ms backoff window, 1000 attempts, i.e., retry for 5s).
+// Create new RLock with default backoff configuration (5ms backoff window, 6000 attempts, i.e., retry for 30s).
 func NewRLockf(rail miso.Rail, keyPattern string, args ...any) *RLock {
 	return NewCustomRLock(rail, fmt.Sprintf(keyPattern, args...), RLockConfig{})
 }
