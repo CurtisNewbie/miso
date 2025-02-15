@@ -8,7 +8,7 @@ type User struct {
 	UserNo   string
 	Username string
 	RoleNo   string
-	IsNil    bool
+	IsNil    bool `json:"-"`
 }
 
 const (

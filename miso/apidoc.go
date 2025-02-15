@@ -184,37 +184,41 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
+	b.WriteString("\n## Contents\n")
 	for _, r := range hr {
-		b.WriteString("\n- ")
-		b.WriteString(r.Method)
-		b.WriteString(" ")
-		b.WriteString(r.Url)
+		tag := fmt.Sprintf("#%s %s", r.Method, r.Url)
+		tag = strings.ToLower(tag)
+		tag = strings.TrimSpace(tag)
+		tag = strings.ReplaceAll(tag, " ", "-")
+		tag = regexp.MustCompile(`[/:]`).ReplaceAllString(tag, "")
+		b.WriteString(fmt.Sprintf("\n- [%s %s](%s)", r.Method, r.Url, tag))
+	}
+	b.WriteRune('\n')
+
+	for _, r := range hr {
+		b.WriteString(fmt.Sprintf("\n## %s %s\n", r.Method, r.Url))
 		if r.Desc != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Description: ")
 			b.WriteString(r.Desc)
 		}
 		if r.Scope != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Expected Access Scope: ")
 			b.WriteString(r.Scope)
 		}
 		if r.Resource != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Bound to Resource: `\"")
 			b.WriteString(r.Resource)
 			b.WriteString("\"`")
 		}
 		if len(r.Headers) > 0 {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Header Parameter:")
 			for _, h := range r.Headers {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(4))
+				b.WriteString(util.Spaces(2))
 				b.WriteString("- \"")
 				b.WriteString(h.Name)
 				b.WriteString("\": ")
@@ -227,7 +231,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString("- Query Parameter:")
 			for _, q := range r.QueryParams {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(4))
+				b.WriteString(util.Spaces(2))
 				b.WriteString("- \"")
 				b.WriteString(q.Name)
 				b.WriteString("\": ")
@@ -236,7 +240,6 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 		}
 		if len(r.JsonRequestDesc.Fields) > 0 {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Request:")
 			if r.JsonRequestDesc.IsSlice {
 				b.WriteString(" (array)")
@@ -245,7 +248,6 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 		}
 		if len(r.JsonResponseDesc.Fields) > 0 {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Response:")
 			if r.JsonResponseDesc.IsSlice {
 				b.WriteString(" (array)")
@@ -255,47 +257,42 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 		if r.Curl != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- cURL:\n")
-			b.WriteString(util.Spaces(4) + "```sh\n")
-			b.WriteString(util.SAddLineIndent(r.Curl, util.Spaces(4)))
-			b.WriteString(util.Spaces(4) + "```\n")
+			b.WriteString(util.Spaces(2) + "```sh\n")
+			b.WriteString(util.SAddLineIndent(r.Curl, util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
 		if r.MisoTClientDemo != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Miso HTTP Client:\n")
-			b.WriteString(util.Spaces(4) + "```go\n")
-			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(4)))
-			b.WriteString(util.Spaces(4) + "```\n")
+			b.WriteString(util.Spaces(2) + "```go\n")
+			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
 		if r.JsonReqTsDef != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Request Object In TypeScript:\n")
-			b.WriteString(util.Spaces(4) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonReqTsDef, util.Spaces(4)))
-			b.WriteString(util.Spaces(4) + "```\n")
+			b.WriteString(util.Spaces(2) + "```ts\n")
+			b.WriteString(util.SAddLineIndent(r.JsonReqTsDef, util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
 		if r.JsonRespTsDef != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- JSON Response Object In TypeScript:\n")
-			b.WriteString(util.Spaces(4) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonRespTsDef, util.Spaces(4)))
-			b.WriteString(util.Spaces(4) + "```\n")
+			b.WriteString(util.Spaces(2) + "```ts\n")
+			b.WriteString(util.SAddLineIndent(r.JsonRespTsDef, util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
 		if r.NgHttpClientDemo != "" {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
 			b.WriteString("- Angular HttpClient Demo:\n")
-			b.WriteString(util.Spaces(4) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(4)))
-			b.WriteString(util.Spaces(4) + "```\n")
+			b.WriteString(util.Spaces(2) + "```ts\n")
+			b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
 		}
 	}
 
