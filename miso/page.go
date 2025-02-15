@@ -22,6 +22,10 @@ func (p Paging) GetPage() int {
 	return p.Page
 }
 
+func (p *Paging) NextPage() {
+	p.Page += 1
+}
+
 func (p Paging) GetOffset() int {
 	return (p.GetPage() - 1) * p.GetLimit()
 }
