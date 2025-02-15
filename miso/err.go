@@ -178,16 +178,9 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 
 // Wrap an error to create new MisoErr without any extra context.
 //
-// This is usually used to add stacktrace to existing error.
-//
-// If the wrapped err is nil, nil is returned.
+// This is equivalent to ErrUnknownError.Wrap(err)
 func WrapErr(err error) *MisoErr {
-	if err == nil {
-		return nil
-	}
-	me := &MisoErr{msg: "", internalMsg: "", err: err}
-	me.withStack()
-	return me
+	return ErrUnknownError.Wrap(err)
 }
 
 // Wrap an error to create new MisoErr with message.
