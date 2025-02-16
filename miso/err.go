@@ -94,14 +94,19 @@ func (e *MisoErr) copyNew() *MisoErr {
 }
 
 func (e *MisoErr) Error() string {
+
+	tok := []string{}
+	if e.msg != "" {
+		tok = append(tok, e.msg)
+	}
+	if e.internalMsg != "" {
+		tok = append(tok, e.internalMsg)
+	}
 	uw := e.Unwrap()
-	if uw == nil {
-		return e.msg
+	if uw != nil {
+		tok = append(tok, uw.Error())
 	}
-	if e.msg == "" {
-		return uw.Error()
-	}
-	return e.msg + ", " + uw.Error()
+	return strings.Join(tok, ", ")
 }
 
 func (e *MisoErr) HasCode() bool {
