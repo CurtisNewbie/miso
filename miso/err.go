@@ -64,21 +64,15 @@ func (e *MisoErr) StackTrace() string {
 	return e.stack
 }
 
-// Create new *MisoErr to wrap the cause error, if the cause error is nil, return nil
+// Create new *MisoErr to wrap the cause error
 func (e *MisoErr) Wrap(cause error) *MisoErr {
-	if cause == nil {
-		return nil
-	}
 	n := e.copyNew()
 	n.withStack()
 	return n
 }
 
-// Create new *MisoErr to wrap the cause error, if the cause error is nil, return nil
+// Create new *MisoErr to wrap the cause error
 func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) *MisoErr {
-	if cause == nil {
-		return nil
-	}
 	n := e.copyNew()
 	n.withStack()
 	if len(args) > 0 {
@@ -184,12 +178,7 @@ func WrapErr(err error) *MisoErr {
 }
 
 // Wrap an error to create new MisoErr with message.
-//
-// If the wrapped err is nil, nil is returned.
 func WrapErrf(err error, msg string, args ...any) *MisoErr {
-	if err == nil {
-		return nil
-	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
@@ -202,9 +191,6 @@ func WrapErrf(err error, msg string, args ...any) *MisoErr {
 //
 // If the wrapped err is nil, nil is returned.
 func WrapErrfCode(err error, code string, msg string, args ...any) *MisoErr {
-	if err == nil {
-		return nil
-	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
@@ -218,7 +204,9 @@ func UnwrapErrStack(err error) (string, bool) {
 	var ue error = err
 	for {
 		if me, ok := ue.(*MisoErr); ok {
-			stack = me.stack
+			if me != nil {
+				stack = me.stack
+			}
 		}
 		u := errors.Unwrap(ue)
 		if u == nil {
