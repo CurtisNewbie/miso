@@ -96,6 +96,8 @@ type httpRouteDoc struct {
 	Curl             string           // curl demo
 	JsonReqTsDef     string           // json request type def in ts
 	JsonRespTsDef    string           // json response type def in ts
+	JsonReqGoDef     string           // json request type def in go
+	JsonRespGoDef    string           // json response type def in go
 	NgHttpClientDemo string           // angular http client demo
 	NgTableDemo      string           // angular table demo
 	MisoTClientDemo  string           // miso TClient demo
@@ -152,6 +154,7 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 			rv := reflect.ValueOf(jsonRequestVal)
 			d.JsonRequestDesc, reqTypeName = BuildJsonPayloadDesc(rv)
 			d.JsonReqTsDef = genJsonTsDef(reqTypeName, d.JsonRequestDesc)
+			d.JsonReqGoDef = genJsonGoDef(reqTypeName, rv)
 		}
 
 		var respTypeName string
@@ -159,6 +162,7 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 			rv := reflect.ValueOf(jsonResponseVal)
 			d.JsonResponseDesc, respTypeName = BuildJsonPayloadDesc(rv)
 			d.JsonRespTsDef = genJsonTsDef(respTypeName, d.JsonResponseDesc)
+			d.JsonRespGoDef = genJsonGoDef(respTypeName, rv)
 		}
 
 		// curl
@@ -173,7 +177,13 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		}
 
 		// miso http TClient
-		d.MisoTClientDemo = genTClientDemo(d, reqTypeName, respTypeName)
+		var goRespTypeName string
+		d.MisoTClientDemo, goRespTypeName = genTClientDemo(d, reqTypeName, respTypeName)
+
+		if jsonResponseVal != nil {
+			rv := reflect.ValueOf(jsonResponseVal)
+			d.JsonRespGoDef = genJsonGoDef(goRespTypeName, rv)
+		}
 
 		docs = append(docs, d)
 	}
@@ -265,8 +275,14 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 		if r.MisoTClientDemo != "" {
 			b.WriteRune('\n')
-			b.WriteString("- Miso HTTP Client:\n")
+			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
 			b.WriteString(util.Spaces(2) + "```go\n")
+			if r.JsonReqGoDef != "" {
+				b.WriteString(util.SAddLineIndent(r.JsonReqGoDef+"\n", util.Spaces(2)))
+			}
+			if r.JsonRespGoDef != "" {
+				b.WriteString(util.SAddLineIndent(r.JsonRespGoDef+"\n", util.Spaces(2)))
+			}
 			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(2)))
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
@@ -690,6 +706,86 @@ func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 	}
 }
 
+type structFieldVal struct {
+	v reflect.Value
+	t reflect.StructField
+}
+
+func collectStructFieldValues(rv reflect.Value) []structFieldVal {
+	if rv.Kind() != reflect.Struct {
+		return []structFieldVal{}
+	}
+
+	fields := make([]structFieldVal, 0, rv.NumField())
+	t := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		fv := rv.Field(i)
+		ft := t.Field(i)
+		if ft.IsExported() {
+			fields = append(fields, structFieldVal{
+				v: fv,
+				t: ft,
+			})
+		}
+
+	}
+	return fields
+}
+
+// generate one or more golang type definitions.
+func genJsonGoDef(typeName string, rv reflect.Value) string {
+	if typeName == "any" {
+		return ""
+	}
+
+	sb, writef := util.NewIndWritef("\t")
+	writef(0, "type %s struct {", typeName)
+	deferred := make([]func(), 0, 10)
+
+	genJsonGoDefRecur(1, writef, &deferred, collectStructFieldValues(rv))
+	writef(0, "}")
+
+	for i := 0; i < len(deferred); i++ {
+		writef(0, "")
+		deferred[i]()
+	}
+	return sb.String()
+}
+
+func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []structFieldVal) {
+	for _, f := range fields {
+		jsonTag := f.t.Tag.Get("json")
+		if jsonTag == "-" {
+			continue
+		}
+		if jsonTag != "" {
+			jsonTag = fmt.Sprintf(" `json:\"%v\"`", jsonTag)
+		}
+		typeName := guessTsItfName(util.TypeName(f.t.Type))
+		ffields := collectStructFieldValues(f.v)
+
+		if len(ffields) > 0 {
+			writef(indentc, "%s %s%s", f.t.Name, f.t.Type, jsonTag)
+
+			*deferred = append(*deferred, func() {
+				writef(0, "type %s struct {", typeName)
+				genJsonGoDefRecur(1, writef, deferred, collectStructFieldValues(f.v))
+				writef(0, "}")
+			})
+		} else {
+			var desc string = getTagDesc(f.t.Tag)
+
+			if desc != "" {
+				comment := " // " + desc
+				fieldDec := fmt.Sprintf("%s %s%s", f.t.Name, f.t.Type, jsonTag)
+				writef(indentc, "%-30s%s", fieldDec, comment)
+			} else {
+				writef(indentc, "%s %s%s", f.t.Name, f.t.Type, jsonTag)
+			}
+		}
+	}
+}
+
 // generate one or more typescript interface definitions based on a set of jsonDesc.
 func genJsonTsDef(typeName string, payload JsonPayloadDesc) string {
 	if len(payload.Fields) < 1 {
@@ -987,7 +1083,7 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 	return sl.String()
 }
 
-func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) string {
+func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) (code string, realRespTypeName string) {
 	sl := new(util.SLPinter)
 
 	respGeneName := respTypeName
@@ -1042,6 +1138,7 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 			if d.JsonResponseDesc.IsSlice {
 				respn = "[]" + respn
 			}
+			respGeneName = respn
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respn)
 		}
 	} else {
@@ -1052,10 +1149,12 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 			if d.JsonResponseDesc.IsSlice {
 				respn = "[]" + respn
 			}
+			respGeneName = respn
 			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respn)
 		}
 	}
 
+	realRespTypeName = respGeneName
 	sl.LinePrefix = "\t"
 	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
 	sl.Printf("\n%serr := miso.NewDynTClient(rail, \"%s\", \"%s\")", util.Tabs(1), d.Url, GetPropStr(PropAppName))
@@ -1123,7 +1222,7 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 		sl.Printlnf("}")
 		sl.Printlnf("return err")
 		sl.Printf("\n}")
-		return sl.String()
+		return sl.String(), realRespTypeName
 	}
 
 	sl.Printlnf("dat, err := res.Res()")
@@ -1132,7 +1231,7 @@ func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) str
 	sl.Printlnf("}")
 	sl.Printlnf("return dat, err")
 	sl.Printf("\n}")
-	return sl.String()
+	return sl.String(), realRespTypeName
 }
 
 type PipelineDoc struct {
