@@ -163,6 +163,9 @@ var NewErrf = Errf
 
 // Create new MisoErr with message.
 func Errf(msg string, args ...any) *MisoErr {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
 	me := &MisoErr{msg: msg, internalMsg: "", err: nil}
 	me.withStack()
 	return me
@@ -170,6 +173,9 @@ func Errf(msg string, args ...any) *MisoErr {
 
 // Create new MisoErr with message and error code.
 func ErrfCode(code string, msg string, args ...any) *MisoErr {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
 	me := &MisoErr{msg: msg, internalMsg: "", err: nil, code: code}
 	me.withStack()
 	return me

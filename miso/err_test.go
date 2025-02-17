@@ -7,13 +7,13 @@ import (
 )
 
 func TestNewErr(t *testing.T) {
-	err := NewErrf("unknown error").WithInternalMsg("nope, that is not unknown error, that is %v", "fake error")
+	err := NewErrf("unknown error, %v", "nope").WithInternalMsg("nope, that is not unknown error, that is %v", "fake error")
 	s := fmt.Sprintf("nope, that is not unknown error, that is %v", "fake error")
 	if s != err.InternalMsg() {
 		t.Fatalf("%v != %v", s, err.InternalMsg())
 	}
-	if err.Error() != "unknown error" {
-		t.Fatalf("%v != 'unknown error'", err.Error())
+	if err.Error() != "unknown error, nope, nope, that is not unknown error, that is fake error" {
+		t.Fatalf("%v", err.Error())
 	}
 
 	err = NewErrf("unknown error").WithInternalMsg("nope, that is not unknown error, that is ")
@@ -21,7 +21,7 @@ func TestNewErr(t *testing.T) {
 	if s != err.InternalMsg() {
 		t.Fatalf("%v != %v", s, err.InternalMsg())
 	}
-	if err.Error() != "unknown error" {
+	if err.Error() != "unknown error, nope, that is not unknown error, that is " {
 		t.Fatalf("%v != 'unknown error'", err.Error())
 	}
 }
