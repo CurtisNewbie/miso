@@ -188,6 +188,11 @@ func WrapErr(err error) *MisoErr {
 	return ErrUnknownError.Wrap(err)
 }
 
+// Equivalent to ErrUnknownError.Wrapf(..).
+func UnknownErrf(err error, msg string, args ...any) *MisoErr {
+	return ErrUnknownError.Wrapf(err, msg, args...)
+}
+
 // Wrap an error to create new MisoErr with message.
 func WrapErrf(err error, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
