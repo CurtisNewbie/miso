@@ -934,6 +934,7 @@ func genNgTableDemo(d httpRouteDoc, respTypeName string) string {
 	}
 
 	colstr := "[" + strings.Join(cols, ",") + "]"
+	sl.Printlnf(util.Tabs(1)+"<tr mat-row *matRowDef=\"let row; columns: %v;\"></tr>", colstr)
 	sl.Printlnf(util.Tabs(1)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
 	sl.Printlnf(`</table>`)
 	return sl.String()
