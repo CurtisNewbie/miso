@@ -51,6 +51,7 @@ var (
 
 func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
+	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
 
 	PostServerBootstrap(func(rail Rail) error {
 		if !GetPropBool(PropServerGenerateEndpointDocEnabled) || apiDocEndpointDisabled {
@@ -983,11 +984,16 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 		}
 	}
 
-	app := GetPropStr(PropAppName)
-	if app != "" {
-		app = "/" + app
+	var url string
+	if GetPropBool(PropServerGenerateEndpointDocInclPrefix) {
+		app := GetPropStr(PropAppName)
+		if app != "" {
+			app = "/" + app
+		}
+		url = "`" + app + d.Url + qp + "`"
+	} else {
+		url = "`" + d.Url + qp + "`"
 	}
-	url := "`" + app + d.Url + qp + "`"
 
 	for _, h := range d.Headers {
 		sl.Printlnf("let %s: any | null = null;", util.CamelCase(h.Name))
