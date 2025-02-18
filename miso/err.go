@@ -67,6 +67,7 @@ func (e *MisoErr) StackTrace() string {
 // Create new *MisoErr to wrap the cause error
 func (e *MisoErr) Wrap(cause error) *MisoErr {
 	n := e.copyNew()
+	n.err = cause
 	n.withStack()
 	return n
 }
@@ -74,6 +75,7 @@ func (e *MisoErr) Wrap(cause error) *MisoErr {
 // Create new *MisoErr to wrap the cause error
 func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) *MisoErr {
 	n := e.copyNew()
+	n.err = cause
 	n.withStack()
 	if len(args) > 0 {
 		n.internalMsg = fmt.Sprintf(internalMsg, args...)
