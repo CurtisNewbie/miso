@@ -65,7 +65,7 @@ func (e *MisoErr) StackTrace() string {
 }
 
 // Create new *MisoErr to wrap the cause error
-func (e *MisoErr) Wrap(cause error) *MisoErr {
+func (e *MisoErr) Wrap(cause error) error {
 	n := e.copyNew()
 	n.err = cause
 	n.withStack()
@@ -73,7 +73,7 @@ func (e *MisoErr) Wrap(cause error) *MisoErr {
 }
 
 // Create new *MisoErr to wrap the cause error
-func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) *MisoErr {
+func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) error {
 	n := e.copyNew()
 	n.err = cause
 	n.withStack()
@@ -186,17 +186,17 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 // Wrap an error to create new MisoErr without any extra context.
 //
 // This is equivalent to ErrUnknownError.Wrap(err)
-func WrapErr(err error) *MisoErr {
+func WrapErr(err error) error {
 	return ErrUnknownError.Wrap(err)
 }
 
 // Equivalent to ErrUnknownError.Wrapf(..).
-func UnknownErrf(err error, msg string, args ...any) *MisoErr {
+func UnknownErrf(err error, msg string, args ...any) error {
 	return ErrUnknownError.Wrapf(err, msg, args...)
 }
 
 // Wrap an error to create new MisoErr with message.
-func WrapErrf(err error, msg string, args ...any) *MisoErr {
+func WrapErrf(err error, msg string, args ...any) error {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
@@ -208,7 +208,7 @@ func WrapErrf(err error, msg string, args ...any) *MisoErr {
 // Wrap an error to create new MisoErr with message.
 //
 // If the wrapped err is nil, nil is returned.
-func WrapErrfCode(err error, code string, msg string, args ...any) *MisoErr {
+func WrapErrfCode(err error, code string, msg string, args ...any) error {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}

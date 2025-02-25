@@ -79,7 +79,7 @@ func TestWrapErrf(t *testing.T) {
 	err := WrapErrf(ne, "operation failed, %v", "someContext")
 	t.Logf("err: %v", err)
 	Errorf("%v", err)
-	t.Logf("Unwrapped: %v", err.Unwrap())
+	t.Logf("Unwrapped: %v", errors.Unwrap(err))
 	Errorf("wrap again: %v", WrapErrf(err, "warping err"))
 }
 
@@ -92,5 +92,5 @@ func TestDirectWrapErr(t *testing.T) {
 	err := WrapErr(ne)
 	t.Logf("err: %v", err)
 	Errorf("%v", err)
-	t.Logf("Unwrapped: %v", err.Unwrap())
+	t.Logf("Unwrapped: %v", errors.Unwrap(err))
 }
