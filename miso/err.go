@@ -226,7 +226,12 @@ func UnknownErrf(err error, msg string, args ...any) error {
 }
 
 // Wrap an error to create new MisoErr with message.
+//
+// If the wrapped err is nil, nil is returned.
 func WrapErrf(err error, msg string, args ...any) error {
+	if err == nil {
+		return nil
+	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
@@ -239,6 +244,9 @@ func WrapErrf(err error, msg string, args ...any) error {
 //
 // If the wrapped err is nil, nil is returned.
 func WrapErrfCode(err error, code string, msg string, args ...any) error {
+	if err == nil {
+		return nil
+	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
