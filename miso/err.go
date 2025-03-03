@@ -28,6 +28,13 @@ var (
 	ErrIllegalArgument *MisoErr = NewErrf("Illegal Argument").WithCode(ErrCodeIllegalArgument)
 )
 
+var (
+	NewErrf = Errf
+
+	// deprecated: change to UnknownErr() instead
+	WrapErr = UnknownErr
+)
+
 // Check if the error represents None
 func IsNoneErr(err error) bool {
 	return errors.Is(err, NoneErr)
@@ -65,7 +72,12 @@ func (e *MisoErr) StackTrace() string {
 }
 
 // Create new *MisoErr to wrap the cause error
+//
+// if cause is nil, nil is returned.
 func (e *MisoErr) Wrap(cause error) error {
+	if cause == nil {
+		return nil
+	}
 	n := e.copyNew()
 	n.err = cause
 	n.withStack()
@@ -73,7 +85,12 @@ func (e *MisoErr) Wrap(cause error) error {
 }
 
 // Create new *MisoErr to wrap the cause error
+//
+// if cause is nil, nil is returned.
 func (e *MisoErr) Wrapf(cause error, internalMsg string, args ...any) error {
+	if cause == nil {
+		return nil
+	}
 	n := e.copyNew()
 	n.err = cause
 	n.withStack()
@@ -161,8 +178,6 @@ func (e *MisoErr) Unwrap() error {
 	return e.err
 }
 
-var NewErrf = Errf
-
 // Create new MisoErr with message.
 func Errf(msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
@@ -185,13 +200,28 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 
 // Wrap an error to create new MisoErr without any extra context.
 //
-// This is equivalent to ErrUnknownError.Wrap(err)
-func WrapErr(err error) error {
+// This is almost equivalent to ErrUnknownError.Wrap(err)
+//
+// If err is nil, nil is returned.
+//
+// If err is *MisoErr, err is returned directly.
+func UnknownErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if me, ok := err.(*MisoErr); ok {
+		return me
+	}
 	return ErrUnknownError.Wrap(err)
 }
 
 // Equivalent to ErrUnknownError.Wrapf(..).
+//
+// If err is nil, nil is returned.
 func UnknownErrf(err error, msg string, args ...any) error {
+	if err == nil {
+		return nil
+	}
 	return ErrUnknownError.Wrapf(err, msg, args...)
 }
 
