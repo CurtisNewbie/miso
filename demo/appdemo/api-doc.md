@@ -35,8 +35,19 @@
     -d '{"requestId":""}'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
+  type PostReq struct {
+  	RequestId string
+  }
+
+  type PostRes struct {
+  	ErrorCode string `json:"errorCode"` // error code
+  	Msg string `json:"msg"`        // message
+  	Error bool `json:"error"`      // whether the request was successful
+  	Data interface {} `json:"data"` // response data
+  }
+
   func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
   	var res miso.GnResp[PostRes]
   	err := miso.NewDynTClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").
@@ -131,8 +142,19 @@
     -d '{"requestId":""}'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
+  type PostReq struct {
+  	RequestId string
+  }
+
+  type PostRes struct {
+  	ErrorCode string `json:"errorCode"` // error code
+  	Msg string `json:"msg"`        // message
+  	Error bool `json:"error"`      // whether the request was successful
+  	Data interface {} `json:"data"` // response data
+  }
+
   func SendPostReq(rail miso.Rail, req PostReq) (PostRes, error) {
   	var res miso.GnResp[PostRes]
   	err := miso.NewDynTClient(rail, "/open/api/demo/grouped/subgroup/post1", "demo").
@@ -213,7 +235,7 @@
     -H 'Authorization: '
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail, authorization string) error {
   	var res miso.GnResp[any]
@@ -269,7 +291,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -318,7 +340,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof/:name'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -367,7 +389,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof/cmdline'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -416,7 +438,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof/profile'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -465,7 +487,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof/symbol'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -514,7 +536,7 @@
   curl -X GET 'http://localhost:8080/debug/pprof/trace'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
@@ -565,7 +587,7 @@
   curl -X GET 'http://localhost:8080/doc/api'
   ```
 
-- Miso HTTP Client:
+- Miso HTTP Client (experimental, demo may not work):
   ```go
   func SendRequest(rail miso.Rail) error {
   	var res miso.GnResp[any]
