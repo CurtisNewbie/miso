@@ -83,39 +83,42 @@ func init() {
 type GetPipelineDocFunc func() []PipelineDoc
 
 type httpRouteDoc struct {
-	Name             string           // api func name
-	Url              string           // http request url
-	Method           string           // http method
-	Extra            map[string][]any // extra metadata
-	Desc             string           // description of the route (metadata).
-	Scope            string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource         string           // the documented resource that the route should be bound to (metadata).
-	Headers          []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams      []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
-	JsonRequestDesc  JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
-	JsonResponseDesc JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
-	Curl             string           // curl demo
-	JsonReqTsDef     string           // json request type def in ts
-	JsonRespTsDef    string           // json response type def in ts
-	JsonReqGoDef     string           // json request type def in go
-	JsonRespGoDef    string           // json response type def in go
-	NgHttpClientDemo string           // angular http client demo
-	NgTableDemo      string           // angular table demo
-	MisoTClientDemo  string           // miso TClient demo
+	Name              string           // api func name
+	Url               string           // http request url
+	Method            string           // http method
+	Extra             map[string][]any // extra metadata
+	Desc              string           // description of the route (metadata).
+	Scope             string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource          string           // the documented resource that the route should be bound to (metadata).
+	Headers           []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams       []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
+	JsonRequestValue  *reflect.Value   // reflect.Value of json request object
+	JsonRequestDesc   JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
+	JsonResponseDesc  JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
+	JsonResponseValue *reflect.Value   // reflect.Value of json response object
+	Curl              string           // curl demo
+	JsonReqTsDef      string           // json request type def in ts
+	JsonRespTsDef     string           // json response type def in ts
+	JsonReqGoDef      string           // json request type def in go
+	JsonRespGoDef     string           // json response type def in go
+	NgHttpClientDemo  string           // angular http client demo
+	NgTableDemo       string           // angular table demo
+	MisoTClientDemo   string           // miso TClient demo
 }
 
 type FieldDesc struct {
-	FieldName      string
-	Name           string
-	TypeName       string
-	OriginTypeName string
-	Desc           string
-	Fields         []FieldDesc
+	FieldName      string      // field name in golang
+	Name           string      // field name in json
+	TypeName       string      // type name in golang or type name alias translated
+	OriginTypeName string      // type name in golang
+	Desc           string      // `desc` tag value
+	Fields         []FieldDesc // struct fields
 }
 
 type JsonPayloadDesc struct {
-	IsSlice bool
-	Fields  []FieldDesc
+	TypeName string
+	IsSlice  bool
+	Fields   []FieldDesc
 }
 
 func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
@@ -139,51 +142,52 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 			}
 		}
 
-		var jsonRequestVal any
 		if l, ok := r.Extra[ExtraJsonRequest]; ok && len(l) > 0 {
-			jsonRequestVal = l[0]
+			jsonRequestVal := l[0]
+			if jsonRequestVal != nil {
+				v := reflect.ValueOf(jsonRequestVal)
+				d.JsonRequestValue = &v
+			}
 		}
 
-		var jsonResponseVal any
 		if l, ok := r.Extra[ExtraJsonResponse]; ok && len(l) > 0 {
-			jsonResponseVal = l[0]
+			jsonResponseVal := l[0]
+			if jsonResponseVal != nil {
+				v := reflect.ValueOf(jsonResponseVal)
+				d.JsonResponseValue = &v
+			}
 		}
 
 		// json stuff
-		var reqTypeName string
-		if jsonRequestVal != nil {
-			rv := reflect.ValueOf(jsonRequestVal)
-			d.JsonRequestDesc, reqTypeName = BuildJsonPayloadDesc(rv)
-			d.JsonReqTsDef = genJsonTsDef(reqTypeName, d.JsonRequestDesc)
-			d.JsonReqGoDef = genJsonGoDef(reqTypeName, rv)
+		if d.JsonRequestValue != nil {
+			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
+			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
+			d.JsonReqGoDef = genJsonGoDef(d.JsonRequestDesc.TypeName, *d.JsonRequestValue)
 		}
 
-		var respTypeName string
-		if jsonResponseVal != nil {
-			rv := reflect.ValueOf(jsonResponseVal)
-			d.JsonResponseDesc, respTypeName = BuildJsonPayloadDesc(rv)
-			d.JsonRespTsDef = genJsonTsDef(respTypeName, d.JsonResponseDesc)
-			d.JsonRespGoDef = genJsonGoDef(respTypeName, rv)
+		if d.JsonResponseValue != nil {
+			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
+			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
+			d.JsonRespGoDef = genJsonGoDef(d.JsonResponseDesc.TypeName, *d.JsonResponseValue)
 		}
 
 		// curl
 		d.Curl = genRouteCurl(d)
 
 		// ng http client
-		d.NgHttpClientDemo = genNgHttpClientDemo(d, reqTypeName, respTypeName)
+		d.NgHttpClientDemo = genNgHttpClientDemo(d)
 
 		// ng table demo
 		if _, ok := r.Extra[ExtraNgTable]; ok {
-			d.NgTableDemo = genNgTableDemo(d, respTypeName)
+			d.NgTableDemo = genNgTableDemo(d)
 		}
 
 		// miso http TClient
 		var goRespTypeName string
-		d.MisoTClientDemo, goRespTypeName = genTClientDemo(d, reqTypeName, respTypeName)
+		d.MisoTClientDemo, goRespTypeName = genTClientDemo(d)
 
-		if jsonResponseVal != nil {
-			rv := reflect.ValueOf(jsonResponseVal)
-			d.JsonRespGoDef = genJsonGoDef(goRespTypeName, rv)
+		if d.JsonResponseValue != nil {
+			d.JsonRespGoDef = genJsonGoDef(goRespTypeName, *d.JsonResponseValue)
 		}
 
 		docs = append(docs, d)
@@ -382,26 +386,21 @@ func appendJsonPayloadDoc(b *strings.Builder, jds []FieldDesc, indent int) {
 // Parse value's type information to build json style description.
 //
 // Only supports struct, pointer and slice.
-func BuildJsonPayloadDesc(v reflect.Value) (jpd JsonPayloadDesc, typeName string) {
-	typeName = v.Type().Name()
+func BuildJsonPayloadDesc(v reflect.Value) JsonPayloadDesc {
 	switch v.Kind() {
 	case reflect.Pointer:
 		v = reflect.New(v.Type().Elem()).Elem()
-		jpd, typeName = BuildJsonPayloadDesc(v)
-		return
+		return BuildJsonPayloadDesc(v)
 	case reflect.Struct:
-		jpd = JsonPayloadDesc{Fields: buildJsonDesc(v, nil)}
-		return
+		return JsonPayloadDesc{Fields: buildJsonDesc(v, nil), TypeName: v.Type().Name()}
 	case reflect.Slice:
 		et := v.Type().Elem()
 		if et.Kind() == reflect.Struct {
-			typeName = et.Name()
 			ev := reflect.New(et).Elem()
-			jpd = JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil)}
-			return
+			return JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name()}
 		}
 	}
-	return
+	return JsonPayloadDesc{TypeName: v.Type().Name()}
 }
 
 func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
@@ -788,7 +787,8 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 }
 
 // generate one or more typescript interface definitions based on a set of jsonDesc.
-func genJsonTsDef(typeName string, payload JsonPayloadDesc) string {
+func genJsonTsDef(payload JsonPayloadDesc) string {
+	var typeName string = payload.TypeName
 	if len(payload.Fields) < 1 {
 		return ""
 	}
@@ -898,7 +898,8 @@ func guessGoTypName(n string) string {
 	return tsTypeName
 }
 
-func genNgTableDemo(d httpRouteDoc, respTypeName string) string {
+func genNgTableDemo(d httpRouteDoc) string {
+	var respTypeName string = d.JsonResponseDesc.TypeName
 	sl := new(util.SLPinter)
 	sl.Println(`<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
 
@@ -940,7 +941,8 @@ func genNgTableDemo(d httpRouteDoc, respTypeName string) string {
 	return sl.String()
 }
 
-func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) string {
+func genNgHttpClientDemo(d httpRouteDoc) string {
+	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
 	sl := new(util.SLPinter)
 	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
 	sl.Printlnf("import { HttpClient } from \"@angular/common/http\";")
@@ -1090,7 +1092,8 @@ func genNgHttpClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string
 	return sl.String()
 }
 
-func genTClientDemo(d httpRouteDoc, reqTypeName string, respTypeName string) (code string, realRespTypeName string) {
+func genTClientDemo(d httpRouteDoc) (code string, realRespTypeName string) {
+	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
 	sl := new(util.SLPinter)
 
 	respGeneName := respTypeName
