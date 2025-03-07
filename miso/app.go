@@ -127,9 +127,14 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	if e := a.callPreServerBootstrapListeners(rail); e != nil {
-		rail.Errorf("Error occurred while invoking pre server bootstrap callbacks, %v", e)
-		return
+	{
+		rail.Infof("Triggering PreServerBootstrap")
+		start := time.Now()
+		if e := a.callPreServerBootstrapListeners(rail); e != nil {
+			rail.Errorf("Error occurred while trigger PreServerBootstrap callbacks, %v", e)
+			return
+		}
+		rail.Infof("PreServerBootstrap finished, took: %v", time.Since(start))
 	}
 
 	// bootstrap components, these are sorted by their orders
@@ -165,9 +170,14 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
-	if e := a.callPostServerBootstrapListeners(rail); e != nil {
-		rail.Errorf("Error occurred while invoking post server bootstrap callbacks, %v", e)
-		return
+	{
+		rail.Infof("Triggering PostServerBootstrap")
+		start := time.Now()
+		if e := a.callPostServerBootstrapListeners(rail); e != nil {
+			rail.Errorf("Error occurred while triggering PostServerBootstrap callbacks, %v", e)
+			return
+		}
+		rail.Infof("PostServerBootstrap finished, took: %v", time.Since(start))
 	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
