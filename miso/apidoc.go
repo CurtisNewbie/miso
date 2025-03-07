@@ -112,6 +112,7 @@ type FieldDesc struct {
 	TypeName       string      // type name in golang or type name alias translated
 	OriginTypeName string      // type name in golang
 	Desc           string      // `desc` tag value
+	JsonTag        string      // `json` tag value
 	Fields         []FieldDesc // struct fields
 }
 
@@ -162,13 +163,13 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		if d.JsonRequestValue != nil {
 			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
 			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
-			d.JsonReqGoDef = genJsonGoDef(d.JsonRequestDesc.TypeName, *d.JsonRequestValue)
+			d.JsonReqGoDef = genJsonGoDef(d.JsonRequestDesc.TypeName, d.JsonRequestDesc)
 		}
 
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
 			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
-			d.JsonRespGoDef = genJsonGoDef(d.JsonResponseDesc.TypeName, *d.JsonResponseValue)
+			d.JsonRespGoDef = genJsonGoDef(d.JsonResponseDesc.TypeName, d.JsonResponseDesc)
 		}
 
 		// curl
@@ -183,12 +184,7 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		}
 
 		// miso http TClient
-		var goRespTypeName string
-		d.MisoTClientDemo, goRespTypeName = genTClientDemo(d)
-
-		if d.JsonResponseValue != nil {
-			d.JsonRespGoDef = genJsonGoDef(goRespTypeName, *d.JsonResponseValue)
-		}
+		d.MisoTClientDemo, _ = genTClientDemo(d)
 
 		docs = append(docs, d)
 	}
@@ -461,6 +457,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			TypeName:       typeName,
 			OriginTypeName: originTypeName,
 			Desc:           getTagDesc(f.Tag),
+			JsonTag:        f.Tag.Get("json"),
 			Fields:         []FieldDesc{},
 		}
 
@@ -476,6 +473,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
 					jd.TypeName = util.TypeName(et)
+					jd.OriginTypeName = jd.TypeName
 					if !seen.Has(et) {
 						jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields, seen)
 					}
@@ -733,54 +731,73 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 }
 
 // generate one or more golang type definitions.
-func genJsonGoDef(typeName string, rv reflect.Value) string {
-	if typeName == "any" {
+func genJsonGoDef(typeName string, rv JsonPayloadDesc) string {
+	if typeName == "any" || len(rv.Fields) < 1 {
 		return ""
 	}
 
-	sb, writef := util.NewIndWritef("\t")
-	writef(0, "type %s struct {", typeName)
-	deferred := make([]func(), 0, 10)
+	if rv.TypeName == "Resp" || rv.TypeName == "GnResp" {
+		for _, f := range rv.Fields {
+			if f.FieldName == "Data" {
+				if f.OriginTypeName == "any" || len(f.Fields) < 1 {
+					return ""
+				}
 
-	genJsonGoDefRecur(1, writef, &deferred, collectStructFieldValues(rv))
-	writef(0, "}")
+				sb, writef := util.NewIndWritef("\t")
+				writef(0, "type %s struct {", f.OriginTypeName)
+				deferred := make([]func(), 0, 10)
+				genJsonGoDefRecur(1, writef, &deferred, f.Fields)
+				writef(0, "}")
 
-	for i := 0; i < len(deferred); i++ {
-		writef(0, "")
-		deferred[i]()
+				for i := 0; i < len(deferred); i++ {
+					writef(0, "")
+					deferred[i]()
+				}
+				return sb.String()
+			}
+		}
+		return ""
+	} else {
+		sb, writef := util.NewIndWritef("\t")
+		writef(0, "type %s struct {", typeName)
+		deferred := make([]func(), 0, 10)
+
+		genJsonGoDefRecur(1, writef, &deferred, rv.Fields)
+		writef(0, "}")
+
+		for i := 0; i < len(deferred); i++ {
+			writef(0, "")
+			deferred[i]()
+		}
+		return sb.String()
 	}
-	return sb.String()
 }
 
-func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []structFieldVal) {
+func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []FieldDesc) {
 	for _, f := range fields {
-		jsonTag := f.t.Tag.Get("json")
-		if jsonTag == "-" {
-			continue
+		var jsonTag string
+		if f.JsonTag != "" {
+			jsonTag = fmt.Sprintf(" `json:\"%v\"`", f.JsonTag)
 		}
-		if jsonTag != "" {
-			jsonTag = fmt.Sprintf(" `json:\"%v\"`", jsonTag)
-		}
-		typeName := guessTsItfName(util.TypeName(f.t.Type))
-		ffields := collectStructFieldValues(f.v)
+		typeName := guessTsItfName(f.OriginTypeName)
+		ffields := f.Fields
 
 		if len(ffields) > 0 {
-			writef(indentc, "%s %s%s", f.t.Name, f.t.Type, jsonTag)
+			writef(indentc, "%s %s%s", f.FieldName, f.OriginTypeName, jsonTag)
 
 			*deferred = append(*deferred, func() {
 				writef(0, "type %s struct {", typeName)
-				genJsonGoDefRecur(1, writef, deferred, collectStructFieldValues(f.v))
+				genJsonGoDefRecur(1, writef, deferred, f.Fields)
 				writef(0, "}")
 			})
 		} else {
-			var desc string = getTagDesc(f.t.Tag)
-
+			var desc string = f.Desc
 			if desc != "" {
 				comment := " // " + desc
-				fieldDec := fmt.Sprintf("%s %s%s", f.t.Name, f.t.Type, jsonTag)
+				fieldDec := fmt.Sprintf("%s %s%s", f.FieldName, f.OriginTypeName, jsonTag)
 				writef(indentc, "%-30s%s", fieldDec, comment)
 			} else {
-				writef(indentc, "%s %s%s", f.t.Name, f.t.Type, jsonTag)
+				writef(indentc, "%s %s%s", f.FieldName, f.OriginTypeName, jsonTag)
 			}
 		}
 	}
