@@ -304,18 +304,18 @@ func (a *MisoApp) RegisterBootstrapCallback(bootstrapComponent ComponentBootstra
 	a.serverBootrapCallbacks = append(a.serverBootrapCallbacks, bootstrapComponent)
 }
 
-func (a *MisoApp) PostServerBootstrap(callback func(rail Rail) error) {
+func (a *MisoApp) PostServerBootstrap(callback ...func(rail Rail) error) {
 	if callback == nil {
 		return
 	}
-	a.postServerBootstrapListener = append(a.postServerBootstrapListener, callback)
+	a.postServerBootstrapListener = append(a.postServerBootstrapListener, callback...)
 }
 
-func (a *MisoApp) PreServerBootstrap(callback func(rail Rail) error) {
+func (a *MisoApp) PreServerBootstrap(callback ...func(rail Rail) error) {
 	if callback == nil {
 		return
 	}
-	a.preServerBootstrapListener = append(a.preServerBootstrapListener, callback)
+	a.preServerBootstrapListener = append(a.preServerBootstrapListener, callback...)
 }
 
 func (a *MisoApp) configureLogging() error {
