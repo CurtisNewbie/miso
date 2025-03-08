@@ -42,10 +42,8 @@
   }
 
   type PostRes struct {
-  	ErrorCode string `json:"errorCode"` // error code
-  	Msg string `json:"msg"`        // message
-  	Error bool `json:"error"`      // whether the request was successful
-  	Data interface {} `json:"data"` // response data
+  	ResultId string
+  	Time util.ETime
   }
 
   func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
@@ -149,10 +147,8 @@
   }
 
   type PostRes struct {
-  	ErrorCode string `json:"errorCode"` // error code
-  	Msg string `json:"msg"`        // message
-  	Error bool `json:"error"`      // whether the request was successful
-  	Data interface {} `json:"data"` // response data
+  	ResultId string
+  	Time util.ETime
   }
 
   func SendPostReq(rail miso.Rail, req PostReq) (PostRes, error) {

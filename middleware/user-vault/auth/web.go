@@ -57,7 +57,7 @@ func ExposeResourceInfo(res []Resource, extraEndpoints ...Endpoint) {
 		miso.Get("/auth/resource", ServeResourceInfo(extraEndpoints...)).
 			Desc("Expose resource and endpoint information to other backend service for authorization.").
 			Protected().
-			DocJsonResp(miso.GnResp[ResourceInfoRes]{})
+			DocJsonResp(ResourceInfoRes{})
 
 		return nil
 	})
