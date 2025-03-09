@@ -355,8 +355,7 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 
 		if pq.mapToAsync != nil {
 			futures := make([]util.Future[V], 0, len(payload))
-			for i, p := range payload {
-				payload[i] = pq.mapTo(p)
+			for _, p := range payload {
 				futures = append(futures, pq.mapToAsync(p))
 			}
 			for i := range payload {
