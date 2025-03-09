@@ -12,6 +12,9 @@ type Consumer[T any] func(t T) error
 // Transform t to another t
 type Transform[T any] func(t T) T
 
+// Transform t to another t
+type TransformAsync[T any] func(t T) Future[T]
+
 // Supplier of T
 type Supplier[T any] func() T
 

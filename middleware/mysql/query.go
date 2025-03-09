@@ -293,9 +293,10 @@ type ChainedPageQuery func(q *Query) *Query
 // Create param for page query.
 type PageQuery[V any] struct {
 	db          *gorm.DB
-	selectQuery ChainedPageQuery  // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
-	baseQuery   ChainedPageQuery  // Base query, e.g., return tx.Table(`myTable`).Where(...)
-	mapTo       util.Transform[V] // callback triggered on each record, the value returned will overwrite the value passed in.
+	selectQuery ChainedPageQuery       // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
+	baseQuery   ChainedPageQuery       // Base query, e.g., return tx.Table(`myTable`).Where(...)
+	mapTo       util.Transform[V]      // callback triggered on each record, the value returned will overwrite the value passed in.
+	mapToAsync  util.TransformAsync[V] // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
 func NewPagedQuery[V any](db *gorm.DB) *PageQuery[V] {
@@ -314,6 +315,11 @@ func (pq *PageQuery[V]) WithBaseQuery(qry ChainedPageQuery) *PageQuery[V] {
 
 func (pq *PageQuery[V]) Transform(t util.Transform[V]) *PageQuery[V] {
 	pq.mapTo = t
+	return pq
+}
+
+func (pq *PageQuery[V]) TransformAsync(t util.TransformAsync[V]) *PageQuery[V] {
+	pq.mapToAsync = t
 	return pq
 }
 
@@ -344,6 +350,22 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 		if pq.mapTo != nil {
 			for i := range payload {
 				payload[i] = pq.mapTo(payload[i])
+			}
+		}
+
+		if pq.mapToAsync != nil {
+			futures := make([]util.Future[V], 0, len(payload))
+			for i, p := range payload {
+				payload[i] = pq.mapTo(p)
+				futures = append(futures, pq.mapToAsync(p))
+			}
+			for i := range payload {
+				v, err := futures[i].Get()
+				if err != nil {
+					rail.Errorf("Failed to resolve Future, skipped %v", err)
+					continue
+				}
+				payload[i] = v
 			}
 		}
 		return payload, nil
