@@ -361,7 +361,7 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 			for i := range payload {
 				v, err := futures[i].Get()
 				if err != nil {
-					rail.Errorf("Failed to resolve Future, skipped %v", err)
+					rail.Warnf("Failed to resolve Future, skipped %v", err)
 					continue
 				}
 				payload[i] = v
