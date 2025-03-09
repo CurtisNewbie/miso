@@ -36,7 +36,7 @@ func (r GnResp[T]) Unwrap() Resp {
 
 func (r GnResp[T]) Err() error {
 	if r.Error {
-		return fmt.Errorf("Resp has error, code: %v, msg: %v", r.ErrorCode, r.Msg)
+		return ErrfCode(r.ErrorCode, r.Msg)
 	}
 	return nil
 }

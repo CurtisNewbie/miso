@@ -71,7 +71,11 @@ func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
 	}
 
 	defer tr.Close()
-	return io.Copy(writer, tr.Resp.Body)
+	n, err := io.Copy(writer, tr.Resp.Body)
+	if err != nil {
+		return 0, UnknownErr(err)
+	}
+	return n, nil
 }
 
 // Read response as []bytes.
@@ -107,7 +111,7 @@ func (tr *TResponse) Str() (string, error) {
 	defer tr.Close()
 	b, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
-		return "", e
+		return "", UnknownErr(e)
 	}
 	return util.UnsafeByt2Str(b), nil
 }
@@ -128,14 +132,12 @@ func (tr *TResponse) Json(ptr any) error {
 	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
-		return e
+		return UnknownErr(e)
 	}
 
 	if e = json.ParseJson(body, ptr); e != nil {
 		s := util.UnsafeByt2Str(body)
-		errMsg := fmt.Sprintf("Failed to unmarshal json from response, body: %v, %v", s, e)
-		tr.Rail.Error(errMsg)
-		return fmt.Errorf(errMsg)
+		return UnknownErrf(e, "failed to unmarshal json from response, body: %v", s)
 	}
 	return nil
 }
@@ -153,7 +155,7 @@ func (tr *TResponse) Require2xx() error {
 		if err == nil {
 			body = util.UnsafeByt2Str(byt)
 		}
-		return fmt.Errorf("unknown error, status code: %v, body: %v", tr.StatusCode, body)
+		return ErrUnknownError.WithInternalMsg("unknown error, status code: %v, body: %v", tr.StatusCode, body)
 	}
 	return nil
 }
