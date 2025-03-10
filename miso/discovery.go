@@ -1,7 +1,6 @@
 package miso
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -16,9 +15,9 @@ var (
 )
 
 var (
-	ErrMissingServiceName      = errors.New("service name is required")
-	ErrServiceInstanceNotFound = errors.New("unable to find any available service instance")
-	ErrServerListNotFound      = errors.New("fail to find ServerList implemnetation")
+	ErrMissingServiceName      = Errf("service name is required")
+	ErrServiceInstanceNotFound = Errf("unable to find any available service instance")
+	ErrServerListNotFound      = Errf("fail to find ServerList implemnetation")
 )
 
 var discModule = InitAppModuleFunc(newModule)
@@ -91,10 +90,10 @@ func (m *discoveryModule) selectServer(rail Rail, name string, selector func(ser
 		if len(servers) < 1 {
 			if !serverList.IsSubscribed(rail, name) {
 				if err := serverList.Subscribe(rail, name); err != nil {
-					return Server{}, fmt.Errorf("failed to subscribe service, service not avaliable, %w", err)
+					return Server{}, ErrServiceInstanceNotFound.Wrapf(err, "failed to subscribe service: %v, service not avaliable", name)
 				}
 				if err := serverList.PollInstance(rail, name); err != nil {
-					return Server{}, fmt.Errorf("failed to poll service instance, service not available, %w", err)
+					return Server{}, ErrServiceInstanceNotFound.Wrapf(err, "failed to poll service instance: %v, service not available", name)
 				}
 				return m.selectServer(rail, name, selector)
 			}
@@ -104,13 +103,13 @@ func (m *discoveryModule) selectServer(rail Rail, name string, selector func(ser
 		servers, _ = m.propBasedServiceRegistry.ListServers(rail, name)
 	}
 	if len(servers) < 1 {
-		return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+		return Server{}, ErrServiceInstanceNotFound.WithInternalMsg("failed to select server for %v", name)
 	}
 	selected := selector(servers)
 	if selected >= 0 && selected < len(servers) {
 		return servers[selected], nil
 	}
-	return Server{}, fmt.Errorf("failed to select server for %v, %w", name, ErrServiceInstanceNotFound)
+	return Server{}, ErrServiceInstanceNotFound.WithInternalMsg("failed to select server for %v", name)
 }
 
 func (m *discoveryModule) getServiceRegistry() ServiceRegistry {
@@ -123,7 +122,7 @@ func (m *discoveryModule) subscribeServerChanges(rail Rail, name string, cbk fun
 		return ErrServerListNotFound
 	}
 	if err := sl.Subscribe(rail, name); err != nil {
-		return fmt.Errorf("failed to subscribe to service %v, %w", name, err)
+		return UnknownErrf(err, "failed to subscribe to service %v", name)
 	}
 	m.serverChangeListeners.SubscribeChange(name, cbk)
 	return nil

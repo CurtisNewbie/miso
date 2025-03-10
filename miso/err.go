@@ -225,6 +225,11 @@ func UnknownErrf(err error, msg string, args ...any) error {
 	return ErrUnknownError.Wrapf(err, msg, args...)
 }
 
+// Equivalent to ErrUnknownError.WithInternalMsg(msg, args...).
+func UnknownErrMsgf(msg string, args ...any) error {
+	return ErrUnknownError.WithInternalMsg(msg, args...)
+}
+
 // Wrap an error to create new MisoErr with message.
 //
 // If the wrapped err is nil, nil is returned.

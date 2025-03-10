@@ -3,7 +3,6 @@ package miso
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -194,13 +193,12 @@ func (t *TClient) prepReqUrl() (string, error) {
 	if t.discoverService {
 		sr := GetServiceRegistry()
 		if sr == nil {
-			return "", errors.New("service discovery enabled, but no service registry available")
+			return "", UnknownErrMsgf("service discovery enabled, but no service registry available")
 		}
 
 		resolved, err := sr.ResolveUrl(t.Rail, t.serviceName, t.Url)
 		if err != nil {
-			t.Rail.Errorf("Resolve service address failed, service: %v, %v", t.serviceName, err)
-			return "", err
+			return "", UnknownErrf(err, "Resolve service address failed, service: %v", t.serviceName)
 		}
 		url = resolved
 	}

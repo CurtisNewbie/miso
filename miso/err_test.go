@@ -67,36 +67,36 @@ func TestStack(t *testing.T) {
 	t.Log(s)
 }
 
-func TestWrapErr(t *testing.T) {
+func TestUnknownErr(t *testing.T) {
 	ne := errors.New("something is wrong")
 	err := NewErrf("operation failed").Wrap(ne)
 	t.Logf("%v", err)
 	Errorf("%v", err)
 }
 
-func TestWrapErrf(t *testing.T) {
+func TestUnknownErrf(t *testing.T) {
 	ne := someOp()
-	err := WrapErrf(ne, "operation failed, %v", "someContext")
+	err := UnknownErrf(ne, "operation failed, %v", "someContext")
 	t.Logf("err: %v", err)
 	Errorf("%v", err)
 	t.Logf("Unwrapped: %v", errors.Unwrap(err))
-	Errorf("wrap again: %v", WrapErrf(err, "warping err"))
+	Errorf("wrap again: %v", UnknownErrf(err, "warping err"))
 }
 
 func someOp() error {
 	return NewErrf("something is wrong")
 }
 
-func TestDirectWrapErr(t *testing.T) {
+func TestDirectUnknownErr(t *testing.T) {
 	ne := someOp()
-	err := WrapErr(ne)
+	err := UnknownErr(ne)
 	t.Logf("err: %v", err)
 	Errorf("%v", err)
 	t.Logf("Unwrapped: %v", errors.Unwrap(err))
 }
 
 func TestWrapNilErr(t *testing.T) {
-	wrp := WrapErr(nil)
+	wrp := UnknownErr(nil)
 	if wrp != nil {
 		t.Fatal("wrp != nil")
 	}
@@ -104,7 +104,7 @@ func TestWrapNilErr(t *testing.T) {
 
 func TestWrapMisoErr(t *testing.T) {
 	me := ErrfCode("xxxx", "something is wrong")
-	wrp := WrapErr(me)
+	wrp := UnknownErr(me)
 	if wrp == nil {
 		t.Fatal("wrp == nil")
 	}
@@ -118,6 +118,6 @@ func TestWrapMisoErr(t *testing.T) {
 		t.Fatal("wrp is code is different")
 	}
 
-	wrp2 := WrapErr(errors.New("oh no"))
+	wrp2 := UnknownErr(errors.New("oh no"))
 	Errorf("wrp2: %v", wrp2)
 }
