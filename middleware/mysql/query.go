@@ -45,6 +45,20 @@ func (q *Query) Eq(col string, args ...any) *Query {
 	return q
 }
 
+// !=
+func (q *Query) Ne(col string, args ...any) *Query {
+	q.tx = q.tx.Where(col+" != ?", args...)
+	return q
+}
+
+// !=
+func (q *Query) NeIf(cond bool, col string, args ...any) *Query {
+	if cond {
+		q.tx = q.tx.Where(col+" != ?", args...)
+	}
+	return q
+}
+
 // =
 func (q *Query) EqIf(cond bool, col string, args ...any) *Query {
 	if cond {
