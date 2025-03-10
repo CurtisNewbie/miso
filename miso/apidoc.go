@@ -827,9 +827,6 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 
 // generate one or more golang type definitions.
 func genJsonGoDef(rv JsonPayloadDesc) string {
-	if rv.TypeName == "ListFileReq" {
-		Infof("%#v", rv)
-	}
 	if rv.TypeName == "any" || len(rv.Fields) < 1 {
 		return ""
 	}
