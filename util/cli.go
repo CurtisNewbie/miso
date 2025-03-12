@@ -55,6 +55,20 @@ func CliRun(ex string, args ...string) (out []byte, err error) {
 	return out, nil
 }
 
+// CLI runs command v2.
+//
+// If err is not nil, out may still contain output from the command.
+func CliRunV2(dir string, env []string, ex string, args ...string) (out []byte, err error) {
+	cmd := exec.Command(ex, args...)
+	cmd.Dir = dir
+	cmd.Env = append(cmd.Env, env...)
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
 func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }
