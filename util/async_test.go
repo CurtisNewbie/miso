@@ -316,3 +316,26 @@ func TestFutureThenPanic(t *testing.T) {
 		t.Fatalf("cnt should be 1, then callback not invoked")
 	}
 }
+
+func TestBatchTask(t *testing.T) {
+	var mu sync.Mutex
+	var sum int = 0
+
+	n := 50
+	batchTask := NewBatchTask[int](10, n, func(v int) {
+		t.Logf("%v, running -> %v", Now().FormatStdMilli(), v)
+		time.Sleep(500 * time.Millisecond)
+		mu.Lock()
+		defer mu.Unlock()
+		sum += v
+	})
+
+	shouldBe := n * (n + 1) / 2
+	for i := 0; i <= n; i++ {
+		batchTask.Generate(i)
+	}
+	batchTask.Wait()
+	if sum != shouldBe {
+		t.Fatalf("should be %v but %v", shouldBe, sum)
+	}
+}
