@@ -46,8 +46,8 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 // CLI runs command.
 //
 // If err is not nil, out may still contain output from the command.
-func CliRun(ex string, args ...string) (out []byte, err error) {
-	cmd := exec.Command(ex, args...)
+func CliRun(executable string, args ...string) (out []byte, err error) {
+	cmd := exec.Command(executable, args...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return out, err
@@ -55,11 +55,11 @@ func CliRun(ex string, args ...string) (out []byte, err error) {
 	return out, nil
 }
 
-// CLI runs command v2.
+// CLI runs command with env.
 //
 // If err is not nil, out may still contain output from the command.
-func CliRunV2(dir string, env []string, ex string, args ...string) (out []byte, err error) {
-	cmd := exec.Command(ex, args...)
+func CliRunWithEnv(dir string, env []string, executable string, args ...string) (out []byte, err error) {
+	cmd := exec.Command(executable, args...)
 	cmd.Dir = dir
 	cmd.Env = append(cmd.Env, env...)
 	out, err = cmd.CombinedOutput()
