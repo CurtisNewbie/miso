@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -291,7 +292,8 @@ func (t *TClient) PostFormData(data map[string]io.Reader) *TResponse {
 		var err error
 
 		if f, ok := r.(*os.File); ok {
-			iw, err = w.CreateFormFile(k, f.Name())
+			n := path.Base(f.Name())
+			iw, err = w.CreateFormFile(k, n)
 			if err != nil {
 				return t.errorResponse(UnknownErrf(err, "failed to create form file"))
 			}
