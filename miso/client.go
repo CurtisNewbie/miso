@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -276,6 +278,49 @@ func (t *TClient) Get() *TResponse {
 func (t *TClient) PostForm(data url.Values) *TResponse {
 	t.SetContentType(formEncoded)
 	return t.Post(strings.NewReader(data.Encode()))
+}
+
+// Send POST request with urlencoded form data
+func (t *TClient) PostFormData(data map[string]io.Reader) *TResponse {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	for k, r := range data {
+		var iw io.Writer
+		var err error
+
+		if f, ok := r.(*os.File); ok {
+			iw, err = w.CreateFormFile(k, f.Name())
+			if err != nil {
+				closeCloser(r)
+				return t.errorResponse(UnknownErrf(err, "failed to create form file"))
+			}
+		} else {
+			iw, err = w.CreateFormField(k)
+			if err != nil {
+				closeCloser(r)
+				return t.errorResponse(UnknownErrf(err, "failed to create form field"))
+			}
+		}
+
+		if _, err = io.Copy(iw, r); err != nil {
+			closeCloser(r)
+			return t.errorResponse(UnknownErrf(err, "failed to copy data to form field/file"))
+		}
+
+		closeCloser(r)
+	}
+	w.Close()                                 // write boundary
+	t.SetContentType(w.FormDataContentType()) // with boundary, not just the content-type
+	return t.Post(&b)
+}
+
+func closeCloser(r io.Reader) {
+	if r == nil {
+		return
+	}
+	if closer, ok := r.(io.Closer); ok {
+		closer.Close()
+	}
 }
 
 // Send POST request with JSON.
