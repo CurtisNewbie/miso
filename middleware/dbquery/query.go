@@ -1,5 +1,4 @@
-// deprecated: use middleware/dbquery package instead
-package mysql
+package dbquery
 
 import (
 	"github.com/curtisnewbie/miso/miso"
