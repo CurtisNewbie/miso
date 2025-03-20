@@ -272,12 +272,26 @@ func Warn(args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
+	if len(args) == 1 {
+		if v, ok := args[0].(*MisoErr); ok && v != nil {
+			msgWithStack := appendErrStack(v.Error(), v)
+			logger.WithField(callerField, getCallerFn()).Warn(msgWithStack)
+			return
+		}
+	}
 	logger.WithField(callerField, getCallerFn()).Warn(args...)
 }
 
 func Error(args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
+	}
+	if len(args) == 1 {
+		if v, ok := args[0].(*MisoErr); ok && v != nil {
+			msgWithStack := appendErrStack(v.Error(), v)
+			logger.WithField(callerField, getCallerFn()).Error(msgWithStack)
+			return
+		}
 	}
 	logger.WithField(callerField, getCallerFn()).Error(args...)
 }

@@ -168,6 +168,14 @@ func (r Rail) Warn(args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
+	if len(args) == 1 {
+		if v, ok := args[0].(*MisoErr); ok && v != nil {
+			msgWithStack := appendErrStack(v.Error(), v)
+			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+				Warn(msgWithStack)
+			return
+		}
+	}
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Warn(args...)
 }
@@ -175,6 +183,14 @@ func (r Rail) Warn(args ...interface{}) {
 func (r Rail) Error(args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
+	}
+	if len(args) == 1 {
+		if v, ok := args[0].(*MisoErr); ok && v != nil {
+			msgWithStack := appendErrStack(v.Error(), v)
+			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
+				Error(msgWithStack)
+			return
+		}
 	}
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Error(args...)

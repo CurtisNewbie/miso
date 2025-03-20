@@ -62,3 +62,14 @@ func TestErrorfStackTrace(t *testing.T) {
 func testErrorfStackTrace1() error {
 	return NewErrf("NO!!!!!")
 }
+
+func TestErrorStackTrace(t *testing.T) {
+	EmptyRail().Error(NewErrf("oh no"))
+	Error(NewErrf("oh no"))
+	EmptyRail().Warn(NewErrf("oh no"))
+	Warn(NewErrf("oh no"))
+	EmptyRail().Error((*MisoErr)(nil))
+	Error((*MisoErr)(nil))
+	EmptyRail().Warn((*MisoErr)(nil))
+	Warn((*MisoErr)(nil))
+}
