@@ -29,7 +29,7 @@ var (
 )
 
 var (
-	NewErrf = Errf
+	Errf = NewErrf
 
 	// deprecated: change to UnknownErr() instead
 	WrapErr = UnknownErr
@@ -179,7 +179,7 @@ func (e *MisoErr) Unwrap() error {
 }
 
 // Create new MisoErr with message.
-func Errf(msg string, args ...any) *MisoErr {
+func NewErrf(msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
