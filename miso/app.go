@@ -408,8 +408,8 @@ var PostServerBootstrapped = PostServerBootstrap
 // This usually means all server components are started, such as MySQL connection, Redis Connection and so on.
 //
 // Caller is free to call PostServerBootstrap inside another PostServerBootstrap callback.
-func PostServerBootstrap(f func(rail Rail) error) {
-	App().PostServerBootstrap(f)
+func PostServerBootstrap(f ...func(rail Rail) error) {
+	App().PostServerBootstrap(f...)
 }
 
 // Add listener that is invoked before the server is fully bootstrapped
@@ -417,8 +417,8 @@ func PostServerBootstrap(f func(rail Rail) error) {
 // This usually means that the configuration is loaded, and the logging is configured, but the server components are not yet initialized.
 //
 // Caller is free to call PostServerBootstrap or PreServerBootstrap inside another PreServerBootstrap callback.
-func PreServerBootstrap(f func(rail Rail) error) {
-	App().PreServerBootstrap(f)
+func PreServerBootstrap(f ...func(rail Rail) error) {
+	App().PreServerBootstrap(f...)
 }
 
 // Register server component bootstrap callback
