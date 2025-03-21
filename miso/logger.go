@@ -235,7 +235,7 @@ func Warnf(format string, args ...interface{}) {
 		return
 	}
 	format = appendErrStack(format, args...)
-	logger.WithField(callerField, getCallerFn()).Warnf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Warn(format)
 }
 
 func Errorf(format string, args ...interface{}) {
@@ -244,7 +244,7 @@ func Errorf(format string, args ...interface{}) {
 	}
 
 	format = appendErrStack(format, args...)
-	logger.WithField(callerField, getCallerFn()).Errorf(format, args...)
+	logger.WithField(callerField, getCallerFn()).Error(format)
 }
 
 func Fatalf(format string, args ...interface{}) {

@@ -89,6 +89,7 @@ func (r Rail) Infof(format string, args ...interface{}) {
 }
 
 func appendErrStack(format string, args ...any) string {
+	format = fmt.Sprintf(format, args...)
 	var err error = nil
 	for i := len(args) - 1; i > -1; i-- {
 		ar := args[i]
@@ -112,7 +113,7 @@ func (r Rail) Warnf(format string, args ...interface{}) {
 	}
 	format = appendErrStack(format, args...)
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
-		Warnf(format, args...)
+		Warn(format)
 }
 
 func (r Rail) Errorf(format string, args ...interface{}) {
@@ -121,7 +122,7 @@ func (r Rail) Errorf(format string, args ...interface{}) {
 	}
 	format = appendErrStack(format, args...)
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
-		Errorf(format, args...)
+		Error(format)
 }
 
 func (r Rail) Fatalf(format string, args ...interface{}) {
