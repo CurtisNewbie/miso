@@ -90,7 +90,7 @@
                 </p>
             {{end}}
 
-            {{if .JsonRequestDesc}}
+            {{if and (.JsonRequestDesc) (gt (len .JsonRequestDesc.Fields) 0)}}
                 <p>
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Request:</i></b>
@@ -99,7 +99,7 @@
                 </p>
             {{end}}
 
-            {{if .JsonResponseDesc}}
+            {{if and (.JsonResponseDesc) (gt (len .JsonResponseDesc.Fields) 0)}}
                 <p>
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Response:</i></b>
@@ -117,7 +117,7 @@
                 </p>
             {{end}}
 
-            {{if .JsonReqTsDef}}
+            {{if and (.JsonReqTsDef) (ne .JsonReqTsDef "")}}
                 <p>
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
                         <b><i>JSON Request Object In TypeScript:</i></b>
@@ -218,7 +218,7 @@
             {{end}}
         {{end}}
 
-        {{if .PipelineDoc }}
+        <!-- {{if .PipelineDoc }}
             <h2>3. Markdown API Doc:</h2>
         {{else}}
             <h2>2. Markdown API Doc:</h2>
@@ -228,18 +228,18 @@
             <button style="padding:10px; box-shadow: 3px 3px 10px lightgrey;" onclick="copyMarkdown()">Copy Generated Markdown</button>
         </div>
 
-        <pre id="markdownPre" style="white-space: pre-wrap; background-color:#DBD5D4; padding:30px; border-radius: 30px;"><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-md">{{.Markdown}}</code></pre>
+        <pre id="markdownPre" style="white-space: pre-wrap; background-color:#DBD5D4; padding:30px; border-radius: 30px;"><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-md">{{.Markdown}}</code></pre> -->
 
         <script>
-            function copyMarkdown() {
-                var preContent = document.getElementById("markdownPre").textContent;
-                const textArea = document.createElement('textarea');
-                textArea.textContent = preContent;
-                document.body.append(textArea);
-                textArea.select();
-                document.execCommand("copy");
-                textArea.remove();
-            }
+            // function copyMarkdown() {
+            //     var preContent = document.getElementById("markdownPre").textContent;
+            //     const textArea = document.createElement('textarea');
+            //     textArea.textContent = preContent;
+            //     document.body.append(textArea);
+            //     textArea.select();
+            //     document.execCommand("copy");
+            //     textArea.remove();
+            // }
             hljs.highlightAll();
         </script>
     </div>
