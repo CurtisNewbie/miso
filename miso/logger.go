@@ -234,7 +234,7 @@ func Warnf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	format = appendErrStack(format, args...)
+	format = appendErrStack(true, format, args...)
 	logger.WithField(callerField, getCallerFn()).Warn(format)
 }
 
@@ -243,7 +243,7 @@ func Errorf(format string, args ...interface{}) {
 		return
 	}
 
-	format = appendErrStack(format, args...)
+	format = appendErrStack(true, format, args...)
 	logger.WithField(callerField, getCallerFn()).Error(format)
 }
 
@@ -274,7 +274,7 @@ func Warn(args ...interface{}) {
 	}
 	if len(args) == 1 {
 		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(v.Error(), v)
+			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithField(callerField, getCallerFn()).Warn(msgWithStack)
 			return
 		}
@@ -288,7 +288,7 @@ func Error(args ...interface{}) {
 	}
 	if len(args) == 1 {
 		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(v.Error(), v)
+			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithField(callerField, getCallerFn()).Error(msgWithStack)
 			return
 		}

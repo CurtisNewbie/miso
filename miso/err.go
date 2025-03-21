@@ -200,15 +200,7 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 // This is almost equivalent to ErrUnknownError.Wrap(err)
 //
 // If err is nil, nil is returned.
-//
-// If err is *MisoErr, err is returned directly.
 func UnknownErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if me, ok := err.(*MisoErr); ok {
-		return me
-	}
 	return ErrUnknownError.Wrap(err)
 }
 
@@ -224,16 +216,15 @@ func WrapErr(err error) error {
 	if me, ok := err.(*MisoErr); ok {
 		return me
 	}
-	return WrapErrfCode(err, "", "")
+	me := &MisoErr{msg: "", internalMsg: "", err: err, code: ""}
+	me.withStack()
+	return me
 }
 
 // Equivalent to ErrUnknownError.Wrapf(..).
 //
 // If err is nil, nil is returned.
 func UnknownErrf(err error, msg string, args ...any) error {
-	if err == nil {
-		return nil
-	}
 	return ErrUnknownError.Wrapf(err, msg, args...)
 }
 

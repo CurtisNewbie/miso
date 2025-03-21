@@ -88,8 +88,10 @@ func (r Rail) Infof(format string, args ...interface{}) {
 		Infof(format, args...)
 }
 
-func appendErrStack(format string, args ...any) string {
-	format = fmt.Sprintf(format, args...)
+func appendErrStack(dofmt bool, format string, args ...any) string {
+	if dofmt && format != "" && len(args) > 0 {
+		format = fmt.Sprintf(format, args...)
+	}
 	var err error = nil
 	for i := len(args) - 1; i > -1; i-- {
 		ar := args[i]
@@ -111,7 +113,7 @@ func (r Rail) Warnf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.WarnLevel) {
 		return
 	}
-	format = appendErrStack(format, args...)
+	format = appendErrStack(true, format, args...)
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Warn(format)
 }
@@ -120,7 +122,7 @@ func (r Rail) Errorf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
 		return
 	}
-	format = appendErrStack(format, args...)
+	format = appendErrStack(true, format, args...)
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 		Error(format)
 }
@@ -171,7 +173,7 @@ func (r Rail) Warn(args ...interface{}) {
 	}
 	if len(args) == 1 {
 		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(v.Error(), v)
+			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 				Warn(msgWithStack)
 			return
@@ -187,7 +189,7 @@ func (r Rail) Error(args ...interface{}) {
 	}
 	if len(args) == 1 {
 		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(v.Error(), v)
+			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: getCallerFn()}).
 				Error(msgWithStack)
 			return

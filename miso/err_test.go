@@ -140,4 +140,7 @@ func TestWrapErr(t *testing.T) {
 
 	wrp2 := WrapErr(errors.New("oh no"))
 	Errorf("wrp2: %v", wrp2)
+
+	wrp3 := UnknownErr(errors.New("oh no"))
+	Errorf("wrp3: %v", wrp3)
 }
