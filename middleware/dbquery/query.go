@@ -294,6 +294,13 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 	return q
 }
 
+func (q *Query) Create(v any) (rowsAffected int64, err error) {
+	tx := q.tx.Create(v)
+	rowsAffected = tx.RowsAffected
+	err = tx.Error
+	return
+}
+
 func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
