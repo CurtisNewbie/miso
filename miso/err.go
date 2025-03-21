@@ -30,9 +30,6 @@ var (
 
 var (
 	Errf = NewErrf
-
-	// deprecated: change to UnknownErr() instead
-	WrapErr = UnknownErr
 )
 
 // Check if the error represents None
@@ -178,7 +175,7 @@ func (e *MisoErr) Unwrap() error {
 	return e.err
 }
 
-// Create new MisoErr with message.
+// Create new *MisoErr with message.
 func NewErrf(msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
@@ -188,7 +185,7 @@ func NewErrf(msg string, args ...any) *MisoErr {
 	return me
 }
 
-// Create new MisoErr with message and error code.
+// Create new *MisoErr with message and error code.
 func ErrfCode(code string, msg string, args ...any) *MisoErr {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
@@ -198,7 +195,7 @@ func ErrfCode(code string, msg string, args ...any) *MisoErr {
 	return me
 }
 
-// Wrap an error to create new MisoErr without any extra context.
+// Wrap an error to create new *MisoErr without any extra context.
 //
 // This is almost equivalent to ErrUnknownError.Wrap(err)
 //
@@ -213,6 +210,21 @@ func UnknownErr(err error) error {
 		return me
 	}
 	return ErrUnknownError.Wrap(err)
+}
+
+// Wrap an error to create new *MisoErr with stacktrace.
+//
+// If err is nil, nil is returned.
+//
+// If err is *MisoErr, err is returned directly.
+func WrapErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if me, ok := err.(*MisoErr); ok {
+		return me
+	}
+	return WrapErrfCode(err, "", "")
 }
 
 // Equivalent to ErrUnknownError.Wrapf(..).

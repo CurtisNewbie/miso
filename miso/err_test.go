@@ -121,3 +121,23 @@ func TestWrapMisoErr(t *testing.T) {
 	wrp2 := UnknownErr(errors.New("oh no"))
 	Errorf("wrp2: %v", wrp2)
 }
+
+func TestWrapErr(t *testing.T) {
+	me := ErrfCode("xxxx", "something is wrong")
+	wrp := WrapErr(me)
+	if wrp == nil {
+		t.Fatal("wrp == nil")
+	}
+	Errorf("me: %v", me)
+	Errorf("wrp: %v", wrp)
+	v, ok := wrp.(*MisoErr)
+	if !ok {
+		t.Fatal("wrp is not MisoErr")
+	}
+	if v.Code() != "xxxx" {
+		t.Fatal("wrp is code is different")
+	}
+
+	wrp2 := WrapErr(errors.New("oh no"))
+	Errorf("wrp2: %v", wrp2)
+}
