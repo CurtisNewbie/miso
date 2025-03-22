@@ -180,6 +180,8 @@ func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail miso.Rail
 	SubEventBusQos[T](ep.name, concurrency, ep.qos, func(rail miso.Rail, t T) error {
 		if ep.logPaylod {
 			rail.Infof("Pipeline %s receive %+v", ep.name, t)
+		} else {
+			rail.Infof("Pipeline %s receive event", ep.name)
 		}
 		return listener(rail, t)
 	})
