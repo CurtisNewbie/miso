@@ -671,6 +671,7 @@ func webServerBootstrap(rail Rail) error {
 			RawGet("/symbol", func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) }),
 			RawGet("/trace", func(inb *Inbound) { pprof.Trace(inb.Unwrap()) }),
 		)
+		rail.Infof("Registered /debug/pprof APIs for debugging")
 		if GetPropBool(PropServerPprofAuthEnabled) {
 			bearer := GetPropStr(PropServerPprofAuthBearer)
 			if bearer == "" {

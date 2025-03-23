@@ -201,8 +201,23 @@ func pureGoTypeName(n string) string {
 
 func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 	docs := make([]httpRouteDoc, 0, len(hr))
+	filteredPathPatterns := []string{
+		"/debug/pprof/**",
+		"/doc/api/**",
+	}
 
 	for _, r := range hr {
+		excl := false
+		for _, filtered := range filteredPathPatterns {
+			if util.MatchPath(filtered, r.Url) {
+				excl = true
+				break
+			}
+		}
+		if excl {
+			continue
+		}
+
 		d := httpRouteDoc{
 			Url:         r.Url,
 			Method:      r.Method,

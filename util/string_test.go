@@ -270,6 +270,16 @@ func TestMatchPath(t *testing.T) {
 		t.Fatal("should match")
 	}
 
+	v = MatchPath("/api/**", "/api/")
+	if !v {
+		t.Fatal("should match")
+	}
+
+	v = MatchPath("/api/**", "/api")
+	if !v {
+		t.Fatal("should match")
+	}
+
 	v = MatchPath("/api/**", "/api/dothings/thatthing")
 	if !v {
 		t.Fatal("should match")
