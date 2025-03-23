@@ -216,7 +216,7 @@ func (m *rabbitMqModule) publishJson(c miso.Rail, obj any, exchange string, rout
 func (m *rabbitMqModule) publishJsonHeaders(c miso.Rail, obj any, exchange string, routingKey string, headers map[string]any) error {
 	j, err := json.WriteJson(obj)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message body, %w", err)
+		return miso.WrapErrf(err, "failed to marshal message body")
 	}
 	return m.publishMsg(c, j, exchange, routingKey, "application/json", headers)
 }
@@ -228,7 +228,7 @@ func (m *rabbitMqModule) publishText(c miso.Rail, msg string, exchange string, r
 func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
 	pc, err := m.borrowPubChan()
 	if err != nil {
-		return fmt.Errorf("failed to obtain channel, unable to publish message, %w", err)
+		return miso.WrapErrf(err, "failed to obtain channel, unable to publish message")
 	}
 	defer m.returnPubChan(pc)
 
@@ -251,12 +251,11 @@ func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, ro
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
 		false, false, publishing)
 	if err != nil {
-		return fmt.Errorf("failed to publish message, %w", err)
+		return miso.WrapErrf(err, "failed to publish message")
 	}
 
 	if !confirm.Wait() {
-		return fmt.Errorf("failed to publish message, exchange '%v' probably doesn't exist, %w", exchange,
-			errMsgNotPublished)
+		return miso.WrapErrf(errMsgNotPublished, "failed to publish message, exchange '%v' probably doesn't exist", exchange)
 	}
 
 	c.Debugf("Published MQ to exchange '%v', '%s'", exchange, msg)
@@ -285,7 +284,7 @@ func (m *rabbitMqModule) registerRabbitExchange(e ExchangeRegistration) {
 func (m *rabbitMqModule) declareRabbitQueue(ch *amqp.Channel, queue QueueRegistration) error {
 	dqueue, e := ch.QueueDeclare(queue.Name, queue.Durable, false, false, false, nil)
 	if e != nil {
-		return fmt.Errorf("failed to declare queue, %v, %w", queue.Name, e)
+		return miso.WrapErrf(e, "failed to declare queue, %v", queue.Name)
 	}
 	miso.Debugf("Declared queue '%s'", dqueue.Name)
 	return nil
@@ -302,7 +301,7 @@ func (m *rabbitMqModule) declareRabbitBinding(ch *amqp.Channel, bind BindingRegi
 	}
 	e := ch.QueueBind(bind.Queue, bind.RoutingKey, bind.Exchange, false, nil)
 	if e != nil {
-		return fmt.Errorf("failed to declare binding, queue: %v, routingkey: %v, exchange: %v, %w", bind.Queue, bind.RoutingKey, bind.Exchange, e)
+		return miso.WrapErrf(e, "failed to declare binding, queue: %v, routingkey: %v, exchange: %v", bind.Queue, bind.RoutingKey, bind.Exchange)
 	}
 	miso.Debugf("Declared binding for queue '%s' to exchange '%s' using routingKey '%s'", bind.Queue, bind.Exchange, bind.RoutingKey)
 
@@ -319,7 +318,7 @@ func (m *rabbitMqModule) declareRabbitBinding(ch *amqp.Channel, bind BindingRegi
 		"x-dead-letter-routing-key": bind.RoutingKey,
 	})
 	if e != nil {
-		return fmt.Errorf("failed to declare redeliver queue '%v' for '%v', %w", rq, bind.Queue, e)
+		return miso.WrapErrf(e, "failed to declare redeliver queue '%v' for '%v'", rq, bind.Queue)
 	}
 	m.redeliverQueueMap.Store(rqueue, true) // remember this redeliver queue
 	miso.Debugf("Declared redeliver queue '%s' for '%v'", rq.Name, bind.Queue)
@@ -334,7 +333,7 @@ func (m *rabbitMqModule) declareRabbitExchange(ch *amqp.Channel, exchange Exchan
 
 	e := ch.ExchangeDeclare(exchange.Name, exchange.Kind, exchange.Durable, false, false, false, exchange.Properties)
 	if e != nil {
-		return fmt.Errorf("failed to declare exchange, %v, %w", exchange.Name, e)
+		return miso.WrapErrf(e, "failed to declare exchange, %v", exchange.Name)
 	}
 	miso.Debugf("Declared %s exchange '%s'", exchange.Kind, exchange.Name)
 	return nil
@@ -492,7 +491,7 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (notifyCloseChan chan 
 	ch, err := conn.Channel()
 	if err != nil {
 		rail.Errorf("Failed to open RabbitMQ channel for components declaration, %v", err)
-		err = fmt.Errorf("failed to create channel, %w", err)
+		err = miso.WrapErrf(err, "failed to create channel")
 		return
 	}
 	defer ch.Close()
@@ -506,7 +505,7 @@ func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (notifyCloseChan chan 
 	// consumers
 	if err = m.startRabbitConsumers(rail, conn); err != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", err)
-		err = fmt.Errorf("failed to create consumer, %w", err)
+		err = miso.WrapErrf(err, "failed to create consumer")
 		return
 	}
 
@@ -618,7 +617,7 @@ func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delive
 func (m *rabbitMqModule) borrowPubChan() (*amqp.Channel, error) {
 	ch := m.pubChanPool.Get()
 	if ch == nil {
-		return nil, errors.New("could not create new RabbitMQ channel")
+		return nil, miso.NewErrf("could not create new RabbitMQ channel")
 	}
 
 	ach := ch.(*amqp.Channel)
@@ -627,7 +626,7 @@ func (m *rabbitMqModule) borrowPubChan() (*amqp.Channel, error) {
 		ach = ch.(*amqp.Channel)
 
 		if ach == nil { // still unable to create a new channel, the connection may be broken
-			return nil, errors.New("could not create new RabbitMQ channel")
+			return nil, miso.NewErrf("could not create new RabbitMQ channel")
 		}
 	}
 	return ach, nil
@@ -649,11 +648,11 @@ func (m *rabbitMqModule) returnPubChan(ch *amqp.Channel) {
 func (m *rabbitMqModule) newPubChan() (*amqp.Channel, error) {
 	newChan, err := m.newChan()
 	if err != nil {
-		return nil, fmt.Errorf("could not create new RabbitMQ channel, %w", err)
+		return nil, miso.WrapErrf(err, "could not create new RabbitMQ channel")
 	}
 
 	if err = newChan.Confirm(false); err != nil {
-		return nil, fmt.Errorf("channel could not be put into confirm mode, %w", err)
+		return nil, miso.WrapErrf(err, "channel could not be put into confirm mode")
 	}
 
 	miso.Debugf("Created new RabbitMQ publishing channel")
@@ -665,7 +664,7 @@ func (m *rabbitMqModule) newChan() (*amqp.Channel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.conn == nil {
-		return nil, errors.New("rabbitmq connection is missing")
+		return nil, miso.NewErrf("rabbitmq connection is missing")
 	}
 	return m.conn.Channel()
 }
@@ -673,7 +672,7 @@ func (m *rabbitMqModule) newChan() (*amqp.Channel, error) {
 func rabbitBootstrap(rail miso.Rail) error {
 	m := module()
 	if e := m.startClient(rail); e != nil {
-		return fmt.Errorf("failed to establish connection to RabbitMQ, %w", e)
+		return miso.WrapErrf(e, "failed to establish connection to RabbitMQ")
 	}
 	miso.AddShutdownHook(func() {
 		if err := m.close(miso.EmptyRail()); err != nil {
@@ -733,7 +732,7 @@ func (w wrappingListener) Handle(rail miso.Rail, payload string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			util.PanicLog("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
-			err = fmt.Errorf("listener panic recovered, %v", v)
+			err = miso.NewErrf("listener panic recovered, %v", v)
 		}
 	}()
 
@@ -758,7 +757,7 @@ func (w wrappingListener) String() string {
 
 func newWrappingListener(l RabbitListener) RabbitListener {
 	if l == nil {
-		panic(fmt.Errorf("RabbitListener is nil, unable to wrappingListener"))
+		panic(miso.NewErrf("RabbitListener is nil, unable to create wrappingListener"))
 	}
 	return wrappingListener{
 		delegate: l,

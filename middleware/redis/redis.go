@@ -171,7 +171,7 @@ func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 func redisBootstrap(rail miso.Rail) error {
 	m := module()
 	if _, e := m.initFromProp(rail); e != nil {
-		return fmt.Errorf("failed to establish connection to Redis, %w", e)
+		return miso.WrapErrf(e, "failed to establish connection to Redis")
 	}
 	m.addHealthIndicator()
 	return nil
