@@ -67,6 +67,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.pprof.auth.enabled                    | enable bearer authentication for pprof endpoints                                                                          | false         |
 | server.pprof.auth.bearer                     | bearer token for pprof endpoints' authentication                                                                          |               |
 | server.generate-endpoint-doc.enabled         | generate endpoint documentation                                                                                           | true          |
+| server.generate-endpoint-doc.web.enabled     | build webpage for the generated endpoint documentation                                                                    | true          |
 | server.generate-endpoint-doc.file            | generate markdown endpoint documentation and save the doc to the specified file                                           |               |
 | server.generate-endpoint-doc.path-prefix-app | whether the generated endpoint documentation should include app name as the path prefix                                   | true          |
 | server.request.mapping.header                | automatically map header values to request struct                                                                         | true          |

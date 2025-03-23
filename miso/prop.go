@@ -64,6 +64,7 @@ const (
 	PropServerPprofAuthEnabled              = "server.pprof.auth.enabled"
 	PropServerPprofAuthBearer               = "server.pprof.auth.bearer"
 	PropServerGenerateEndpointDocEnabled    = "server.generate-endpoint-doc.enabled"
+	PropServerGenerateEndpointDocApiEnabled = "server.generate-endpoint-doc.web.enabled"
 	PropServerGenerateEndpointDocFile       = "server.generate-endpoint-doc.file"
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
 	PropServerRequestAutoMapHeader          = "server.request.mapping.header"

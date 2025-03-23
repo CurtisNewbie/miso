@@ -704,10 +704,8 @@ func webServerBootstrap(rail Rail) error {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
-	if !IsProdMode() {
-		if err := serveApiDocTmpl(rail); err != nil {
-			rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
-		}
+	if err := serveApiDocTmpl(rail); err != nil {
+		rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
 	}
 
 	// register http routes
