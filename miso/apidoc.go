@@ -261,6 +261,12 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 
 		// miso http TClient
 		d.MisoTClientDemo, _ = genTClientDemo(d)
+		if d.JsonRespGoDef != "" {
+			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
+		}
+		if d.JsonReqGoDef != "" {
+			d.MisoTClientDemo = d.JsonReqGoDef + "\n" + d.MisoTClientDemo
+		}
 
 		docs = append(docs, d)
 	}
@@ -354,12 +360,6 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteRune('\n')
 			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
 			b.WriteString(util.Spaces(2) + "```go\n")
-			if r.JsonReqGoDef != "" {
-				b.WriteString(util.SAddLineIndent(r.JsonReqGoDef+"\n", util.Spaces(2)))
-			}
-			if r.JsonRespGoDef != "" {
-				b.WriteString(util.SAddLineIndent(r.JsonRespGoDef+"\n", util.Spaces(2)))
-			}
 			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(2)))
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
