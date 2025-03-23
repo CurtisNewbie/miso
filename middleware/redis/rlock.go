@@ -44,7 +44,7 @@ func RLockRun[T any](rail miso.Rail, key string, runnable LRunnable[T]) (T, erro
 
 	lock := NewRLock(rail, key)
 	if err := lock.Lock(); err != nil {
-		return t, fmt.Errorf("failed to obtain lock, key: %v, %w", key, err)
+		return t, miso.WrapErrf(err, "failed to obtain lock, key: %v", key)
 	}
 	defer lock.Unlock()
 
@@ -81,7 +81,7 @@ type RLockConfig struct {
 	//
 	// This is not an exact configuration. Linear back off strategy is used with a window size of 5ms, which means RLock will attempt to acquire the lock every 5ms.
 	//
-	// The number of times we may attempt to acquire the lock is called steps, which is by default 200 (that's 1s = 200 * 5ms).
+	// The number of times we may attempt to acquire the lock is called steps, which is by default 600 (that's 30s = 600 * 5ms).
 	// When BackoffDuration is provided, this duration is divided by 5ms to convert to steps and then used by RLock.
 	BackoffDuration time.Duration
 }
@@ -118,6 +118,17 @@ func NewCustomRLock(rail miso.Rail, key string, config RLockConfig) *RLock {
 	return &r
 }
 
+func (r *RLock) TryLock() (locked bool, err error) {
+	err = r.Lock()
+	if err != nil {
+		if errors.Is(err, redislock.ErrNotObtained) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // Acquire lock.
 func (r *RLock) Lock() error {
 	rlocker := ObtainRLocker()
@@ -125,7 +136,7 @@ func (r *RLock) Lock() error {
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to obtain lock, key: %v, %w", r.key, err)
+		return miso.WrapErrf(err, "failed to obtain lock, key: %v", r.key)
 	}
 	r.lock = lock
 	r.rail.Debugf("Obtained lock for key '%s'", r.key)

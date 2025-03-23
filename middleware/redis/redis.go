@@ -94,7 +94,7 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 
 	cmd := rdb.Ping()
 	if cmd.Err() != nil {
-		return nil, fmt.Errorf("ping redis failed, %w", cmd.Err())
+		return nil, miso.WrapErrf(cmd.Err(), "ping redis failed")
 	}
 
 	rail.Info("Redis connection initialized")
