@@ -1,6 +1,6 @@
 # Tracing
 
-Tracing in golang must be hardcoded. Trace info are passed around in infrastructure and application code. This is mainly achieved using `context.Context`. In miso, we don't pass around `context.Context` explictly, instead we pass around `miso.Rail`, a `context.Context` value is stored in `miso.Rail` though.
+Tracing in golang must be hardcoded. Trace info are passed around in infrastructure and application code. This is mainly achieved using `context.Context`. In miso, we don't pass around `context.Context` explicitly, instead we pass around `miso.Rail`, a `context.Context` value is stored in `miso.Rail` though.
 
 It's very common to write code like the following when using miso:
 
