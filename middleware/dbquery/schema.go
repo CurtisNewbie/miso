@@ -23,7 +23,7 @@ func InitSchema(rail miso.Rail, initSchemaSegments []string, getDB func() *gorm.
 
 type ConditionalSchemaSegment struct {
 	Script    string
-	Condition func(*gorm.DB) (ok bool) // considered true if Condition is nil
+	Condition func(*gorm.DB) (ok bool, err error) // considered true if Condition is nil
 }
 
 func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSchemaSegment, getDB func() *gorm.DB) error {
@@ -32,8 +32,12 @@ func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSc
 	db := getDB()
 	for _, seg := range conditionalSegments {
 		var ok bool = true
+		var err error = nil
 		if seg.Condition != nil {
-			ok = seg.Condition(db)
+			ok, err = seg.Condition(db)
+			if err != nil {
+				return miso.WrapErrf(err, "Failed to execute Condition func")
+			}
 		}
 		if ok {
 			if err := db.Exec(seg.Script).Error; err != nil {
