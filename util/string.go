@@ -296,3 +296,12 @@ func MatchPath(pattern, s string) bool {
 	}
 	return ok
 }
+
+func ContainsAnyStr(s string, substrings ...string) bool {
+	for _, sub := range substrings {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
+}
