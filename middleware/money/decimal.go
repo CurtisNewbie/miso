@@ -201,8 +201,11 @@ func (et *Amt) Scan(value interface{}) error {
 			return et.SetString("0")
 		}
 		return et.SetString(v)
-	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
+	case int, int64, int32, int16, *int, *int64, *int32, *int16:
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
+		return et.SetString(cast.ToString(val))
+	case uint, uint64, uint32, uint16, *uint, *uint64, *uint32, *uint16:
+		val := reflect.Indirect(reflect.ValueOf(v)).Uint()
 		return et.SetString(cast.ToString(val))
 	case float32, float64, *float32, *float64:
 		val := reflect.Indirect(reflect.ValueOf(v)).Float()
