@@ -37,9 +37,9 @@ func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSc
 		}
 		if ok {
 			if err := db.Exec(seg.Script).Error; err != nil {
-				return miso.UnknownErrf(err, "Failed to executed '%v'", seg)
+				return miso.UnknownErrf(err, "Failed to executed '%v'", seg.Script)
 			}
-			rail.Debugf("Executed: '%v'", seg)
+			rail.Debugf("Executed: '%v'", seg.Script)
 		}
 	}
 	rail.Infof("Schema initialized, took: %v", time.Since(start))
