@@ -24,6 +24,7 @@ func InitSchema(rail miso.Rail, initSchemaSegments []string, getDB func() *gorm.
 type ConditionalSchemaSegment struct {
 	Script    string
 	Condition func(*gorm.DB) (ok bool, err error) // considered true if Condition is nil
+	AfterExec func(*gorm.DB) error                // can be nil, called when script is executed without error
 }
 
 func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSchemaSegment, getDB func() *gorm.DB) error {
@@ -36,14 +37,20 @@ func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSc
 		if seg.Condition != nil {
 			ok, err = seg.Condition(db)
 			if err != nil {
-				return miso.WrapErrf(err, "Failed to execute Condition func")
+				return miso.WrapErrf(err, "failed to execute Condition func")
 			}
 		}
 		if ok {
 			if err := db.Exec(seg.Script).Error; err != nil {
-				return miso.UnknownErrf(err, "Failed to executed '%v'", seg.Script)
+				return miso.WrapErrf(err, "failed to executed '%v'", seg.Script)
 			}
 			rail.Debugf("Executed: '%v'", seg.Script)
+
+			if seg.AfterExec != nil {
+				if err := seg.AfterExec(db); err != nil {
+					return miso.WrapErrf(err, "failed to call AfterExec for script '%v'", seg.Script)
+				}
+			}
 		}
 	}
 	rail.Infof("Schema initialized, took: %v", time.Since(start))
