@@ -86,6 +86,12 @@ func TestAmt(t *testing.T) {
 	}
 	t.Logf("amt: %v", amt)
 
+	err = amt.Scan(uint(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("amt: %v", amt)
+
 	err = amt.Scan("")
 	if err != nil {
 		t.Fatal(err)
