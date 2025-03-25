@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/go-co-op/gocron"
 )
 
@@ -63,7 +64,8 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	var err error
 	s := m.scheduler
 
-	wrappedJob := func() {
+	wrappedJob := util.PanicSafeFunc(func() {
+
 		rail := EmptyRail()
 
 		inf := JobInf{
@@ -101,7 +103,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 				}
 			}
 		}
-	}
+	})
 
 	if job.CronWithSeconds {
 		_, err = s.CronWithSeconds(job.Cron).Tag(job.Name).Do(wrappedJob)
