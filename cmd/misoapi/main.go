@@ -42,8 +42,7 @@ const (
 	tagQueryDocV2    = "query"
 	tagHeaderDocV2   = "header"
 	tagNgTable       = "ngtable"
-	tagConfigDesc    = "config-desc"
-	tagConfigDefault = "config-default"
+	tagConfig        = "config"
 	tagConfigSection = "config-section"
 )
 
@@ -606,9 +605,13 @@ type MisoApiTag struct {
 }
 
 func (m *MisoApiTag) BodyKV() (Pair, bool) {
-	i := strings.Index(m.Body, ":")
+	return m.BodyKVTok(":")
+}
+
+func (m *MisoApiTag) BodyKVTok(tok string) (Pair, bool) {
+	i := strings.Index(m.Body, tok)
 	if i < 0 {
-		return Pair{}, false
+		return Pair{K: m.Body}, false
 	}
 	return Pair{
 		K: strings.TrimSpace(m.Body[:i]),
@@ -791,12 +794,11 @@ func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, con
 		var cd ConfigDecl = ConfigDecl{}
 		for _, t := range tags {
 			switch t.Command {
-			case tagConfigDesc:
+			case tagConfig:
 				found = true
-				cd.Description = t.Body
-			case tagConfigDefault:
-				found = true
-				cd.DefaultValue = t.Body
+				p, _ := t.BodyKVTok("|")
+				cd.Description = p.K
+				cd.DefaultValue = p.V
 			}
 		}
 
