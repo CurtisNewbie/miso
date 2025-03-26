@@ -1,6 +1,7 @@
 package miso
 
 const (
+
 	// whether production mode is turned on (true/false)
 	PropProdMode = "mode.production"
 
@@ -83,21 +84,6 @@ const (
 	/*
 		------------------------------------
 
-		Prop for Logging
-
-		------------------------------------
-	*/
-
-	PropLoggingLevel                  = "logging.level"
-	PropLoggingRollingFile            = "logging.rolling.file"
-	PropLoggingRollingFileMaxAge      = "logging.file.max-age"
-	PropLoggingRollingFileMaxSize     = "logging.file.max-size"
-	PropLoggingRollingFileMaxBackups  = "logging.file.max-backups"
-	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
-
-	/*
-		------------------------------------
-
 		Prop for Metrics & Prometheus
 
 		------------------------------------
@@ -119,4 +105,26 @@ const (
 	*/
 
 	PropConfigExtraFiles = "config.extra.files"
+)
+
+// misoapi-config-section: Logging Configuration
+const (
+
+	// misoapi-config: log level | info
+	PropLoggingLevel = "logging.level"
+
+	// misoapi-config: path to rolling log file
+	PropLoggingRollingFile = "logging.rolling.file"
+
+	// misoapi-config: max age of log files in days | 0 (files are retained forever)
+	PropLoggingRollingFileMaxAge = "logging.file.max-age"
+
+	// misoapi-config: max size of each log file (in mb) | 50
+	PropLoggingRollingFileMaxSize = "logging.file.max-size"
+
+	// misoapi-config: max number of backup log files | 10
+	PropLoggingRollingFileMaxBackups = "logging.file.max-backups"
+
+	// misoapi-config: rotate log file at every day 00:00 (local) | true
+	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 )
