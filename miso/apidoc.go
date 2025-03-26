@@ -546,6 +546,10 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			typeName = originTypeName
 		}
 
+		jsonTag := f.Tag.Get("json")
+		if jsonTag == "" {
+			jsonTag = jsonName
+		}
 		jd := FieldDesc{
 			FieldName:             f.Name,
 			Name:                  jsonName,
@@ -554,7 +558,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			OriginTypeName:        originTypeName,
 			OriginTypeNameWithPkg: f.Type.String(),
 			Desc:                  getTagDesc(f.Tag),
-			JsonTag:               f.Tag.Get("json"),
+			JsonTag:               jsonTag,
 			Fields:                []FieldDesc{},
 		}
 
