@@ -158,7 +158,9 @@ func parseFiles(files []FsFile) error {
 	}
 
 	util.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
-	printConfigTable(configDecl)
+	if *ConfigTable {
+		printConfigTable(configDecl)
+	}
 
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
