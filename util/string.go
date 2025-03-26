@@ -255,6 +255,23 @@ func PadSpace(n int, s string) string {
 	return strings.Repeat(" ", pad) + s
 }
 
+func PadToken(n int, s string, tok string) string {
+	r := []rune(s)
+	rl := len(r)
+	an := n
+	if n < 0 {
+		an = n * -1
+	}
+	if len(r) >= an {
+		return s
+	}
+	pad := an - rl
+	if n < 0 {
+		return s + strings.Repeat(tok, pad)
+	}
+	return strings.Repeat(tok, pad) + s
+}
+
 // Splist kv pair. Returns false if token is not found or key is absent.
 func SplitKV(s string, token string) (string, string, bool) {
 	tokens := strings.SplitN(s, token, 2)
@@ -304,4 +321,15 @@ func ContainsAnyStr(s string, substrings ...string) bool {
 		}
 	}
 	return false
+}
+
+func UnquoteStr(s string) string {
+	ru := []rune(s)
+	if len(ru) < 2 {
+		return s
+	}
+	if ru[0] == '"' && ru[len(ru)-1] == '"' {
+		return string(ru[1 : len(ru)-1])
+	}
+	return s
 }

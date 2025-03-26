@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path"
@@ -32,15 +33,18 @@ const (
 	importGorm       = "gorm.io/gorm"
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 
-	tagHttp        = "http"
-	tagDesc        = "desc"
-	tagScope       = "scope"
-	tagRes         = "resource"
-	tagQueryDocV1  = "query-doc"
-	tagHeaderDocV1 = "header-doc"
-	tagQueryDocV2  = "query"
-	tagHeaderDocV2 = "header"
-	tagNgTable     = "ngtable"
+	tagHttp          = "http"
+	tagDesc          = "desc"
+	tagScope         = "scope"
+	tagRes           = "resource"
+	tagQueryDocV1    = "query-doc"
+	tagHeaderDocV1   = "header-doc"
+	tagQueryDocV2    = "query"
+	tagHeaderDocV2   = "header"
+	tagNgTable       = "ngtable"
+	tagConfigDesc    = "config-desc"
+	tagConfigDefault = "config-default"
+	tagConfigSection = "config-section"
 )
 
 var (
@@ -49,7 +53,8 @@ var (
 )
 
 var (
-	Debug = flag.Bool("debug", false, "Enable debug log")
+	Debug       = flag.Bool("debug", false, "Enable debug log")
+	ConfigTable = flag.Bool("config-table", false, "Generate config table")
 )
 
 func init() {
@@ -128,13 +133,21 @@ func parseFiles(files []FsFile) error {
 		}
 	}
 
+	configDecl := map[string]ConfigSection{}
+	var section string
 	for _, df := range dstFiles {
 		importSepc := map[string]string{}
 		dstutil.Apply(df.Dst,
 			func(c *dstutil.Cursor) bool {
+				// parse api declaration
 				ad, imports, ok := parseApiDecl(c, df.Path, importSepc)
 				if ok {
 					addApiDecl(df.Path, df.Dst.Name.Name, ad, imports)
+				}
+
+				// parse config declaration
+				if ns := parseConfigDecl(c, df.Path, section, configDecl); ns != "" {
+					section = ns
 				}
 				return true
 			},
@@ -143,6 +156,9 @@ func parseFiles(files []FsFile) error {
 			},
 		)
 	}
+
+	util.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
+	printConfigTable(configDecl)
 
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
@@ -734,4 +750,117 @@ func parseRef(r string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(s[1]), true
+}
+
+type ConfigSection = []ConfigDecl
+type ConfigDecl struct {
+	Name         string
+	Description  string
+	DefaultValue string
+}
+
+func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, configs map[string]ConfigSection) (newSection string) {
+
+	switch n := cursor.Node().(type) {
+	case *dst.GenDecl:
+		comment := n.Decs.Start
+		tags, ok := parseMisoApiTag(srcPath, comment)
+		if !ok {
+			return section
+		}
+		for _, t := range tags {
+			if t.Command == tagConfigSection {
+				section = t.Body
+			}
+		}
+	case *dst.ValueSpec:
+		comment := n.Decs.Start
+		tags, ok := parseMisoApiTag(srcPath, comment)
+		if !ok {
+			return section
+		}
+
+		var constName string
+		for _, n := range n.Names {
+			constName = n.Name
+		}
+
+		var found bool = false
+		var cd ConfigDecl = ConfigDecl{}
+		for _, t := range tags {
+			switch t.Command {
+			case tagConfigDesc:
+				found = true
+				cd.Description = t.Body
+			case tagConfigDefault:
+				found = true
+				cd.DefaultValue = t.Body
+			}
+		}
+
+		if !found {
+			return section
+		}
+
+		for _, v := range n.Values {
+			if bl, ok := v.(*dst.BasicLit); ok && bl.Kind == token.STRING {
+				cd.Name = util.UnquoteStr(bl.Value)
+			}
+		}
+		if cd.Name == "" {
+			return section
+		}
+		util.DebugPrintlnf(*Debug, "parseConfigDecl() %v: (%v) %v -> %#v", srcPath, section, constName, cd)
+		sec := section
+		if sec == "" {
+			sec = "General"
+		}
+		configs[sec] = append(configs[sec], cd)
+	}
+	return section
+}
+
+func printConfigTable(configs map[string][]ConfigDecl) {
+	if len(configs) < 1 {
+		return
+	}
+	defer println("")
+	util.Printlnf("# Configurations\n")
+	for sec, l := range configs {
+		if len(l) < 1 {
+			continue
+		}
+		maxNameLen := len("property")
+		maxDescLen := len("description")
+		maxValLen := len("default value")
+		for _, c := range l {
+			if len(c.Name) > maxNameLen {
+				maxNameLen = len(c.Name)
+			}
+			if len(c.Description) > maxDescLen {
+				maxDescLen = len(c.Description)
+			}
+			if len(c.DefaultValue) > maxValLen {
+				maxValLen = len(c.DefaultValue)
+			}
+		}
+
+		util.Printlnf("## %v\n", sec)
+		println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
+			"Name":         util.PadSpace(-maxNameLen, "property"),
+			"Description":  util.PadSpace(-maxDescLen, "description"),
+			"DefaultValue": util.PadSpace(-maxValLen, "default value"),
+		}))
+		println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
+			"Name":         util.PadToken(-maxNameLen, "---", "-"),
+			"Description":  util.PadToken(-maxDescLen, "---", "-"),
+			"DefaultValue": util.PadToken(-maxValLen, "---", "-"),
+		}))
+		for _, c := range l {
+			c.Name = util.PadSpace(-maxNameLen, c.Name)
+			c.Description = util.PadSpace(-maxDescLen, c.Description)
+			c.DefaultValue = util.PadSpace(-maxValLen, c.DefaultValue)
+			println(util.NamedSprintfv("| ${Name} | ${Description} | ${DefaultValue} |", c))
+		}
+	}
 }
