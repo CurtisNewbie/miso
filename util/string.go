@@ -333,3 +333,12 @@ func UnquoteStr(s string) string {
 	}
 	return s
 }
+
+func EqualAnyStr(s string, canditates ...string) bool {
+	for _, c := range canditates {
+		if s == c {
+			return true
+		}
+	}
+	return false
+}
