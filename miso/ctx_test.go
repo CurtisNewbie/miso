@@ -42,15 +42,15 @@ func TestRailIsDone(t *testing.T) {
 
 func TestRailErrorIf(t *testing.T) {
 	r := EmptyRail()
-	r.ErrorIf("Create file", nil)
-	r.ErrorIf("Delete file, file_id: %v", errors.New("file not found"), "ABC123")
+	r.ErrorIf(nil, "Create file")
+	r.ErrorIf(errors.New("file not found"), "Delete file, file_id: %v", "ABC123")
 }
 
 func TestRailWarnIf(t *testing.T) {
 	r := EmptyRail()
-	r.WarnIf("Create file", nil)
-	r.WarnIf("Delete file failed, file_id: %v", errors.New("file not found"), "ABC123")
-	r.WarnIf("Delete file failed, file_id: %v", fmt.Errorf("failed to delete file, %w", errors.New("file not found")), "ABC123")
+	r.WarnIf(nil, "Create file")
+	r.WarnIf(errors.New("file not found"), "Delete file failed, file_id: %v", "ABC123")
+	r.WarnIf(fmt.Errorf("failed to delete file, %w", errors.New("file not found")), "Delete file failed, file_id: %v", "ABC123")
 }
 
 func TestErrorfStackTrace(t *testing.T) {

@@ -14,13 +14,13 @@ type Rail struct {
 	ctx context.Context
 }
 
-func (r Rail) ErrorIf(op string, err error, args ...any) {
+func (r Rail) ErrorIf(err error, op string, args ...any) {
 	if err != nil {
 		r.Errorf(fmt.Sprintf("%v - %v, %v", getCallerFn(), op, err), args...)
 	}
 }
 
-func (r Rail) WarnIf(op string, err error, args ...any) {
+func (r Rail) WarnIf(err error, op string, args ...any) {
 	if err != nil {
 		r.Warnf(fmt.Sprintf("%v - %v, %v", getCallerFn(), op, err), args...)
 	}
