@@ -832,7 +832,6 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	if len(configs) < 1 {
 		return
 	}
-	defer println("")
 
 	sb := util.SLPinter{}
 	sb.Printlnf("# Configurations")
@@ -909,9 +908,11 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 
 		f.Seek(0, io.SeekStart)
 		f.Truncate(0)
-		f.WriteString(out)
-	} else {
-		print(sb.String())
+		if _, err := f.WriteString(out); err != nil {
+			util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
+		} else {
+			util.Printlnf("Generated config table to %v", f.Name())
+		}
 	}
 }
 
