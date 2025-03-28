@@ -19,6 +19,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.14.0
+	github.com/tmaxmax/go-sse v0.10.0
 	golang.org/x/text v0.16.0
 	gopkg.in/inf.v0 v0.9.1
 	gorm.io/driver/mysql v1.3.6

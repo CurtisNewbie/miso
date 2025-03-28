@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/cast"
+	"github.com/tmaxmax/go-sse"
 )
 
 const (
@@ -142,6 +143,37 @@ func (tr *TResponse) Json(ptr any) error {
 		return UnknownErrf(e, "failed to unmarshal json from response, body: %v", s)
 	}
 	return nil
+}
+
+func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error)) error {
+	if tr.Err != nil {
+		return tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return NoneErr
+	}
+	defer tr.Close()
+
+	onEvent := sse.Read(tr.Resp.Body, nil)
+	onEvent(func(ev sse.Event, err error) bool {
+		tr.Rail.Debugf("Received sse event: %#v", ev)
+		if err != nil {
+			tr.Err = WrapErr(err)
+			tr.Rail.Errorf("Read SSE events failed, %v", tr.Err)
+			return false
+		}
+
+		stop, err := parse(ev)
+		if err != nil {
+			tr.Err = WrapErr(err)
+			tr.Rail.Errorf("Parse SSE events failed, %v", tr.Err)
+			return false
+		}
+
+		return !stop
+	})
+
+	return tr.Err
 }
 
 // Is status code 2xx
