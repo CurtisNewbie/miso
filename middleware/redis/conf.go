@@ -20,7 +20,7 @@ const (
 	// misoapi-config: password
 	PropRedisPassword = "redis.password"
 
-	// misoapi-config: 0
+	// misoapi-config: database | 0
 	PropRedisDatabase = "redis.database"
 )
 

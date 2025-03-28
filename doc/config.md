@@ -144,7 +144,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | redis.port     | Redis server port   | 6379          |
 | redis.username | username            |               |
 | redis.password | password            |               |
-| redis.database | 0                   |               |
+| redis.database | database            | 0             |
 
 ## SQLite Configuration
 
