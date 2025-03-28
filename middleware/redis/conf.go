@@ -2,19 +2,25 @@ package redis
 
 import "github.com/curtisnewbie/miso/miso"
 
+// misoapi-config-section: Redis Configuration
 const (
-	/*
-		------------------------------------
 
-		Prop for Redis
+	// misoapi-config: enable Redis client | false
+	PropRedisEnabled = "redis.enabled"
 
-		------------------------------------
-	*/
-	PropRedisEnabled  = "redis.enabled"
-	PropRedisAddress  = "redis.address"
-	PropRedisPort     = "redis.port"
+	// misoapi-config: Redis server host | `localhost`
+	PropRedisAddress = "redis.address"
+
+	// misoapi-config: Redis server port | 6379
+	PropRedisPort = "redis.port"
+
+	// misoapi-config: username
 	PropRedisUsername = "redis.username"
+
+	// misoapi-config: password
 	PropRedisPassword = "redis.password"
+
+	// misoapi-config: 0
 	PropRedisDatabase = "redis.database"
 )
 

@@ -2,23 +2,37 @@ package mysql
 
 import "github.com/curtisnewbie/miso/miso"
 
+// misoapi-config-section: MySQL Configuration
 const (
-	/*
-		------------------------------------
 
-		Prop for MySQL
+	// misoapi-config: enable MySQL client | false
+	PropMySQLEnabled = "mysql.enabled"
 
-		------------------------------------
-	*/
-	PropMySQLEnabled      = "mysql.enabled"
-	PropMySQLUser         = "mysql.user"
-	PropMySQLPassword     = "mysql.password"
-	PropMySQLSchema       = "mysql.database"
-	PropMySQLHost         = "mysql.host"
-	PropMySQLPort         = "mysql.port"
-	PropMySQLConnParam    = "mysql.connection.parameters"
+	// misoapi-config: username | root
+	PropMySQLUser = "mysql.user"
+
+	// misoapi-config: password
+	PropMySQLPassword = "mysql.password"
+
+	// misoapi-config: database
+	PropMySQLSchema = "mysql.database"
+
+	// misoapi-config: host | `localhost`
+	PropMySQLHost = "mysql.host"
+
+	// misoapi-config: port | 3306
+	PropMySQLPort = "mysql.port"
+
+	// misoapi-config: connection parameters (slices of strings) | "charset=utf8mb4"<br>"parseTime=True"<br>"loc=Local"<br>"readTimeout=30s"<br>"writeTimeout=30s"<br>"timeout=3s"
+	PropMySQLConnParam = "mysql.connection.parameters"
+
+	// misoapi-config: connection lifetime in minutes | 30
 	PropMySQLConnLifetime = "mysql.connection.lifetime"
+
+	// misoapi-config: max number of open connections | 10
 	PropMySQLMaxOpenConns = "mysql.connection.open.max"
+
+	// misoapi-config: max number of idle connections | 10
 	PropMySQLMaxIdleConns = "mysql.connection.idle.max"
 )
 

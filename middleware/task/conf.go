@@ -2,17 +2,14 @@ package task
 
 import "github.com/curtisnewbie/miso/miso"
 
+// misoapi-config-section: Distributed Task Scheduling Configuration
 const (
-	/*
-		------------------------------------
 
-		Prop for distributed task scheduling
-
-		------------------------------------
-	*/
-
+	// misoapi-config: enable distributed task scheduling | true
 	PropTaskSchedulingEnabled = "task.scheduling.enabled"
-	PropTaskSchedulingGroup   = "task.scheduling.group"
+
+	// misoapi-config: name of the cluster | `${app.name}`
+	PropTaskSchedulingGroup = "task.scheduling.group"
 )
 
 func init() {

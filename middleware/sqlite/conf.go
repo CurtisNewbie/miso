@@ -2,9 +2,13 @@ package sqlite
 
 import "github.com/curtisnewbie/miso/miso"
 
-// Configuration properties for SQLite
+// misoapi-config-section: SQLite Configuration
 const (
-	PropSqliteFile       = "sqlite.file"
+
+	// misoapi-config: path to SQLite database file
+	PropSqliteFile = "sqlite.file"
+
+	// misoapi-config: enable WAL mode | true
 	PropSqliteWalEnabled = "sqlite.wal.enabled"
 )
 
