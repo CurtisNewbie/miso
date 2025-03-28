@@ -39,9 +39,6 @@ var (
 )
 
 func init() {
-	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
-	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
-
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:  "BootstrapMetrics",
 		Order: BootstrapOrderL4,

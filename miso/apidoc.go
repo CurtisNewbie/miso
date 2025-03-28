@@ -50,10 +50,6 @@ var (
 )
 
 func init() {
-	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
-	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)
-	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
-
 	PostServerBootstrap(func(rail Rail) error {
 		if !GetPropBool(PropServerGenerateEndpointDocEnabled) {
 			return nil

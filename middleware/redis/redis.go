@@ -14,13 +14,6 @@ const (
 )
 
 func init() {
-	miso.SetDefProp(PropRedisEnabled, false)
-	miso.SetDefProp(PropRedisAddress, "localhost")
-	miso.SetDefProp(PropRedisPort, 6379)
-	miso.SetDefProp(PropRedisUsername, "")
-	miso.SetDefProp(PropRedisPassword, "")
-	miso.SetDefProp(PropRedisDatabase, 0)
-
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap Redis",
 		Bootstrap: redisBootstrap,

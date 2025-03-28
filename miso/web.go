@@ -98,21 +98,6 @@ type HttpRoute struct {
 }
 
 func init() {
-	SetDefProp(PropServerEnabled, true)
-	SetDefProp(PropServerHost, "0.0.0.0")
-	SetDefProp(PropServerPort, 8080)
-	SetDefProp(PropServerPerfEnabled, false)
-	SetDefProp(PropServerPropagateInboundTrace, true)
-	SetDefProp(PropServerRequestValidateEnabled, true)
-	SetDefProp(PropServerPprofEnabled, false)
-	SetDefProp(PropServerRequestAutoMapHeader, true)
-	SetDefProp(PropServerGinValidationDisabled, true)
-
-	SetDefProp(PropLoggingRollingFileMaxAge, 0)
-	SetDefProp(PropLoggingRollingFileMaxSize, 50)
-	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
-	SetDefProp(PropLoggingRollingFileRotateDaily, true)
-
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap HTTP Server",
 		Bootstrap: webServerBootstrap,

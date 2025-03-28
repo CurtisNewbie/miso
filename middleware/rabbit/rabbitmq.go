@@ -53,14 +53,6 @@ var (
 var module = miso.InitAppModuleFunc(newModule)
 
 func init() {
-	miso.SetDefProp(PropRabbitMqEnabled, false)
-	miso.SetDefProp(PropRabbitMqHost, "localhost")
-	miso.SetDefProp(PropRabbitMqPort, 5672)
-	miso.SetDefProp(PropRabbitMqUsername, "guest")
-	miso.SetDefProp(PropRabbitMqPassword, "guest")
-	miso.SetDefProp(PropRabbitMqVhost, "")
-	miso.SetDefProp(PropRabbitMqConsumerQos, DefaultQos)
-
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap RabbitMQ",
 		Bootstrap: rabbitBootstrap,

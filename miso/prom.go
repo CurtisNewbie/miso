@@ -15,9 +15,6 @@ var (
 )
 
 func init() {
-	SetDefProp(PropMetricsEnabled, true)
-	SetDefProp(PropMetricsRoute, "/metrics")
-
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Bootstrap Prometheus",
 		Bootstrap: prometheusBootstrap,

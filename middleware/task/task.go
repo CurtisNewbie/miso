@@ -17,9 +17,6 @@ const (
 )
 
 func init() {
-	miso.SetDefProp(PropTaskSchedulingEnabled, true)
-	miso.SetDefProp(PropTaskSchedulingGroup, "${app.name}")
-
 	// run before SchedulerBootstrap
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap Distributed Task Scheduler",

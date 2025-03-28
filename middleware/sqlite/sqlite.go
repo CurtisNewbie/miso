@@ -11,7 +11,6 @@ import (
 )
 
 func init() {
-	miso.SetDefProp(PropSqliteWalEnabled, true)
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap SQLite",
 		Bootstrap: sqliteBootstrap,

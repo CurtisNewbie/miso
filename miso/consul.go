@@ -59,18 +59,6 @@ type serviceRegistration struct {
 }
 
 func init() {
-	SetDefProp(PropConsulEnabled, false)
-	SetDefProp(PropConsulAddress, "localhost:8500")
-	SetDefProp(PropConsulHealthcheckUrl, "/health")
-	SetDefProp(PropConsulHealthCheckInterval, "5s")
-	SetDefProp(PropConsulHealthcheckTimeout, "3s")
-	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "30m")
-	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
-	SetDefProp(PropConsulFetchServerInterval, 30)
-	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
-	SetDefProp(PropConsulEnableDeregisterUrl, false)
-	SetDefProp(PropConsuleRegisterName, "${app.name}")
-
 	RegisterBootstrapCallback(ComponentBootstrap{
 		Name:      "Boostrap Consul",
 		Bootstrap: consulBootstrap,

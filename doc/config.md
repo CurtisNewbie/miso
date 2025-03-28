@@ -97,6 +97,28 @@ The tables shown below list all configuration that you can tune. You can also re
 | --------------------------- | ---------------------------------------------------------- | ------------- |
 | service-discovery.subscribe | slice of service names that should be subcribed on startup |               |
 
+## Metrics Configuration
+
+| property                        | description                                                              | default value   |
+| ------------------------------- | ------------------------------------------------------------------------ | --------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                               | true            |
+| metrics.route                   | route used to expose collected metrics                                   | /metrics        |
+| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false           |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |                 |
+| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false           |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | `0 */1 * * * *` |
+
+## Logging Configuration
+
+| property                  | description                                | default value                  |
+| ------------------------- | ------------------------------------------ | ------------------------------ |
+| logging.level             | log level                                  | info                           |
+| logging.rolling.file      | path to rolling log file                   |                                |
+| logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
+| logging.file.max-size     | max size of each log file (in mb)          | 50                             |
+| logging.file.max-backups  | max number of backup log files             | 10                             |
+| logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
+
 ## MySQL Configuration
 
 | property                    | description                               | default value                                                                                                   |
@@ -144,17 +166,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | sqlite.file        | path to SQLite database file |               |
 | sqlite.wal.enabled | enable WAL mode              | true          |
 
-## Logging Configuration
-
-| property                  | description                                | default value                  |
-| ------------------------- | ------------------------------------------ | ------------------------------ |
-| logging.level             | log level                                  | info                           |
-| logging.rolling.file      | path to rolling log file                   |                                |
-| logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
-| logging.file.max-size     | max size of each log file (in mb)          | 50                             |
-| logging.file.max-backups  | max number of backup log files             | 10                             |
-| logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
-
 ## Distributed Task Scheduling Configuration
 
 | property                | description                                                    | default value |
@@ -176,17 +187,6 @@ Miso's integration with RabbitMQ supports delayed message redelivery (messages t
 | jwt.key.public  | public key for verifying the JWT token |               |
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
-
-## Metrics Configuration
-
-| property                        | description                                                              | default value   |
-| ------------------------------- | ------------------------------------------------------------------------ | --------------- |
-| metrics.enabled                 | enable metrics collection using prometheus                               | true            |
-| metrics.route                   | route used to expose collected metrics                                   | /metrics        |
-| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false           |
-| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |                 |
-| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false           |
-| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | `0 */1 * * * *` |
 
 ## Yaml Configuration File Example
 

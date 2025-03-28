@@ -19,10 +19,6 @@ var (
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
 )
 
-func init() {
-	SetDefProp(PropProdMode, true)
-}
-
 type AppConfig struct {
 	vp   *viper.Viper
 	rwmu *sync.RWMutex

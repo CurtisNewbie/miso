@@ -43,10 +43,6 @@ var (
 	globalApp *MisoApp = newApp()
 )
 
-func init() {
-	SetDefProp(PropServerGracefulShutdownTimeSec, 0)
-}
-
 type ComponentBootstrap struct {
 	// name of the component.
 	Name string

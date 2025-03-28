@@ -16,25 +16,6 @@ const (
 )
 
 func init() {
-	miso.SetDefProp(PropMySQLEnabled, false)
-	miso.SetDefProp(PropMySQLUser, "root")
-	miso.SetDefProp(PropMySQLPassword, "")
-	miso.SetDefProp(PropMySQLHost, "localhost")
-	miso.SetDefProp(PropMySQLPort, 3306)
-	miso.SetDefProp(PropMySQLConnParam, []string{
-		"charset=utf8mb4",
-		"parseTime=True",
-		"loc=Local",
-		"readTimeout=30s",
-		"writeTimeout=30s",
-		"timeout=3s",
-	})
-	miso.SetDefProp(PropMySQLMaxOpenConns, 10)
-	miso.SetDefProp(PropMySQLMaxIdleConns, 10)
-
-	// Connection max lifetime, hikari recommends 1800000, so we do the same thing (30 minutes)
-	miso.SetDefProp(PropMySQLConnLifetime, 30)
-
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap MySQL",
 		Bootstrap: mysqlBootstrap,
