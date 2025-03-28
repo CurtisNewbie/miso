@@ -136,7 +136,7 @@ func parseFiles(files []FsFile) error {
 		}
 	}
 
-	configDecl := map[string]ConfigSection{}
+	configDecl := map[string][]ConfigDecl{}
 	var section string
 	for _, df := range dstFiles {
 		importSepc := map[string]string{}
@@ -761,14 +761,17 @@ func parseRef(r string) (string, bool) {
 	return strings.TrimSpace(s[1]), true
 }
 
-type ConfigSection = []ConfigDecl
+type ConfigSection struct {
+	Name    string
+	Configs []ConfigDecl
+}
 type ConfigDecl struct {
 	Name         string
 	Description  string
 	DefaultValue string
 }
 
-func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, configs map[string]ConfigSection) (newSection string) {
+func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, configs map[string][]ConfigDecl) (newSection string) {
 
 	switch n := cursor.Node().(type) {
 	case *dst.GenDecl:
@@ -833,16 +836,42 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		return
 	}
 
+	sections := make([]ConfigSection, 0, len(configs))
+	for k, v := range configs {
+		sections = append(sections, ConfigSection{Configs: v, Name: k})
+	}
+	hasPrioritisedKw := func(n string) bool {
+		return util.ContainsAnyStr(n, "Common", "General")
+	}
+	sort.SliceStable(sections, func(i, j int) bool {
+		if hasPrioritisedKw(sections[i].Name) {
+			return true
+		}
+		return strings.Compare(sections[i].Name, sections[j].Name) < 0
+	})
+
+	// find file
+	f, err := findConfigTableFile()
+	if err != nil {
+		util.Printlnf("Failed to find config table file, %v", err)
+	}
+	doEmbed := err == nil && f != nil
+	if doEmbed {
+		defer f.Close()
+	}
+
 	sb := util.SLPinter{}
-	sb.Printlnf("# Configurations")
-	for sec, l := range configs {
-		if len(l) < 1 {
+	if !doEmbed {
+		sb.Printlnf("# Configurations")
+	}
+	for _, sec := range sections {
+		if len(sec.Configs) < 1 {
 			continue
 		}
 		maxNameLen := len("property")
 		maxDescLen := len("description")
 		maxValLen := len("default value")
-		for _, c := range l {
+		for _, c := range sec.Configs {
 			if len(c.Name) > maxNameLen {
 				maxNameLen = len(c.Name)
 			}
@@ -854,7 +883,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			}
 		}
 
-		sb.Printlnf("\n## %v\n", sec)
+		sb.Printlnf("\n## %v\n", sec.Name)
 		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
 			"Name":         util.PadSpace(-maxNameLen, "property"),
 			"Description":  util.PadSpace(-maxDescLen, "description"),
@@ -865,7 +894,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			"Description":  util.PadToken(-maxDescLen, "---", "-"),
 			"DefaultValue": util.PadToken(-maxValLen, "---", "-"),
 		}))
-		for _, c := range l {
+		for _, c := range sec.Configs {
 			c.Name = util.PadSpace(-maxNameLen, c.Name)
 			c.Description = util.PadSpace(-maxDescLen, c.Description)
 			c.DefaultValue = util.PadSpace(-maxValLen, c.DefaultValue)
@@ -873,15 +902,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 	}
 
-	// find file
-	f, err := findConfigTableFile()
-	if err != nil {
-		util.Printlnf("Failed to find config table file, %v", err)
-	}
-
-	if err == nil && f != nil {
-		defer f.Close()
-
+	if doEmbed {
 		// check if we are embedding config table or replacing the whole content
 		out := sb.String()
 
@@ -902,7 +923,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			if startOffset > -1 && endOffset > -1 {
 				before := strings.Join(lines[:startOffset+1], "\n")
 				after := strings.Join(lines[endOffset:], "\n")
-				out = before + "\n\n" + out + "\n\n" + after
+				out = before + "\n" + out + "\n\n" + after
 			}
 		}
 
