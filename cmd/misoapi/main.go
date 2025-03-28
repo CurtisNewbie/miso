@@ -835,7 +835,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	defer println("")
 
 	sb := util.SLPinter{}
-	sb.Printlnf("# Configurations\n")
+	sb.Printlnf("# Configurations")
 	for sec, l := range configs {
 		if len(l) < 1 {
 			continue
@@ -855,7 +855,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			}
 		}
 
-		sb.Printlnf("## %v\n", sec)
+		sb.Printlnf("\n## %v\n", sec)
 		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
 			"Name":         util.PadSpace(-maxNameLen, "property"),
 			"Description":  util.PadSpace(-maxDescLen, "description"),
