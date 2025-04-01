@@ -664,22 +664,14 @@ func webServerBootstrap(rail Rail) error {
 				return Errf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
 			}
 
-			AddInterceptor(func(inb *gin.Context, next func()) {
-				url := inb.Request.RequestURI
-
-				if strings.HasPrefix(url, "/debug/pprof") {
-					r := inb.Request
-					w := inb.Writer
-					token, ok := ParseBearer(inb.GetHeader("Authorization"))
-					if !ok || token != bearer {
-						Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
-						w.WriteHeader(http.StatusUnauthorized)
-						return
-					}
-				}
-
-				next()
-			})
+			AddBearerInterceptor(
+				func(method, url string) bool {
+					return strings.HasPrefix(url, "/debug/pprof")
+				},
+				func() string {
+					return bearer
+				},
+			)
 		}
 	}
 
@@ -1106,4 +1098,24 @@ func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
 		interceptors := newInterceptor(c, f)
 		interceptors.next()
 	}
+}
+
+func AddBearerInterceptor(doIntercept func(method string, url string) bool, bearerToken func() string) {
+	AddInterceptor(func(inb *gin.Context, next func()) {
+		url := inb.Request.RequestURI
+		method := inb.Request.Method
+
+		if doIntercept(method, url) {
+			bearer := bearerToken()
+			r := inb.Request
+			w := inb.Writer
+			token, ok := ParseBearer(inb.GetHeader("Authorization"))
+			if !ok || token != bearer {
+				Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+		next()
+	})
 }
