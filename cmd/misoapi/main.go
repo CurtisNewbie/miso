@@ -929,7 +929,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	}
 
 	if !doEmbed {
-		out = "# Configurations\n" + out
+		out = "# Configurations\n\n" + "For more configuration, see [github.com/curtisnewbie/miso](https://github.com/CurtisNewbie/miso/blob/main/doc/config.md).\n" + out
 	}
 
 	f.Seek(0, io.SeekStart)
