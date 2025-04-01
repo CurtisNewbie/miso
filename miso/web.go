@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/spf13/cast"
 
 	"github.com/curtisnewbie/miso/util"
 
@@ -911,6 +912,28 @@ func reflectSetHeaderCallback(c *gin.Context) util.WalkTagCallback {
 	return walkHeaderTagCallback(func(k string) string { return c.GetHeader(k) })
 }
 
+func reflectSetHeaderValue(fieldVal reflect.Value, fieldType reflect.Type, header string) {
+	switch fieldType.Kind() {
+	case reflect.String:
+		fieldVal.SetString(header)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		vv := cast.ToInt64(header)
+		fieldVal.SetInt(vv)
+	case reflect.Float32, reflect.Float64:
+		vv := cast.ToFloat64(header)
+		fieldVal.SetFloat(vv)
+	case reflect.Bool:
+		vv := cast.ToBool(header)
+		fieldVal.SetBool(vv)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		vv := cast.ToUint64(header)
+		fieldVal.SetUint(vv)
+	case reflect.Pointer:
+		ptrType := fieldType.Elem()
+		reflectSetHeaderValue(fieldVal, ptrType, header)
+	}
+}
+
 func walkHeaderTagCallback(getHeader func(k string) string) util.WalkTagCallback {
 	return util.WalkTagCallback{
 		Tag: TagHeaderParam,
@@ -919,15 +942,7 @@ func walkHeaderTagCallback(getHeader func(k string) string) util.WalkTagCallback
 			if hv == "" {
 				return nil
 			}
-			switch fieldType.Type.Kind() {
-			case reflect.String:
-				fieldVal.SetString(hv)
-			case reflect.Pointer:
-				ptrType := fieldType.Type.Elem()
-				if ptrType.Kind() == reflect.String {
-					fieldVal.Set(reflect.ValueOf(&hv))
-				}
-			}
+			reflectSetHeaderValue(fieldVal, fieldType.Type, hv)
 			return nil
 		},
 	}
