@@ -19,13 +19,16 @@ const (
 	// misoapi-config: enable http server | true
 	PropServerEnabled = "server.enabled"
 
-	// misoapi-config: http server host | 0.0.0.0
+	// misoapi-config: http server host | 127.0.0.1
 	PropServerHost = "server.host"
 
 	// misoapi-config: http server port | 8080
 	PropServerPort = "server.port"
 
-	// misoapi-config: time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 0
+	// misoapi-config: http server bearer authorization token for all endpoints |
+	PropServerAuthBearer = "server.auth.bearer"
+
+	// misoapi-config: time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30
 	PropServerGracefulShutdownTimeSec = "server.gracefulShutdownTimeSec"
 
 	// misoapi-config: logs time duration for each inbound http request | false
@@ -175,7 +178,7 @@ func init() {
 	SetDefProp(PropProdMode, true)
 
 	SetDefProp(PropServerEnabled, true)
-	SetDefProp(PropServerHost, "0.0.0.0")
+	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
@@ -207,7 +210,7 @@ func init() {
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
 
-	SetDefProp(PropServerGracefulShutdownTimeSec, 0)
+	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
 
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)

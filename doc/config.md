@@ -170,9 +170,10 @@ The tables shown below list all configuration that you can tune. You can also re
 | property                                     | description                                                                                                               | default value |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | server.enabled                               | enable http server                                                                                                        | true          |
-| server.host                                  | http server host                                                                                                          | 0.0.0.0       |
+| server.host                                  | http server host                                                                                                          | 127.0.0.1     |
 | server.port                                  | http server port                                                                                                          | 8080          |
-| server.gracefulShutdownTimeSec               | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 0             |
+| server.auth.bearer                           | http server bearer authorization token for all endpoints                                                                  |               |
+| server.gracefulShutdownTimeSec               | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30            |
 | server.perf.enabled                          | logs time duration for each inbound http request                                                                          | false         |
 | server.trace.inbound.propagate               | propagate trace info from inbound requests                                                                                | true          |
 | server.validate.request.enabled              | enable inbound request parameter validation                                                                               | true          |

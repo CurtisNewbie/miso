@@ -675,6 +675,15 @@ func webServerBootstrap(rail Rail) error {
 		}
 	}
 
+	serverAuthBearer := GetPropStr(PropServerAuthBearer)
+	if serverAuthBearer != "" {
+		AddBearerInterceptor(
+			func(method, url string) bool { return true },
+			func() string { return serverAuthBearer },
+		)
+		rail.Infof("Registered bearer authorization for all endpoints")
+	}
+
 	// register customer recovery func
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
