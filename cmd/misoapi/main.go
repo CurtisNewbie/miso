@@ -854,16 +854,16 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	f, err := findConfigTableFile()
 	if err != nil {
 		util.Printlnf("Failed to find config table file, %v", err)
+		return
 	}
-	doEmbed := err == nil && f != nil
-	if doEmbed {
-		defer f.Close()
+	if f == nil {
+		util.Printlnf("Failed to find config table file")
+		return
 	}
+	defer f.Close()
 
 	sb := util.SLPinter{}
-	if !doEmbed {
-		sb.Printlnf("# Configurations")
-	}
+
 	for _, sec := range sections {
 		if len(sec.Configs) < 1 {
 			continue
@@ -902,38 +902,42 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 	}
 
-	if doEmbed {
-		// check if we are embedding config table or replacing the whole content
-		out := sb.String()
+	// check if we are embedding config table or replacing the whole content
+	out := sb.String()
+	doEmbed := false
 
-		content, err := io.ReadAll(f)
-		if err == nil {
-			startOffset := -1
-			endOffset := -1
-			contents := string(content)
-			lines := strings.Split(contents, "\n")
-			for i, l := range lines {
-				switch strings.TrimSpace(l) {
-				case ConfigTableEmbedStart:
-					startOffset = i
-				case ConfigTableEmbedEnd:
-					endOffset = i
-				}
-			}
-			if startOffset > -1 && endOffset > -1 {
-				before := strings.Join(lines[:startOffset+1], "\n")
-				after := strings.Join(lines[endOffset:], "\n")
-				out = before + "\n" + out + "\n\n" + after
+	content, err := io.ReadAll(f)
+	if err == nil {
+		startOffset := -1
+		endOffset := -1
+		contents := string(content)
+		lines := strings.Split(contents, "\n")
+		for i, l := range lines {
+			switch strings.TrimSpace(l) {
+			case ConfigTableEmbedStart:
+				startOffset = i
+			case ConfigTableEmbedEnd:
+				endOffset = i
 			}
 		}
-
-		f.Seek(0, io.SeekStart)
-		f.Truncate(0)
-		if _, err := f.WriteString(out); err != nil {
-			util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
-		} else {
-			util.Printlnf("Generated config table to %v", f.Name())
+		if startOffset > -1 && endOffset > -1 {
+			before := strings.Join(lines[:startOffset+1], "\n")
+			after := strings.Join(lines[endOffset:], "\n")
+			out = before + "\n" + out + "\n\n" + after
+			doEmbed = true
 		}
+	}
+
+	if !doEmbed {
+		out = "# Configurations\n" + out
+	}
+
+	f.Seek(0, io.SeekStart)
+	f.Truncate(0)
+	if _, err := f.WriteString(out); err != nil {
+		util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
+	} else {
+		util.Printlnf("Generated config table to %v", f.Name())
 	}
 }
 
