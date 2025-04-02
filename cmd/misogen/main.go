@@ -28,6 +28,8 @@ var (
 	SchemaFile              = filepath.Join(SchemaDir, "schema.sql")
 	SchemaMigrateFile       = filepath.Join("internal", "schema", "migrate.go")
 	ServerFile              = filepath.Join("internal", "server", "server.go")
+	WebFile                 = filepath.Join("internal", "web", "web.go")
+	ConfigFile              = filepath.Join("internal", "config", "prop.go")
 	VersionFile             = filepath.Join("internal", "server", "version.go")
 	StaticFsFile            = filepath.Join("internal", "static", "static.go")
 	StaticFsDir             = filepath.Join("internal", "static", "static")
@@ -416,6 +418,9 @@ func main() {
 		writef(0, "")
 		writef(0, "import (")
 		writef(1, "\"os\"")
+		if !*DisableWebFlag {
+			writef(1, "\"%s/internal/web\"", cpltModName)
+		}
 		writef(1, "")
 		if *StaticFlag {
 			writef(1, "\"%s/internal/static\"", cpltModName)
@@ -427,7 +432,7 @@ func main() {
 		writef(0, ")")
 		writef(0, "func init() {")
 		writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
-		writef(2, "rail.Infof(\"%v version: %%v\", Version)", modName)
+		writef(2, "rail.Infof(\"%%v version: %%v\", miso.GetPropStr(miso.PropAppName), Version)")
 		writef(2, "return nil")
 		writef(1, "})")
 		writef(0, "}")
@@ -446,21 +451,70 @@ func main() {
 			writef(1, "static.PrepareWebStaticFs()")
 			writef(1, "")
 		}
-		writef(1, "miso.PreServerBootstrap(PreServerBootstrap)")
-		writef(1, "miso.PostServerBootstrap(PostServerBootstrap)")
+		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
+		if !*DisableWebFlag {
+			writef(1, "miso.PreServerBootstrap(web.PrepareWebServer)")
+		} else {
+			writef(1, "miso.PreServerBootstrap()")
+		}
+
+		writef(1, "// do stuff right after server being fully bootstrapped")
+		writef(1, "miso.PostServerBootstrap()")
 		writef(1, "miso.BootstrapServer(os.Args)")
 		writef(0, "}")
 		writef(0, "")
-		writef(0, "func PreServerBootstrap(rail miso.Rail) error {")
-		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
-		writef(1, "return nil")
-		writef(0, "}")
-		writef(0, "")
-		writef(0, "func PostServerBootstrap(rail miso.Rail) error {")
-		writef(1, "// do stuff right after server being fully bootstrapped")
-		writef(1, "return nil")
-		writef(0, "}")
 		if _, err := serverf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
+		serverf.Close()
+	}
+
+	// web.go
+	if !*DisableWebFlag {
+		if err := util.MkdirParentAll(WebFile); err != nil {
+			panic(fmt.Errorf("failed to make parent dir for file %s, %v", WebFile, err))
+		}
+		webf, err := util.ReadWriteFile(WebFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", WebFile, err))
+		}
+		defer webf.Close()
+
+		sb, writef := util.NewIndWritef("\t")
+		writef(0, "package web")
+		writef(0, "")
+		writef(0, "import \"github.com/curtisnewbie/miso/miso\"")
+		writef(0, "")
+		writef(0, "func PrepareWebServer(rail miso.Rail) error {")
+		writef(1, "return nil")
+		writef(0, "}")
+		if _, err := webf.WriteString(sb.String()); err != nil {
+			panic(err)
+		}
+	}
+
+	// config.go
+	{
+		if err := util.MkdirParentAll(ConfigFile); err != nil {
+			panic(fmt.Errorf("failed to make parent dir for file %s, %v", ConfigFile, err))
+		}
+		configf, err := util.ReadWriteFile(ConfigFile)
+		if err != nil {
+			panic(fmt.Errorf("failed to create file %s, %v", ConfigFile, err))
+		}
+		defer configf.Close()
+
+		sb, writef := util.NewIndWritef("\t")
+		writef(0, "package config")
+		writef(0, "")
+		writef(0, "// misogen-config-section: General Configuration")
+		writef(0, "const ()")
+		writef(0, "")
+		writef(0, "func init() {")
+		writef(1, "// miso.SetDefProp(...)")
+		writef(0, "}")
+
+		if _, err := configf.WriteString(sb.String()); err != nil {
 			panic(err)
 		}
 	}
