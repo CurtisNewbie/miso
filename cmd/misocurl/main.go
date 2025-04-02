@@ -74,15 +74,24 @@ func GenRequests(inst Instruction) string {
 
 			sb := strings.Builder{}
 			sb.WriteString("\n")
-			sb.WriteString("\t\tPostJson(Req{}).")
+			if inst.Method == "POST" {
+				sb.WriteString("\t\tPostJson(Req{}).")
+			} else {
+				sb.WriteString("\t\tPutJson(Req{}).")
+			}
 			call = sb.String()
 		}
+	} else if inst.Method == "GET" {
+		call = "\n\t\tGet()."
+	} else if inst.Method == "POST" {
+		call = "\n\t\tPost(nil)."
+	} else if inst.Method == "PUT" {
+		call = "\n\t\tPut(nil)."
+	} else if inst.Method == "DELETE" {
+		call = "\n\t\tDelete()."
 	}
 
 	headersb := strings.Builder{}
-	if len(inst.Headers) > 0 {
-		headersb.WriteString("\n")
-	}
 	for k, v := range inst.Headers {
 		headersb.WriteString(fmt.Sprintf("\n\t\tAddHeader(\"%v\", \"%v\").", k, v))
 	}
