@@ -3,6 +3,7 @@ module github.com/curtisnewbie/miso
 go 1.22
 
 require (
+	github.com/ChimeraCoder/gojson v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.8.0
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
 	github.com/curtisnewbie/svc v0.0.8
@@ -20,6 +21,7 @@ require (
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.14.0
 	github.com/tmaxmax/go-sse v0.10.0
+	golang.design/x/clipboard v0.7.0
 	golang.org/x/text v0.16.0
 	gopkg.in/inf.v0 v0.9.1
 	gorm.io/driver/mysql v1.3.6
@@ -73,6 +75,9 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
+	golang.org/x/image v0.6.0 // indirect
+	golang.org/x/mobile v0.0.0-20230301163155-e0f57694e12c // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
