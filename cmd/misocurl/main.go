@@ -93,7 +93,7 @@ func GenRequests(inst Instruction) string {
 
 	headersb := strings.Builder{}
 	for k, v := range inst.Headers {
-		headersb.WriteString(fmt.Sprintf("\n\t\tAddHeader(\"%v\", \"%v\").", k, v))
+		headersb.WriteString(fmt.Sprintf("\n\t\tAddHeader(\"%v\", \"%v\").", k, util.EscapeString(v)))
 	}
 	headers = headersb.String()
 
