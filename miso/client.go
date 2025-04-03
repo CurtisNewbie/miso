@@ -8,7 +8,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -313,36 +312,61 @@ func (t *TClient) PostForm(data url.Values) *TResponse {
 	return t.Post(strings.NewReader(data.Encode()))
 }
 
+// Send PUT request with urlencoded form data
+func (t *TClient) PutForm(data url.Values) *TResponse {
+	t.SetContentType(formEncoded)
+	return t.Put(strings.NewReader(data.Encode()))
+}
+
 // Send POST request with urlencoded form data
 //
 // Caller is responsible for closing all the reader.
 func (t *TClient) PostFormData(data map[string]io.Reader) *TResponse {
+	b, err := t.buildFormData(data)
+	if err != nil {
+		return t.errorResponse(err)
+	}
+	return t.Post(b)
+}
+
+// Send PUT request with urlencoded form data
+//
+// Caller is responsible for closing all the reader.
+func (t *TClient) PutFormData(data map[string]io.Reader) *TResponse {
+	b, err := t.buildFormData(data)
+	if err != nil {
+		return t.errorResponse(err)
+	}
+	return t.Put(b)
+}
+
+func (t *TClient) buildFormData(data map[string]io.Reader) (io.Reader, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	for k, r := range data {
 		var iw io.Writer
 		var err error
 
-		if f, ok := r.(*os.File); ok {
+		if f, ok := r.(interface{ Name() string }); ok {
 			n := path.Base(f.Name())
 			iw, err = w.CreateFormFile(k, n)
 			if err != nil {
-				return t.errorResponse(UnknownErrf(err, "failed to create form file"))
+				return nil, WrapErrf(err, "failed to create form file")
 			}
 		} else {
 			iw, err = w.CreateFormField(k)
 			if err != nil {
-				return t.errorResponse(UnknownErrf(err, "failed to create form field"))
+				return nil, WrapErrf(err, "failed to create form field")
 			}
 		}
 
 		if _, err = io.Copy(iw, r); err != nil {
-			return t.errorResponse(UnknownErrf(err, "failed to copy data to form field/file"))
+			return nil, WrapErrf(err, "failed to copy data to form field/file")
 		}
 	}
 	w.Close()                                 // write boundary
 	t.SetContentType(w.FormDataContentType()) // with boundary, not just the content-type
-	return t.Post(&b)
+	return &b, nil
 }
 
 // Send POST request with JSON.
@@ -697,4 +721,17 @@ func ClientSkipTlsSecureCheck() {
 // Set default http client timeout
 func SetDefaultTimeout(ttl time.Duration) {
 	MisoDefaultClient.Timeout = ttl
+}
+
+type readerFile struct {
+	io.Reader
+	name string
+}
+
+func (r *readerFile) Name() string {
+	return r.name
+}
+
+func NewReaderFile(reader io.Reader, name string) *readerFile {
+	return &readerFile{Reader: reader, name: name}
 }
