@@ -442,7 +442,10 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 				vv := codeBlock.FindAllStringSubmatch(dv, 1)[0][1]
 				dv = vv
 			} else {
-				dv = "\"" + dv + "\""
+				rdv := []rune(dv)
+				if len(rdv) < 1 || rdv[0] != '"' || rdv[len(rdv)-1] != '"' {
+					dv = "\"" + dv + "\""
+				}
 			}
 			if pkg == "miso" {
 				b.WriteString("\n\t" + fmt.Sprintf("SetDefProp(%v, %v)", c.ConstName, dv))
