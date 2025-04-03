@@ -264,3 +264,34 @@ func (t *TickRunner) Stop() {
 	t.ticker.Stop()
 	t.ticker = nil
 }
+
+func CronEveryXSec(n int, options ...func(j Job) Job) Job {
+	j := Job{
+		Cron:            fmt.Sprintf("*/%d * * * * *", n),
+		CronWithSeconds: true,
+	}
+	return buildCronJob(j)
+}
+
+func CronEveryXMin(n int, options ...func(j Job) Job) Job {
+	j := Job{
+		Cron:            fmt.Sprintf("* */%d * * * *", n),
+		CronWithSeconds: true,
+	}
+	return buildCronJob(j)
+}
+
+func CronEveryXHour(n int, options ...func(j Job) Job) Job {
+	j := Job{
+		Cron:            fmt.Sprintf("* * */%d * * *", n),
+		CronWithSeconds: true,
+	}
+	return buildCronJob(j)
+}
+
+func buildCronJob(j Job, options ...func(j Job) Job) Job {
+	for _, op := range options {
+		j = op(j)
+	}
+	return j
+}
