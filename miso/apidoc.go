@@ -392,7 +392,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.NgHttpClientDemo != "" {
+		if r.NgHttpClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
 			b.WriteRune('\n')
 			b.WriteString("- Angular HttpClient Demo:\n")
 			b.WriteString(util.Spaces(2) + "```ts\n")

@@ -64,6 +64,9 @@ const (
 	// misoconfig-prop: whether the generated markdown endpoint documentation should exclude miso.TClient demo | false
 	PropServerGenerateEndpointDocFileExclTClientDemo = "server.generate-endpoint-doc.file-excl-tclient-demo"
 
+	// misoconfig-prop: whether the generated markdown endpoint documentation should exclude Angular HttpClient demo | false
+	PropServerGenerateEndpointDocFileExclNgClientDemo = "server.generate-endpoint-doc.file-excl-ng-client-demo"
+
 	// misoconfig-prop: whether the generated endpoint documentation should include app name as the path prefix | true
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
 
@@ -215,6 +218,7 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocFileExclTClientDemo, false)
+	SetDefProp(PropServerGenerateEndpointDocFileExclNgClientDemo, false)
 	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
 	SetDefProp(PropServerGinValidationDisabled, true)
