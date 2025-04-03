@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"go/parser"
 	"go/token"
 	"io"
@@ -426,9 +427,8 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			continue
 		}
 
-		b := util.NewIndentWriter("\t")
-		b.WriteString("func init() {\n")
-		b.IncrIndent()
+		b := strings.Builder{}
+		b.WriteString("func init() {")
 		for _, c := range src {
 			if c.DefaultValue == "" {
 				continue
@@ -445,13 +445,12 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 				dv = "\"" + dv + "\""
 			}
 			if pkg == "miso" {
-				b.Writef("SetDefProp(%v, %v)", c.ConstName, dv)
+				b.WriteString("\n\t" + fmt.Sprintf("SetDefProp(%v, %v)", c.ConstName, dv))
 			} else {
-				b.Writef("miso.SetDefProp(%v, %v)", c.ConstName, dv)
+				b.WriteString("\n\t" + fmt.Sprintf("miso.SetDefProp(%v, %v)", c.ConstName, dv))
 			}
 		}
-		b.DecrIndent()
-		b.WriteString("}")
+		b.WriteString("\n}")
 
 		buf, err := io.ReadAll(f)
 		if err != nil {
