@@ -8,7 +8,7 @@ const (
 	// misoconfig-prop: enable Redis client | false
 	PropRedisEnabled = "redis.enabled"
 
-	// misoconfig-prop: Redis server host | `localhost`
+	// misoconfig-prop: Redis server host | localhost
 	PropRedisAddress = "redis.address"
 
 	// misoconfig-prop: Redis server port | 6379
@@ -24,11 +24,12 @@ const (
 	PropRedisDatabase = "redis.database"
 )
 
+// misoconfig-default-start
 func init() {
 	miso.SetDefProp(PropRedisEnabled, false)
 	miso.SetDefProp(PropRedisAddress, "localhost")
 	miso.SetDefProp(PropRedisPort, 6379)
-	miso.SetDefProp(PropRedisUsername, "")
-	miso.SetDefProp(PropRedisPassword, "")
 	miso.SetDefProp(PropRedisDatabase, 0)
 }
+
+// misoconfig-default-end

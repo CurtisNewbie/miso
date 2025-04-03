@@ -82,16 +82,16 @@ const (
 	// misoconfig-prop: enable Consul client, service registration and service discovery | false
 	PropConsulEnabled = "consul.enabled"
 
-	// misoconfig-prop: 	registered service name | `${app.name}`
+	// misoconfig-prop: registered service name | `"${app.name}"`
 	PropConsuleRegisterName = "consul.registerName"
 
-	// misoconfig-prop: registered service address | `${server.host}:${server.port}`
+	// misoconfig-prop: registered service address | `"${server.host}:${server.port}"`
 	PropConsulRegisterAddress = "consul.registerAddress"
 
-	// misoconfig-prop: consul server address | `localhost:8500`
+	// misoconfig-prop: consul server address | localhost:8500
 	PropConsulAddress = "consul.consulAddress"
 
-	// misoconfig-prop: health check url | `/health`
+	// misoconfig-prop: health check url | /health
 	PropConsulHealthcheckUrl = "consul.healthCheckUrl"
 
 	// misoconfig-prop: health check interval | 5s
@@ -100,10 +100,10 @@ const (
 	// misoconfig-prop: health check timeout | 3s
 	PropConsulHealthcheckTimeout = "consul.healthCheckTimeout"
 
-	// misoconfig-prop:  for how long the current instance is deregistered after first health check failure | 30m
+	// misoconfig-prop: for how long the current instance is deregistered after first health check failure | 30m
 	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
 
-	// misoconfig-prop: 	register default health check endpoint on startup | true
+	// misoconfig-prop: register default health check endpoint on startup | true
 	PropConsulRegisterDefaultHealthcheck = "consul.registerDefaultHealthCheck"
 
 	// misoconfig-prop: fetch server list from Consul in ever N seconds | 30
@@ -112,7 +112,7 @@ const (
 	// misoconfig-prop: enable endpoint for manual Consul service deregistration | false
 	PropConsulEnableDeregisterUrl = "consul.enableDeregisterUrl"
 
-	// misoconfig-prop: endpoint url for manual Consul service deregistration | `/consul/deregister`
+	// misoconfig-prop: endpoint url for manual Consul service deregistration | /consul/deregister
 	PropConsulDeregisterUrl = "consul.deregisterUrl"
 
 	// misoconfig-prop: instance metadata (`map[string]string`)
@@ -129,14 +129,14 @@ const (
 // misoconfig-section: Tracing Configuration
 const (
 
-	// misoconfig-prop: propagation keys in trace (string slice) | `X-B3-TraceId`, `X-B3-SpanId`
+	// misoconfig-prop: propagation keys in trace (string slice) |
 	PropTracingPropagationKeys = "tracing.propagation.keys"
 )
 
 // misoconfig-section: Metrics Configuration
 const (
 
-	// misoconfig-prop:  enable metrics collection using prometheus | true
+	// misoconfig-prop: enable metrics collection using prometheus | true
 	PropMetricsEnabled = "metrics.enabled"
 
 	// misoconfig-prop: route used to expose collected metrics | /metrics
@@ -151,7 +151,7 @@ const (
 	// misoconfig-prop: enable job that logs memory stats periodically (using `runtime/metrics`) | false
 	PropMetricsEnableMemStatsLogJob = "metrics.memstat.log.job.enabled"
 
-	// misoconfig-prop: job cron expresson for memory stats log job | `0 */1 * * * *`
+	// misoconfig-prop: job cron expresson for memory stats log job | 0 */1 * * * *
 	PropMetricsMemStatsLogJobCron = "metrics.memstat.log.job.cron"
 )
 
@@ -164,7 +164,7 @@ const (
 	// misoconfig-prop: path to rolling log file
 	PropLoggingRollingFile = "logging.rolling.file"
 
-	// misoconfig-prop: max age of log files in days | 0 (files are retained forever)
+	// misoconfig-prop: max age of log files in days, 0 means files are retained forever | 0
 	PropLoggingRollingFileMaxAge = "logging.file.max-age"
 
 	// misoconfig-prop: max size of each log file (in mb) | 50
@@ -177,31 +177,12 @@ const (
 	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 )
 
+// misoconfig-default-start
 func init() {
 	SetDefProp(PropProdMode, true)
-
-	SetDefProp(PropServerEnabled, true)
-	SetDefProp(PropServerHost, "127.0.0.1")
-	SetDefProp(PropServerPort, 8080)
-	SetDefProp(PropServerPerfEnabled, false)
-	SetDefProp(PropServerPropagateInboundTrace, true)
-	SetDefProp(PropServerRequestValidateEnabled, true)
-	SetDefProp(PropServerPprofEnabled, false)
-	SetDefProp(PropServerRequestAutoMapHeader, true)
-	SetDefProp(PropServerGinValidationDisabled, true)
-
-	SetDefProp(PropLoggingRollingFileMaxAge, 0)
-	SetDefProp(PropLoggingRollingFileMaxSize, 50)
-	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
-	SetDefProp(PropLoggingRollingFileRotateDaily, true)
-
-	SetDefProp(PropMetricsEnabled, true)
-	SetDefProp(PropMetricsRoute, "/metrics")
-
-	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
-	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
-
 	SetDefProp(PropConsulEnabled, false)
+	SetDefProp(PropConsuleRegisterName, "${app.name}")
+	SetDefProp(PropConsulRegisterAddress, "${server.host}:${server.port}")
 	SetDefProp(PropConsulAddress, "localhost:8500")
 	SetDefProp(PropConsulHealthcheckUrl, "/health")
 	SetDefProp(PropConsulHealthCheckInterval, "5s")
@@ -209,13 +190,34 @@ func init() {
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "30m")
 	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 30)
-	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
-	SetDefProp(PropConsuleRegisterName, "${app.name}")
-
+	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
+	SetDefProp(PropLoggingLevel, "info")
+	SetDefProp(PropLoggingRollingFileMaxAge, 0)
+	SetDefProp(PropLoggingRollingFileMaxSize, 50)
+	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
+	SetDefProp(PropLoggingRollingFileRotateDaily, true)
+	SetDefProp(PropMetricsEnabled, true)
+	SetDefProp(PropMetricsRoute, "/metrics")
+	SetDefProp(PropMetricsAuthEnabled, false)
+	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
+	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
+	SetDefProp(PropServerEnabled, true)
+	SetDefProp(PropServerHost, "127.0.0.1")
+	SetDefProp(PropServerPort, 8080)
 	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
-
+	SetDefProp(PropServerPerfEnabled, false)
+	SetDefProp(PropServerPropagateInboundTrace, true)
+	SetDefProp(PropServerRequestValidateEnabled, true)
+	SetDefProp(PropServerRequestLogEnabled, false)
+	SetDefProp(PropServerPprofEnabled, false)
+	SetDefProp(PropServerPprofAuthEnabled, false)
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)
+	SetDefProp(PropServerGenerateEndpointDocFileExclTClientDemo, false)
 	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
+	SetDefProp(PropServerRequestAutoMapHeader, true)
+	SetDefProp(PropServerGinValidationDisabled, true)
 }
+
+// misoconfig-default-end

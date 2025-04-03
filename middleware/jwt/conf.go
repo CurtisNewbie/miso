@@ -12,3 +12,6 @@ const (
 	// misoconfig-prop: issuer of the token
 	PropJwtIssue = "jwt.key.issuer"
 )
+
+// misoconfig-default-start
+// misoconfig-default-end

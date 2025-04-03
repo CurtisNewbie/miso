@@ -12,6 +12,9 @@ const (
 	PropSqliteWalEnabled = "sqlite.wal.enabled"
 )
 
+// misoconfig-default-start
 func init() {
 	miso.SetDefProp(PropSqliteWalEnabled, true)
 }
+
+// misoconfig-default-end

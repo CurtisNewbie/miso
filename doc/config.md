@@ -55,28 +55,28 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Consul Configuration
 
-| property                                | description                                                                        | default value                   |
-| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
-| consul.enabled                          | enable Consul client, service registration and service discovery                   | false                           |
-| consul.registerName                     | registered service name                                                            | `${app.name}`                   |
-| consul.registerAddress                  | registered service address                                                         | `${server.host}:${server.port}` |
-| consul.consulAddress                    | consul server address                                                              | `localhost:8500`                |
-| consul.healthCheckUrl                   | health check url                                                                   | `/health`                       |
-| consul.healthCheckInterval              | health check interval                                                              | 5s                              |
-| consul.healthCheckTimeout               | health check timeout                                                               | 3s                              |
-| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 30m                             |
-| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true                            |
-| consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                              |
-| consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false                           |
-| consul.deregisterUrl                    | endpoint url for manual Consul service deregistration                              | `/consul/deregister`            |
-| consul.metadata                         | instance metadata (`map[string]string`)                                            |                                 |
+| property                                | description                                                                        | default value                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
+| consul.enabled                          | enable Consul client, service registration and service discovery                   | false                             |
+| consul.registerName                     | registered service name                                                            | `"${app.name}"`                   |
+| consul.registerAddress                  | registered service address                                                         | `"${server.host}:${server.port}"` |
+| consul.consulAddress                    | consul server address                                                              | localhost:8500                    |
+| consul.healthCheckUrl                   | health check url                                                                   | /health                           |
+| consul.healthCheckInterval              | health check interval                                                              | 5s                                |
+| consul.healthCheckTimeout               | health check timeout                                                               | 3s                                |
+| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 30m                               |
+| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true                              |
+| consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                                |
+| consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false                             |
+| consul.deregisterUrl                    | endpoint url for manual Consul service deregistration                              | /consul/deregister                |
+| consul.metadata                         | instance metadata (`map[string]string`)                                            |                                   |
 
 ## Distributed Task Scheduling Configuration
 
-| property                | description                        | default value |
-| ----------------------- | ---------------------------------- | ------------- |
-| task.scheduling.enabled | enable distributed task scheduling | true          |
-| task.scheduling.group   | name of the cluster                | `${app.name}` |
+| property                | description                        | default value   |
+| ----------------------- | ---------------------------------- | --------------- |
+| task.scheduling.enabled | enable distributed task scheduling | true            |
+| task.scheduling.group   | name of the cluster                | `"${app.name}"` |
 
 ## JWT Configuration
 
@@ -88,50 +88,50 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Logging Configuration
 
-| property                  | description                                | default value                  |
-| ------------------------- | ------------------------------------------ | ------------------------------ |
-| logging.level             | log level                                  | info                           |
-| logging.rolling.file      | path to rolling log file                   |                                |
-| logging.file.max-age      | max age of log files in days               | 0 (files are retained forever) |
-| logging.file.max-size     | max size of each log file (in mb)          | 50                             |
-| logging.file.max-backups  | max number of backup log files             | 10                             |
-| logging.file.rotate-daily | rotate log file at every day 00:00 (local) | true                           |
+| property                  | description                                                      | default value |
+| ------------------------- | ---------------------------------------------------------------- | ------------- |
+| logging.level             | log level                                                        | info          |
+| logging.rolling.file      | path to rolling log file                                         |               |
+| logging.file.max-age      | max age of log files in days, 0 means files are retained forever | 0             |
+| logging.file.max-size     | max size of each log file (in mb)                                | 50            |
+| logging.file.max-backups  | max number of backup log files                                   | 10            |
+| logging.file.rotate-daily | rotate log file at every day 00:00 (local)                       | true          |
 
 ## Metrics Configuration
 
-| property                        | description                                                              | default value   |
-| ------------------------------- | ------------------------------------------------------------------------ | --------------- |
-| metrics.enabled                 | enable metrics collection using prometheus                               | true            |
-| metrics.route                   | route used to expose collected metrics                                   | /metrics        |
-| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false           |
-| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |                 |
-| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false           |
-| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | `0 */1 * * * *` |
+| property                        | description                                                              | default value |
+| ------------------------------- | ------------------------------------------------------------------------ | ------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                               | true          |
+| metrics.route                   | route used to expose collected metrics                                   | /metrics      |
+| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false         |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |               |
+| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false         |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | 0 */1 * * * * |
 
 ## MySQL Configuration
 
-| property                    | description                               | default value                                                                                                   |
-| --------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| mysql.enabled               | enable MySQL client                       | false                                                                                                           |
-| mysql.user                  | username                                  | root                                                                                                            |
-| mysql.password              | password                                  |                                                                                                                 |
-| mysql.database              | database                                  |                                                                                                                 |
-| mysql.host                  | host                                      | `localhost`                                                                                                     |
-| mysql.port                  | port                                      | 3306                                                                                                            |
-| mysql.connection.parameters | connection parameters (slices of strings) | "charset=utf8mb4"<br>"parseTime=True"<br>"loc=Local"<br>"readTimeout=30s"<br>"writeTimeout=30s"<br>"timeout=3s" |
-| mysql.connection.lifetime   | connection lifetime in minutes            | 30                                                                                                              |
-| mysql.connection.open.max   | max number of open connections            | 10                                                                                                              |
-| mysql.connection.idle.max   | max number of idle connections            | 10                                                                                                              |
+| property                    | description                                                                         | default value                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| mysql.enabled               | enable MySQL client                                                                 | false                                                                                                             |
+| mysql.user                  | username                                                                            | root                                                                                                              |
+| mysql.password              | password                                                                            |                                                                                                                   |
+| mysql.database              | database                                                                            |                                                                                                                   |
+| mysql.host                  | host                                                                                | localhost                                                                                                         |
+| mysql.port                  | port                                                                                | 3306                                                                                                              |
+| mysql.connection.parameters | connection parameters (slices of strings)                                           | `[]string{"charset=utf8mb4", "parseTime=True", "loc=Local", "readTimeout=30s", "writeTimeout=30s", "timeout=3s"}` |
+| mysql.connection.lifetime   | connection lifetime in minutes (hikari recommends 1800000, so we do the same thing) | 30                                                                                                                |
+| mysql.connection.open.max   | max number of open connections                                                      | 10                                                                                                                |
+| mysql.connection.idle.max   | max number of idle connections                                                      | 10                                                                                                                |
 
 ## RabbitMQ Configuration
 
 | property              | description                        | default value |
 | --------------------- | ---------------------------------- | ------------- |
 | rabbitmq.enabled      | enable RabbitMQ client             | false         |
-| rabbitmq.host         | RabbitMQ server host               | `localhost`   |
+| rabbitmq.host         | RabbitMQ server host               | localhost     |
 | rabbitmq.port         | RabbitMQ server port               | 5672          |
-| rabbitmq.username     | username used to connect to server |               |
-| rabbitmq.password     | password used to connect to server |               |
+| rabbitmq.username     | username used to connect to server | guest         |
+| rabbitmq.password     | password used to connect to server | guest         |
 | rabbitmq.vhost        | virtual host                       |               |
 | rabbitmq.consumer.qos | consumer QOS                       | 68            |
 
@@ -140,7 +140,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | property       | description         | default value |
 | -------------- | ------------------- | ------------- |
 | redis.enabled  | enable Redis client | false         |
-| redis.address  | Redis server host   | `localhost`   |
+| redis.address  | Redis server host   | localhost     |
 | redis.port     | Redis server port   | 6379          |
 | redis.username | username            |               |
 | redis.password | password            |               |
@@ -161,9 +161,9 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Tracing Configuration
 
-| property                 | description                              | default value                 |
-| ------------------------ | ---------------------------------------- | ----------------------------- |
-| tracing.propagation.keys | propagation keys in trace (string slice) | `X-B3-TraceId`, `X-B3-SpanId` |
+| property                 | description                              | default value |
+| ------------------------ | ---------------------------------------- | ------------- |
+| tracing.propagation.keys | propagation keys in trace (string slice) |               |
 
 ## Web Server Configuration
 

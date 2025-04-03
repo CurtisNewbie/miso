@@ -427,7 +427,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 
 		b := util.NewIndentWriter("\t")
-		b.WriteString("func init() {\n\n")
+		b.WriteString("func init() {\n")
 		b.IncrIndent()
 		for _, c := range src {
 			if c.DefaultValue == "" {
