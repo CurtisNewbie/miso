@@ -50,8 +50,8 @@ const (
 
 const (
 	DefaultConfigurationFileName = "config.md"
-	ConfigTableEmbedStart        = "<!-- misoapi-config-table-start -->"
-	ConfigTableEmbedEnd          = "<!-- misoapi-config-table-end -->"
+	ConfigTableEmbedStart        = "<!-- misoconfig-prop-table-start -->"
+	ConfigTableEmbedEnd          = "<!-- misoconfig-prop-table-end -->"
 )
 
 var (

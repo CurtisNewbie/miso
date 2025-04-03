@@ -43,7 +43,7 @@ mysql:
 
 The tables shown below list all configuration that you can tune. You can also read [example_conf.yml](./example_conf.yml) to get a better understanding on how these configuration properties are mapped in a yaml file.
 
-<!-- misoapi-config-table-start -->
+<!-- misoconfig-table-start -->
 
 ## Common Configuration
 
@@ -189,7 +189,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.request.mapping.header                       | automatically map header values to request struct                                                                         | true          |
 | server.gin.validation.disabled                      | disable gin's builtin validation                                                                                          | true          |
 
-<!-- misoapi-config-table-end -->
+<!-- misoconfig-table-end -->
 
 ## Client Package Configuration
 

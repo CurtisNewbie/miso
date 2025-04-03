@@ -1,179 +1,179 @@
 package miso
 
-// misoapi-config-section: Common Configuration
+// misoconfig-section: Common Configuration
 const (
 
-	// misoapi-config: name of the application
+	// misoconfig-prop: name of the application
 	PropAppName = "app.name"
 
-	// misoapi-config: whether production mode is turned on | true
+	// misoconfig-prop: whether production mode is turned on | true
 	PropProdMode = "mode.production"
 
-	// misoapi-config: extra config files that should be loaded
+	// misoconfig-prop: extra config files that should be loaded
 	PropConfigExtraFiles = "config.extra.files"
 )
 
-// misoapi-config-section: Web Server Configuration
+// misoconfig-section: Web Server Configuration
 const (
 
-	// misoapi-config: enable http server | true
+	// misoconfig-prop: enable http server | true
 	PropServerEnabled = "server.enabled"
 
-	// misoapi-config: http server host | 127.0.0.1
+	// misoconfig-prop: http server host | 127.0.0.1
 	PropServerHost = "server.host"
 
-	// misoapi-config: http server port | 8080
+	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
-	// misoapi-config: http server bearer authorization token for all endpoints |
+	// misoconfig-prop: http server bearer authorization token for all endpoints |
 	PropServerAuthBearer = "server.auth.bearer"
 
-	// misoapi-config: time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30
+	// misoconfig-prop: time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30
 	PropServerGracefulShutdownTimeSec = "server.gracefulShutdownTimeSec"
 
-	// misoapi-config: logs time duration for each inbound http request | false
+	// misoconfig-prop: logs time duration for each inbound http request | false
 	PropServerPerfEnabled = "server.perf.enabled"
 
-	// misoapi-config: propagate trace info from inbound requests | true
+	// misoconfig-prop: propagate trace info from inbound requests | true
 	PropServerPropagateInboundTrace = "server.trace.inbound.propagate"
 
-	// misoapi-config: enable inbound request parameter validation | true
+	// misoconfig-prop: enable inbound request parameter validation | true
 	PropServerRequestValidateEnabled = "server.validate.request.enabled"
 
-	// misoapi-config: enable server request log | false
+	// misoconfig-prop: enable server request log | false
 	PropServerRequestLogEnabled = "server.request-log.enabled"
 
-	// misoapi-config: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
+	// misoconfig-prop: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
 	PropServerPprofEnabled = "server.pprof.enabled"
 
-	// misoapi-config: enable bearer authentication for pprof endpoints | false
+	// misoconfig-prop: enable bearer authentication for pprof endpoints | false
 	PropServerPprofAuthEnabled = "server.pprof.auth.enabled"
 
-	// misoapi-config: bearer token for pprof endpoints' authentication
+	// misoconfig-prop: bearer token for pprof endpoints' authentication
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
-	// misoapi-config: generate endpoint documentation | true
+	// misoconfig-prop: generate endpoint documentation | true
 	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
 
-	// misoapi-config: build webpage for the generated endpoint documentation | true
+	// misoconfig-prop: build webpage for the generated endpoint documentation | true
 	PropServerGenerateEndpointDocApiEnabled = "server.generate-endpoint-doc.web.enabled"
 
-	// misoapi-config: generate markdown endpoint documentation and save the doc to the specified file
+	// misoconfig-prop: generate markdown endpoint documentation and save the doc to the specified file
 	PropServerGenerateEndpointDocFile = "server.generate-endpoint-doc.file"
 
-	// misoapi-config: whether the generated markdown endpoint documentation should exclude miso.TClient demo | false
+	// misoconfig-prop: whether the generated markdown endpoint documentation should exclude miso.TClient demo | false
 	PropServerGenerateEndpointDocFileExclTClientDemo = "server.generate-endpoint-doc.file-excl-tclient-demo"
 
-	// misoapi-config: whether the generated endpoint documentation should include app name as the path prefix | true
+	// misoconfig-prop: whether the generated endpoint documentation should include app name as the path prefix | true
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
 
-	// misoapi-config: automatically map header values to request struct | true
+	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
 
-	// misoapi-config: disable gin's builtin validation | true
+	// misoconfig-prop: disable gin's builtin validation | true
 	PropServerGinValidationDisabled = "server.gin.validation.disabled"
 
 	PropServerActualPort = "server.actual-port"
 )
 
-// misoapi-config-section: Consul Configuration
+// misoconfig-section: Consul Configuration
 const (
 
-	// misoapi-config: enable Consul client, service registration and service discovery | false
+	// misoconfig-prop: enable Consul client, service registration and service discovery | false
 	PropConsulEnabled = "consul.enabled"
 
-	// misoapi-config: 	registered service name | `${app.name}`
+	// misoconfig-prop: 	registered service name | `${app.name}`
 	PropConsuleRegisterName = "consul.registerName"
 
-	// misoapi-config: registered service address | `${server.host}:${server.port}`
+	// misoconfig-prop: registered service address | `${server.host}:${server.port}`
 	PropConsulRegisterAddress = "consul.registerAddress"
 
-	// misoapi-config: consul server address | `localhost:8500`
+	// misoconfig-prop: consul server address | `localhost:8500`
 	PropConsulAddress = "consul.consulAddress"
 
-	// misoapi-config: health check url | `/health`
+	// misoconfig-prop: health check url | `/health`
 	PropConsulHealthcheckUrl = "consul.healthCheckUrl"
 
-	// misoapi-config: health check interval | 5s
+	// misoconfig-prop: health check interval | 5s
 	PropConsulHealthCheckInterval = "consul.healthCheckInterval"
 
-	// misoapi-config: health check timeout | 3s
+	// misoconfig-prop: health check timeout | 3s
 	PropConsulHealthcheckTimeout = "consul.healthCheckTimeout"
 
-	// misoapi-config:  for how long the current instance is deregistered after first health check failure | 30m
+	// misoconfig-prop:  for how long the current instance is deregistered after first health check failure | 30m
 	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
 
-	// misoapi-config: 	register default health check endpoint on startup | true
+	// misoconfig-prop: 	register default health check endpoint on startup | true
 	PropConsulRegisterDefaultHealthcheck = "consul.registerDefaultHealthCheck"
 
-	// misoapi-config: fetch server list from Consul in ever N seconds | 30
+	// misoconfig-prop: fetch server list from Consul in ever N seconds | 30
 	PropConsulFetchServerInterval = "consul.fetchServerInterval"
 
-	// misoapi-config: enable endpoint for manual Consul service deregistration | false
+	// misoconfig-prop: enable endpoint for manual Consul service deregistration | false
 	PropConsulEnableDeregisterUrl = "consul.enableDeregisterUrl"
 
-	// misoapi-config: endpoint url for manual Consul service deregistration | `/consul/deregister`
+	// misoconfig-prop: endpoint url for manual Consul service deregistration | `/consul/deregister`
 	PropConsulDeregisterUrl = "consul.deregisterUrl"
 
-	// misoapi-config: instance metadata (`map[string]string`)
+	// misoconfig-prop: instance metadata (`map[string]string`)
 	PropConsulMetadata = "consul.metadata"
 )
 
-// misoapi-config-section: Service Discovery Configuration
+// misoconfig-section: Service Discovery Configuration
 const (
 
-	// misoapi-config: slice of service names that should be subcribed on startup
+	// misoconfig-prop: slice of service names that should be subcribed on startup
 	PropSDSubscrbe = "service-discovery.subscribe"
 )
 
-// misoapi-config-section: Tracing Configuration
+// misoconfig-section: Tracing Configuration
 const (
 
-	// misoapi-config: propagation keys in trace (string slice) | `X-B3-TraceId`, `X-B3-SpanId`
+	// misoconfig-prop: propagation keys in trace (string slice) | `X-B3-TraceId`, `X-B3-SpanId`
 	PropTracingPropagationKeys = "tracing.propagation.keys"
 )
 
-// misoapi-config-section: Metrics Configuration
+// misoconfig-section: Metrics Configuration
 const (
 
-	// misoapi-config:  enable metrics collection using prometheus | true
+	// misoconfig-prop:  enable metrics collection using prometheus | true
 	PropMetricsEnabled = "metrics.enabled"
 
-	// misoapi-config: route used to expose collected metrics | /metrics
+	// misoconfig-prop: route used to expose collected metrics | /metrics
 	PropMetricsRoute = "metrics.route"
 
-	// misoapi-config: enable authorization for metrics endpoint | false
+	// misoconfig-prop: enable authorization for metrics endpoint | false
 	PropMetricsAuthEnabled = "metrics.auth.enabled"
 
-	// misoapi-config: bearer token for metrics endpoint authorization
+	// misoconfig-prop: bearer token for metrics endpoint authorization
 	PropMetricsAuthBearer = "metrics.auth.bearer"
 
-	// misoapi-config: enable job that logs memory stats periodically (using `runtime/metrics`) | false
+	// misoconfig-prop: enable job that logs memory stats periodically (using `runtime/metrics`) | false
 	PropMetricsEnableMemStatsLogJob = "metrics.memstat.log.job.enabled"
 
-	// misoapi-config: job cron expresson for memory stats log job | `0 */1 * * * *`
+	// misoconfig-prop: job cron expresson for memory stats log job | `0 */1 * * * *`
 	PropMetricsMemStatsLogJobCron = "metrics.memstat.log.job.cron"
 )
 
-// misoapi-config-section: Logging Configuration
+// misoconfig-section: Logging Configuration
 const (
 
-	// misoapi-config: log level | info
+	// misoconfig-prop: log level | info
 	PropLoggingLevel = "logging.level"
 
-	// misoapi-config: path to rolling log file
+	// misoconfig-prop: path to rolling log file
 	PropLoggingRollingFile = "logging.rolling.file"
 
-	// misoapi-config: max age of log files in days | 0 (files are retained forever)
+	// misoconfig-prop: max age of log files in days | 0 (files are retained forever)
 	PropLoggingRollingFileMaxAge = "logging.file.max-age"
 
-	// misoapi-config: max size of each log file (in mb) | 50
+	// misoconfig-prop: max size of each log file (in mb) | 50
 	PropLoggingRollingFileMaxSize = "logging.file.max-size"
 
-	// misoapi-config: max number of backup log files | 10
+	// misoconfig-prop: max number of backup log files | 10
 	PropLoggingRollingFileMaxBackups = "logging.file.max-backups"
 
-	// misoapi-config: rotate log file at every day 00:00 (local) | true
+	// misoconfig-prop: rotate log file at every day 00:00 (local) | true
 	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 )
 

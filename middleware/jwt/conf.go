@@ -1,14 +1,14 @@
 package jwt
 
-// misoapi-config-section: JWT Configuration
+// misoconfig-section: JWT Configuration
 const (
 
-	// misoapi-config: public key for verifying the JWT token
+	// misoconfig-prop: public key for verifying the JWT token
 	PropJwtPublicKey = "jwt.key.public"
 
-	// misoapi-config: private key for signing the JWT token
+	// misoconfig-prop: private key for signing the JWT token
 	PropJwtPrivateKey = "jwt.key.private"
 
-	// misoapi-config: issuer of the token
+	// misoconfig-prop: issuer of the token
 	PropJwtIssue = "jwt.key.issuer"
 )

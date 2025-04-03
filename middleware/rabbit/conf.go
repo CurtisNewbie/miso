@@ -2,27 +2,27 @@ package rabbit
 
 import "github.com/curtisnewbie/miso/miso"
 
-// misoapi-config-section: RabbitMQ Configuration
+// misoconfig-section: RabbitMQ Configuration
 const (
-	// misoapi-config: enable RabbitMQ client | false
+	// misoconfig-prop: enable RabbitMQ client | false
 	PropRabbitMqEnabled = "rabbitmq.enabled"
 
-	// misoapi-config: RabbitMQ server host | `localhost`
+	// misoconfig-prop: RabbitMQ server host | `localhost`
 	PropRabbitMqHost = "rabbitmq.host"
 
-	// misoapi-config: RabbitMQ server port | 5672
+	// misoconfig-prop: RabbitMQ server port | 5672
 	PropRabbitMqPort = "rabbitmq.port"
 
-	// misoapi-config: username used to connect to server
+	// misoconfig-prop: username used to connect to server
 	PropRabbitMqUsername = "rabbitmq.username"
 
-	// misoapi-config: password used to connect to server
+	// misoconfig-prop: password used to connect to server
 	PropRabbitMqPassword = "rabbitmq.password"
 
-	// misoapi-config: virtual host
+	// misoconfig-prop: virtual host
 	PropRabbitMqVhost = "rabbitmq.vhost"
 
-	// misoapi-config: consumer QOS | 68
+	// misoconfig-prop: consumer QOS | 68
 	PropRabbitMqConsumerQos = "rabbitmq.consumer.qos"
 )
 
