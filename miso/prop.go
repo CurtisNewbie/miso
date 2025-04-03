@@ -61,6 +61,9 @@ const (
 	// misoapi-config: generate markdown endpoint documentation and save the doc to the specified file
 	PropServerGenerateEndpointDocFile = "server.generate-endpoint-doc.file"
 
+	// misoapi-config: whether the generated markdown endpoint documentation should exclude miso.TClient demo | false
+	PropServerGenerateEndpointDocFileExclTClientDemo = "server.generate-endpoint-doc.file-excl-tclient-demo"
+
 	// misoapi-config: whether the generated endpoint documentation should include app name as the path prefix | true
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
 

@@ -368,7 +368,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.MisoTClientDemo != "" {
+		if r.MisoTClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
 			b.WriteRune('\n')
 			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
 			b.WriteString(util.Spaces(2) + "```go\n")
