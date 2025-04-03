@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -26,10 +27,17 @@ const (
 	tagProp    = "prop"
 )
 
+var (
+	digits    = regexp.MustCompile(`^[0-9]*$`)
+	codeBlock = regexp.MustCompile("^`(.*)`$")
+)
+
 const (
 	DefaultConfigurationFileName = "config.md"
 	ConfigTableEmbedStart        = "<!-- misoconfig-table-start -->"
 	ConfigTableEmbedEnd          = "<!-- misoconfig-table-end -->"
+	ConfigDefaultEmbedStart      = "// misoconfig-default-start"
+	ConfigDefaultEmbedEnd        = "// misoconfig-default-end"
 )
 
 var (
@@ -88,7 +96,7 @@ func parseFiles(files []FsFile) error {
 		dstutil.Apply(df.Dst,
 			func(c *dstutil.Cursor) bool {
 				// parse config declaration
-				if ns := parseConfigDecl(c, df.Path, section, configDecl); ns != "" {
+				if ns := parseConfigDecl(c, df, section, configDecl); ns != "" {
 					section = ns
 				}
 				return true
@@ -218,12 +226,17 @@ type ConfigSection struct {
 	Configs []ConfigDecl
 }
 type ConfigDecl struct {
+	Source       string
+	Package      string
 	Name         string
+	ConstName    string
 	Description  string
 	DefaultValue string
 }
 
-func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, configs map[string][]ConfigDecl) (newSection string) {
+func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs map[string][]ConfigDecl) (newSection string) {
+	srcPath := df.Path
+	pkg := df.Dst.Name
 
 	switch n := cursor.Node().(type) {
 	case *dst.GenDecl:
@@ -250,7 +263,7 @@ func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, con
 		}
 
 		var found bool = false
-		var cd ConfigDecl = ConfigDecl{}
+		var cd ConfigDecl = ConfigDecl{Source: srcPath, Package: pkg.Name, ConstName: constName}
 		for _, t := range tags {
 			switch t.Command {
 			case tagProp:
@@ -360,22 +373,10 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 
 	content, err := io.ReadAll(f)
 	if err == nil {
-		startOffset := -1
-		endOffset := -1
 		contents := string(content)
-		lines := strings.Split(contents, "\n")
-		for i, l := range lines {
-			switch strings.TrimSpace(l) {
-			case ConfigTableEmbedStart:
-				startOffset = i
-			case ConfigTableEmbedEnd:
-				endOffset = i
-			}
-		}
-		if startOffset > -1 && endOffset > -1 {
-			before := strings.Join(lines[:startOffset+1], "\n")
-			after := strings.Join(lines[endOffset:], "\n")
-			out = before + "\n" + out + "\n\n" + after
+		v, embed := parseEmbed(contents, out, ConfigTableEmbedStart, ConfigTableEmbedEnd)
+		if embed {
+			out = v
 			doEmbed = true
 		}
 	}
@@ -390,6 +391,86 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
 	} else {
 		util.Printlnf("Generated config table to %v", f.Name())
+	}
+
+	// write default value in golang source code
+	srcMap := map[string][]ConfigDecl{}
+	for _, v := range sections {
+		for _, c := range v.Configs {
+			srcMap[c.Source] = append(srcMap[c.Source], c)
+		}
+	}
+
+	for _, src := range srcMap {
+		if len(src) < 1 {
+			continue
+		}
+		path := src[0].Source
+		pkg := src[0].Package
+		util.DebugPrintlnf(*Debug, "path: %v, pkg: %v", path, pkg)
+
+		f, err := util.ReadWriteFile(path)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		n := 0
+		for _, c := range src {
+			if c.DefaultValue == "" {
+				continue
+			}
+			n++
+		}
+		if n < 1 {
+			continue
+		}
+
+		b := util.NewIndentWriter("\t")
+		b.WriteString("func init() {\n\n")
+		b.IncrIndent()
+		for _, c := range src {
+			if c.DefaultValue == "" {
+				continue
+			}
+			dv := c.DefaultValue
+			dvLower := strings.ToLower(dv)
+			if dvLower == "true" || dvLower == "false" || digits.MatchString(dv) {
+				// bool or int
+			} else if codeBlock.MatchString(dv) {
+				// code block
+				vv := codeBlock.FindAllStringSubmatch(dv, 1)[0][1]
+				dv = vv
+			} else {
+				dv = "\"" + dv + "\""
+			}
+			if pkg == "miso" {
+				b.Writef("SetDefProp(%v, %v)", c.ConstName, dv)
+			} else {
+				b.Writef("miso.SetDefProp(%v, %v)", c.ConstName, dv)
+			}
+		}
+		b.DecrIndent()
+		b.WriteString("}")
+
+		buf, err := io.ReadAll(f)
+		if err != nil {
+			panic(err)
+		}
+		content := string(buf)
+		v, doEmbed := parseEmbed(content, b.String(), ConfigDefaultEmbedStart, ConfigDefaultEmbedEnd)
+		if !doEmbed {
+			continue
+		}
+		content = v
+		f.Truncate(0)
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			panic(err)
+		}
+		if _, err := f.WriteString(content); err != nil {
+			panic(err)
+		}
+		util.Printlnf("Generated default config code in %v", f.Name())
 	}
 }
 
@@ -413,4 +494,23 @@ func findConfigTableFile() (*os.File, error) {
 		}
 	}
 	return util.ReadWriteFile("./doc/" + DefaultConfigurationFileName)
+}
+
+func parseEmbed(contents string, embedded string, start string, end string) (string, bool) {
+	startOffset, endOffset := -1, -1
+	lines := strings.Split(contents, "\n")
+	for i, l := range lines {
+		switch strings.TrimSpace(l) {
+		case start:
+			startOffset = i
+		case end:
+			endOffset = i
+		}
+	}
+	if startOffset > -1 && endOffset > -1 {
+		before := strings.Join(lines[:startOffset+1], "\n")
+		after := strings.Join(lines[endOffset:], "\n")
+		return before + "\n" + embedded + "\n\n" + after, true
+	}
+	return "", false
 }
