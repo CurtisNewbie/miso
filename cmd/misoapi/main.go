@@ -4,8 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"go/parser"
-	"go/token"
-	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -35,23 +33,15 @@ const (
 	importGorm       = "gorm.io/gorm"
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 
-	tagHttp          = "http"
-	tagDesc          = "desc"
-	tagScope         = "scope"
-	tagRes           = "resource"
-	tagQueryDocV1    = "query-doc"
-	tagHeaderDocV1   = "header-doc"
-	tagQueryDocV2    = "query"
-	tagHeaderDocV2   = "header"
-	tagNgTable       = "ngtable"
-	tagConfig        = "config"
-	tagConfigSection = "config-section"
-)
-
-const (
-	DefaultConfigurationFileName = "config.md"
-	ConfigTableEmbedStart        = "<!-- misoconfig-prop-table-start -->"
-	ConfigTableEmbedEnd          = "<!-- misoconfig-prop-table-end -->"
+	tagHttp        = "http"
+	tagDesc        = "desc"
+	tagScope       = "scope"
+	tagRes         = "resource"
+	tagQueryDocV1  = "query-doc"
+	tagHeaderDocV1 = "header-doc"
+	tagQueryDocV2  = "query"
+	tagHeaderDocV2 = "header"
+	tagNgTable     = "ngtable"
 )
 
 var (
@@ -59,9 +49,7 @@ var (
 )
 
 var (
-	Debug           = flag.Bool("debug", false, "Enable debug log")
-	ConfigTable     = flag.Bool("config-table", false, "Generate markdown config table")
-	ConfigTablePath = flag.String("config-table-path", "", "Path to the generated markdown config table file")
+	Debug = flag.Bool("debug", false, "Enable debug log")
 )
 
 func main() {
@@ -136,8 +124,6 @@ func parseFiles(files []FsFile) error {
 		}
 	}
 
-	configDecl := map[string][]ConfigDecl{}
-	var section string
 	for _, df := range dstFiles {
 		importSepc := map[string]string{}
 		dstutil.Apply(df.Dst,
@@ -148,21 +134,12 @@ func parseFiles(files []FsFile) error {
 					addApiDecl(df.Path, df.Dst.Name.Name, ad, imports)
 				}
 
-				// parse config declaration
-				if ns := parseConfigDecl(c, df.Path, section, configDecl); ns != "" {
-					section = ns
-				}
 				return true
 			},
 			func(cursor *dstutil.Cursor) bool {
 				return true
 			},
 		)
-	}
-
-	util.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
-	if *ConfigTable {
-		flushConfigTable(configDecl)
 	}
 
 	baseIndent := 1
@@ -759,206 +736,4 @@ func parseRef(r string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(s[1]), true
-}
-
-type ConfigSection struct {
-	Name    string
-	Configs []ConfigDecl
-}
-type ConfigDecl struct {
-	Name         string
-	Description  string
-	DefaultValue string
-}
-
-func parseConfigDecl(cursor *dstutil.Cursor, srcPath string, section string, configs map[string][]ConfigDecl) (newSection string) {
-
-	switch n := cursor.Node().(type) {
-	case *dst.GenDecl:
-		comment := n.Decs.Start
-		tags, ok := parseMisoApiTag(srcPath, comment)
-		if !ok {
-			return section
-		}
-		for _, t := range tags {
-			if t.Command == tagConfigSection {
-				section = t.Body
-			}
-		}
-	case *dst.ValueSpec:
-		comment := n.Decs.Start
-		tags, ok := parseMisoApiTag(srcPath, comment)
-		if !ok {
-			return section
-		}
-
-		var constName string
-		for _, n := range n.Names {
-			constName = n.Name
-		}
-
-		var found bool = false
-		var cd ConfigDecl = ConfigDecl{}
-		for _, t := range tags {
-			switch t.Command {
-			case tagConfig:
-				found = true
-				p, _ := t.BodyKVTok("|")
-				cd.Description = p.K
-				cd.DefaultValue = p.V
-			}
-		}
-
-		if !found {
-			return section
-		}
-
-		for _, v := range n.Values {
-			if bl, ok := v.(*dst.BasicLit); ok && bl.Kind == token.STRING {
-				cd.Name = util.UnquoteStr(bl.Value)
-			}
-		}
-		if cd.Name == "" {
-			return section
-		}
-		util.DebugPrintlnf(*Debug, "parseConfigDecl() %v: (%v) %v -> %#v", srcPath, section, constName, cd)
-		sec := section
-		if sec == "" {
-			sec = "General"
-		}
-		configs[sec] = append(configs[sec], cd)
-	}
-	return section
-}
-
-func flushConfigTable(configs map[string][]ConfigDecl) {
-	if len(configs) < 1 {
-		return
-	}
-
-	sections := make([]ConfigSection, 0, len(configs))
-	for k, v := range configs {
-		sections = append(sections, ConfigSection{Configs: v, Name: k})
-	}
-	hasPrioritisedKw := func(n string) bool {
-		return util.ContainsAnyStr(n, "Common", "General")
-	}
-	sort.SliceStable(sections, func(i, j int) bool {
-		if hasPrioritisedKw(sections[i].Name) {
-			return true
-		}
-		return strings.Compare(sections[i].Name, sections[j].Name) < 0
-	})
-
-	// find file
-	f, err := findConfigTableFile()
-	if err != nil {
-		util.Printlnf("Failed to find config table file, %v", err)
-		return
-	}
-	if f == nil {
-		util.Printlnf("Failed to find config table file")
-		return
-	}
-	defer f.Close()
-
-	sb := util.SLPinter{}
-
-	for _, sec := range sections {
-		if len(sec.Configs) < 1 {
-			continue
-		}
-		maxNameLen := len("property")
-		maxDescLen := len("description")
-		maxValLen := len("default value")
-		for _, c := range sec.Configs {
-			if len(c.Name) > maxNameLen {
-				maxNameLen = len(c.Name)
-			}
-			if len(c.Description) > maxDescLen {
-				maxDescLen = len(c.Description)
-			}
-			if len(c.DefaultValue) > maxValLen {
-				maxValLen = len(c.DefaultValue)
-			}
-		}
-
-		sb.Printlnf("\n## %v\n", sec.Name)
-		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
-			"Name":         util.PadSpace(-maxNameLen, "property"),
-			"Description":  util.PadSpace(-maxDescLen, "description"),
-			"DefaultValue": util.PadSpace(-maxValLen, "default value"),
-		}))
-		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
-			"Name":         util.PadToken(-maxNameLen, "---", "-"),
-			"Description":  util.PadToken(-maxDescLen, "---", "-"),
-			"DefaultValue": util.PadToken(-maxValLen, "---", "-"),
-		}))
-		for _, c := range sec.Configs {
-			c.Name = util.PadSpace(-maxNameLen, c.Name)
-			c.Description = util.PadSpace(-maxDescLen, c.Description)
-			c.DefaultValue = util.PadSpace(-maxValLen, c.DefaultValue)
-			sb.Println(util.NamedSprintfv("| ${Name} | ${Description} | ${DefaultValue} |", c))
-		}
-	}
-
-	// check if we are embedding config table or replacing the whole content
-	out := sb.String()
-	doEmbed := false
-
-	content, err := io.ReadAll(f)
-	if err == nil {
-		startOffset := -1
-		endOffset := -1
-		contents := string(content)
-		lines := strings.Split(contents, "\n")
-		for i, l := range lines {
-			switch strings.TrimSpace(l) {
-			case ConfigTableEmbedStart:
-				startOffset = i
-			case ConfigTableEmbedEnd:
-				endOffset = i
-			}
-		}
-		if startOffset > -1 && endOffset > -1 {
-			before := strings.Join(lines[:startOffset+1], "\n")
-			after := strings.Join(lines[endOffset:], "\n")
-			out = before + "\n" + out + "\n\n" + after
-			doEmbed = true
-		}
-	}
-
-	if !doEmbed {
-		out = "# Configurations\n\n" + "For more configuration, see [github.com/curtisnewbie/miso](https://github.com/CurtisNewbie/miso/blob/main/doc/config.md).\n" + out
-	}
-
-	f.Seek(0, io.SeekStart)
-	f.Truncate(0)
-	if _, err := f.WriteString(out); err != nil {
-		util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
-	} else {
-		util.Printlnf("Generated config table to %v", f.Name())
-	}
-}
-
-func findConfigTableFile() (*os.File, error) {
-	if *ConfigTablePath != "" {
-		return util.ReadWriteFile(*ConfigTablePath)
-	}
-
-	if err := util.MkdirAll("./doc"); err != nil {
-		return nil, err
-	}
-
-	files, err := walkDir("./doc", ".md")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, f := range files {
-		if f.File.Name() == DefaultConfigurationFileName {
-			return util.ReadWriteFile(f.Path)
-		}
-	}
-	return util.ReadWriteFile("./doc/" + DefaultConfigurationFileName)
 }
