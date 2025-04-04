@@ -15,6 +15,7 @@ var (
 	_ Future[any] = (*future[any])(nil)
 
 	PanicLog func(pat string, args ...any) = Printlnf
+	DebugLog func(pat string, args ...any) = func(pat string, args ...any) {}
 )
 
 var (
@@ -218,6 +219,7 @@ type AsyncPool struct {
 	drainTasksWg *sync.WaitGroup
 	tasks        chan func()
 	workers      chan struct{}
+	idleDur      time.Duration
 }
 
 // Create a bounded pool of goroutines.
@@ -239,6 +241,7 @@ func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
 		stopped:      0,
 		stopOnce:     &sync.Once{},
 		drainTasksWg: &sync.WaitGroup{},
+		idleDur:      5 * time.Minute,
 	}
 }
 
@@ -315,13 +318,26 @@ func (p *AsyncPool) Go(f func()) {
 // spawn a new worker.
 func (p *AsyncPool) spawn(first func()) {
 	defer func() { <-p.workers }()
+	DebugLog("AyncPool created worker")
 
 	if first != nil {
 		PanicSafeFunc(first)()
 	}
 
-	for f := range p.tasks {
-		PanicSafeFunc(f)()
+	idleTimer := time.NewTimer(p.idleDur)
+	defer idleTimer.Stop()
+	for {
+		idleTimer.Reset(p.idleDur)
+		select {
+		case f, ok := <-p.tasks:
+			if !ok {
+				return
+			}
+			PanicSafeFunc(f)()
+		case <-idleTimer.C:
+			DebugLog("AsyncPool.Worker has been idle for %v, release worker", p.idleDur)
+			return
+		}
 	}
 }
 

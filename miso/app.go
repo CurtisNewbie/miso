@@ -316,6 +316,7 @@ func (a *MisoApp) PreServerBootstrap(callback ...func(rail Rail) error) {
 
 func (a *MisoApp) configureLogging() error {
 	util.PanicLog = Errorf
+	util.DebugLog = Debugf
 	util.CliErrLog = Errorf
 	c := a.Config()
 
