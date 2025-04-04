@@ -1,10 +1,10 @@
 # miso
 
-> ***main branch is unstable, install miso with tags instead***
+> **_main branch is unstable, install miso with tags instead_**
 
-Miso, yet another simple application framework. It's mainly a fun project for me to prove: ***'yes, we can just write a framework ourselves.'***.
+Miso, yet another simple application framework. It's mainly a fun project for me to prove: **_'yes, we can just write a framework ourselves.'_**.
 
-Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write *almost* any kind of application, but it's mainly a backend framework.
+Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write _almost_ any kind of application, but it's mainly a backend framework.
 
 The overall target is to make it as small and simple as possible, backward compatibility may break in future releases.
 
@@ -16,67 +16,10 @@ Install a specific release of miso:
 go get github.com/curtisnewbie/miso@v0.1.17
 ```
 
-## Generate miso project
-
-Install latest `misogen` tool:
-
-```sh
-go install github.com/curtisnewbie/miso/cmd/misogen@v0.1.17
-```
-
-Use `misogen` to generate new projects, e.g.,
-
-```sh
-$ misogen -h
-Usage of misogen:
-  -cli
-        Generate CLI style project
-  -disable-web
-        Disable web server
-  -name string
-        Module name
-  -static
-        Generate code to embed and statically host frontend project
-  -svc
-        Generate code to integrate svc for automatic schema migration
-
-$ mkdir myapp && cd myapp && misogen -name "myapp" -svc
-misogen, current miso version: v0.1.17
-
-Initialized module 'myapp'
-Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.17
-Initializing conf.yml
-Initializing internal/schema/scripts/schema.sql
-Initializing internal/schema/migrate.go
-Initializing main.go
-```
-
-## Generate api endpoints
-
-```sh
-$ misoapi -h
-misoapi - automatically generate web endpoint in go based on misoapi-* comments
-
-  Supported miso version: v0.1.17
-
-Usage of misoapi:
-  -debug
-        Enable debug log
-
-For example:
-
-  misoapi-http: GET /open/api/doc
-  misoapi-desc: open api endpoint to retrieve documents
-  misoapi-query-doc: page: curent page index
-  misoapi-header-doc: Authorization: bearer authorization token
-  misoapi-scope: PROTECTED
-  misoapi-resource: document:read
-  misoapi-ngtable
-```
-
 ## Documentations
 
 - [Configuration](./doc/config.md)
+- [CLI Tools](./doc/tools.md)
 - [Application Lifecycle](./doc/lifecycle.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)

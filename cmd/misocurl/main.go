@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ChimeraCoder/gojson"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/version"
 	"golang.design/x/clipboard"
 )
 
@@ -15,6 +17,12 @@ var (
 )
 
 func main() {
+	flag.Usage = func() {
+		util.Printlnf("\nmisocurl - automatically miso.TClient code based on curl in clipboard\n")
+		util.Printlnf("  Supported miso version: %v\n", version.Version)
+		util.Printlnf("Usage of %s:", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.BoolVar(&Debug, "debug", false, "Debug")
 	flag.Parse()
 
