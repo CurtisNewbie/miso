@@ -398,50 +398,58 @@ func NewSignalOnce() *SignalOnce {
 	}
 }
 
-type BatchTask[T any] struct {
-	parallel int
-	pipe     chan T
-	wg       *sync.WaitGroup
-	consumer func(T)
+type BatchTask[T any, V any] struct {
+	parallel  int
+	taskPipe  chan T
+	workerWg  *sync.WaitGroup
+	doConsume func(T)
+	results   []V
+	resultsMu *sync.Mutex
 }
 
 // Wait until all generated tasks are completed and close pipeline channel.
-func (b *BatchTask[T]) Wait() {
-	b.wg.Wait()
-	close(b.pipe)
+func (b *BatchTask[T, V]) Wait() []V {
+	b.workerWg.Wait()
+	defer close(b.taskPipe)
+	return b.results
 }
 
 // Close underlying pipeline channel without waiting.
-func (b *BatchTask[T]) Close() {
-	close(b.pipe)
+func (b *BatchTask[T, V]) Close() {
+	close(b.taskPipe)
 }
 
-func (b *BatchTask[T]) preHeat() {
+func (b *BatchTask[T, V]) preHeat() {
 	for i := 0; i < b.parallel; i++ {
 		go func() {
-			for t := range b.pipe {
-				b.consumer(t)
+			for t := range b.taskPipe {
+				b.doConsume(t)
 			}
 		}()
 	}
 }
 
 // Generate task.
-func (b *BatchTask[T]) Generate(task T) {
-	b.wg.Add(1)
-	b.pipe <- task
+func (b *BatchTask[T, V]) Generate(task T) {
+	b.workerWg.Add(1)
+	b.taskPipe <- task
 }
 
 // Create a batch of concurrent task for one time use.
-func NewBatchTask[T any](parallel int, bufferSize int, consumer func(T)) *BatchTask[T] {
-	bt := &BatchTask[T]{
-		parallel: parallel,
-		pipe:     make(chan T, bufferSize),
-		wg:       &sync.WaitGroup{},
+func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) V) *BatchTask[T, V] {
+	bt := &BatchTask[T, V]{
+		parallel:  parallel,
+		taskPipe:  make(chan T, bufferSize),
+		workerWg:  &sync.WaitGroup{},
+		results:   make([]V, 0, bufferSize),
+		resultsMu: &sync.Mutex{},
 	}
-	bt.consumer = func(t T) {
-		defer bt.wg.Done()
-		consumer(t)
+	bt.doConsume = func(t T) {
+		defer bt.workerWg.Done()
+		v := consumer(t)
+		bt.resultsMu.Lock()
+		defer bt.resultsMu.Unlock()
+		bt.results = append(bt.results, v)
 	}
 	bt.preHeat()
 	return bt
