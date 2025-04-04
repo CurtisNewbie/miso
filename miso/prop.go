@@ -88,7 +88,7 @@ const (
 	// misoconfig-prop: registered service name | `"${app.name}"`
 	PropConsuleRegisterName = "consul.registerName"
 
-	// misoconfig-prop: registered service address | `"${server.host}:${server.port}"`
+	// misoconfig-prop: registered service address | `"${server.host}"`
 	PropConsulRegisterAddress = "consul.registerAddress"
 
 	// misoconfig-prop: consul server address | localhost:8500
@@ -185,7 +185,7 @@ func init() {
 	SetDefProp(PropProdMode, true)
 	SetDefProp(PropConsulEnabled, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
-	SetDefProp(PropConsulRegisterAddress, "${server.host}:${server.port}")
+	SetDefProp(PropConsulRegisterAddress, "${server.host}")
 	SetDefProp(PropConsulAddress, "localhost:8500")
 	SetDefProp(PropConsulHealthcheckUrl, "/health")
 	SetDefProp(PropConsulHealthCheckInterval, "5s")

@@ -55,21 +55,21 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Consul Configuration
 
-| property                                | description                                                                        | default value                     |
-| --------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
-| consul.enabled                          | enable Consul client, service registration and service discovery                   | false                             |
-| consul.registerName                     | registered service name                                                            | `"${app.name}"`                   |
-| consul.registerAddress                  | registered service address                                                         | `"${server.host}:${server.port}"` |
-| consul.consulAddress                    | consul server address                                                              | localhost:8500                    |
-| consul.healthCheckUrl                   | health check url                                                                   | /health                           |
-| consul.healthCheckInterval              | health check interval                                                              | 5s                                |
-| consul.healthCheckTimeout               | health check timeout                                                               | 3s                                |
-| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 30m                               |
-| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true                              |
-| consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                                |
-| consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false                             |
-| consul.deregisterUrl                    | endpoint url for manual Consul service deregistration                              | /consul/deregister                |
-| consul.metadata                         | instance metadata (`map[string]string`)                                            |                                   |
+| property                                | description                                                                        | default value      |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------ |
+| consul.enabled                          | enable Consul client, service registration and service discovery                   | false              |
+| consul.registerName                     | registered service name                                                            | `"${app.name}"`    |
+| consul.registerAddress                  | registered service address                                                         | `"${server.host}"` |
+| consul.consulAddress                    | consul server address                                                              | localhost:8500     |
+| consul.healthCheckUrl                   | health check url                                                                   | /health            |
+| consul.healthCheckInterval              | health check interval                                                              | 5s                 |
+| consul.healthCheckTimeout               | health check timeout                                                               | 3s                 |
+| consul.healthCheckFailedDeregisterAfter | for how long the current instance is deregistered after first health check failure | 30m                |
+| consul.registerDefaultHealthCheck       | register default health check endpoint on startup                                  | true               |
+| consul.fetchServerInterval              | fetch server list from Consul in ever N seconds                                    | 30                 |
+| consul.enableDeregisterUrl              | enable endpoint for manual Consul service deregistration                           | false              |
+| consul.deregisterUrl                    | endpoint url for manual Consul service deregistration                              | /consul/deregister |
+| consul.metadata                         | instance metadata (`map[string]string`)                                            |                    |
 
 ## Distributed Task Scheduling Configuration
 

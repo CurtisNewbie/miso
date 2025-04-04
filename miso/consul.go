@@ -300,7 +300,7 @@ func RegisterConsulService() error {
 		return nil
 	}
 
-	serverPort := GetPropInt(PropServerPort)
+	serverPort := GetPropInt(PropServerActualPort)
 	registerName := GetPropStr(PropConsuleRegisterName)
 	registerAddress := GetPropStr(PropConsulRegisterAddress)
 	healthCheckUrl := GetPropStr(PropConsulHealthcheckUrl)
@@ -319,6 +319,7 @@ func RegisterConsulService() error {
 	}
 	meta[ConsulMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
 
+	completeHealthCheckUrl := fmt.Sprintf("http://%s:%v%s", registerAddress, serverPort, healthCheckUrl)
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
 	registration := &api.AgentServiceRegistration{
 		ID:      proposedServiceId,
@@ -326,11 +327,11 @@ func RegisterConsulService() error {
 		Port:    serverPort,
 		Address: registerAddress,
 		Check: &api.AgentServiceCheck{
-			HTTP:                           fmt.Sprintf("http://%s:%d%s", registerAddress, serverPort, healthCheckUrl),
+			HTTP:                           completeHealthCheckUrl,
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
-			Status:                         ConsulStatusPassing, // for responsiveness
+			Status:                         ConsulStatusPassing, // for responsiveness (TODO)
 		},
 		Meta: meta,
 	}
@@ -341,7 +342,7 @@ func RegisterConsulService() error {
 	consulRegistration.serviceId = proposedServiceId
 	consulRegistration.serviceName = registerName
 
-	Infof("Registered on Consul, serviceId: '%s'", proposedServiceId)
+	Infof("Registered on Consul, serviceId: '%s', healthCheckUrl: '%v'", proposedServiceId, completeHealthCheckUrl)
 	return nil
 }
 
