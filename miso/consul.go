@@ -311,6 +311,8 @@ func RegisterConsulService() error {
 	// registerAddress not specified, resolve the ip address used for the server
 	if registerAddress == "" {
 		registerAddress = ResolveServerHost(GetPropStr(PropServerHost))
+	} else {
+		registerAddress = ResolveServerHost(registerAddress)
 	}
 
 	meta := GetPropStrMap(PropConsulMetadata)
