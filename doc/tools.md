@@ -5,7 +5,7 @@
 Install latest `misogen` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misogen@v0.1.17
+go install github.com/curtisnewbie/miso/cmd/misogen@v0.1.18
 ```
 
 Use `misogen` to generate new projects, e.g.,
@@ -27,10 +27,10 @@ $ misogen -h
 
 $ mkdir myapp && cd myapp && misogen -name "myapp" -svc
 
-# misogen, current miso version: v0.1.17
+# misogen, current miso version: v0.1.18
 #
 # Initialized module 'myapp'
-# Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.17
+# Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.18
 # Initializing conf.yml
 # Initializing internal/schema/scripts/schema.sql
 # Initializing internal/schema/migrate.go
@@ -42,7 +42,7 @@ $ mkdir myapp && cd myapp && misogen -name "myapp" -svc
 Install latest `misoapi` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misoapi@v0.1.17
+go install github.com/curtisnewbie/miso/cmd/misoapi@v0.1.18
 ```
 
 ```sh
@@ -50,7 +50,7 @@ $ misoapi -h
 
 # misoapi - automatically generate web endpoint in go based on misoapi-* comments
 #
-#   Supported miso version: v0.1.17
+#   Supported miso version: v0.1.18
 #
 # Usage of misoapi:
 #   -debug
