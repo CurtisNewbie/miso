@@ -32,6 +32,7 @@ const (
 	importMiso       = "github.com/curtisnewbie/miso/miso"
 	importGorm       = "gorm.io/gorm"
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
+	importDbQuery    = "github.com/curtisnewbie/miso/middleware/dbquery"
 
 	tagHttp        = "http"
 	tagDesc        = "desc"
@@ -337,8 +338,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			case typeCommonUser:
 				imports.Add(importCommonUser)
 				continue
-			case typeGormDbPtr, typeMySqlQryPtr:
+			case typeMySqlQryPtr:
 				imports.Add(importMySQL)
+				continue
+			case typeGormDbPtr:
+				imports.Add(importDbQuery)
 				continue
 			default:
 				if custReqType == "" {
@@ -392,9 +396,9 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					case typeMisoRail:
 						v = "inb.Rail()"
 					case typeMySqlQryPtr:
-						v = "mysql.NewQuery(mysql.GetMySQL())"
+						v = "mysql.NewQuery(dbquery.GetDB())"
 					case typeGormDbPtr:
-						v = "mysql.GetMySQL()"
+						v = "dbquery.GetDB()"
 					case typeCommonUser:
 						v = "common.GetUser(inb.Rail())"
 					case custReqType:
@@ -435,9 +439,9 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						case typeMisoRail:
 							v = "inb.Rail()"
 						case typeMySqlQryPtr:
-							v = "mysql.NewQuery(mysql.GetMySQL())"
+							v = "mysql.NewQuery(dbquery.GetDB())"
 						case typeGormDbPtr:
-							v = "mysql.GetMySQL()"
+							v = "dbquery.GetDB()"
 						case typeCommonUser:
 							v = "common.GetUser(inb.Rail())"
 						}

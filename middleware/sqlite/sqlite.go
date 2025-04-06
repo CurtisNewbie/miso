@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/driver/sqlite"
@@ -46,6 +47,8 @@ func (m *sqliteModule) initOnce() {
 			panic(err)
 		}
 		m.sqliteDb = sq
+
+		dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetDB() })
 	})
 }
 

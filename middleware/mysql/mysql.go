@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -238,6 +239,8 @@ func mysqlBootstrap(rail miso.Rail) error {
 
 	// register health indicator
 	m.registerHealthIndicator()
+
+	dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetMySQL() })
 
 	return nil
 }
