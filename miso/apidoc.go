@@ -156,28 +156,16 @@ type JsonPayloadDesc struct {
 	Fields   []FieldDesc
 }
 
-func (f JsonPayloadDesc) toOpenApiParam(reqName string) *openapi3.SchemaRef {
+func (f JsonPayloadDesc) toOpenApiReq(reqName string) *openapi3.SchemaRef {
 	var ref *openapi3.SchemaRef
 	if len(f.Fields) > 0 {
 		sec := &openapi3.Schema{}
 		f.buildSchema(f.Fields, sec)
 		ref = &openapi3.SchemaRef{Value: sec}
 	} else {
-		switch f.TypeName {
-		case "string":
-			ref = &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}
-		case "int", "int8", "int16", "int32", "int64":
-			ref = &openapi3.SchemaRef{Value: openapi3.NewIntegerSchema()}
-		case "float32", "float64":
-			ref = &openapi3.SchemaRef{Value: openapi3.NewFloat64Schema()}
-		case "bool":
-			ref = &openapi3.SchemaRef{Value: openapi3.NewBoolSchema()}
-		case "byte":
-			ref = &openapi3.SchemaRef{Value: openapi3.NewBytesSchema()}
-		default:
-			ref = &openapi3.SchemaRef{Value: openapi3.NewObjectSchema()}
-		}
+		ref = f.simpleTypeRef(f.TypeName)
 	}
+	ref.Value.Description = reqName
 	return ref
 }
 
@@ -217,17 +205,18 @@ func (j JsonPayloadDesc) buildSchemaRef(f FieldDesc) *openapi3.SchemaRef {
 func (j JsonPayloadDesc) simpleTypeRef(typeName string) *openapi3.SchemaRef {
 	var ref *openapi3.SchemaRef
 	switch strings.TrimSpace(typeName) {
-	case "string":
+	case "string", "*string":
 		ref = &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}
-	case "int", "int8", "int16", "int32", "int64":
+	case "int", "int8", "int16", "int32", "int64", "*int", "*int8", "*int16", "*int32", "*int64":
 		ref = &openapi3.SchemaRef{Value: openapi3.NewIntegerSchema()}
-	case "float32", "float64":
+	case "float32", "float64", "*float32", "*float64":
 		ref = &openapi3.SchemaRef{Value: openapi3.NewFloat64Schema()}
-	case "bool":
+	case "bool", "*bool":
 		ref = &openapi3.SchemaRef{Value: openapi3.NewBoolSchema()}
-	case "byte":
+	case "byte", "*byte":
 		ref = &openapi3.SchemaRef{Value: openapi3.NewBytesSchema()}
 	default:
+		// util.Printlnf("> typename: %v", typeName)
 		ref = &openapi3.SchemaRef{Value: openapi3.NewObjectSchema()}
 	}
 	return ref
@@ -243,8 +232,9 @@ func (j JsonPayloadDesc) toOpenApiResp(respName string) *openapi3.Response {
 	} else {
 		ref = j.simpleTypeRef(j.TypeName)
 	}
-	r.WithJSONSchemaRef(ref)
+	ref.Value.Description = respName
 	r.Description = &j.TypeName
+	r.WithJSONSchemaRef(ref)
 	return r
 }
 
@@ -1608,7 +1598,6 @@ func genOpenApiDoc(d httpRouteDoc) string {
 	op := &openapi3.Operation{
 		Summary:     d.Desc,
 		Description: d.Desc,
-		Parameters:  openapi3.Parameters{},
 	}
 
 	for _, v := range d.QueryParams {
@@ -1639,17 +1628,17 @@ func genOpenApiDoc(d httpRouteDoc) string {
 		})
 	}
 
-	if p := d.JsonRequestDesc.toOpenApiParam(d.JsonReqGoDefTypeName); p != nil {
-		op.RequestBody = &openapi3.RequestBodyRef{}
-		op.RequestBody.Value = &openapi3.RequestBody{}
-		op.RequestBody.Value.WithJSONSchemaRef(p)
+	if d.JsonRequestValue != nil {
+		if p := d.JsonRequestDesc.toOpenApiReq(d.JsonReqGoDefTypeName); p != nil {
+			op.RequestBody = &openapi3.RequestBodyRef{}
+			op.RequestBody.Value = &openapi3.RequestBody{}
+			op.RequestBody.Value.WithJSONSchemaRef(p)
+		}
 	}
 
 	if p := d.JsonResponseDesc.toOpenApiResp(d.JsonRespGoDefTypeName); p != nil {
 		op.AddResponse(200, p)
 	}
-
-	components := &openapi3.Components{}
 
 	switch d.Method {
 	case http.MethodGet:
@@ -1678,9 +1667,8 @@ func genOpenApiDoc(d httpRouteDoc) string {
 			Title:   title,
 			Version: "1.0.0",
 		},
-		Paths:      &paths,
-		Components: components,
-		Servers:    servers,
+		Paths:   &paths,
+		Servers: servers,
 	}
 
 	j, _ := json.SWriteIndent(doc)
