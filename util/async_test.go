@@ -322,16 +322,16 @@ func TestBatchTask(t *testing.T) {
 	var sum int = 0
 
 	n := 50
-	batchTask := NewBatchTask[int, int](10, 10, func(v int) int {
+	batchTask := NewBatchTask[int, int](10, 10, func(v int) (int, error) {
 		t.Logf("%v, running -> %v", Now().FormatStdMilli(), v)
 		defer func() {
 			t.Logf("%v, finished -> %v", Now().FormatStdMilli(), v)
 		}()
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		mu.Lock()
 		defer mu.Unlock()
 		sum += v
-		return v
+		return v, nil
 	})
 
 	shouldBe := n * (n + 1) / 2
@@ -348,7 +348,7 @@ func TestBatchTask(t *testing.T) {
 
 	resultSum := 0
 	for _, v := range result {
-		resultSum += v
+		resultSum += v.Result
 	}
 	if resultSum != shouldBe {
 		t.Fatalf("should be %v but %v", shouldBe, resultSum)

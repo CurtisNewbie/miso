@@ -403,12 +403,12 @@ type BatchTask[T any, V any] struct {
 	taskPipe  chan T
 	workerWg  *sync.WaitGroup
 	doConsume func(T)
-	results   []V
+	results   []BatchTaskResult[V]
 	resultsMu *sync.Mutex
 }
 
 // Wait until all generated tasks are completed and close pipeline channel.
-func (b *BatchTask[T, V]) Wait() []V {
+func (b *BatchTask[T, V]) Wait() []BatchTaskResult[V] {
 	b.workerWg.Wait()
 	defer close(b.taskPipe)
 	return b.results
@@ -435,21 +435,27 @@ func (b *BatchTask[T, V]) Generate(task T) {
 	b.taskPipe <- task
 }
 
+type BatchTaskResult[V any] struct {
+	Result V
+	Err    error
+}
+
 // Create a batch of concurrent task for one time use.
-func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) V) *BatchTask[T, V] {
+func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (V, error)) *BatchTask[T, V] {
 	bt := &BatchTask[T, V]{
 		parallel:  parallel,
 		taskPipe:  make(chan T, bufferSize),
 		workerWg:  &sync.WaitGroup{},
-		results:   make([]V, 0, bufferSize),
+		results:   make([]BatchTaskResult[V], 0, bufferSize),
 		resultsMu: &sync.Mutex{},
 	}
 	bt.doConsume = func(t T) {
 		defer bt.workerWg.Done()
-		v := consumer(t)
+		v, err := consumer(t)
+		r := BatchTaskResult[V]{Result: v, Err: err}
 		bt.resultsMu.Lock()
 		defer bt.resultsMu.Unlock()
-		bt.results = append(bt.results, v)
+		bt.results = append(bt.results, r)
 	}
 	bt.preHeat()
 	return bt
