@@ -156,7 +156,7 @@ type JsonPayloadDesc struct {
 	Fields   []FieldDesc
 }
 
-func (f JsonPayloadDesc) toOpenApiParam(reqName string) *openapi3.Parameter {
+func (f JsonPayloadDesc) toOpenApiParam(reqName string) *openapi3.SchemaRef {
 	var ref *openapi3.SchemaRef
 	if len(f.Fields) > 0 {
 		sec := &openapi3.Schema{}
@@ -178,14 +178,7 @@ func (f JsonPayloadDesc) toOpenApiParam(reqName string) *openapi3.Parameter {
 			ref = &openapi3.SchemaRef{Value: openapi3.NewObjectSchema()}
 		}
 	}
-	p := &openapi3.Parameter{
-		Name:        reqName,
-		In:          "body",
-		Required:    true,
-		Description: f.pureGoTypeName(),
-		Schema:      ref,
-	}
-	return p
+	return ref
 }
 
 func (j JsonPayloadDesc) buildSchema(fields []FieldDesc, sec *openapi3.Schema) {
@@ -251,6 +244,7 @@ func (j JsonPayloadDesc) toOpenApiResp(respName string) *openapi3.Response {
 		ref = j.simpleTypeRef(j.TypeName)
 	}
 	r.WithJSONSchemaRef(ref)
+	r.Description = &j.TypeName
 	return r
 }
 
@@ -1605,6 +1599,12 @@ func genOpenApiDoc(d httpRouteDoc) string {
 	paths := openapi3.Paths{}
 	paths.Set(d.Url, pathIt)
 
+	servers := openapi3.Servers{}
+	if v := GetPropStr(PropServerGenerateEndpointDocFileOpenApiServer); v != "" {
+		servers = openapi3.Servers{
+			&openapi3.Server{URL: v},
+		}
+	}
 	op := &openapi3.Operation{
 		Summary:     d.Desc,
 		Description: d.Desc,
@@ -1640,7 +1640,9 @@ func genOpenApiDoc(d httpRouteDoc) string {
 	}
 
 	if p := d.JsonRequestDesc.toOpenApiParam(d.JsonReqGoDefTypeName); p != nil {
-		op.AddParameter(p)
+		op.RequestBody = &openapi3.RequestBodyRef{}
+		op.RequestBody.Value = &openapi3.RequestBody{}
+		op.RequestBody.Value.WithJSONSchemaRef(p)
 	}
 
 	if p := d.JsonResponseDesc.toOpenApiResp(d.JsonRespGoDefTypeName); p != nil {
@@ -1678,6 +1680,7 @@ func genOpenApiDoc(d httpRouteDoc) string {
 		},
 		Paths:      &paths,
 		Components: components,
+		Servers:    servers,
 	}
 
 	j, _ := json.SWriteIndent(doc)

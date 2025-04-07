@@ -70,6 +70,9 @@ const (
 	// misoconfig-prop: whether the generated markdown endpoint documentation should exclude openapi json doc | true
 	PropServerGenerateEndpointDocFileExclOpenApiDoc = "server.generate-endpoint-doc.file-excl-openapi-doc"
 
+	// misoconfig-prop: server address specified in openapi json doc as part of the generated markdown endpoint documentation |
+	PropServerGenerateEndpointDocFileOpenApiServer = "server.generate-endpoint-doc.file-openapi-server"
+
 	// misoconfig-prop: whether the generated endpoint documentation should include app name as the path prefix | true
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
 
