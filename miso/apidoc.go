@@ -1671,6 +1671,6 @@ func genOpenApiDoc(d httpRouteDoc) string {
 		Servers: servers,
 	}
 
-	j, _ := json.SWriteIndent(doc)
+	j, _ := json.SWriteJson(doc)
 	return j
 }

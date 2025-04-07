@@ -1,6 +1,8 @@
 package json
 
 import (
+	"bytes"
+	jso "encoding/json"
 	"io"
 	"strings"
 	"unicode"
@@ -119,4 +121,14 @@ func IsValidJson(s []byte) bool {
 
 func IsValidJsonStr(s string) bool {
 	return IsValidJson(util.UnsafeStr2Byt(s))
+}
+
+func Indent(b []byte) string {
+	var buf bytes.Buffer
+	_ = jso.Indent(&buf, b, "", "\t")
+	return buf.String()
+}
+
+func SIndent(b string) string {
+	return Indent(util.UnsafeStr2Byt(b))
 }
