@@ -186,6 +186,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.generate-endpoint-doc.file                     | generate markdown endpoint documentation and save the doc to the specified file                                           |               |
 | server.generate-endpoint-doc.file-excl-tclient-demo   | whether the generated markdown endpoint documentation should exclude miso.TClient demo                                    | false         |
 | server.generate-endpoint-doc.file-excl-ng-client-demo | whether the generated markdown endpoint documentation should exclude Angular HttpClient demo                              | false         |
+| server.generate-endpoint-doc.file-excl-openapi-doc    | whether the generated markdown endpoint documentation should exclude openapi json doc                                     | true          |
 | server.generate-endpoint-doc.path-prefix-app          | whether the generated endpoint documentation should include app name as the path prefix                                   | true          |
 | server.request.mapping.header                         | automatically map header values to request struct                                                                         | true          |
 | server.gin.validation.disabled                        | disable gin's builtin validation                                                                                          | true          |

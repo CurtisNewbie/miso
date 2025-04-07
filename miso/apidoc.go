@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/getkin/kin-openapi/openapi3"
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -80,27 +82,30 @@ func init() {
 type GetPipelineDocFunc func() []PipelineDoc
 
 type httpRouteDoc struct {
-	Name              string           // api func name
-	Url               string           // http request url
-	Method            string           // http method
-	Extra             map[string][]any // extra metadata
-	Desc              string           // description of the route (metadata).
-	Scope             string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource          string           // the documented resource that the route should be bound to (metadata).
-	Headers           []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams       []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
-	JsonRequestValue  *reflect.Value   // reflect.Value of json request object
-	JsonRequestDesc   JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
-	JsonResponseValue *reflect.Value   // reflect.Value of json response object
-	JsonResponseDesc  JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
-	Curl              string           // curl demo
-	JsonReqTsDef      string           // json request type def in ts
-	JsonRespTsDef     string           // json response type def in ts
-	JsonReqGoDef      string           // json request type def in go
-	JsonRespGoDef     string           // json response type def in go
-	NgHttpClientDemo  string           // angular http client demo
-	NgTableDemo       string           // angular table demo
-	MisoTClientDemo   string           // miso TClient demo
+	Name                  string           // api func name
+	Url                   string           // http request url
+	Method                string           // http method
+	Extra                 map[string][]any // extra metadata
+	Desc                  string           // description of the route (metadata).
+	Scope                 string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource              string           // the documented resource that the route should be bound to (metadata).
+	Headers               []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams           []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
+	JsonRequestValue      *reflect.Value   // reflect.Value of json request object
+	JsonRequestDesc       JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
+	JsonResponseValue     *reflect.Value   // reflect.Value of json response object
+	JsonResponseDesc      JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
+	Curl                  string           // curl demo
+	JsonReqTsDef          string           // json request type def in ts
+	JsonRespTsDef         string           // json response type def in ts
+	JsonReqGoDef          string           // json request type def in go
+	JsonReqGoDefTypeName  string           // json request type name in go
+	JsonRespGoDef         string           // json response type def in go
+	JsonRespGoDefTypeName string           // json response type name in go
+	NgHttpClientDemo      string           // angular http client demo
+	NgTableDemo           string           // angular table demo
+	MisoTClientDemo       string           // miso TClient demo
+	OpenApiDoc            string
 }
 
 type FieldDesc struct {
@@ -151,13 +156,111 @@ type JsonPayloadDesc struct {
 	Fields   []FieldDesc
 }
 
-func (f JsonPayloadDesc) pureGoTypeName() string {
-	n := f.TypeName
+func (f JsonPayloadDesc) toOpenApiParam(reqName string) *openapi3.Parameter {
+	var ref *openapi3.SchemaRef
+	if len(f.Fields) > 0 {
+		sec := &openapi3.Schema{}
+		f.buildSchema(f.Fields, sec)
+		ref = &openapi3.SchemaRef{Value: sec}
+	} else {
+		switch f.TypeName {
+		case "string":
+			ref = &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}
+		case "int", "int8", "int16", "int32", "int64":
+			ref = &openapi3.SchemaRef{Value: openapi3.NewIntegerSchema()}
+		case "float32", "float64":
+			ref = &openapi3.SchemaRef{Value: openapi3.NewFloat64Schema()}
+		case "bool":
+			ref = &openapi3.SchemaRef{Value: openapi3.NewBoolSchema()}
+		case "byte":
+			ref = &openapi3.SchemaRef{Value: openapi3.NewBytesSchema()}
+		default:
+			ref = &openapi3.SchemaRef{Value: openapi3.NewObjectSchema()}
+		}
+	}
+	p := &openapi3.Parameter{
+		Name:        reqName,
+		In:          "body",
+		Required:    true,
+		Description: f.pureGoTypeName(),
+		Schema:      ref,
+	}
+	return p
+}
+
+func (j JsonPayloadDesc) buildSchema(fields []FieldDesc, sec *openapi3.Schema) {
+	if len(fields) < 1 {
+		return
+	}
+	for _, f := range fields {
+		var ref *openapi3.SchemaRef = j.buildSchemaRef(f)
+		sec.WithPropertyRef(f.Name, ref)
+	}
+}
+
+func (j JsonPayloadDesc) buildSchemaRef(f FieldDesc) *openapi3.SchemaRef {
+	// simple types
+	if len(f.Fields) < 1 {
+		str := j.simpleTypeRef(f.OriginTypeName)
+		str.Value.Description = f.Desc
+		return str
+	}
+	var sec *openapi3.Schema
+	if f.isSliceOrArray {
+		sec = openapi3.NewArraySchema()
+		secit := &openapi3.Schema{}
+		sec.WithItems(secit)
+		j.buildSchema(f.Fields, secit)
+	} else {
+		sec = openapi3.NewObjectSchema()
+		j.buildSchema(f.Fields, sec)
+	}
+	sec.Description = f.Desc
+
+	ref := &openapi3.SchemaRef{Value: sec}
+	return ref
+}
+
+func (j JsonPayloadDesc) simpleTypeRef(typeName string) *openapi3.SchemaRef {
+	var ref *openapi3.SchemaRef
+	switch strings.TrimSpace(typeName) {
+	case "string":
+		ref = &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}
+	case "int", "int8", "int16", "int32", "int64":
+		ref = &openapi3.SchemaRef{Value: openapi3.NewIntegerSchema()}
+	case "float32", "float64":
+		ref = &openapi3.SchemaRef{Value: openapi3.NewFloat64Schema()}
+	case "bool":
+		ref = &openapi3.SchemaRef{Value: openapi3.NewBoolSchema()}
+	case "byte":
+		ref = &openapi3.SchemaRef{Value: openapi3.NewBytesSchema()}
+	default:
+		ref = &openapi3.SchemaRef{Value: openapi3.NewObjectSchema()}
+	}
+	return ref
+}
+
+func (j JsonPayloadDesc) toOpenApiResp(respName string) *openapi3.Response {
+	var ref *openapi3.SchemaRef
+	r := &openapi3.Response{}
+	if len(j.Fields) > 0 {
+		sec := &openapi3.Schema{}
+		j.buildSchema(j.Fields, sec)
+		ref = &openapi3.SchemaRef{Value: sec}
+	} else {
+		ref = j.simpleTypeRef(j.TypeName)
+	}
+	r.WithJSONSchemaRef(ref)
+	return r
+}
+
+func (j JsonPayloadDesc) pureGoTypeName() string {
+	n := j.TypeName
 	return pureGoTypeName(n)
 }
 
-func (f JsonPayloadDesc) isMisoPkg() bool {
-	return strings.HasPrefix(f.TypePkg, "github.com/curtisnewbie/miso")
+func (j JsonPayloadDesc) isMisoPkg() bool {
+	return strings.HasPrefix(j.TypePkg, "github.com/curtisnewbie/miso")
 }
 
 func pureGoTypeName(n string) string {
@@ -251,13 +354,13 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		if d.JsonRequestValue != nil {
 			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
 			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
-			d.JsonReqGoDef = genJsonGoDef(d.JsonRequestDesc)
+			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc)
 		}
 
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
 			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
-			d.JsonRespGoDef = genJsonGoDef(d.JsonResponseDesc)
+			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc)
 		}
 
 		// curl
@@ -272,13 +375,16 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		}
 
 		// miso http TClient
-		d.MisoTClientDemo, _ = genTClientDemo(d)
+		d.MisoTClientDemo = genTClientDemo(d)
 		if d.JsonRespGoDef != "" {
 			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
 		}
 		if d.JsonReqGoDef != "" {
 			d.MisoTClientDemo = d.JsonReqGoDef + "\n" + d.MisoTClientDemo
 		}
+
+		// openapi 3.0.0
+		d.OpenApiDoc = genOpenApiDoc(d)
 
 		docs = append(docs, d)
 	}
@@ -397,6 +503,14 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString("- Angular HttpClient Demo:\n")
 			b.WriteString(util.Spaces(2) + "```ts\n")
 			b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
+			b.WriteString(util.Spaces(2) + "```\n")
+		}
+
+		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApiDoc) {
+			b.WriteRune('\n')
+			b.WriteString("- Open Api (experimental, demo may not work):\n")
+			b.WriteString(util.Spaces(2) + "```json\n")
+			b.WriteString(util.SAddLineIndent(r.OpenApiDoc+"\n", util.Spaces(2)))
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 	}
@@ -848,9 +962,9 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 }
 
 // generate one or more golang type definitions.
-func genJsonGoDef(rv JsonPayloadDesc) string {
+func genJsonGoDef(rv JsonPayloadDesc) (string, string) {
 	if rv.TypeName == "any" || len(rv.Fields) < 1 {
-		return ""
+		return "", ""
 	}
 	seenTypeDef := util.NewSet[string]()
 
@@ -858,12 +972,13 @@ func genJsonGoDef(rv JsonPayloadDesc) string {
 		for _, f := range rv.Fields {
 			if f.FieldName == "Data" {
 				if f.OriginTypeName == "any" || len(f.Fields) < 1 {
-					return ""
+					return "", ""
 				}
 				inclTypeDef := inclGoTypeDef(f, seenTypeDef)
 				sb, writef := util.NewIndWritef("\t")
+				ptn := f.pureGoTypeName()
 				if inclTypeDef {
-					writef(0, "type %s struct {", f.pureGoTypeName())
+					writef(0, "type %s struct {", ptn)
 				}
 				deferred := make([]func(), 0, 10)
 				genJsonGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
@@ -873,15 +988,16 @@ func genJsonGoDef(rv JsonPayloadDesc) string {
 				for i := 0; i < len(deferred); i++ {
 					deferred[i]()
 				}
-				return sb.String()
+				return sb.String(), ptn
 			}
 		}
-		return ""
+		return "", ""
 	} else {
 		sb, writef := util.NewIndWritef("\t")
 		inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
+		ptn := rv.pureGoTypeName()
 		if inclTypeDef {
-			writef(0, "type %s struct {", rv.pureGoTypeName())
+			writef(0, "type %s struct {", ptn)
 		}
 		deferred := make([]func(), 0, 10)
 		genJsonGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
@@ -892,7 +1008,7 @@ func genJsonGoDef(rv JsonPayloadDesc) string {
 		for i := 0; i < len(deferred); i++ {
 			deferred[i]()
 		}
-		return sb.String()
+		return sb.String(), ptn
 	}
 }
 
@@ -1267,7 +1383,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 	return sl.String()
 }
 
-func genTClientDemo(d httpRouteDoc) (code string, realRespTypeName string) {
+func genTClientDemo(d httpRouteDoc) (code string) {
 	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
 	sl := new(util.SLPinter)
 
@@ -1339,7 +1455,6 @@ func genTClientDemo(d httpRouteDoc) (code string, realRespTypeName string) {
 		}
 	}
 
-	realRespTypeName = respGeneName
 	sl.LinePrefix = "\t"
 	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
 	sl.Printf("\n%serr := miso.NewDynTClient(rail, \"%s\", \"%s\")", util.Tabs(1), d.Url, GetPropStr(PropAppName))
@@ -1407,7 +1522,7 @@ func genTClientDemo(d httpRouteDoc) (code string, realRespTypeName string) {
 		sl.Printlnf("}")
 		sl.Printlnf("return err")
 		sl.Printf("\n}")
-		return sl.String(), realRespTypeName
+		return sl.String()
 	}
 
 	sl.Printlnf("dat, err := res.Res()")
@@ -1416,7 +1531,7 @@ func genTClientDemo(d httpRouteDoc) (code string, realRespTypeName string) {
 	sl.Printlnf("}")
 	sl.Printlnf("return dat, err")
 	sl.Printf("\n}")
-	return sl.String(), realRespTypeName
+	return sl.String()
 }
 
 type PipelineDoc struct {
@@ -1479,4 +1594,92 @@ func singleLine(v string) string {
 // Disable apidoc endpoint handler.
 func DisableApidocEndpointRegister() {
 	apiDocEndpointDisabled = true
+}
+
+func genOpenApiDoc(d httpRouteDoc) string {
+	title := d.Desc
+	if title == "" {
+		title = d.Method + " " + d.Url
+	}
+	pathIt := &openapi3.PathItem{}
+	paths := openapi3.Paths{}
+	paths.Set(d.Url, pathIt)
+
+	op := &openapi3.Operation{
+		Summary:     d.Desc,
+		Description: d.Desc,
+		Parameters:  openapi3.Parameters{},
+	}
+
+	for _, v := range d.QueryParams {
+		op.AddParameter(&openapi3.Parameter{
+			Name:        v.Name,
+			In:          "query",
+			Required:    false,
+			Description: v.Desc,
+			Schema: &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type: &openapi3.Types{"string"}, // TODO
+				},
+			},
+		})
+	}
+
+	for _, v := range d.Headers {
+		op.AddParameter(&openapi3.Parameter{
+			Name:        v.Name,
+			In:          "header",
+			Required:    false,
+			Description: v.Desc,
+			Schema: &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type: &openapi3.Types{"string"}, // TODO
+				},
+			},
+		})
+	}
+
+	if p := d.JsonRequestDesc.toOpenApiParam(d.JsonReqGoDefTypeName); p != nil {
+		op.AddParameter(p)
+	}
+
+	if p := d.JsonResponseDesc.toOpenApiResp(d.JsonRespGoDefTypeName); p != nil {
+		op.AddResponse(200, p)
+	}
+
+	components := &openapi3.Components{}
+
+	switch d.Method {
+	case http.MethodGet:
+		pathIt.Get = op
+	case http.MethodPut:
+		pathIt.Put = op
+	case http.MethodPost:
+		pathIt.Post = op
+	case http.MethodDelete:
+		pathIt.Delete = op
+	case http.MethodHead:
+		pathIt.Head = op
+	case http.MethodOptions:
+		pathIt.Options = op
+	case http.MethodTrace:
+		pathIt.Trace = op
+	case http.MethodConnect:
+		pathIt.Connect = op
+	case http.MethodPatch:
+		pathIt.Patch = op
+	}
+
+	doc := openapi3.T{
+		OpenAPI: "3.0.0",
+		Info: &openapi3.Info{
+			Title:   title,
+			Version: "1.0.0",
+		},
+		Paths:      &paths,
+		Components: components,
+	}
+
+	j, _ := json.SWriteIndent(doc)
+	return j
 }
