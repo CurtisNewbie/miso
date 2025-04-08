@@ -17,6 +17,12 @@ func TableHasColumn(table string, column string, d *gorm.DB) (ok bool, err error
 	return c > 0, nil
 }
 
+func NotTableHasColumnFunc(table string, column string) func(*gorm.DB) (ok bool, err error) {
+	return func(d *gorm.DB) (ok bool, err error) {
+		return NotTableHasColumn(table, column, d)
+	}
+}
+
 func NotTableHasColumn(table string, column string, d *gorm.DB) (ok bool, err error) {
 	v, e := TableHasColumn(table, column, d)
 	return !v, e
