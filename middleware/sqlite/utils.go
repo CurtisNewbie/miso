@@ -14,5 +14,10 @@ func TableHasColumn(table string, column string, d *gorm.DB) (ok bool, err error
 	if err != nil {
 		return false, err
 	}
-	return c < 1, nil
+	return c > 0, nil
+}
+
+func NotTableHasColumn(table string, column string, d *gorm.DB) (ok bool, err error) {
+	v, e := TableHasColumn(table, column, d)
+	return !v, e
 }
