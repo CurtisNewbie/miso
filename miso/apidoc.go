@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
-	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
@@ -68,12 +67,13 @@ func init() {
 		f.Truncate(0)
 		defer f.Close()
 
-		httpRouteDoc := buildHttpRouteDoc(GetHttpRoutes())
+		routes := GetHttpRoutes()
+		docs := buildHttpRouteDoc(routes)
 		var pipelineDoc []PipelineDoc
 		for _, f := range getPipelineDocFuncs {
 			pipelineDoc = append(pipelineDoc, f()...)
 		}
-		markdown := genMarkDownDoc(httpRouteDoc, pipelineDoc)
+		markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc, docs.openapi)
 		_, _ = f.WriteString(markdown)
 		return nil
 	})
@@ -282,11 +282,27 @@ func pureGoTypeName(n string) string {
 	return n
 }
 
-func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
+type httpRouteDocs struct {
+	routeDocs []httpRouteDoc
+	openapi   *openapi3.T
+}
+
+func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	docs := make([]httpRouteDoc, 0, len(hr))
 	filteredPathPatterns := []string{
 		"/debug/pprof/**",
 		"/doc/api/**",
+	}
+
+	openapi := &openapi3.T{
+		OpenAPI: "3.0.0",
+		Info: &openapi3.Info{
+			Title:   GetPropStr(PropAppName),
+			Version: "1.0.0",
+		},
+	}
+	if v := GetPropStr(PropServerGenerateEndpointDocFileOpenApiServer); v != "" {
+		openapi.AddServer(&openapi3.Server{URL: v})
 	}
 
 	for _, r := range hr {
@@ -368,14 +384,17 @@ func buildHttpRouteDoc(hr []HttpRoute) []httpRouteDoc {
 		}
 
 		// openapi 3.0.0
-		d.OpenApiDoc = genOpenApiDoc(d)
+		d.OpenApiDoc = genOpenApiDoc(d, openapi)
 
 		docs = append(docs, d)
 	}
-	return docs
+	return httpRouteDocs{
+		routeDocs: docs,
+		openapi:   openapi,
+	}
 }
 
-func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
+func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc, mergedOpenApi *openapi3.T) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
@@ -490,7 +509,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApiDoc) {
+		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApi) {
 			b.WriteRune('\n')
 			b.WriteString("- Open Api (experimental, demo may not work):\n")
 			b.WriteString(util.Spaces(2) + "```json\n")
@@ -550,6 +569,11 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			}
 			b.WriteString("\n")
 		}
+	}
+
+	if mergedOpenApi != nil && !GetPropBool(PropServerGenerateEndpointDocFileExclMergedOpenApi) {
+		openApiJson, _ := json.SWriteIndent(mergedOpenApi)
+		b.WriteString("\n\n## Open Api \n\n```json\n" + openApiJson + "\n```\n")
 	}
 
 	return b.String()
@@ -769,7 +793,7 @@ func serveApiDocTmpl(rail Rail) error {
 			for _, f := range getPipelineDocFuncs {
 				pipelineDoc = append(pipelineDoc, f()...)
 			}
-			markdown := genMarkDownDoc(docs, pipelineDoc)
+			markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc, nil)
 
 			w, _ := inb.Unwrap()
 			if err := apiDocTmpl.ExecuteTemplate(w, "apiDocTempl",
@@ -780,7 +804,7 @@ func serveApiDocTmpl(rail Rail) error {
 					Markdown    string
 				}{
 					App:         GetPropStr(PropAppName),
-					HttpDoc:     docs,
+					HttpDoc:     docs.routeDocs,
 					PipelineDoc: pipelineDoc,
 					Markdown:    markdown,
 				}); err != nil {
@@ -1580,14 +1604,11 @@ func DisableApidocEndpointRegister() {
 	apiDocEndpointDisabled = true
 }
 
-func genOpenApiDoc(d httpRouteDoc) string {
+func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 	title := d.Desc
 	if title == "" {
 		title = d.Method + " " + d.Url
 	}
-	pathIt := &openapi3.PathItem{}
-	paths := openapi3.Paths{}
-	paths.Set(d.Url, pathIt)
 
 	servers := openapi3.Servers{}
 	if v := GetPropStr(PropServerGenerateEndpointDocFileOpenApiServer); v != "" {
@@ -1640,36 +1661,16 @@ func genOpenApiDoc(d httpRouteDoc) string {
 		op.AddResponse(200, p)
 	}
 
-	switch d.Method {
-	case http.MethodGet:
-		pathIt.Get = op
-	case http.MethodPut:
-		pathIt.Put = op
-	case http.MethodPost:
-		pathIt.Post = op
-	case http.MethodDelete:
-		pathIt.Delete = op
-	case http.MethodHead:
-		pathIt.Head = op
-	case http.MethodOptions:
-		pathIt.Options = op
-	case http.MethodTrace:
-		pathIt.Trace = op
-	case http.MethodConnect:
-		pathIt.Connect = op
-	case http.MethodPatch:
-		pathIt.Patch = op
-	}
-
 	doc := openapi3.T{
 		OpenAPI: "3.0.0",
 		Info: &openapi3.Info{
 			Title:   title,
 			Version: "1.0.0",
 		},
-		Paths:   &paths,
 		Servers: servers,
 	}
+	doc.AddOperation(d.Url, d.Method, op)
+	root.AddOperation(d.Url, d.Method, op)
 
 	j, _ := json.SWriteJson(doc)
 	return j
