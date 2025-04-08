@@ -275,7 +275,7 @@ func CronEveryXSec(n int, options ...func(j Job) Job) Job {
 
 func CronEveryXMin(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            fmt.Sprintf("* */%d * * * *", n),
+		Cron:            fmt.Sprintf("0 */%d * * * *", n),
 		CronWithSeconds: true,
 	}
 	return buildCronJob(j, options...)
@@ -283,7 +283,7 @@ func CronEveryXMin(n int, options ...func(j Job) Job) Job {
 
 func CronEveryXHour(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            fmt.Sprintf("* * */%d * * *", n),
+		Cron:            fmt.Sprintf("0 0 */%d * * *", n),
 		CronWithSeconds: true,
 	}
 	return buildCronJob(j, options...)
