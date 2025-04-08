@@ -286,7 +286,13 @@ func (r Rail) WithCtxVal(key string, val any) Rail {
 
 // Create a new Rail with a new SpanId
 func (r Rail) NextSpan() Rail {
-	// X_TRACE_ID is propagated as parent context, we only need to create a new X_SPAN_ID
+	prev := r.ctx
+	r.ctx = context.Background() // avoid using the cancelled context in a new goroutine
+
+	// copy values from previous context
+	for _, k := range GetPropagationKeys() {
+		r = r.WithCtxVal(k, prev.Value(k))
+	}
 	return r.WithCtxVal(XSpanId, util.RandLowerAlphaNumeric16())
 }
 
