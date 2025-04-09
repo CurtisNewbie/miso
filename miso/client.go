@@ -113,9 +113,13 @@ func (tr *TResponse) Str() (string, error) {
 	defer tr.Close()
 	b, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
-		return "", UnknownErr(e)
+		return "", WrapErr(e)
 	}
-	return util.UnsafeByt2Str(b), nil
+	s := util.UnsafeByt2Str(b)
+	if IsDebugLevel() {
+		tr.Rail.Debugf("Response Body: %v", s)
+	}
+	return s, nil
 }
 
 // Read response as JSON object.
@@ -134,12 +138,16 @@ func (tr *TResponse) Json(ptr any) error {
 	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
-		return UnknownErr(e)
+		return WrapErr(e)
+	}
+
+	if IsDebugLevel() {
+		tr.Rail.Debugf("Response Body: %s", body)
 	}
 
 	if e = json.ParseJson(body, ptr); e != nil {
 		s := util.UnsafeByt2Str(body)
-		return UnknownErrf(e, "failed to unmarshal json from response, body: %v", s)
+		return WrapErrf(e, "failed to unmarshal json from response, body: %v", s)
 	}
 	return nil
 }
@@ -188,7 +196,7 @@ func (tr *TResponse) Require2xx() error {
 		if err == nil {
 			body = util.UnsafeByt2Str(byt)
 		}
-		return ErrUnknownError.WithInternalMsg("unknown error, status code: %v, body: %v", tr.StatusCode, body)
+		return NewErrf("2xx status check failed, status code: %v, body: %v", tr.StatusCode, body)
 	}
 	return nil
 }
