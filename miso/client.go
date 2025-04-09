@@ -149,6 +149,13 @@ func (tr *TResponse) Json(ptr any) error {
 		s := util.UnsafeByt2Str(body)
 		return WrapErrf(e, "failed to unmarshal json from response, body: %v", s)
 	}
+
+	if v, ok := ptr.(TResponseJsonCheckErr); ok && v != nil {
+		if err := v.CheckErr(); err != nil {
+			return WrapErr(err)
+		}
+	}
+
 	return nil
 }
 
@@ -742,4 +749,8 @@ func (r *readerFile) Name() string {
 
 func NewReaderFile(reader io.Reader, name string) *readerFile {
 	return &readerFile{Reader: reader, name: name}
+}
+
+type TResponseJsonCheckErr interface {
+	CheckErr() error
 }
