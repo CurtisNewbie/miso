@@ -305,6 +305,15 @@ func SAddLineIndent(s string, indentChar string) string {
 	return b.String()
 }
 
+func MatchPathAny(pattern []string, s string) bool {
+	for _, p := range pattern {
+		if MatchPath(p, s) {
+			return true
+		}
+	}
+	return false
+}
+
 func MatchPath(pattern, s string) bool {
 	ok, err := doublestar.Match(pattern, s)
 	if err != nil {

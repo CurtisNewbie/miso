@@ -73,8 +73,23 @@ func init() {
 		for _, f := range getPipelineDocFuncs {
 			pipelineDoc = append(pipelineDoc, f()...)
 		}
-		markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc, docs.openapi)
+		markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc)
 		_, _ = f.WriteString(markdown)
+
+		if oapiFile := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecFile); oapiFile != "" {
+			f, err := util.ReadWriteFile(oapiFile)
+			if err != nil {
+				rail.Debugf("Failed to openapi spec json file, %v, %v", oapiFile, err)
+				return nil
+			}
+			f.Truncate(0)
+			defer f.Close()
+
+			openApiJson, _ := json.SWriteIndent(docs.openapi)
+			openApiJson = json.SIndent(openApiJson)
+			f.WriteString(openApiJson)
+		}
+
 		return nil
 	})
 }
@@ -294,16 +309,17 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		"/doc/api/**",
 	}
 
-	openapi := &openapi3.T{
+	rootSpec := &openapi3.T{
 		OpenAPI: "3.0.0",
 		Info: &openapi3.Info{
 			Title:   GetPropStr(PropAppName),
 			Version: "1.0.0",
 		},
 	}
-	if v := GetPropStr(PropServerGenerateEndpointDocFileOpenApiServer); v != "" {
-		openapi.AddServer(&openapi3.Server{URL: v})
+	if v := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecServer); v != "" {
+		rootSpec.AddServer(&openapi3.Server{URL: v})
 	}
+	patterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
 
 	for _, r := range hr {
 		excl := false
@@ -384,17 +400,26 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		}
 
 		// openapi 3.0.0
-		d.OpenApiDoc = genOpenApiDoc(d, openapi)
+		var matchSpecPattern bool = true
+		if len(patterns) > 0 {
+			matchSpecPattern = util.MatchPathAny(patterns, d.Url)
+		}
+
+		if matchSpecPattern {
+			d.OpenApiDoc = genOpenApiDoc(d, rootSpec)
+		} else {
+			d.OpenApiDoc = genOpenApiDoc(d, nil)
+		}
 
 		docs = append(docs, d)
 	}
 	return httpRouteDocs{
 		routeDocs: docs,
-		openapi:   openapi,
+		openapi:   rootSpec,
 	}
 }
 
-func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc, mergedOpenApi *openapi3.T) string {
+func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
@@ -569,11 +594,6 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc, mergedOpenApi *openapi3
 			}
 			b.WriteString("\n")
 		}
-	}
-
-	if mergedOpenApi != nil && !GetPropBool(PropServerGenerateEndpointDocFileExclMergedOpenApi) {
-		openApiJson, _ := json.SWriteIndent(mergedOpenApi)
-		b.WriteString("\n\n## Open Api \n\n```json\n" + openApiJson + "\n```\n")
 	}
 
 	return b.String()
@@ -793,7 +813,7 @@ func serveApiDocTmpl(rail Rail) error {
 			for _, f := range getPipelineDocFuncs {
 				pipelineDoc = append(pipelineDoc, f()...)
 			}
-			markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc, nil)
+			markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc)
 
 			w, _ := inb.Unwrap()
 			if err := apiDocTmpl.ExecuteTemplate(w, "apiDocTempl",
@@ -1611,7 +1631,7 @@ func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 	}
 
 	servers := openapi3.Servers{}
-	if v := GetPropStr(PropServerGenerateEndpointDocFileOpenApiServer); v != "" {
+	if v := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecServer); v != "" {
 		servers = openapi3.Servers{
 			&openapi3.Server{URL: v},
 		}
@@ -1670,7 +1690,10 @@ func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 		Servers: servers,
 	}
 	doc.AddOperation(d.Url, d.Method, op)
-	root.AddOperation(d.Url, d.Method, op)
+
+	if root != nil {
+		root.AddOperation(d.Url, d.Method, op)
+	}
 
 	j, _ := json.SWriteJson(doc)
 	return j

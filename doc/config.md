@@ -167,31 +167,32 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Web Server Configuration
 
-| property                                                  | description                                                                                                               | default value |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| server.enabled                                            | enable http server                                                                                                        | true          |
-| server.host                                               | http server host                                                                                                          | 127.0.0.1     |
-| server.port                                               | http server port                                                                                                          | 8080          |
-| server.auth.bearer                                        | http server bearer authorization token for all endpoints                                                                  |               |
-| server.gracefulShutdownTimeSec                            | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30            |
-| server.perf.enabled                                       | logs time duration for each inbound http request                                                                          | false         |
-| server.trace.inbound.propagate                            | propagate trace info from inbound requests                                                                                | true          |
-| server.validate.request.enabled                           | enable inbound request parameter validation                                                                               | true          |
-| server.request-log.enabled                                | enable server request log                                                                                                 | false         |
-| server.pprof.enabled                                      | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
-| server.pprof.auth.enabled                                 | enable bearer authentication for pprof endpoints                                                                          | false         |
-| server.pprof.auth.bearer                                  | bearer token for pprof endpoints' authentication                                                                          |               |
-| server.generate-endpoint-doc.enabled                      | generate api doc                                                                                                          | true          |
-| server.generate-endpoint-doc.web.enabled                  | build webpage for the generated api doc                                                                                   | true          |
-| server.generate-endpoint-doc.file                         | generate markdown api doc to the specified file                                                                           |               |
-| server.generate-endpoint-doc.file-excl-tclient-demo       | whether the markdown api doc should exclude miso.TClient demo                                                             | false         |
-| server.generate-endpoint-doc.file-excl-ng-client-demo     | whether the markdown api doc should exclude Angular HttpClient demo                                                       | false         |
-| server.generate-endpoint-doc.file-excl-openapi-doc        | whether the markdown api doc should exclude openapi json for each endpoint                                                | true          |
-| server.generate-endpoint-doc.file-excl-merged-openapi-doc | whether the markdown api doc should exclude openapi json for all endpoints                                                | true          |
-| server.generate-endpoint-doc.file-openapi-server          | server address specified in openapi json doc as part of the generated markdown endpoint documentation                     |               |
-| server.generate-endpoint-doc.path-prefix-app              | whether the generated endpoint documentation should include app name as the path prefix                                   | true          |
-| server.request.mapping.header                             | automatically map header values to request struct                                                                         | true          |
-| server.gin.validation.disabled                            | disable gin's builtin validation                                                                                          | true          |
+| property                                                | description                                                                                                               | default value |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| server.enabled                                          | enable http server                                                                                                        | true          |
+| server.host                                             | http server host                                                                                                          | 127.0.0.1     |
+| server.port                                             | http server port                                                                                                          | 8080          |
+| server.auth.bearer                                      | http server bearer authorization token for all endpoints                                                                  |               |
+| server.gracefulShutdownTimeSec                          | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30            |
+| server.perf.enabled                                     | logs time duration for each inbound http request                                                                          | false         |
+| server.trace.inbound.propagate                          | propagate trace info from inbound requests                                                                                | true          |
+| server.validate.request.enabled                         | enable inbound request parameter validation                                                                               | true          |
+| server.request-log.enabled                              | enable server request log                                                                                                 | false         |
+| server.pprof.enabled                                    | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
+| server.pprof.auth.enabled                               | enable bearer authentication for pprof endpoints                                                                          | false         |
+| server.pprof.auth.bearer                                | bearer token for pprof endpoints' authentication                                                                          |               |
+| server.generate-endpoint-doc.enabled                    | generate api doc                                                                                                          | true          |
+| server.generate-endpoint-doc.web.enabled                | build webpage for the generated api doc                                                                                   | true          |
+| server.generate-endpoint-doc.file                       | generate markdown api doc to the specified file                                                                           |               |
+| server.generate-endpoint-doc.file-excl-tclient-demo     | whether the markdown api doc should exclude miso.TClient demo                                                             | false         |
+| server.generate-endpoint-doc.file-excl-ng-client-demo   | whether the markdown api doc should exclude Angular HttpClient demo                                                       | false         |
+| server.generate-endpoint-doc.file-excl-openapi-spec     | whether the markdown api doc should exclude openapi json for each endpoint                                                | true          |
+| server.generate-endpoint-doc.path-prefix-app            | whether the generated endpoint documentation should include app name as the path prefix                                   | true          |
+| server.generate-endpoint-doc.openapi-spec.server        | server address specified in openapi json doc                                                                              |               |
+| server.generate-endpoint-doc.openapi-spec.file          | path to generated openapi json for all endpoints                                                                          |               |
+| server.generate-endpoint-doc.openapi-spec.path-patterns | path patterns for endpoints in openapi json (`slice of string`)                                                           |               |
+| server.request.mapping.header                           | automatically map header values to request struct                                                                         | true          |
+| server.gin.validation.disabled                          | disable gin's builtin validation                                                                                          | true          |
 
 <!-- misoconfig-table-end -->
 

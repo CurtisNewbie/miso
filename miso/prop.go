@@ -68,16 +68,19 @@ const (
 	PropServerGenerateEndpointDocFileExclNgClientDemo = "server.generate-endpoint-doc.file-excl-ng-client-demo"
 
 	// misoconfig-prop: whether the markdown api doc should exclude openapi json for each endpoint | true
-	PropServerGenerateEndpointDocFileExclOpenApi = "server.generate-endpoint-doc.file-excl-openapi-doc"
-
-	// misoconfig-prop: whether the markdown api doc should exclude openapi json for all endpoints | true
-	PropServerGenerateEndpointDocFileExclMergedOpenApi = "server.generate-endpoint-doc.file-excl-merged-openapi-doc"
-
-	// misoconfig-prop: server address specified in openapi json doc as part of the generated markdown endpoint documentation |
-	PropServerGenerateEndpointDocFileOpenApiServer = "server.generate-endpoint-doc.file-openapi-server"
+	PropServerGenerateEndpointDocFileExclOpenApi = "server.generate-endpoint-doc.file-excl-openapi-spec"
 
 	// misoconfig-prop: whether the generated endpoint documentation should include app name as the path prefix | true
 	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
+
+	// misoconfig-prop: server address specified in openapi json doc |
+	PropServerGenerateEndpointDocOpenApiSpecServer = "server.generate-endpoint-doc.openapi-spec.server"
+
+	// misoconfig-prop: path to generated openapi json for all endpoints |
+	PropServerGenerateEndpointDocOpenApiSpecFile = "server.generate-endpoint-doc.openapi-spec.file"
+
+	// misoconfig-prop: path patterns for endpoints in openapi json (`slice of string`) |
+	PropServerGenerateEndpointDocOpenApiSpecPathPatterns = "server.generate-endpoint-doc.openapi-spec.path-patterns"
 
 	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
@@ -229,7 +232,6 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocFileExclTClientDemo, false)
 	SetDefProp(PropServerGenerateEndpointDocFileExclNgClientDemo, false)
 	SetDefProp(PropServerGenerateEndpointDocFileExclOpenApi, true)
-	SetDefProp(PropServerGenerateEndpointDocFileExclMergedOpenApi, true)
 	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
 	SetDefProp(PropServerGinValidationDisabled, true)
