@@ -1128,3 +1128,21 @@ func AddBearerInterceptor(doIntercept func(method string, url string) bool, bear
 		next()
 	})
 }
+
+func AddCorsAny() {
+	PreProcessGin(func(rail Rail, engine *gin.Engine) {
+		engine.Use(func(c *gin.Context) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, HEAD")
+
+			if c.Request.Method == "OPTIONS" {
+				c.AbortWithStatus(204)
+				return
+			}
+
+			c.Next()
+		})
+	})
+}
