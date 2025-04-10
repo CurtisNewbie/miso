@@ -112,6 +112,7 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	s := string(b)
 	millisec, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
+		s = UnquoteStr(s)
 		// try SQLDateTimeFormat
 		if xer := t.Scan(s); xer != nil {
 			return fmt.Errorf("failed to UnmarshalJSON, tried epoch milliseconds format %w, tried '2006-01-02 15:04:05.999999' format %w", err, xer)
