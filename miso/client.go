@@ -159,7 +159,7 @@ func (tr *TResponse) Json(ptr any) error {
 	return nil
 }
 
-func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error)) error {
+func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options ...func(c *SseReadConfig)) error {
 	if tr.Err != nil {
 		return tr.Err
 	}
@@ -168,7 +168,12 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error)) error {
 	}
 	defer tr.Close()
 
-	onEvent := sse.Read(tr.Resp.Body, nil)
+	conf := &SseReadConfig{}
+	for _, op := range options {
+		op(conf)
+	}
+
+	onEvent := sse.Read(tr.Resp.Body, &sse.ReadConfig{MaxEventSize: conf.MaxEventSize})
 	onEvent(func(ev sse.Event, err error) bool {
 		tr.Rail.Debugf("Received sse event: %#v", ev)
 		if err != nil {
@@ -753,4 +758,8 @@ func NewReaderFile(reader io.Reader, name string) *readerFile {
 
 type TResponseJsonCheckErr interface {
 	CheckErr() error
+}
+
+type SseReadConfig struct {
+	MaxEventSize int
 }
