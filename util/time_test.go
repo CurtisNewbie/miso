@@ -76,11 +76,11 @@ func TestUnmarshalJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%v", et.FormatStdMilli())
+	t.Logf("%v", et)
 
 	err = et.UnmarshalJSON([]byte("1744251041206"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%v", et.FormatStdMilli())
+	t.Logf("%v", et)
 }

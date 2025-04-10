@@ -98,6 +98,10 @@ func (t ETime) Value() (driver.Value, error) {
 	return t.Format(SQLDateTimeFormat), nil
 }
 
+func (t ETime) String() string {
+	return t.FormatStdMilli()
+}
+
 // Implements encoding/json Marshaler
 func (t ETime) MarshalJSON() ([]byte, error) {
 	return UnsafeStr2Byt(fmt.Sprintf("%d", t.UnixMilli())), nil
