@@ -26,8 +26,8 @@ var (
 	ApiDocTypeAlias = map[string]string{
 		"ETime":       "int64",
 		"*ETime":      "int64",
-		"*miso.ETime": "int64",
 		"*util.ETime": "int64",
+		"util.ETime":  "int64",
 	}
 	apiDocEndpointDisabled = false
 

@@ -105,9 +105,15 @@ func (t ETime) MarshalJSON() ([]byte, error) {
 
 // Implements encoding/json Unmarshaler.
 func (t *ETime) UnmarshalJSON(b []byte) error {
-	millisec, err := strconv.ParseInt(string(b), 10, 64)
+	s := string(b)
+	millisec, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return err
+		// try SQLDateTimeFormat
+		if xer := t.Scan(s); xer != nil {
+			return fmt.Errorf("failed to UnmarshalJSON, tried epoch milliseconds format %w, tried '2006-01-02 15:04:05.999999' format %w", err, xer)
+		} else {
+			return nil
+		}
 	}
 
 	pt := time.UnixMilli(millisec)
@@ -135,6 +141,13 @@ func (et *ETime) Scan(value interface{}) error {
 	case string:
 		var t time.Time
 		t, err := time.ParseInLocation(SQLDateTimeFormat, v, time.Local)
+		if err != nil {
+			return err
+		}
+		*et = ToETime(t)
+	case *string:
+		var t time.Time
+		t, err := time.ParseInLocation(SQLDateTimeFormat, *v, time.Local)
 		if err != nil {
 			return err
 		}

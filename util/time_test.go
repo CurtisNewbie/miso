@@ -69,3 +69,18 @@ func TestTimeAddDate(t *testing.T) {
 		t.Fatal("v should not be before n")
 	}
 }
+
+func TestUnmarshalJSON(t *testing.T) {
+	var et ETime
+	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", et.FormatStdMilli())
+
+	err = et.UnmarshalJSON([]byte("1744251041206"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", et.FormatStdMilli())
+}
