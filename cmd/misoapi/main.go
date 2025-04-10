@@ -607,6 +607,7 @@ func (m *MisoApiTag) BodyKVTok(tok string) (Pair, bool) {
 func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 	t := []MisoApiTag{}
 	currIsDesc := false
+	var descTmp string
 	for _, s := range start {
 		s = strings.TrimSpace(s)
 		s, _ = strings.CutPrefix(s, "//")
@@ -641,6 +642,11 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 				continue
 			}
 
+			if len(t) < 1 {
+				descTmp += s
+				continue
+			}
+
 			// multi-lines misoapi-desc
 			if currIsDesc && len(t) > 0 && t[len(t)-1].Command == tagDesc {
 				last := t[len(t)-1]
@@ -654,6 +660,18 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 			}
 		}
 	}
+	if descTmp != "" {
+		anyDesc := false
+		for _, v := range t {
+			if v.Command == tagDesc {
+				anyDesc = true
+			}
+		}
+		if !anyDesc {
+			t = append(t, MisoApiTag{Command: tagDesc, Body: strings.TrimSpace(descTmp)})
+		}
+	}
+
 	return t, len(t) > 0
 }
 
