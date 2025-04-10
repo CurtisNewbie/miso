@@ -18,6 +18,7 @@ const (
 	StdDateTimeMilliFormat      = "2006-01-02 15:04:05.000"
 	StdDateTimeLocaleFormat     = "2006-01-02 15:04:05 (MST)"
 	SQLDateTimeFormat           = "2006-01-02 15:04:05.999999"
+	SQLDateFormat               = "2006-01-02"
 )
 
 // ETime, same as time.Time but is serialized/deserialized in forms of unix epoch milliseconds.
@@ -38,6 +39,12 @@ func Now() ETime {
 
 func ToETime(t time.Time) ETime {
 	return ETime{t}
+}
+
+func (t ETime) EndOfDay() ETime {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, 23, 59, 59, 999_999999, t.Location())
+	return ETime{tt}
 }
 
 func (t ETime) ToTime() time.Time {
@@ -126,6 +133,11 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+var jsonParseTimeFormats = []string{
+	SQLDateTimeFormat,
+	SQLDateFormat,
+}
+
 // Implements sql.Scanner in database/sql.
 func (et *ETime) Scan(value interface{}) error {
 	if value == nil {
@@ -138,21 +150,21 @@ func (et *ETime) Scan(value interface{}) error {
 	case []byte:
 		sv := string(v)
 		var t time.Time
-		t, err := time.ParseInLocation(SQLDateTimeFormat, sv, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, sv, time.Local)
 		if err != nil {
 			return err
 		}
 		*et = ToETime(t)
 	case string:
 		var t time.Time
-		t, err := time.ParseInLocation(SQLDateTimeFormat, v, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, v, time.Local)
 		if err != nil {
 			return err
 		}
 		*et = ToETime(t)
 	case *string:
 		var t time.Time
-		t, err := time.ParseInLocation(SQLDateTimeFormat, *v, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, *v, time.Local)
 		if err != nil {
 			return err
 		}

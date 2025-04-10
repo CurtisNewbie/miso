@@ -78,9 +78,25 @@ func TestUnmarshalJSON(t *testing.T) {
 	}
 	t.Logf("%v", et)
 
+	err = et.UnmarshalJSON([]byte("2025-04-09"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", et)
+
 	err = et.UnmarshalJSON([]byte("1744251041206"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("%v", et)
+}
+
+func TestEndOfDay(t *testing.T) {
+	var et ETime
+	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", et)
+	t.Logf("%v", et.EndOfDay())
 }
