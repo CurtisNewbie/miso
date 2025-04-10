@@ -117,6 +117,9 @@ func (t ETime) MarshalJSON() ([]byte, error) {
 // Implements encoding/json Unmarshaler.
 func (t *ETime) UnmarshalJSON(b []byte) error {
 	s := string(b)
+	if s == "" {
+		return nil
+	}
 	millisec, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		s = UnquoteStr(s)
