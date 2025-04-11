@@ -184,7 +184,7 @@ func (a Amt) Value() (driver.Value, error) {
 func (a Amt) MarshalJSON() ([]byte, error) {
 	v := a.String()
 	if marshalAsString {
-		v = "\"" + v + "\""
+		v = util.QuoteStr(v)
 	}
 	return util.UnsafeStr2Byt(v), nil
 }

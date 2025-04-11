@@ -332,6 +332,10 @@ func ContainsAnyStr(s string, substrings ...string) bool {
 	return false
 }
 
+func QuoteStr(s string) string {
+	return "\"" + s + "\""
+}
+
 func UnquoteStr(s string) string {
 	ru := []rune(s)
 	if len(ru) < 2 {

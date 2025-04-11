@@ -21,10 +21,14 @@ const (
 	SQLDateFormat               = "2006-01-02"
 )
 
-// ETime, same as time.Time but is serialized/deserialized in forms of unix epoch milliseconds.
+var (
+	etimeMarshalFormat = ""
+)
+
+// ETime enhanced wrapper of time.Time.
 //
 // This type implements sql.Scanner and driver.Valuer, and thus can be safely used in GORM just like time.Time. It also
-// implements json/encoding Marshaler and Unmarshaler to support json marshalling (in forms of epoch milliseconds).
+// implements json/encoding Marshaler and Unmarshaler to support json marshalling (in forms of epoch milliseconds 'by default').
 //
 // In previous releases, ETime was a type alias to time.Time. Since v0.1.2, ETime embeds time.Time to access all of it's methods.
 //
@@ -111,7 +115,13 @@ func (t ETime) String() string {
 
 // Implements encoding/json Marshaler
 func (t ETime) MarshalJSON() ([]byte, error) {
-	return UnsafeStr2Byt(fmt.Sprintf("%d", t.UnixMilli())), nil
+	var v string
+	if etimeMarshalFormat != "" {
+		v = QuoteStr(t.ToTime().Format(etimeMarshalFormat)) // other format configured
+	} else {
+		v = fmt.Sprintf("%d", t.UnixMilli()) // epoch milli by default
+	}
+	return UnsafeStr2Byt(v), nil
 }
 
 // Implements encoding/json Unmarshaler.
@@ -214,4 +224,8 @@ var classicDateTimeFmt = []string{SQLDateTimeFormat, ClassicDateTimeFormat}
 // Parse classic datetime format using patterns: "2006-01-02 15:04:05", "2006/01/02 15:04:05".
 func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {
 	return FuzzParseTimeLoc(classicDateTimeFmt, val, loc)
+}
+
+func SetETimeMarshalFormat(fmt string) {
+	etimeMarshalFormat = fmt
 }
