@@ -482,9 +482,9 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		if d.Desc != "" {
 			w.NoIndWritef(".\n")
 			if d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Desc(\"%v\")", d.Desc)
+				w.NoLbWritef("Desc(`%v`)", d.Desc)
 			} else {
-				w.Writef("Desc(\"%v\")", d.Desc)
+				w.Writef("Desc(`%v`)", d.Desc)
 			}
 		}
 		if d.Scope != "" {
