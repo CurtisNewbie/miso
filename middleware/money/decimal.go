@@ -12,6 +12,10 @@ import (
 	inf "gopkg.in/inf.v0"
 )
 
+var (
+	marshalAsString = true
+)
+
 func init() {
 	miso.ApiDocTypeAlias["*money.Amt"] = "*string"
 	miso.ApiDocTypeAlias["money.Amt"] = "string"
@@ -178,7 +182,11 @@ func (a Amt) Value() (driver.Value, error) {
 
 // Implements encoding/json Marshaler
 func (a Amt) MarshalJSON() ([]byte, error) {
-	return util.UnsafeStr2Byt("\"" + a.String() + "\""), nil
+	v := a.String()
+	if marshalAsString {
+		v = "\"" + v + "\""
+	}
+	return util.UnsafeStr2Byt(v), nil
 }
 
 // Implements encoding/json Unmarshaler.
@@ -230,4 +238,9 @@ func NewAmt(s string) *Amt {
 
 func Zero() *Amt {
 	return &Amt{}
+}
+
+// Configure *Amt to be marshalled as numbers in json, by default it's string.
+func AmtMarshalAsNum(v bool) {
+	marshalAsString = !v
 }
