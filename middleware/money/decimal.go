@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	miso.ApiDocTypeAlias["*money.Amt"] = "string"
+	miso.ApiDocTypeAlias["*money.Amt"] = "*string"
 	miso.ApiDocTypeAlias["money.Amt"] = "string"
 }
 
@@ -187,7 +187,8 @@ func (t *Amt) UnmarshalJSON(b []byte) error {
 	if s == "null" || s == "\"\"" || len(s) < 2 {
 		return nil
 	}
-	return t.SetString(s[1 : len(s)-1])
+	s = util.UnquoteStr(s)
+	return t.SetString(s)
 }
 
 // Implements sql.Scanner in database/sql.
