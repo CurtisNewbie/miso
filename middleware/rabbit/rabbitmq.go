@@ -512,7 +512,9 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connect
 			conn:     conn,
 			listener: listener,
 		}
-		rmc.start(rail)
+		if err := rmc.start(rail); err != nil {
+			return err
+		}
 	}
 
 	miso.Debug("RabbitMQ consumer initialization finished")
