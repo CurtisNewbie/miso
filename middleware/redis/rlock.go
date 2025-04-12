@@ -162,7 +162,7 @@ func (r *RLock) Lock() error {
 					rail.Infof("Refreshed rlock for '%v', source span_id: %v", r.key, srcSpan)
 				}
 			case <-ctx.Done():
-				rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
+				rail.Infof("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
@@ -175,19 +175,20 @@ func (r *RLock) Lock() error {
 //
 // If the lock is not obtained, method call will be ignored.
 func (r *RLock) Unlock() error {
+	if r.cancelRefresher != nil {
+		defer r.cancelRefresher()
+	}
+
 	if r.lock != nil {
 		err := r.lock.Release()
 		if err != nil {
 			r.rail.Errorf("Failed to release lock for key '%s', err: %v", r.key, err)
 			return err
 		} else {
-			r.rail.Debugf("Released lock for key '%s'", r.key)
+			r.rail.Infof("Released lock for key '%s'", r.key)
 		}
 		r.lock = nil
-
-		if r.cancelRefresher != nil {
-			r.cancelRefresher()
-		}
 	}
+
 	return nil
 }
