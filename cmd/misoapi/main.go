@@ -34,16 +34,17 @@ const (
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 	importDbQuery    = "github.com/curtisnewbie/miso/middleware/dbquery"
 
-	tagHttp        = "http"
-	tagDesc        = "desc"
-	tagScope       = "scope"
-	tagRes         = "resource"
-	tagQueryDocV1  = "query-doc"
-	tagHeaderDocV1 = "header-doc"
-	tagQueryDocV2  = "query"
-	tagHeaderDocV2 = "header"
-	tagNgTable     = "ngtable"
-	tagRaw         = "raw"
+	tagHttp         = "http"
+	tagDesc         = "desc"
+	tagScope        = "scope"
+	tagRes          = "resource"
+	tagQueryDocV1   = "query-doc"
+	tagHeaderDocV1  = "header-doc"
+	tagQueryDocV2   = "query"
+	tagHeaderDocV2  = "header"
+	tagNgTable      = "ngtable"
+	tagRaw          = "raw"
+	tagJsonRespType = "json-resp-type"
 )
 
 var (
@@ -61,13 +62,16 @@ func main() {
 		util.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
 		util.Printlnf("\nFor example:\n")
-		util.Printlnf("  misoapi-http: GET /open/api/doc")
-		util.Printlnf("  misoapi-desc: open api endpoint to retrieve documents")
-		util.Printlnf("  misoapi-query-doc: page: curent page index")
-		util.Printlnf("  misoapi-header-doc: Authorization: bearer authorization token")
-		util.Printlnf("  misoapi-scope: PROTECTED")
-		util.Printlnf("  misoapi-resource: document:read")
-		util.Printlnf("  misoapi-ngtable")
+		util.Printlnf("  misoapi-http: GET /open/api/doc                                     // http method and url")
+		util.Printlnf("  misoapi-desc: open api endpoint to retrieve documents               // description")
+		util.Printlnf("  misoapi-query-doc: page: curent page index                          // query parameter")
+		util.Printlnf("  misoapi-header-doc: Authorization: bearer authorization token       // header parameter")
+		util.Printlnf("  misoapi-scope: PROTECTED                                            // access scope")
+		util.Printlnf("  misoapi-resource: document:read                                     // resource code")
+		util.Printlnf("  misoapi-ngtable                                                     // generate angular table code")
+		util.Printlnf("  misoapi-raw                                                         // raw endpoint without auto request/response json handling")
+		// util.Printlnf("  misoapi-json-req-type: MyReq                                        // json request type (struct), for raw api only")
+		util.Printlnf("  misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only")
 		util.Printlnf("")
 	}
 	flag.Parse()
@@ -322,6 +326,8 @@ type ApiDecl struct {
 	FuncParams  []ParamMeta
 	FuncResults []ParamMeta
 	Flags       util.Set[string]
+
+	JsonRespType string
 }
 
 func (d ApiDecl) parseFuncParams() (imports []string, reqType string) {
@@ -430,8 +436,12 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
 				})
 				w.Writef("}).")
-				w.NoLbWritef("DocJsonReq(%v{})", custReqType)
-
+				if d.JsonRespType != "" {
+					w.Writef("DocJsonReq(%v{}).", custReqType)
+					w.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
+				} else {
+					w.NoLbWritef("DocJsonReq(%v{})", custReqType)
+				}
 			} else {
 				w.Writef("miso.I%v(\"%v\",", mtd, d.Url)
 				w.IncrIndent()
@@ -602,6 +612,8 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 			if ok {
 				ad.Header = append(ad.Header, kv)
 			}
+		case tagJsonRespType:
+			ad.JsonRespType = t.Body
 		case tagNgTable, tagRaw:
 			ad.Flags.Add(t.Command)
 		}

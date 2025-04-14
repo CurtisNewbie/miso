@@ -58,13 +58,15 @@ $ misoapi -h
 #
 # For example:
 #
-#   misoapi-http: GET /open/api/doc
-#   misoapi-desc: open api endpoint to retrieve documents
-#   misoapi-query-doc: page: curent page index
-#   misoapi-header-doc: Authorization: bearer authorization token
-#   misoapi-scope: PROTECTED
-#   misoapi-resource: document:read
-#   misoapi-ngtable
+#   misoapi-http: GET /open/api/doc                                     // http method and url
+#   misoapi-desc: open api endpoint to retrieve documents               // description
+#   misoapi-query-doc: page: curent page index                          // query parameter
+#   misoapi-header-doc: Authorization: bearer authorization token       // header parameter
+#   misoapi-scope: PROTECTED                                            // access scope
+#   misoapi-resource: document:read                                     // resource code
+#   misoapi-ngtable                                                     // generate angular table code
+#   misoapi-raw                                                         // raw endpoint without auto request/response json handling
+#   misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only
 ```
 
 ## `misocurl` - generate miso.TClient from curl
