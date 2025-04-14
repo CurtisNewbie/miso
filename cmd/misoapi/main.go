@@ -43,6 +43,7 @@ const (
 	tagQueryDocV2  = "query"
 	tagHeaderDocV2 = "header"
 	tagNgTable     = "ngtable"
+	tagRaw         = "raw"
 )
 
 var (
@@ -323,86 +324,103 @@ type ApiDecl struct {
 	Flags       util.Set[string]
 }
 
+func (d ApiDecl) parseFuncParams() (imports []string, reqType string) {
+	importSet := util.NewSet[string]()
+	for _, p := range d.FuncParams {
+		switch p.Type {
+		case typeMisoInboundPtr, typeMisoRail:
+			continue
+		case typeCommonUser:
+			importSet.Add(importCommonUser)
+			continue
+		case typeMySqlQryPtr:
+			importSet.Add(importMySQL)
+			continue
+		case typeGormDbPtr:
+			importSet.Add(importDbQuery)
+			continue
+		default:
+			if reqType == "" {
+				reqType = p.Type
+			}
+		}
+	}
+	return importSet.CopyKeys(), reqType
+}
+
+func (d ApiDecl) parseFuncResults() (imports []string, resType string, errorOnly bool, noError bool) {
+	noError = true
+	errorOnly = false
+	importSet := util.NewSet[string]()
+	for _, p := range d.FuncResults {
+		switch p.Type {
+		case "error":
+			if len(d.FuncResults) == 1 {
+				errorOnly = true
+			}
+			noError = false
+			continue
+		case typeCommonUser:
+			if resType == "" {
+				resType = p.Type
+			}
+			importSet.Add(importCommonUser)
+			continue
+		default:
+			if resType == "" {
+				resType = p.Type
+			}
+		}
+	}
+	if resType == "" {
+		resType = "any"
+	}
+	return importSet.CopyKeys(), resType, errorOnly, noError
+}
+
+func (d ApiDecl) guessInjectToken(typ string) string {
+	var v string
+	switch typ {
+	case typeMisoInboundPtr:
+		v = "inb"
+	case typeMisoRail:
+		v = "inb.Rail()"
+	case typeMySqlQryPtr:
+		v = "mysql.NewQuery(dbquery.GetDB())"
+	case typeGormDbPtr:
+		v = "dbquery.GetDB()"
+	case typeCommonUser:
+		v = "common.GetUser(inb.Rail())"
+	}
+	return v
+}
+
 func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (util.Set[string], string, error) {
 	w := util.NewIndentWriter("\t")
 	w.SetIndent(baseIndent)
 	imports.Add(importMiso)
 
 	for i, d := range dec {
-		var custReqType string
 
-		for _, p := range d.FuncParams {
-			switch p.Type {
-			case typeMisoInboundPtr, typeMisoRail:
-				continue
-			case typeCommonUser:
-				imports.Add(importCommonUser)
-				continue
-			case typeMySqlQryPtr:
-				imports.Add(importMySQL)
-				continue
-			case typeGormDbPtr:
-				imports.Add(importDbQuery)
-				continue
-			default:
-				if custReqType == "" {
-					custReqType = p.Type
-				}
-			}
-		}
+		imp, custReqType := d.parseFuncParams()
+		imports.AddAll(imp)
 
-		// TODO: this code is terrible, have to fix it :(
-		var custResType string
-		var errorOnly bool = false
-		var noError bool = true
-		for _, p := range d.FuncResults {
-			switch p.Type {
-			case "error":
-				if len(d.FuncResults) == 1 {
-					errorOnly = true
-				}
-				noError = false
-				continue
-			case typeCommonUser:
-				if custResType == "" {
-					custResType = p.Type
-				}
-				imports.Add(importCommonUser)
-				continue
-			default:
-				if custResType == "" {
-					custResType = p.Type
-				}
-			}
-		}
-
-		resType := "any"
-		if custResType != "" {
-			resType = custResType
-		}
+		imp, custResType, errorOnly, noError := d.parseFuncResults()
+		imports.AddAll(imp)
 
 		mtd := d.Method[:1] + strings.ToLower(d.Method[1:])
 		if custReqType != "" {
 			w.Writef("miso.I%v(\"%v\",", mtd, d.Url)
 			w.IncrIndent()
-			w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, resType)
+			w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
 			w.StepIn(func(w *util.IndentWriter) {
 				paramTokens := make([]string, 0, len(d.FuncParams))
 				for _, p := range d.FuncParams {
 					var v string
-					switch p.Type {
-					case typeMisoInboundPtr:
-						v = "inb"
-					case typeMisoRail:
-						v = "inb.Rail()"
-					case typeMySqlQryPtr:
-						v = "mysql.NewQuery(dbquery.GetDB())"
-					case typeGormDbPtr:
-						v = "dbquery.GetDB()"
-					case typeCommonUser:
-						v = "common.GetUser(inb.Rail())"
-					case custReqType:
+					if p.Type == custReqType {
 						v = "req"
+					} else {
+						v = d.guessInjectToken(p.Type)
 					}
 					paramTokens = append(paramTokens, v)
 				}
@@ -428,23 +446,11 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			} else {
 				w.Writef("miso.%v(\"%v\",", mtd, d.Url)
 				w.IncrIndent()
-				w.Writef("func(inb *miso.Inbound) (%v, error) {", resType)
+				w.Writef("func(inb *miso.Inbound) (%v, error) {", custResType)
 				w.StepIn(func(w *util.IndentWriter) {
 					paramTokens := make([]string, 0, len(d.FuncParams))
 					for _, p := range d.FuncParams {
-						var v string
-						switch p.Type {
-						case typeMisoInboundPtr:
-							v = "inb"
-						case typeMisoRail:
-							v = "inb.Rail()"
-						case typeMySqlQryPtr:
-							v = "mysql.NewQuery(dbquery.GetDB())"
-						case typeGormDbPtr:
-							v = "dbquery.GetDB()"
-						case typeCommonUser:
-							v = "common.GetUser(inb.Rail())"
-						}
+						var v string = d.guessInjectToken(p.Type)
 						paramTokens = append(paramTokens, v)
 					}
 					if errorOnly { // TODO: refactor this
@@ -572,8 +578,8 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 			if ok {
 				ad.Header = append(ad.Header, kv)
 			}
-		case tagNgTable:
-			ad.Flags.Add(tagNgTable)
+		case tagNgTable, tagRaw:
+			ad.Flags.Add(t.Command)
 		}
 	}
 	return ad, !util.IsBlankStr(ad.Method) && !util.IsBlankStr(ad.Url)
