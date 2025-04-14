@@ -410,34 +410,58 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 		mtd := d.Method[:1] + strings.ToLower(d.Method[1:])
 		if custReqType != "" {
-			w.Writef("miso.I%v(\"%v\",", mtd, d.Url)
-			w.IncrIndent()
-			w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
-			w.StepIn(func(w *util.IndentWriter) {
-				paramTokens := make([]string, 0, len(d.FuncParams))
-				for _, p := range d.FuncParams {
-					var v string
-					if p.Type == custReqType {
-						v = "req"
-					} else {
-						v = d.guessInjectToken(p.Type)
+			if d.Flags.Has(tagRaw) {
+				w.Writef("miso.Raw%v(\"%v\",", mtd, d.Url)
+				w.IncrIndent()
+				w.Writef("func(inb *miso.Inbound) {")
+				w.StepIn(func(w *util.IndentWriter) {
+					paramTokens := make([]string, 0, len(d.FuncParams))
+					for _, p := range d.FuncParams {
+						var v string
+						if p.Type == custReqType {
+							v = "req"
+						} else {
+							v = d.guessInjectToken(p.Type)
+						}
+						paramTokens = append(paramTokens, v)
 					}
-					paramTokens = append(paramTokens, v)
-				}
-				if errorOnly { // TODO: refactor this
-					w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
-				} else if len(d.FuncResults) < 1 {
+					w.Writef("var req %v", custReqType)
+					w.Writef("inb.MustBind(&req)")
 					w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
-					w.Writef("return nil, nil")
-				} else if noError {
-					w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
-				} else {
-					w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
-				}
-			})
-			w.NoLbWritef("})")
+				})
+				w.Writef("}).")
+				w.NoLbWritef("DocJsonReq(%v{})", custReqType)
+
+			} else {
+				w.Writef("miso.I%v(\"%v\",", mtd, d.Url)
+				w.IncrIndent()
+				w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
+				w.StepIn(func(w *util.IndentWriter) {
+					paramTokens := make([]string, 0, len(d.FuncParams))
+					for _, p := range d.FuncParams {
+						var v string
+						if p.Type == custReqType {
+							v = "req"
+						} else {
+							v = d.guessInjectToken(p.Type)
+						}
+						paramTokens = append(paramTokens, v)
+					}
+					if errorOnly {
+						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					} else if len(d.FuncResults) < 1 {
+						w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return nil, nil")
+					} else if noError {
+						w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
+					} else {
+						w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					}
+				})
+				w.NoLbWritef("})")
+			}
 		} else {
-			isRaw := len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr && len(d.FuncResults) < 1
+			isRaw := d.Flags.Has(tagRaw) && (len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr && len(d.FuncResults) < 1)
 			if isRaw {
 				w.NoLbWritef("miso.Raw%v(\"%v\", %v)", mtd, d.Url, d.FuncName)
 				if d.Desc != "" || len(d.Header) > 0 || len(d.Query) > 0 {

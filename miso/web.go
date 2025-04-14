@@ -1041,6 +1041,11 @@ func (i *Inbound) AddHeader(k string, v string) {
 	i.r.Header.Add(k, v)
 }
 
+func (i *Inbound) MustBind(ptr any) {
+	c := i.Engine().(*gin.Context)
+	MustBind(i.Rail(), c, ptr)
+}
+
 func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
 	noRouteHandler = f
 }

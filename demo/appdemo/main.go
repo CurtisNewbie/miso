@@ -232,3 +232,12 @@ func api18(inb *miso.Inbound, db *gorm.DB) {
 func api19(inb *miso.Inbound, db *gorm.DB) error {
 	return nil
 }
+
+// misoapi-http: POST /api/v20
+func api20(inb *miso.Inbound, req api.ApiReq, db *gorm.DB) {
+}
+
+// misoapi-http: POST /api/v21
+// misoapi-raw
+func api21(inb *miso.Inbound, req api.ApiReq, db *gorm.DB) {
+}
