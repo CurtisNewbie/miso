@@ -154,6 +154,16 @@ func (i *IndentWriter) NoLbWritef(pat string, args ...any) *IndentWriter {
 	return i
 }
 
+// NoLbWritef(..) when condition is true else Writef(..).
+func (i *IndentWriter) NoLbWritefWhen(condition bool, pat string, args ...any) *IndentWriter {
+	if condition {
+		i.NoLbWritef(pat, args...)
+	} else {
+		i.Writef(pat, args...)
+	}
+	return i
+}
+
 // Writef without indentation and with line break.
 func (i *IndentWriter) NoIndWritef(pat string, args ...any) *IndentWriter {
 	i.WriteString(fmt.Sprintf(pat, args...))

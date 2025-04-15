@@ -48,7 +48,14 @@ const (
 )
 
 var (
-	refPat = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
+	refPat              = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
+	injectTokenToImport = map[string]string{
+		typeCommonUser:     importCommonUser,
+		typeMySqlQryPtr:    importMySQL,
+		typeGormDbPtr:      importDbQuery,
+		typeMisoInboundPtr: "",
+		typeMisoRail:       "",
+	}
 )
 
 var (
@@ -328,51 +335,60 @@ type ApiDecl struct {
 	Flags       util.Set[string]
 
 	JsonRespType string
+	Imports      util.Set[string]
 }
 
-func (d ApiDecl) parseFuncParams() (imports []string, reqType string) {
-	importSet := util.NewSet[string]()
+func (d ApiDecl) countExtraLines() int {
+	n := 0
+	if d.Desc != "" {
+		n++
+	}
+	n += len(d.Header)
+	n += len(d.Query)
+	if d.FuncName != "" {
+		n++
+	}
+	if d.Flags.Has(tagNgTable) {
+		n++
+	}
+	if d.Scope != "" {
+		n++
+	}
+	if d.Resource != "" {
+		n++
+	}
+	return n
+}
+
+func (d ApiDecl) parseFuncParams() (reqType string) {
 	for _, p := range d.FuncParams {
-		switch p.Type {
-		case typeMisoInboundPtr, typeMisoRail:
-			continue
-		case typeCommonUser:
-			importSet.Add(importCommonUser)
-			continue
-		case typeMySqlQryPtr:
-			importSet.Add(importMySQL)
-			continue
-		case typeGormDbPtr:
-			importSet.Add(importDbQuery)
-			continue
-		default:
-			if reqType == "" {
-				reqType = p.Type
+		if imp, ok := injectTokenToImport[p.Type]; ok {
+			if imp != "" {
+				d.Imports.Add(imp)
 			}
+			continue
+		}
+		if reqType == "" {
+			reqType = p.Type
 		}
 	}
-	return importSet.CopyKeys(), reqType
+	return reqType
 }
 
-func (d ApiDecl) parseFuncResults() (imports []string, resType string, errorOnly bool, noError bool) {
+func (d ApiDecl) parseFuncResults() (resType string, errorOnly bool, noError bool) {
 	noError = true
-	errorOnly = false
-	importSet := util.NewSet[string]()
+	errorOnly = len(d.FuncResults) == 1 && d.FuncResults[0].Type == "error"
 	for _, p := range d.FuncResults {
 		switch p.Type {
 		case "error":
-			if len(d.FuncResults) == 1 {
-				errorOnly = true
-			}
 			noError = false
 			continue
-		case typeCommonUser:
-			if resType == "" {
-				resType = p.Type
-			}
-			importSet.Add(importCommonUser)
-			continue
 		default:
+			if imp, ok := injectTokenToImport[p.Type]; ok {
+				if imp != "" {
+					d.Imports.Add(imp)
+				}
+			}
 			if resType == "" {
 				resType = p.Type
 			}
@@ -381,7 +397,7 @@ func (d ApiDecl) parseFuncResults() (imports []string, resType string, errorOnly
 	if resType == "" {
 		resType = "any"
 	}
-	return importSet.CopyKeys(), resType, errorOnly, noError
+	return resType, errorOnly, noError
 }
 
 func (d ApiDecl) guessInjectToken(typ string) string {
@@ -408,16 +424,15 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 	for i, d := range dec {
 
-		imp, custReqType := d.parseFuncParams()
-		imports.AddAll(imp)
+		custReqType := d.parseFuncParams()
+		custResType, errorOnly, noError := d.parseFuncResults()
+		imports.AddAll(d.Imports.CopyKeys())
+		extraLines := d.countExtraLines()
 
-		imp, custResType, errorOnly, noError := d.parseFuncResults()
-		imports.AddAll(imp)
-
-		mtd := d.Method[:1] + strings.ToLower(d.Method[1:])
+		httpMethod := d.Method[:1] + strings.ToLower(d.Method[1:])
 		if custReqType != "" {
 			if d.Flags.Has(tagRaw) {
-				w.Writef("miso.Raw%v(\"%v\",", mtd, d.Url)
+				w.Writef("miso.Raw%v(\"%v\",", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) {")
 				w.StepIn(func(w *util.IndentWriter) {
@@ -443,7 +458,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					w.NoLbWritef("DocJsonReq(%v{})", custReqType)
 				}
 			} else {
-				w.Writef("miso.I%v(\"%v\",", mtd, d.Url)
+				w.Writef("miso.I%v(\"%v\",", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
 				w.StepIn(func(w *util.IndentWriter) {
@@ -474,18 +489,18 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			isRaw := d.Flags.Has(tagRaw) && (len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr && len(d.FuncResults) < 1)
 			if isRaw {
 				if d.JsonRespType != "" {
-					w.Writef("miso.Raw%v(\"%v\", %v).", mtd, d.Url, d.FuncName)
+					w.Writef("miso.Raw%v(\"%v\", %v).", httpMethod, d.Url, d.FuncName)
 					w.StepIn(func(iw *util.IndentWriter) {
 						iw.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
 					})
 				} else {
-					w.NoLbWritef("miso.Raw%v(\"%v\", %v)", mtd, d.Url, d.FuncName)
+					w.NoLbWritef("miso.Raw%v(\"%v\", %v)", httpMethod, d.Url, d.FuncName)
 				}
-				if d.Desc != "" || len(d.Header) > 0 || len(d.Query) > 0 || d.FuncName != "" {
+				if extraLines > 0 {
 					w.IncrIndent()
 				}
 			} else {
-				w.Writef("miso.%v(\"%v\",", mtd, d.Url)
+				w.Writef("miso.%v(\"%v\",", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) (%v, error) {", custResType)
 				w.StepIn(func(w *util.IndentWriter) {
@@ -510,31 +525,23 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		}
 
 		if d.FuncName != "" {
+			extraLines--
 			w.NoIndWritef(".\n")
-			if d.Flags.Has(tagNgTable) || d.Desc != "" || d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Extra(miso.ExtraName, \"%s\")", d.FuncName)
-			} else {
-				w.Writef("Extra(miso.ExtraName, \"%s\")", d.FuncName)
-			}
+			w.NoLbWritefWhen(extraLines > 0, "Extra(miso.ExtraName, \"%s\")", d.FuncName)
 		}
 
 		if d.Flags.Has(tagNgTable) {
+			extraLines--
 			w.NoIndWritef(".\n")
-			if d.Desc != "" || d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Extra(miso.ExtraNgTable, true)")
-			} else {
-				w.Writef("Extra(miso.ExtraNgTable, true)")
-			}
+			w.NoLbWritefWhen(extraLines > 0, "Extra(miso.ExtraNgTable, true)")
 		}
 		if d.Desc != "" {
+			extraLines--
 			w.NoIndWritef(".\n")
-			if d.Scope != "" || d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Desc(`%v`)", d.Desc)
-			} else {
-				w.Writef("Desc(`%v`)", d.Desc)
-			}
+			w.NoLbWritefWhen(extraLines > 0, "Desc(`%v`)", d.Desc)
 		}
 		if d.Scope != "" {
+			extraLines--
 			w.NoIndWritef(".\n")
 			var l string
 			switch d.Scope {
@@ -545,13 +552,10 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			default:
 				l = fmt.Sprintf("Scope(\"%v\")", d.Scope)
 			}
-			if d.Resource != "" || len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef(l)
-			} else {
-				w.Writef(l)
-			}
+			w.NoLbWritefWhen(extraLines > 0, l)
 		}
 		if d.Resource != "" {
+			extraLines--
 			w.NoIndWritef(".\n")
 			ref, isRef := parseRef(d.Resource)
 			var res string
@@ -560,27 +564,17 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			} else {
 				res = ref
 			}
-			if len(d.Header) > 0 || len(d.Query) > 0 {
-				w.NoLbWritef("Resource(%v)", res)
-			} else {
-				w.Writef("Resource(%v)", res)
-			}
+			w.NoLbWritefWhen(extraLines > 0, "Resource(%v)", res)
 		}
-		for i, dh := range d.Header {
+		for _, dh := range d.Header {
+			extraLines--
 			w.NoIndWritef(".\n")
-			if i < len(d.Header)-1 || len(d.Query) > 0 {
-				w.NoLbWritef("DocHeader(\"%v\", \"%v\")", dh.K, dh.V)
-			} else {
-				w.Writef("DocHeader(\"%v\", \"%v\")", dh.K, dh.V)
-			}
+			w.NoLbWritefWhen(extraLines > 0, "DocHeader(\"%v\", \"%v\")", dh.K, dh.V)
 		}
-		for i, dh := range d.Query {
+		for _, dh := range d.Query {
+			extraLines--
 			w.NoIndWritef(".\n")
-			if i < len(d.Query)-1 {
-				w.NoLbWritef("DocQueryParam(\"%v\", \"%v\")", dh.K, dh.V)
-			} else {
-				w.Writef("DocQueryParam(\"%v\", \"%v\")", dh.K, dh.V)
-			}
+			w.NoLbWritefWhen(extraLines > 0, "DocQueryParam(\"%v\", \"%v\")", dh.K, dh.V)
 		}
 		if i < len(dec)-1 {
 			w.NoIndWritef("\n")
@@ -592,7 +586,8 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 	ad := ApiDecl{
-		Flags: util.NewSet[string](),
+		Flags:   util.NewSet[string](),
+		Imports: util.NewSet[string](),
 	}
 	for _, t := range tags {
 		switch t.Command {
