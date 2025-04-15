@@ -253,3 +253,14 @@ func api22(inb *miso.Inbound, req api.ApiReq, db *gorm.DB) {
 // misoapi-raw
 func api23(inb *miso.Inbound) {
 }
+
+// misoapi-http: POST /api/v24
+// misoapi-raw
+func api24(inb *miso.Inbound, rail miso.Rail, db *gorm.DB) {
+}
+
+// misoapi-http: POST /api/v25
+// misoapi-json-resp-type: PostRes
+// misoapi-raw
+func api25(inb *miso.Inbound, rail miso.Rail, db *gorm.DB) {
+}

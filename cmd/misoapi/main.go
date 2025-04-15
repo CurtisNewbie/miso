@@ -407,6 +407,15 @@ func (d ApiDecl) parseFuncResults() (resType string, errorOnly bool, noError boo
 	return resType, errorOnly, noError
 }
 
+func (d ApiDecl) allParamsInjectable() bool {
+	for _, p := range d.FuncParams {
+		if _, ok := injectToken[p.Type]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func (d ApiDecl) guessInjectToken(typ string, extra ...func(typ string) (string, bool)) string {
 	for _, ex := range extra {
 		if v, ok := ex(typ); ok {
@@ -452,19 +461,15 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) {")
 				w.StepIn(func(w *util.IndentWriter) {
-					paramTokens := make([]string, 0, len(d.FuncParams))
-					for _, p := range d.FuncParams {
-						var v string
-						if p.Type == custReqType {
-							v = "req"
-						} else {
-							v = d.guessInjectToken(p.Type)
+					invokeFunc := d.printInvokeFunc(func(typ string) (string, bool) {
+						if typ == custReqType {
+							return "req", true
 						}
-						paramTokens = append(paramTokens, v)
-					}
+						return "", false
+					})
 					w.Writef("var req %v", custReqType)
 					w.Writef("inb.MustBind(&req)")
-					w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+					w.Writef(invokeFunc)
 				})
 				w.Writef("}).")
 				if d.JsonRespType != "" {
@@ -498,19 +503,35 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.NoLbWritef("})")
 			}
 		} else {
-			isRaw := d.Flags.Has(tagRaw) && (len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr && len(d.FuncResults) < 1)
+			isRaw := d.Flags.Has(tagRaw) && len(d.FuncResults) < 1 && d.allParamsInjectable()
 			if isRaw {
-				if d.JsonRespType != "" {
-					w.Writef("miso.Raw%v(\"%v\", %v).", httpMethod, d.Url, d.FuncName)
-					w.StepIn(func(iw *util.IndentWriter) {
-						iw.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
-					})
+				if len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr {
+					if d.JsonRespType != "" {
+						w.Writef("miso.Raw%v(\"%v\", %v).", httpMethod, d.Url, d.FuncName)
+						w.StepIn(func(iw *util.IndentWriter) {
+							iw.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
+						})
+					} else {
+						w.NoLbWritef("miso.Raw%v(\"%v\", %v)", httpMethod, d.Url, d.FuncName)
+					}
+					if extraLines > 0 {
+						w.IncrIndent()
+					}
 				} else {
-					w.NoLbWritef("miso.Raw%v(\"%v\", %v)", httpMethod, d.Url, d.FuncName)
-				}
-				if extraLines > 0 {
+					w.Writef("miso.Raw%v(\"%v\",", httpMethod, d.Url)
 					w.IncrIndent()
+					w.Writef("func(inb *miso.Inbound) {")
+					w.StepIn(func(w *util.IndentWriter) {
+						w.Writef(d.printInvokeFunc())
+					})
+					if d.JsonRespType != "" {
+						w.Writef("}).")
+						w.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
+					} else {
+						w.NoLbWritef("})")
+					}
 				}
+
 			} else {
 				w.Writef("miso.%v(\"%v\",", httpMethod, d.Url)
 				w.IncrIndent()
