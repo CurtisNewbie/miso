@@ -572,6 +572,8 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 	endpointResultHandler(c, rail, result, err)
 }
 
+// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
+//
 // Must bind request payload to the given pointer, else panic
 func MustBind(rail Rail, c *gin.Context, ptr any) {
 	onFailed := func(err error) {
@@ -593,6 +595,8 @@ func MustBind(rail Rail, c *gin.Context, ptr any) {
 	}
 }
 
+// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
+//
 // Dispatch a json response
 func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	c.Status(code)
@@ -604,11 +608,15 @@ func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	}
 }
 
+// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
+//
 // Dispatch error response in json format
 func DispatchErrMsgJson(c *gin.Context, msg string) {
 	DispatchJson(c, ErrorResp(msg))
 }
 
+// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
+//
 // Dispatch a json response
 func DispatchJson(c *gin.Context, body interface{}) {
 	DispatchJsonCode(c, http.StatusOK, body)
@@ -1044,6 +1052,19 @@ func (i *Inbound) AddHeader(k string, v string) {
 func (i *Inbound) MustBind(ptr any) {
 	c := i.Engine().(*gin.Context)
 	MustBind(i.Rail(), c, ptr)
+}
+
+func (i *Inbound) WriteJson(v any) {
+	i.SetHeader("Content-Type", applicationJson)
+	w, _ := i.Unwrap()
+	if err := json.EncodeJson(w, v); err != nil {
+		panic(err)
+	}
+}
+
+func (i *Inbound) WriteJsonStatus(v any, httpStatus int) {
+	i.Status(httpStatus)
+	i.WriteJson(v)
 }
 
 func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
