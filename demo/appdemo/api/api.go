@@ -149,3 +149,28 @@ func api24(inb *miso.Inbound, rail miso.Rail, db *gorm.DB) {
 // misoapi-raw
 func api25(inb *miso.Inbound, rail miso.Rail, db *gorm.DB) {
 }
+
+// misoapi-http: OPTIONS /api/v26
+// misoapi-raw
+func api26(inb *miso.Inbound) {
+}
+
+// misoapi-http: HEAD /api/v27
+// misoapi-raw
+func api27(inb *miso.Inbound) {
+}
+
+// misoapi-http: PATCH /api/v28
+// misoapi-raw
+func api28(inb *miso.Inbound) {
+}
+
+// misoapi-http: CONNECT /api/v29
+// misoapi-raw
+func api29(inb *miso.Inbound) {
+}
+
+// misoapi-http: TRACE /api/v30
+// misoapi-raw
+func api30(inb *miso.Inbound) {
+}

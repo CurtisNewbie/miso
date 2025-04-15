@@ -27,6 +27,11 @@
 - [POST /api/v23](#post-apiv23)
 - [POST /api/v24](#post-apiv24)
 - [POST /api/v25](#post-apiv25)
+- [OPTIONS /api/v26](#options-apiv26)
+- [HEAD /api/v27](#head-apiv27)
+- [PATCH /api/v28](#patch-apiv28)
+- [CONNECT /api/v29](#connect-apiv29)
+- [TRACE /api/v30](#trace-apiv30)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 - [POST /open/api/demo/grouped/subgroup/post1](#post-openapidemogroupedsubgrouppost1)
 - [GET /metrics](#get-metrics)
@@ -2303,6 +2308,251 @@
     this.http.post<PostRes>(`/demo/api/v25`, null)
       .subscribe({
         next: (resp) => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## OPTIONS /api/v26
+
+- cURL:
+  ```sh
+  curl -X OPTIONS 'http://localhost:8080/api/v26'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api26(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v26", "demo").
+  		Options().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  26() {
+    this.http.options<any>(`/demo/api/v26`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## HEAD /api/v27
+
+- cURL:
+  ```sh
+  curl -X HEAD 'http://localhost:8080/api/v27'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api27(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v27", "demo").
+  		Head().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  27() {
+    this.http.head<any>(`/demo/api/v27`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## PATCH /api/v28
+
+- cURL:
+  ```sh
+  curl -X PATCH 'http://localhost:8080/api/v28'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api28(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v28", "demo").
+  		Patch().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  28() {
+    this.http.patch<any>(`/demo/api/v28`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## CONNECT /api/v29
+
+- cURL:
+  ```sh
+  curl -X CONNECT 'http://localhost:8080/api/v29'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api29(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v29", "demo").
+  		Connect().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  29() {
+    this.http.connect<any>(`/demo/api/v29`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## TRACE /api/v30
+
+- cURL:
+  ```sh
+  curl -X TRACE 'http://localhost:8080/api/v30'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api30(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v30", "demo").
+  		Trace().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  30() {
+    this.http.trace<any>(`/demo/api/v30`)
+      .subscribe({
+        next: () => {
         },
         error: (err) => {
           console.log(err)
