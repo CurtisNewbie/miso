@@ -56,6 +56,13 @@ var (
 		typeMisoInboundPtr: "",
 		typeMisoRail:       "",
 	}
+	injectToken = map[string]string{
+		typeMisoInboundPtr: "inb",
+		typeMisoRail:       "inb.Rail()",
+		typeMySqlQryPtr:    "mysql.NewQuery(dbquery.GetDB())",
+		typeGormDbPtr:      "dbquery.GetDB()",
+		typeCommonUser:     "common.GetUser(inb.Rail())",
+	}
 )
 
 var (
@@ -400,21 +407,30 @@ func (d ApiDecl) parseFuncResults() (resType string, errorOnly bool, noError boo
 	return resType, errorOnly, noError
 }
 
-func (d ApiDecl) guessInjectToken(typ string) string {
-	var v string
-	switch typ {
-	case typeMisoInboundPtr:
-		v = "inb"
-	case typeMisoRail:
-		v = "inb.Rail()"
-	case typeMySqlQryPtr:
-		v = "mysql.NewQuery(dbquery.GetDB())"
-	case typeGormDbPtr:
-		v = "dbquery.GetDB()"
-	case typeCommonUser:
-		v = "common.GetUser(inb.Rail())"
+func (d ApiDecl) guessInjectToken(typ string, extra ...func(typ string) (string, bool)) string {
+	for _, ex := range extra {
+		if v, ok := ex(typ); ok {
+			return v
+		}
 	}
-	return v
+	if injected, ok := injectToken[typ]; ok {
+		return injected
+	}
+	return typ + "{}" // something we don't know :(
+}
+
+func (d ApiDecl) injectFuncParams(extra ...func(typ string) (string, bool)) string {
+	paramTokens := make([]string, 0, len(d.FuncParams))
+	for _, p := range d.FuncParams {
+		var v string = d.guessInjectToken(p.Type, extra...)
+		paramTokens = append(paramTokens, v)
+	}
+	return strings.Join(paramTokens, ", ")
+}
+
+func (d ApiDecl) printInvokeFunc(extra ...func(typ string) (string, bool)) string {
+	params := d.injectFuncParams(extra...)
+	return fmt.Sprintf("%v(%v)", d.FuncName, params)
 }
 
 func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (util.Set[string], string, error) {
@@ -462,25 +478,21 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
 				w.StepIn(func(w *util.IndentWriter) {
-					paramTokens := make([]string, 0, len(d.FuncParams))
-					for _, p := range d.FuncParams {
-						var v string
-						if p.Type == custReqType {
-							v = "req"
-						} else {
-							v = d.guessInjectToken(p.Type)
+					invokeFunc := d.printInvokeFunc(func(typ string) (string, bool) {
+						if typ == custReqType {
+							return "req", true
 						}
-						paramTokens = append(paramTokens, v)
-					}
+						return "", false
+					})
 					if errorOnly {
-						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return nil, %v", invokeFunc)
 					} else if len(d.FuncResults) < 1 {
-						w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef(invokeFunc)
 						w.Writef("return nil, nil")
 					} else if noError {
-						w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return %v, nil", invokeFunc)
 					} else {
-						w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return %v", invokeFunc)
 					}
 				})
 				w.NoLbWritef("})")
@@ -504,20 +516,16 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) (%v, error) {", custResType)
 				w.StepIn(func(w *util.IndentWriter) {
-					paramTokens := make([]string, 0, len(d.FuncParams))
-					for _, p := range d.FuncParams {
-						var v string = d.guessInjectToken(p.Type)
-						paramTokens = append(paramTokens, v)
-					}
+					invokeFunc := d.printInvokeFunc()
 					if errorOnly {
-						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return nil, %v", invokeFunc)
 					} else if len(d.FuncResults) < 1 {
-						w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef(invokeFunc)
 						w.Writef("return nil, nil")
 					} else if noError {
-						w.Writef("return %v(%v), nil", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return %v, nil", invokeFunc)
 					} else {
-						w.Writef("return %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
+						w.Writef("return %v", invokeFunc)
 					}
 				})
 				w.NoLbWritef("})")
