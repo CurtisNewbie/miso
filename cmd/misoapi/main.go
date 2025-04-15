@@ -473,8 +473,15 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		} else {
 			isRaw := d.Flags.Has(tagRaw) && (len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr && len(d.FuncResults) < 1)
 			if isRaw {
-				w.NoLbWritef("miso.Raw%v(\"%v\", %v)", mtd, d.Url, d.FuncName)
-				if d.Desc != "" || len(d.Header) > 0 || len(d.Query) > 0 {
+				if d.JsonRespType != "" {
+					w.Writef("miso.Raw%v(\"%v\", %v).", mtd, d.Url, d.FuncName)
+					w.StepIn(func(iw *util.IndentWriter) {
+						iw.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
+					})
+				} else {
+					w.NoLbWritef("miso.Raw%v(\"%v\", %v)", mtd, d.Url, d.FuncName)
+				}
+				if d.Desc != "" || len(d.Header) > 0 || len(d.Query) > 0 || d.FuncName != "" {
 					w.IncrIndent()
 				}
 			} else {
@@ -487,7 +494,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						var v string = d.guessInjectToken(p.Type)
 						paramTokens = append(paramTokens, v)
 					}
-					if errorOnly { // TODO: refactor this
+					if errorOnly {
 						w.Writef("return nil, %v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
 					} else if len(d.FuncResults) < 1 {
 						w.Writef("%v(%v)", d.FuncName, strings.Join(paramTokens, ", "))
