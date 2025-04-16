@@ -33,7 +33,9 @@ const (
 	importGorm       = "gorm.io/gorm"
 	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
 	importDbQuery    = "github.com/curtisnewbie/miso/middleware/dbquery"
+)
 
+const (
 	tagHttp         = "http"
 	tagDesc         = "desc"
 	tagScope        = "scope"
@@ -42,13 +44,19 @@ const (
 	tagHeaderDocV1  = "header-doc"
 	tagQueryDocV2   = "query"
 	tagHeaderDocV2  = "header"
-	tagNgTable      = "ngtable"
-	tagRaw          = "raw"
 	tagJsonRespType = "json-resp-type"
+)
+
+const (
+	tagNgTable = "ngtable"
+	tagRaw     = "raw"
+	tagIgnore  = "ignore"
 )
 
 var (
 	refPat = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
+
+	flagTags = util.NewSet[string](tagNgTable, tagRaw, tagIgnore)
 )
 
 var (
@@ -70,8 +78,8 @@ func main() {
 		util.Printlnf("  misoapi-resource: document:read                                     // resource code")
 		util.Printlnf("  misoapi-ngtable                                                     // generate angular table code")
 		util.Printlnf("  misoapi-raw                                                         // raw endpoint without auto request/response json handling")
-		// util.Printlnf("  misoapi-json-req-type: MyReq                                        // json request type (struct), for raw api only")
 		util.Printlnf("  misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only")
+		util.Printlnf("  misoapi-ignore                                                      // ignored by misoapi")
 		util.Printlnf("")
 	}
 	flag.Parse()
@@ -408,6 +416,10 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 	for i, d := range dec {
 
+		if d.Flags.Has(tagIgnore) {
+			continue
+		}
+
 		imp, custReqType := d.parseFuncParams()
 		imports.AddAll(imp)
 
@@ -621,8 +633,10 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 			}
 		case tagJsonRespType:
 			ad.JsonRespType = t.Body
-		case tagNgTable, tagRaw:
-			ad.Flags.Add(t.Command)
+		default:
+			if flagTags.Has(t.Command) {
+				ad.Flags.Add(t.Command)
+			}
 		}
 	}
 	return ad, !util.IsBlankStr(ad.Method) && !util.IsBlankStr(ad.Url)

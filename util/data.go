@@ -130,8 +130,12 @@ func (s *Set[T]) CopyKeys() []T {
 }
 
 // Create new Set
-func NewSet[T comparable]() Set[T] {
-	return Set[T]{Keys: map[T]Void{}}
+func NewSet[T comparable](keys ...T) Set[T] {
+	s := Set[T]{Keys: map[T]Void{}}
+	for _, k := range keys {
+		s.Add(k)
+	}
+	return s
 }
 
 // Create new Set from slice
