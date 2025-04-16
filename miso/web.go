@@ -197,6 +197,31 @@ func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return newLazyRouteDecl(url, http.MethodDelete, newRawTRouteHandler(handler))
 }
 
+// Register OPTIONS request route (raw version)
+func RawOptions(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return newLazyRouteDecl(url, http.MethodOptions, newRawTRouteHandler(handler))
+}
+
+// Register HEAD request route (raw version)
+func RawHead(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return newLazyRouteDecl(url, http.MethodHead, newRawTRouteHandler(handler))
+}
+
+// Register PATCH request route (raw version)
+func RawPatch(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return newLazyRouteDecl(url, http.MethodPatch, newRawTRouteHandler(handler))
+}
+
+// Register CONNECT request route (raw version)
+func RawConnect(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return newLazyRouteDecl(url, http.MethodConnect, newRawTRouteHandler(handler))
+}
+
+// Register CONNECT ACE est route (raw version)
+func RawTrace(url string, handler RawTRouteHandler) *LazyRouteDecl {
+	return newLazyRouteDecl(url, http.MethodTrace, newRawTRouteHandler(handler))
+}
+
 // Register GET request.
 //
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
