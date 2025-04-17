@@ -38,3 +38,51 @@ func NewByteBufferPool(initCap int) *ByteBufPool {
 		MaxCap: 4096,
 	}
 }
+
+type FixedPool[T any] struct {
+	ch            chan T
+	popFilterFunc func(t T) (dropped bool)
+}
+
+func FixedPoolFilterFunc[T any](filterFunc func(t T) (dropped bool)) func(*FixedPool[T]) {
+	return func(f *FixedPool[T]) {
+		f.popFilterFunc = filterFunc
+	}
+}
+
+func NewFixedPool[T any](cap int, options ...func(*FixedPool[T])) *FixedPool[T] {
+	f := new(FixedPool[T])
+	f.ch = make(chan T, cap)
+	for _, op := range options {
+		op(f)
+	}
+	return f
+}
+
+func (r *FixedPool[T]) Push(t T) {
+	r.ch <- t
+}
+
+func (r *FixedPool[T]) Pop() (T, bool) {
+	for c := range r.ch {
+		if r.popFilterFunc != nil && r.popFilterFunc(c) {
+			continue
+		}
+		return c, true
+	}
+	return NewVar[T](), false
+}
+
+func (r *FixedPool[T]) TryPop() (T, bool) {
+	for {
+		select {
+		case v := <-r.ch:
+			if r.popFilterFunc != nil && r.popFilterFunc(v) {
+				continue
+			}
+			return v, true
+		default:
+			return NewVar[T](), false
+		}
+	}
+}
