@@ -18,6 +18,7 @@ const (
 	StdDateTimeMilliFormat      = "2006-01-02 15:04:05.000"
 	StdDateTimeLocaleFormat     = "2006-01-02 15:04:05 (MST)"
 	SQLDateTimeFormat           = "2006-01-02 15:04:05.999999"
+	SQLDateTimeFormatWithT      = "2006-01-02T15:04:05.999999"
 	SQLDateFormat               = "2006-01-02"
 )
 
@@ -149,6 +150,13 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 var jsonParseTimeFormats = []string{
 	SQLDateTimeFormat,
 	SQLDateFormat,
+	SQLDateTimeFormatWithT,
+}
+
+func AddETimeParseFormat(fmt ...string) {
+	m := NewSet[string](jsonParseTimeFormats...)
+	m.AddAll(fmt)
+	jsonParseTimeFormats = m.CopyKeys()
 }
 
 // Implements sql.Scanner in database/sql.
