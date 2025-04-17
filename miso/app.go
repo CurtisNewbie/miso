@@ -236,7 +236,7 @@ func (a *MisoApp) triggerShutdownHook() {
 
 // Register shutdown hook, hook should never panic
 func (a *MisoApp) AddShutdownHook(hook func()) {
-	caller := getCallerFnUpOne()
+	caller := getCallerFnUpN(1)
 	a.AddOrderedShutdownHook(DefShutdownOrder, func() {
 		Debugf("Triggering ShutdownHook: %v", caller)
 		defer Debugf("ShutdownHook exited: %v", caller)

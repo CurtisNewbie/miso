@@ -333,11 +333,11 @@ func getCallerFn() string {
 	return ""
 }
 
-func getCallerFnUpOne() string {
+func getCallerFnUpN(n int) string {
 	pcs := callerUintptrPool.Get().(*[]uintptr)
 	defer putCallerUintptrPool(pcs)
 
-	depth := runtime.Callers(4, *pcs)
+	depth := runtime.Callers(3+n, *pcs)
 	frames := runtime.CallersFrames((*pcs)[:depth])
 
 	// we only need the first frame
