@@ -63,6 +63,15 @@ func (r *FixedPool[T]) Push(t T) {
 	r.ch <- t
 }
 
+func (r *FixedPool[T]) TryPush(t T) bool {
+	select {
+	case r.ch <- t:
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *FixedPool[T]) Pop() (T, bool) {
 	for c := range r.ch {
 		if r.popFilterFunc != nil && r.popFilterFunc(c) {

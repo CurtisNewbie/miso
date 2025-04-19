@@ -513,7 +513,10 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connect
 func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, conn *amqp.Connection) error {
 
 	n := 20
-	pub := rabbitManagedPublisher{channels: make(chan *amqp.Channel, n*2)}
+	pub := rabbitManagedPublisher{FixedPool: util.NewFixedPool(
+		n*2,
+		util.FixedPoolFilterFunc(func(c *amqp.Channel) (dropped bool) { return c.IsClosed() }),
+	)}
 	m.publisher = &pub
 
 	for i := 0; i < n; i++ {
@@ -623,8 +626,8 @@ func (m *rabbitMqModule) borrowPubChan() (*amqp.Channel, error) {
 		return nil, miso.NewErrf("publisher is missing")
 	}
 
-	ch := m.publisher.pop()
-	if ch == nil {
+	ch, ok := m.publisher.Pop()
+	if !ok {
 		return nil, miso.NewErrf("could not create new RabbitMQ channel")
 	}
 	return ch, nil
@@ -639,7 +642,7 @@ func (m *rabbitMqModule) returnPubChan(ch *amqp.Channel) {
 	}
 
 	// put it back to the pool
-	m.publisher.push(ch)
+	m.publisher.Push(ch)
 }
 
 func rabbitBootstrap(rail miso.Rail) error {
@@ -861,34 +864,7 @@ func (r *rabbitManagedChannel) retryStart(rail miso.Rail) {
 }
 
 type rabbitManagedPublisher struct {
-	channels chan *amqp.Channel
-}
-
-func (r *rabbitManagedPublisher) push(c *amqp.Channel) {
-	r.channels <- c
-}
-
-func (r *rabbitManagedPublisher) pop() *amqp.Channel {
-	for c := range r.channels {
-		if c.IsClosed() {
-			continue
-		}
-		return c
-	}
-	return nil
-}
-
-func (r *rabbitManagedPublisher) tryPop() *amqp.Channel {
-	for {
-		select {
-		case v := <-r.channels:
-			if v.IsClosed() {
-				continue
-			}
-		default:
-			return nil
-		}
-	}
+	*util.FixedPool[*amqp.Channel]
 }
 
 func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
@@ -899,15 +875,13 @@ func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
 	miso.Info("Created new RabbitMQ publishing channel")
 
 	// push newly created channel in pool
-	select {
-	case r.channels <- ch:
-	default:
+	if !r.TryPush(ch) {
 		// pool is full, try to clean up the pool? TODO: could be an issue
-		popped := r.tryPop()
-		if popped != nil {
-			r.push(popped)
+		popped, ok := r.TryPop()
+		if ok {
+			r.Push(popped)
 		}
-		r.push(ch)
+		r.Push(ch)
 	}
 
 	miso.Info("RabbitMQ publishing channel added to pool")
