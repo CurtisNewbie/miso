@@ -872,7 +872,7 @@ func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
 	if err := ch.Confirm(false); err != nil {
 		return miso.WrapErrf(err, "channel could not be put into confirm mode")
 	}
-	miso.Info("Created new RabbitMQ publishing channel")
+	miso.Debug("Created new RabbitMQ publishing channel")
 
 	// push newly created channel in pool
 	if !r.TryPush(ch) {
@@ -884,6 +884,6 @@ func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
 		r.Push(ch)
 	}
 
-	miso.Info("RabbitMQ publishing channel added to pool")
+	miso.Debug("RabbitMQ publishing channel added to pool")
 	return nil
 }
