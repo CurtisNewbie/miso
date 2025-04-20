@@ -13,7 +13,7 @@ The overall target is to make it as small and simple as possible, backward compa
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.1.20
+go get github.com/curtisnewbie/miso@v0.1.21
 ```
 
 ## Documentations
