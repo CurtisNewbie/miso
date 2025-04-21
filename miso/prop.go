@@ -25,6 +25,9 @@ const (
 	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
+	// misoconfig-prop: log all http server routes in INFO level | false
+	PropServerLogRoutes = "server.log-routes"
+
 	// misoconfig-prop: http server bearer authorization token for all endpoints |
 	PropServerAuthBearer = "server.auth.bearer"
 
@@ -220,6 +223,7 @@ func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
+	SetDefProp(PropServerLogRoutes, false)
 	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)

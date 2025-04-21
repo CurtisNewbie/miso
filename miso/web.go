@@ -382,8 +382,16 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 	}
 	lazyRouteRegistars = nil
 
-	for _, r := range GetHttpRoutes() {
-		c.Debugf("%-6s %s", r.Method, r.Url)
+	logRoutes := GetPropBool(PropServerLogRoutes)
+	if IsDebugLevel() || logRoutes {
+		for _, r := range GetHttpRoutes() {
+			if logRoutes {
+				c.Infof("%-6s %s", r.Method, r.Url)
+			} else {
+				c.Debugf("%-6s %s", r.Method, r.Url)
+			}
+
+		}
 	}
 }
 
