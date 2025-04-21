@@ -356,7 +356,7 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 	p := miso.Paging{Page: 1, Limit: param.Limit}
 	for {
 		rail.Debugf("IterateAll '%v', page: %v", caller, p.Page)
-		l, err := pq.Scan(rail, p)
+		l, err := pq.scan(rail, p, false)
 		if err != nil {
 			return miso.WrapErr(err)
 		}
@@ -374,15 +374,22 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 }
 
 func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[V], error) {
+	return pq.scan(rail, reqPage, true)
+}
+
+func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) (miso.PageRes[V], error) {
 	newQuery := func() *Query {
 		return pq.baseQuery(NewQuery(pq.db))
 	}
 
-	countFuture := util.RunAsync(func() (int, error) {
-		var total int
-		_, err := newQuery().Select("COUNT(*)").Scan(&total)
-		return total, err
-	})
+	var countFuture util.Future[int]
+	if doCount {
+		countFuture = util.RunAsync(func() (int, error) {
+			var total int
+			_, err := newQuery().Select("COUNT(*)").Scan(&total)
+			return total, err
+		})
+	}
 
 	pageFuture := util.RunAsync(func() ([]V, error) {
 		var payload []V
@@ -421,9 +428,13 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 	})
 
 	var res miso.PageRes[V]
-	total, err := countFuture.Get()
-	if err != nil {
-		return res, err
+	var total int
+	if doCount {
+		if t, err := countFuture.Get(); err != nil {
+			return res, err
+		} else {
+			total = t
+		}
 	}
 
 	payload, err := pageFuture.Get()
