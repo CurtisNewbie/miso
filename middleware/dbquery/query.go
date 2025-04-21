@@ -344,6 +344,35 @@ func (pq *PageQuery[V]) TransformAsync(t util.TransformAsync[V]) *PageQuery[V] {
 	return pq
 }
 
+type IteratePageParam struct {
+	Limit int `json:"limit" desc:"page limit"`
+}
+
+func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEach func(v V) (stop bool, err error)) error {
+	caller := miso.GetCallerFn()
+	rail.Debugf("IterateAll '%v' start", caller)
+	defer rail.Debugf("IterateAll '%v' finished", caller)
+
+	p := miso.Paging{Page: 1, Limit: param.Limit}
+	for {
+		rail.Debugf("IterateAll '%v', page: %v", caller, p.Page)
+		l, err := pq.Scan(rail, p)
+		if err != nil {
+			return miso.WrapErr(err)
+		}
+		if len(l.Payload) < 1 {
+			return nil
+		}
+		for _, l := range l.Payload {
+			stop, err := forEach(l)
+			if err != nil || stop {
+				return err
+			}
+		}
+		p.NextPage()
+	}
+}
+
 func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[V], error) {
 	newQuery := func() *Query {
 		return pq.baseQuery(NewQuery(pq.db))

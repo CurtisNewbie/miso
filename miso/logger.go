@@ -24,6 +24,11 @@ const (
 )
 
 var (
+	GetCallerFn    = getCallerFn
+	GetCallerFnUpN = getCallerFnUpN
+)
+
+var (
 	logBufPool = util.NewByteBufferPool(128)
 )
 
