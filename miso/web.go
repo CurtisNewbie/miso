@@ -706,12 +706,8 @@ func webServerBootstrap(rail Rail) error {
 			}
 
 			AddBearerInterceptor(
-				func(method, url string) bool {
-					return strings.HasPrefix(url, "/debug/pprof")
-				},
-				func() string {
-					return bearer
-				},
+				MatchPathPatternFunc("/debug/pprof/**"),
+				func() string { return bearer },
 			)
 		}
 	}
@@ -1165,6 +1161,13 @@ func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		interceptors := newInterceptor(c, f)
 		interceptors.next()
+	}
+}
+
+func MatchPathPatternFunc(patterns ...string) func(method string, url string) bool {
+	Infof("Matching patterns: %#v", patterns)
+	return func(method string, url string) bool {
+		return util.MatchPathAny(patterns, url)
 	}
 }
 
