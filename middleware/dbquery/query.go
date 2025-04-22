@@ -29,6 +29,11 @@ func (q *Query) Table(table string) *Query {
 	return q
 }
 
+func (q *Query) Joins(query string, args ...any) *Query {
+	q.tx = q.tx.Joins(query, args...)
+	return q
+}
+
 func (q *Query) Select(cols string, args ...any) *Query {
 	q.tx = q.tx.Select(cols, args...)
 	return q
