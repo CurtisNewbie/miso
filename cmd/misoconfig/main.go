@@ -312,6 +312,8 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	sort.SliceStable(sections, func(i, j int) bool {
 		if hasPrioritisedKw(sections[i].Name) {
 			return true
+		} else if hasPrioritisedKw(sections[j].Name) {
+			return false
 		}
 		return strings.Compare(sections[i].Name, sections[j].Name) < 0
 	})
