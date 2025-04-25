@@ -72,6 +72,22 @@ func (q *Query) EqIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
+// =
+func (q *Query) EqNotEmpty(col string, v any) *Query {
+	var cond bool = true
+	switch vs := v.(type) {
+	case string:
+		if vs == "" {
+			cond = false
+		}
+	case *string:
+		if vs == nil || *vs == "" {
+			cond = false
+		}
+	}
+	return q.EqIf(cond, col, v)
+}
+
 // <=
 func (q *Query) Le(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" <= ?", args...)
