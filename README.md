@@ -21,7 +21,7 @@ go get github.com/curtisnewbie/miso@v0.1.21
 - [CLI Tools](./doc/tools.md)
 - [Configuration](./doc/config.md)
 - [Application Lifecycle](./doc/lifecycle.md)
-- [HTTP Api Declaration](./doc/web.md)
+- [HTTP API Declaration](./doc/web.md)
 - [Tracing](./doc/trace.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
