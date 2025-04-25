@@ -166,6 +166,13 @@ func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 	return q
 }
 
+func (q *Query) WhereNotNil(query string, v any) *Query {
+	if v != nil {
+		return q.Where(query, v)
+	}
+	return q
+}
+
 func (q *Query) Group(name string) *Query {
 	q.tx = q.tx.Group(name)
 	return q
