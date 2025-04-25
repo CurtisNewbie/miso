@@ -18,17 +18,19 @@ go get github.com/curtisnewbie/miso@v0.1.21
 
 ## Documentations
 
-- [Configuration](./doc/config.md)
 - [CLI Tools](./doc/tools.md)
+- [Configuration](./doc/config.md)
 - [Application Lifecycle](./doc/lifecycle.md)
+- [HTTP Api Declaration](./doc/web.md)
+- [Tracing](./doc/trace.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
 - [Json Processing Behaviour](./doc/json.md)
-- [Using pprof](./doc/pprof.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
 - [API Documentation Generation](./doc/api_doc_gen.md)
-- [Tracing](./doc/trace.md)
+- [Using pprof](./doc/pprof.md)
+
 - More in the future (maybe) :D
 
 ## Projects that use miso

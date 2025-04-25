@@ -261,7 +261,7 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 // Register POST request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -277,7 +277,7 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 // Register GET request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
+// using 'form' tag (for form-data, query param) or 'header' tag.
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -295,7 +295,7 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 // Register DELETE request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -313,7 +313,7 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 // Register PUT request.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
@@ -511,7 +511,7 @@ func BuildRail(c *gin.Context) Rail {
 // Traced and parameters mapped route handler.
 //
 // Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag (only supports string/*string).
+// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
 //
 // Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
 // miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
