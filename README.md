@@ -31,8 +31,6 @@ go get github.com/curtisnewbie/miso@v0.1.21
 - [API Documentation Generation](./doc/api_doc_gen.md)
 - [Using pprof](./doc/pprof.md)
 
-- More in the future (maybe) :D
-
 ## Projects that use miso
 
 The following are projects that use miso (mine tho), see also [moon-monorepo](https://github.com/curtisnewbie/moon-monorepo).
