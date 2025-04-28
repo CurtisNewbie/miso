@@ -22,6 +22,8 @@ import (
 const (
 	formEncoded     = "application/x-www-form-urlencoded"
 	applicationJson = "application/json"
+	applicationXml  = "application/xml"
+	textXml         = "text/xml"
 	textPlain       = "text/plain"
 	contentType     = "Content-Type"
 
@@ -52,6 +54,7 @@ type TResponse struct {
 	RespHeader http.Header
 	StatusCode int
 	Err        error
+	logBody    bool
 }
 
 // Close Response
@@ -116,10 +119,19 @@ func (tr *TResponse) Str() (string, error) {
 		return "", WrapErr(e)
 	}
 	s := util.UnsafeByt2Str(b)
-	if IsDebugLevel() {
-		tr.Rail.Debugf("Response Body: %v", s)
-	}
+
+	tr.logRespBody(s)
 	return s, nil
+}
+
+func (tr *TResponse) logRespBody(body any) {
+	if IsDebugLevel() || tr.logBody {
+		if tr.logBody {
+			tr.Rail.Infof("Response Body: %s", body)
+		} else {
+			tr.Rail.Debugf("Response Body: %s", body)
+		}
+	}
 }
 
 // Read response as JSON object.
@@ -140,10 +152,7 @@ func (tr *TResponse) Json(ptr any) error {
 	if e != nil {
 		return WrapErr(e)
 	}
-
-	if IsDebugLevel() {
-		tr.Rail.Debugf("Response Body: %s", body)
-	}
+	tr.logRespBody(body)
 
 	if e = json.ParseJson(body, ptr); e != nil {
 		s := util.UnsafeByt2Str(body)
@@ -175,7 +184,12 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options
 
 	onEvent := sse.Read(tr.Resp.Body, &sse.ReadConfig{MaxEventSize: conf.MaxEventSize})
 	onEvent(func(ev sse.Event, err error) bool {
-		tr.Rail.Debugf("Received sse event: %#v", ev)
+		if tr.logBody {
+			tr.Rail.Infof("Received sse event: %#v", ev)
+		} else {
+			tr.Rail.Debugf("Received sse event: %#v", ev)
+		}
+
 		if err != nil {
 			tr.Err = WrapErr(err)
 			tr.Rail.Errorf("Read SSE events failed, %v", tr.Err)
@@ -228,6 +242,12 @@ type TClient struct {
 	trace           bool
 	discoverService bool
 	require2xx      bool
+	logBody         bool
+}
+
+func (t *TClient) LogBody() *TClient {
+	t.logBody = true
+	return t
 }
 
 // Change the underlying *http.Client
@@ -402,7 +422,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 }
 
 func (t *TClient) errorResponse(e error) *TResponse {
-	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail}
+	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody}
 }
 
 // Send POST request with reader to request body.
@@ -503,7 +523,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	AddHeaders(req, t.Headers)
 
-	if IsDebugLevel() {
+	if IsDebugLevel() || t.logBody {
 		loggedBody := "***"
 		if req.Body != nil && req.GetBody != nil {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
@@ -514,7 +534,11 @@ func (t *TClient) send(req *http.Request) *TResponse {
 				}
 			}
 		}
-		t.Rail.Debugf("%v %v, Headers: %v, Body: %v", req.Method, req.URL, req.Header, loggedBody)
+		if t.logBody {
+			t.Rail.Infof("%v %v, Headers: %v, Body: %v", req.Method, req.URL, req.Header, loggedBody)
+		} else {
+			t.Rail.Debugf("%v %v, Headers: %v, Body: %v", req.Method, req.URL, req.Header, loggedBody)
+		}
 	}
 
 	r, e := t.client.Do(req) // send HTTP requests
@@ -526,7 +550,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		respHeaders = r.Header
 	}
 
-	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders}
+	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders, logBody: t.logBody}
 
 	// check http status code
 	if tr.Err == nil && t.require2xx {
@@ -538,7 +562,7 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 func contentTypeLoggable(contentType string) bool {
 	lct := strings.ToLower(contentType)
-	return lct == applicationJson || lct == textPlain
+	return util.ContainsAnyStr(lct, applicationJson, applicationXml, textPlain, textXml)
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
