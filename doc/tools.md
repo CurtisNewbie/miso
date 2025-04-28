@@ -82,7 +82,7 @@ $ misocurl -h
 
 # misocurl - automatically miso.TClient code based on curl in clipboard
 #
-#   Supported miso version: v0.1.22-beta.1
+#   Supported miso version: v0.1.22
 #
 # Usage of misocurl:
 #   -debug
