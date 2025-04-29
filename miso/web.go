@@ -1208,3 +1208,129 @@ func AddCorsAny() {
 		})
 	})
 }
+
+type rawHandler struct {
+	handleFunc func(c *gin.Context)
+}
+
+func (a *rawHandler) handle(c *gin.Context) {
+	a.handleFunc(c)
+}
+
+type resAutoHandler struct {
+	handleFunc func(c *gin.Context)
+	resVar     any
+}
+
+func (a *resAutoHandler) handle(c *gin.Context) {
+	a.handleFunc(c)
+}
+
+func (a *resAutoHandler) res() any {
+	return a.resVar
+}
+
+type autoHandler struct {
+	handleFunc func(c *gin.Context)
+	reqVar     any
+	resVar     any
+}
+
+func (a *autoHandler) handle(c *gin.Context) {
+	a.handleFunc(c)
+}
+
+func (a *autoHandler) req() any {
+	return a.reqVar
+}
+
+func (a *autoHandler) res() any {
+	return a.resVar
+}
+
+type httpHandler = interface {
+	handle(c *gin.Context)
+}
+
+type reqAwareHandler = interface {
+	req() any
+}
+
+type resAwareHandler = interface {
+	res() any
+}
+
+func HttpGet(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodGet, url, handler)
+}
+
+func HttpHead(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodHead, url, handler)
+}
+
+func HttpPost(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodPost, url, handler)
+}
+
+func HttpPut(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodPut, url, handler)
+}
+
+func HttpPatch(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodPatch, url, handler)
+}
+
+func HttpDelete(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodDelete, url, handler)
+}
+
+func HttpConnect(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodConnect, url, handler)
+}
+
+func HttpOptions(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodOptions, url, handler)
+}
+
+func HttpTrace(url string, handler httpHandler) *LazyRouteDecl {
+	return handleHttp(http.MethodTrace, url, handler)
+}
+
+func handleHttp(method string, url string, handler httpHandler) *LazyRouteDecl {
+	decl := newLazyRouteDecl(url, method, handler.handle)
+	return setAwareHandler(decl, handler)
+}
+
+func setAwareHandler(decl *LazyRouteDecl, handler any) *LazyRouteDecl {
+	if v, ok := handler.(reqAwareHandler); ok {
+		decl = decl.DocJsonReq(v.req())
+	}
+	if v, ok := handler.(resAwareHandler); ok {
+		decl = decl.DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(v.res()))
+	}
+	return decl
+}
+
+func AutoHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) httpHandler {
+	req := util.NewVar[Req]()
+	res := util.NewVar[Res]()
+	return &autoHandler{
+		handleFunc: newMappedTRouteHandler(handler),
+		reqVar:     req,
+		resVar:     res,
+	}
+}
+
+func RawHandler(handler RawTRouteHandler) httpHandler {
+	return &rawHandler{
+		handleFunc: newRawTRouteHandler(handler),
+	}
+}
+
+func ResHandler[Res any](url string, handler TRouteHandler[Res]) httpHandler {
+	res := util.NewVar[Res]()
+	return &resAutoHandler{
+		handleFunc: newTRouteHandler(handler),
+		resVar:     res,
+	}
+}
