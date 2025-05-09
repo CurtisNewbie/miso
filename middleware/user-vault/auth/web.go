@@ -54,7 +54,7 @@ func ExposeResourceInfo(res []Resource, extraEndpoints ...Endpoint) {
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 
 		// resources and paths are polled by uservault
-		miso.Get("/auth/resource", ServeResourceInfo(extraEndpoints...)).
+		miso.HttpGet("/auth/resource", miso.ResHandler(ServeResourceInfo(extraEndpoints...))).
 			Desc("Expose resource and endpoint information to other backend service for authorization.").
 			Protected().
 			DocJsonResp(ResourceInfoRes{})

@@ -170,51 +170,71 @@ func GetHttpRoutes() []HttpRoute {
 }
 
 // Register ANY request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpAny() instead.
 func RawAny(url string, handler RawTRouteHandler, extra ...util.StrPair) {
 	HttpAny(url, handler, extra...)
 }
 
 // Register GET request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpGet() instead.
 func RawGet(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpGet(url, RawHandler(handler))
 }
 
 // Register POST request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpPost() instead.
 func RawPost(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpPost(url, RawHandler(handler))
 }
 
 // Register PUT request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpPut() instead.
 func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpPut(url, RawHandler(handler))
 }
 
 // Register DELETE request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpDelete() instead.
 func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpDelete(url, RawHandler(handler))
 }
 
 // Register OPTIONS request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpOptions() instead.
 func RawOptions(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpOptions(url, RawHandler(handler))
 }
 
 // Register HEAD request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpHead() instead.
 func RawHead(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpHead(url, RawHandler(handler))
 }
 
 // Register PATCH request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpPatch() instead.
 func RawPatch(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpPatch(url, RawHandler(handler))
 }
 
 // Register CONNECT request route (raw version)
+//
+// Deprecated since v0.1.23, use miso.HttpConnect() instead.
 func RawConnect(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpConnect(url, RawHandler(handler))
 }
 
 // Register CONNECT ACE est route (raw version)
+//
+// Deprecated: since v0.1.23, use miso.HttpTrace() instead.
 func RawTrace(url string, handler RawTRouteHandler) *LazyRouteDecl {
 	return HttpTrace(url, RawHandler(handler))
 }
@@ -223,6 +243,8 @@ func RawTrace(url string, handler RawTRouteHandler) *LazyRouteDecl {
 //
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
+//
+// Deprecated: since v0.1.23, use miso.HttpGet() instead.
 func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return HttpGet(url, ResHandler(handler))
 }
@@ -231,6 +253,8 @@ func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 //
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
+//
+// Deprecated: since v0.1.23, use miso.HttpPost() instead.
 func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return HttpPost(url, ResHandler(handler))
 }
@@ -239,6 +263,8 @@ func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 //
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
+//
+// Deprecated: since v0.1.23, use miso.HttpPut() instead.
 func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return HttpPut(url, ResHandler(handler))
 }
@@ -247,6 +273,8 @@ func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 //
 // The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
 // and serialized to json.
+//
+// Deprecated: since v0.1.23, use miso.HttpDelete() instead.
 func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 	return HttpDelete(url, ResHandler(handler))
 }
@@ -261,6 +289,8 @@ func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
 //
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
+//
+// Deprecated: since v0.1.23, use miso.HttpPost() instead.
 func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return HttpPost(url, AutoHandler(handler))
 }
@@ -275,6 +305,8 @@ func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) 
 //
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
+//
+// Deprecated: since v0.1.23, use miso.HttpGet() instead.
 func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return HttpGet(url, AutoHandler(handler))
 }
@@ -289,6 +321,8 @@ func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *
 //
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
+//
+// Deprecated: since v0.1.23, use miso.HttpDelete() instead.
 func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return HttpDelete(url, AutoHandler(handler))
 }
@@ -303,6 +337,8 @@ func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]
 //
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
+//
+// Deprecated: since v0.1.23, use miso.HttpPut() instead.
 func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
 	return HttpPut(url, AutoHandler(handler))
 }
@@ -672,12 +708,12 @@ func webServerBootstrap(rail Rail) error {
 
 	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
-			RawGet("", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
-			RawGet("/:name", func(inb *Inbound) { pprof.Index(inb.Unwrap()) }),
-			RawGet("/cmdline", func(inb *Inbound) { pprof.Cmdline(inb.Unwrap()) }),
-			RawGet("/profile", func(inb *Inbound) { pprof.Profile(inb.Unwrap()) }),
-			RawGet("/symbol", func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) }),
-			RawGet("/trace", func(inb *Inbound) { pprof.Trace(inb.Unwrap()) }),
+			HttpGet("", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
+			HttpGet("/:name", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
+			HttpGet("/cmdline", RawHandler(func(inb *Inbound) { pprof.Cmdline(inb.Unwrap()) })),
+			HttpGet("/profile", RawHandler(func(inb *Inbound) { pprof.Profile(inb.Unwrap()) })),
+			HttpGet("/symbol", RawHandler(func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) })),
+			HttpGet("/trace", RawHandler(func(inb *Inbound) { pprof.Trace(inb.Unwrap()) })),
 		)
 		rail.Infof("Registered /debug/pprof APIs for debugging")
 		if GetPropBool(PropServerPprofAuthEnabled) {

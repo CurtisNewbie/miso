@@ -100,8 +100,8 @@ func prometheusBootstrap(rail Rail) error {
 
 	if !prometheusBootstrapDisabled {
 		handler := PrometheusHandler()
-		RawGet(GetPropStr(PropMetricsRoute),
-			func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) }).
+		HttpGet(GetPropStr(PropMetricsRoute),
+			RawHandler(func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) })).
 			Desc("Collect prometheus metrics information").
 			DocHeader("Authorization", "Basic authorization if enabled")
 	}

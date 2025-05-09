@@ -103,56 +103,6 @@ func TestPreServerBootstrapCallback(t *testing.T) {
 	}
 }
 
-func TestGroupingNestedRoutes(t *testing.T) {
-
-	Infof("routes before: %+v", serverHttpRoutes)
-	BaseRoute("/open/api").Group(
-
-		Get("/special/order", func(inb *Inbound) (any, error) {
-			// do something
-			return nil, nil
-		}).Extra("123", 123),
-
-		BaseRoute("/v1").Group(
-			Get("/order", func(inb *Inbound) (any, error) {
-				// do something
-				return nil, nil
-			}).Extra("123", 123),
-
-			Get("/shipment", func(inb *Inbound) (any, error) {
-				// do something
-				return nil, nil
-			}),
-		),
-
-		BaseRoute("/v2").Group(
-			Get("/order", func(inb *Inbound) (any, error) {
-				// do something
-				return nil, nil
-			}).Extra("123", 123).Extra("456", 456),
-			Get("/shipment", func(inb *Inbound) (any, error) {
-				// do something
-				return nil, nil
-			}),
-			Get("/invoice", func(inb *Inbound) (any, error) {
-				// do something
-				return nil, nil
-			}),
-		),
-	)
-
-	PostServerBootstrap(func(rail Rail) error {
-		Info("print routes")
-		for _, r := range GetHttpRoutes() {
-			Infof("%+v", r)
-		}
-
-		Shutdown()
-		return nil
-	})
-
-	BootstrapServer([]string{"app.name=test"})
-}
 func TestSetHeaderTag(t *testing.T) {
 	type dummy struct {
 		Name string  `header:"name"`

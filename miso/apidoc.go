@@ -804,7 +804,7 @@ func serveApiDocTmpl(rail Rail) error {
 		return err
 	}
 
-	RawGet("/doc/api",
+	HttpGet("/doc/api", RawHandler(
 		func(inb *Inbound) {
 			defer DebugTimeOp(rail, time.Now(), "gen api doc")
 
@@ -830,7 +830,7 @@ func serveApiDocTmpl(rail Rail) error {
 				}); err != nil {
 				rail.Errorf("failed to serve apiDocTmpl, %v", err)
 			}
-		}).
+		})).
 		Desc("Serve the generated API documentation webpage").
 		Public()
 

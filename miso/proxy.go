@@ -62,14 +62,14 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	}
 	p.resolveTarget = targetResolver
 	if proxiedPath != "/" {
-		RawAny(proxiedPath, p.proxyRequestHandler)
+		HttpAny(proxiedPath, p.proxyRequestHandler)
 	}
 	wildcardPath := proxiedPath
 	if !strings.HasSuffix(wildcardPath, "/") {
 		wildcardPath += "/"
 	}
 	wildcardPath += "*proxyPath"
-	RawAny(wildcardPath, p.proxyRequestHandler)
+	HttpAny(wildcardPath, p.proxyRequestHandler)
 	return p
 }
 

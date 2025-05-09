@@ -421,7 +421,7 @@ func consulBootstrap(rail Rail) error {
 		if !util.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
-			Get(deregisterUrl,
+			HttpGet(deregisterUrl, ResHandler(
 				func(inb *Inbound) (any, error) {
 					if !IsConsulServiceRegistered() {
 						rail.Info("Current instance is not registered on consul")
@@ -436,7 +436,7 @@ func consulBootstrap(rail Rail) error {
 						rail.Info("consul service deregistered")
 					}
 					return nil, nil
-				}).
+				})).
 				Desc("Endpoint used to trigger Consul service deregistration")
 		}
 	}
