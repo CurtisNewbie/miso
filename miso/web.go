@@ -1326,7 +1326,15 @@ func handleHttp(method string, url string, handler httpHandler) *LazyRouteDecl {
 
 func setAwareHandler(decl *LazyRouteDecl, handler any) *LazyRouteDecl {
 	if v, ok := handler.(reqAwareHandler); ok {
-		decl = decl.DocJsonReq(v.req())
+		r := v.req()
+		switch decl.Method {
+		case http.MethodPut, http.MethodPost, http.MethodDelete:
+			decl = decl.DocJsonReq(r)
+		default:
+			decl = decl.DocQueryReq(r).
+				DocHeaderReq(r)
+		}
+
 	}
 	if v, ok := handler.(resAwareHandler); ok {
 		decl = decl.DocJsonResp(resultBodyBuilder.PayloadJsonBuilder(v.res()))
