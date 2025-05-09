@@ -16,6 +16,8 @@ Install a specific release of miso:
 go get github.com/curtisnewbie/miso@v0.1.22
 ```
 
+You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
+
 ## Documentations
 
 - [CLI Tools](./doc/tools.md)

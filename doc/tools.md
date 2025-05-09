@@ -25,15 +25,13 @@ $ misogen -h
 #   -svc
 #         Generate code to integrate svc for automatic schema migration
 
-$ mkdir myapp && cd myapp && misogen -name "myapp" -svc
+$ mkdir myapp && cd myapp && misogen -name "myapp"
 
 # misogen, current miso version: v0.1.22
 #
 # Initialized module 'myapp'
 # Installing dependency: github.com/curtisnewbie/miso/miso@v0.1.22
 # Initializing conf.yml
-# Initializing internal/schema/scripts/schema.sql
-# Initializing internal/schema/migrate.go
 # Initializing main.go
 ```
 
