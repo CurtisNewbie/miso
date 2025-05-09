@@ -468,7 +468,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 		httpMethod := d.Method[:1] + strings.ToLower(d.Method[1:])
 		if custReqType != "" {
 			if d.Flags.Has(tagRaw) {
-				w.Writef("miso.Raw%v(\"%v\",", httpMethod, d.Url)
+				w.Writef("miso.Http%v(\"%v\", miso.RawHandler(", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) {")
 				w.StepIn(func(w *util.IndentWriter) {
@@ -482,7 +482,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					w.Writef("inb.MustBind(&req)")
 					w.Writef(invokeFunc)
 				})
-				w.Writef("}).")
+				w.Writef("})).")
 				if d.JsonRespType != "" {
 					w.Writef("DocJsonReq(%v{}).", custReqType)
 					w.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
@@ -490,7 +490,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 					w.NoLbWritef("DocJsonReq(%v{})", custReqType)
 				}
 			} else {
-				w.Writef("miso.I%v(\"%v\",", httpMethod, d.Url)
+				w.Writef("miso.Http%v(\"%v\", miso.AutoHandler(", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound, req %v) (%v, error) {", custReqType, custResType)
 				w.StepIn(func(w *util.IndentWriter) {
@@ -511,40 +511,40 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						w.Writef("return %v", invokeFunc)
 					}
 				})
-				w.NoLbWritef("})")
+				w.NoLbWritef("}))")
 			}
 		} else {
 			isRaw := d.Flags.Has(tagRaw) && len(d.FuncResults) < 1 && d.allParamsInjectable()
 			if isRaw {
 				if len(d.FuncParams) == 1 && d.FuncParams[0].Type == typeMisoInboundPtr {
 					if d.JsonRespType != "" {
-						w.Writef("miso.Raw%v(\"%v\", %v).", httpMethod, d.Url, d.FuncName)
+						w.Writef("miso.Http%v(\"%v\", miso.RawHandler(%v)).", httpMethod, d.Url, d.FuncName)
 						w.StepIn(func(iw *util.IndentWriter) {
 							iw.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
 						})
 					} else {
-						w.NoLbWritef("miso.Raw%v(\"%v\", %v)", httpMethod, d.Url, d.FuncName)
+						w.NoLbWritef("miso.Http%v(\"%v\", miso.RawHandler(%v))", httpMethod, d.Url, d.FuncName)
 					}
 					if extraLines > 0 {
 						w.IncrIndent()
 					}
 				} else {
-					w.Writef("miso.Raw%v(\"%v\",", httpMethod, d.Url)
+					w.Writef("miso.Http%v(\"%v\", miso.RawHandler(", httpMethod, d.Url)
 					w.IncrIndent()
 					w.Writef("func(inb *miso.Inbound) {")
 					w.StepIn(func(w *util.IndentWriter) {
 						w.Writef(d.printInvokeFunc())
 					})
 					if d.JsonRespType != "" {
-						w.Writef("}).")
+						w.Writef("})).")
 						w.NoLbWritef("DocJsonResp(%v{})", d.JsonRespType)
 					} else {
-						w.NoLbWritef("})")
+						w.NoLbWritef("}))")
 					}
 				}
 
 			} else {
-				w.Writef("miso.%v(\"%v\",", httpMethod, d.Url)
+				w.Writef("miso.Http%v(\"%v\", miso.ResHandler(", httpMethod, d.Url)
 				w.IncrIndent()
 				w.Writef("func(inb *miso.Inbound) (%v, error) {", custResType)
 				w.StepIn(func(w *util.IndentWriter) {
@@ -560,7 +560,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 						w.Writef("return %v", invokeFunc)
 					}
 				})
-				w.NoLbWritef("})")
+				w.NoLbWritef("}))")
 			}
 		}
 

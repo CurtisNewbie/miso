@@ -1311,6 +1311,16 @@ func setAwareHandler(decl *LazyRouteDecl, handler any) *LazyRouteDecl {
 	return decl
 }
 
+// Create HTTP handler that automatically resolve Request and Response data.
+//
+// Req type should be a struct (or a pointer to a struct), where all fields are automatically mapped from the request
+// using 'json' tag, 'form' tag (for form-data or query param) or 'header' tag.
+//
+// Both Res value and error (if not nil) are be wrapped inside miso.Resp and serialized as json.
+// This behaviour can be custmized using miso.SetResultBodyBuilder func.
+//
+// With both Req and Res type declared, miso will automatically parse these two types using reflect
+// and generate an API documentation describing the endpoint.
 func AutoHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) httpHandler {
 	req := util.NewVar[Req]()
 	res := util.NewVar[Res]()
@@ -1321,13 +1331,23 @@ func AutoHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) httpHa
 	}
 }
 
+// Create raw HTTP Handler.
+//
+// Request and Response are handled by the handler itself.
 func RawHandler(handler RawTRouteHandler) httpHandler {
 	return &rawHandler{
 		handleFunc: newRawTRouteHandler(handler),
 	}
 }
 
-func ResHandler[Res any](url string, handler TRouteHandler[Res]) httpHandler {
+// Create HTTP handler that automatically resolve Res.
+//
+// Both Res value and error (if not nil) are be wrapped inside miso.Resp and serialized as json.
+// This behaviour can be custmized using miso.SetResultBodyBuilder func.
+//
+// With Res type declared, miso will automatically parse these the type using reflect
+// and generate an API documentation describing the endpoint.
+func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
 	res := util.NewVar[Res]()
 	return &resAutoHandler{
 		handleFunc: newTRouteHandler(handler),
