@@ -4,7 +4,7 @@
 
 miso, yet another simple application framework. miso provides an opinionated way to write backend application, it _'subjectively'_ solves many common issues that we all have at some point during development.
 
-It's mainly a fun project for me to prove: **_'yes, we can just write a framework ourselves.'_**. Surprisingly, it does work :D.
+It's mainly a fun project for me to prove: **_'yes, we can just write a framework ourselves.'_**. Surprisingly, it does work.
 
 The overall target is to make it as small and simple as possible, backward compatibility may break in future releases.
 
