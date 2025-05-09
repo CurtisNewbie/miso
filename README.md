@@ -2,9 +2,9 @@
 
 > **_main branch is unstable, install miso with tags instead_**
 
-Miso, yet another simple application framework. It's mainly a fun project for me to prove: **_'yes, we can just write a framework ourselves.'_**.
+miso, yet another simple application framework. miso provides an opinionated way to write backend application, it _'subjectively'_ solves many common issues that we all have at some point during development.
 
-Miso provides an opinionated way to write application, common functionalities such as configuration, service discovery, load balancing, log tracing, log rotation, task scheduling, message queue and so on, are all implemented in an opinionated way. You can use miso to write _almost_ any kind of application, but it's mainly a backend framework.
+It's mainly a fun project for me to prove: **_'yes, we can just write a framework ourselves.'_**. Surprisingly, it does work :D.
 
 The overall target is to make it as small and simple as possible, backward compatibility may break in future releases.
 
