@@ -1328,7 +1328,7 @@ func setAwareHandler(decl *LazyRouteDecl, handler any) *LazyRouteDecl {
 	if v, ok := handler.(reqAwareHandler); ok {
 		r := v.req()
 		switch decl.Method {
-		case http.MethodPut, http.MethodPost, http.MethodDelete:
+		case http.MethodPut, http.MethodPost:
 			decl = decl.DocJsonReq(r)
 		default:
 			decl = decl.DocQueryReq(r).
