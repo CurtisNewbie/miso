@@ -68,7 +68,7 @@ func PrepareServer(rail miso.Rail) error {
 	miso.BaseRoute("/open/api/demo/grouped").Group(
 
 		// /open/api/demo/grouped/post
-		miso.IPost("/open/api/demo/post",
+		miso.HttpPost("/open/api/demo/post", miso.AutoHandler(
 			func(inb *miso.Inbound, req api.PostReq) (api.PostRes, error) {
 				rail := inb.Rail()
 				rail.Infof("Received request: %#v", req)
@@ -84,14 +84,14 @@ func PrepareServer(rail miso.Rail) error {
 				}
 
 				return res, nil // serialized to json
-			}).
+			})).
 			Desc("Post demo stuff").                            // describe endpoint in api-doc
 			DocHeader("Authorization", "Bearer Authorization"), // document request header
 
 		miso.BaseRoute("/subgroup").Group(
 
 			// /open/api/demo/grouped/subgroup/post
-			miso.IPost("/post1", doSomethingEndpoint),
+			miso.HttpPost("/post1", miso.AutoHandler(doSomethingEndpoint)),
 		),
 	)
 	return nil
