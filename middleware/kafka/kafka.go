@@ -58,6 +58,7 @@ func NewWriter(addrs []string) (*kafka.Writer, error) {
 		Balancer:               &kafka.RoundRobin{},
 		RequiredAcks:           kafka.RequireOne,
 		AllowAutoTopicCreation: true,
+		Logger:                 miso.EmptyRail(),
 	}
 	return w, nil
 }
@@ -65,13 +66,19 @@ func NewWriter(addrs []string) (*kafka.Writer, error) {
 // Create new Kafka Reader using default Transport.
 //
 // The created Reader is not managed by miso.
+//
+// Notice that, internally miso uses kafka-go, which doesn't support CooperativeStickyAssigner and StickyPartitioner, while these are used by default in cpp and java client.
+//
+// This means the group consumer created here will not be compatible with other clients written in different languages. Just don't share the same topic with different clients.
 func NewReader(addrs []string, groupId string, topic string) *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     addrs,
-		GroupID:     groupId,
-		Topic:       topic,
-		MaxAttempts: math.MaxInt, // retry forever?
-		MaxBytes:    10e6,        // 10MB
+		Brokers:               addrs,
+		GroupID:               groupId,
+		Topic:                 topic,
+		MaxAttempts:           math.MaxInt, // retry forever?
+		MaxBytes:              10e6,        // 10MB
+		Logger:                miso.EmptyRail(),
+		WatchPartitionChanges: true,
 	})
 }
 
@@ -112,6 +119,11 @@ func GetWriter() *kafka.Writer {
 	return m.w
 }
 
+// Register Kafka Listener.
+//
+// Notice that, internally miso uses kafka-go, which doesn't support CooperativeStickyAssigner and StickyPartitioner, while these are used by default in cpp and java client.
+//
+// This means the group consumer created here will not be compatible with other clients written in different languages. Just don't share the same topic with different clients.
 func AddKafkaListener(c KafkaReaderConfig) {
 	m := mod()
 	m.mu.Lock()
