@@ -14,7 +14,7 @@ const (
 	issuer     = "jwt_test"
 )
 
-func TestEncodeToken(t *testing.T) {
+func TestEncodeDecodeToken(t *testing.T) {
 	miso.SetProp(PropJwtPrivateKey, privateKey)
 	miso.SetProp(PropJwtPublicKey, publicKey)
 	miso.SetProp(PropJwtIssue, issuer)
@@ -28,17 +28,10 @@ func TestEncodeToken(t *testing.T) {
 		t.Fatal("token is empty")
 	}
 	t.Log(tkn)
-}
 
-func TestDecodeToken(t *testing.T) {
-	miso.SetProp(PropJwtPrivateKey, privateKey)
-	miso.SetProp(PropJwtPublicKey, publicKey)
-	miso.SetProp(PropJwtIssue, issuer)
-
-	jwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTA2MjM1MTQsImlzcyI6Imp3dF90ZXN0IiwidXNlcm5hbWUiOiJ6aHVhbmd5b25naiJ9.Q_2CR6MyZ9jzmI0HswtfMHZ7-T9BZK62XXEDz_GwmmO_YRYRF5NmSdYng3-jHVjUsNIsfvu5VSUxOSrUgGzsURwYvxG-I8BtXAJf3dtV4n---iz9zvm8TzItiVeplEgW3N_QGx5RibKQM8lwt3-VZL2tU70AmsxNGVlKp63We_A"
-	tkn, err := JwtDecode(jwt)
+	decoded, err := JwtDecode(tkn)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(tkn.Claims)
+	t.Logf("%#v", decoded.Claims)
 }

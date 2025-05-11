@@ -43,35 +43,20 @@ func (m *jwtModule) jwtEncode(claims jwt.MapClaims, exp time.Duration) (string, 
 	if err != nil {
 		return "", err
 	}
-
-	claims["iss"] = miso.GetPropStr(PropJwtIssue)
-	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	return token.SignedString(pk)
+	issuer := miso.GetPropStr(PropJwtIssue)
+	return JwtKeyEncode(pk, claims, exp, issuer)
 }
 
 func (m *jwtModule) jwtDecode(token string) (ParsedJwt, error) {
-	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return m.loadPublicKey()
-	}, validateIssuer())
-
+	pubKey, err := m.loadPublicKey()
 	if err != nil {
 		return ParsedJwt{}, err
 	}
-
-	if !parsed.Valid {
-		return ParsedJwt{Valid: false}, nil
-	}
-
-	if claims, ok := parsed.Claims.(jwt.MapClaims); ok {
-		return ParsedJwt{Valid: true, Claims: claims}, nil
-	} else {
-		return ParsedJwt{}, ErrExtractClaimFailed
-	}
+	iss := miso.GetPropStr(PropJwtIssue)
+	return JwtKeyDecode(pubKey, token, iss)
 }
 
-func (m *jwtModule) loadPublicKey() (any, error) {
+func (m *jwtModule) loadPublicKey() (*rsa.PublicKey, error) {
 	m.pubKeyRwmu.RLock()
 	if m.pubKey != nil {
 		defer m.pubKeyRwmu.RUnlock()
@@ -97,7 +82,7 @@ func (m *jwtModule) loadPublicKey() (any, error) {
 	return m.pubKey, nil
 }
 
-func (m *jwtModule) loadPrivateKey() (any, error) {
+func (m *jwtModule) loadPrivateKey() (*rsa.PrivateKey, error) {
 	m.privKeyRwmu.RLock()
 	if m.privKey != nil {
 		defer m.privKeyRwmu.RUnlock()
@@ -127,18 +112,46 @@ func (m *jwtModule) loadPrivateKey() (any, error) {
 	return m.privKey, nil
 }
 
-func validateIssuer() jwt.ParserOption {
-	iss := miso.GetPropStr(PropJwtIssue)
-	if iss == "" {
-		return func(p *jwt.Parser) {}
-	}
-	return jwt.WithIssuer(iss)
-}
-
+// JWT Encode using default configuration in loaded properties.
 func JwtEncode(claims jwt.MapClaims, exp time.Duration) (string, error) {
 	return module().jwtEncode(claims, exp)
 }
 
+// JWT Decode using default configuration in loaded properties.
 func JwtDecode(token string) (ParsedJwt, error) {
 	return module().jwtDecode(token)
+}
+
+// JWT Encode using provided key, claims, exp and iss.
+func JwtKeyEncode(pk *rsa.PrivateKey, claims jwt.MapClaims, exp time.Duration, issuer string) (string, error) {
+	claims["iss"] = issuer
+	claims["exp"] = jwt.NewNumericDate(time.Now().Add(exp))
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	return token.SignedString(pk)
+}
+
+// JWT Decode using provided key and iss.
+func JwtKeyDecode(pk *rsa.PublicKey, token string, issuer string) (ParsedJwt, error) {
+	validateIssuerFunc := func(p *jwt.Parser) {}
+	if issuer != "" {
+		validateIssuerFunc = jwt.WithIssuer(issuer)
+	}
+	pubKeyFunc := func(token *jwt.Token) (interface{}, error) {
+		return pk, nil
+	}
+
+	parsed, err := jwt.Parse(token, pubKeyFunc, validateIssuerFunc)
+	if err != nil {
+		return ParsedJwt{Valid: false}, err
+	}
+	if !parsed.Valid {
+		return ParsedJwt{Valid: false}, nil
+	}
+
+	if claims, ok := parsed.Claims.(jwt.MapClaims); ok {
+		return ParsedJwt{Valid: true, Claims: claims}, nil
+	} else {
+		return ParsedJwt{Valid: false}, ErrExtractClaimFailed
+	}
 }
