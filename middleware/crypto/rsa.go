@@ -12,11 +12,17 @@ import (
 )
 
 const (
+	// PKI X.509, public key start
 	PubPemBegin = "-----BEGIN PUBLIC KEY-----"
-	pubPemEnd   = "-----END PUBLIC KEY-----"
 
+	// PKI X.509, public key end
+	pubPemEnd = "-----END PUBLIC KEY-----"
+
+	// PKCS8, private key start
 	PrivPemBegin = "-----BEGIN PRIVATE KEY-----"
-	PrivPemEnd   = "-----END PRIVATE KEY-----"
+
+	// PKCS8, private key end
+	PrivPemEnd = "-----END PRIVATE KEY-----"
 )
 
 var (
@@ -24,6 +30,9 @@ var (
 	ErrInvalidKey      = errors.New("invalid key")
 )
 
+// Load RSA PrivateKey from content.
+//
+// Content should be PKCS8 compatible format with or without '-----BEGIN PRIVATE KEY-----' prefix and suffix.
 func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
 	if !strings.HasPrefix(content, PrivPemBegin) {
 		content = PrivPemBegin + "\n" + content
@@ -50,6 +59,9 @@ func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
 	return privKey, nil
 }
 
+// Load RSA PublicKey from content.
+//
+// Content should be X.509 compatible format with or without '-----BEGIN PUBLIC KEY-----' prefix and suffix.
 func LoadPubKey(content string) (*rsa.PublicKey, error) {
 	if !strings.HasPrefix(content, PubPemBegin) {
 		content = PubPemBegin + "\n" + content
