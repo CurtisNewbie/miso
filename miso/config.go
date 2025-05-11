@@ -72,7 +72,7 @@ func (a *AppConfig) GetPropStrSlice(prop string) []string {
 		v := a.vp.Get(prop)
 		if s, ok := v.(string); ok {
 			sp := strings.Split(s, ",")
-			util.TrimSlice(sp)
+			util.TrimStrSlice(sp)
 			return sp
 		}
 		return cast.ToStringSlice(v)

@@ -301,8 +301,8 @@ func TestMatchPath(t *testing.T) {
 	}
 }
 
-func TestTrimSlice(t *testing.T) {
+func TestTrimStrSlice(t *testing.T) {
 	s := []string{"1 ", "2 ", "3 "}
-	TrimSlice(s)
+	TrimStrSlice(s)
 	t.Logf("%#v", s)
 }
