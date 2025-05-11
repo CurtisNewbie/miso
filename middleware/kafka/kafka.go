@@ -75,15 +75,15 @@ func NewReader(addrs []string, groupId string, topic string) *kafka.Reader {
 	})
 }
 
-func WriteMessageJson(rail miso.Rail, key string, value any) error {
+func WriteMessageJson(rail miso.Rail, topic string, key string, value any) error {
 	byt, err := json.WriteJson(value)
 	if err != nil {
 		return err
 	}
-	return WriteMessage(rail, key, byt)
+	return WriteMessage(rail, topic, key, byt)
 }
 
-func WriteMessage(rail miso.Rail, key string, value []byte) error {
+func WriteMessage(rail miso.Rail, topic string, key string, value []byte) error {
 	w := GetWriter()
 	if w == nil {
 		return miso.NewErrf("failed to obtain Kafka Writer")
@@ -96,6 +96,7 @@ func WriteMessage(rail miso.Rail, key string, value []byte) error {
 	})
 
 	err := w.WriteMessages(context.Background(), kafka.Message{
+		Topic:   topic,
 		Headers: headers,
 		Key:     []byte(key),
 		Value:   value,
