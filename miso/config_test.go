@@ -258,3 +258,12 @@ test: "TestLoadConfigFromReader"
 		t.Fatal("incorrect test value")
 	}
 }
+
+func TestPropSlice(t *testing.T) {
+	SetProp("test", "apple,  orange, juice")
+	v := GetPropStrSlice("test")
+	t.Logf("%#v", v)
+	if len(v) != 3 {
+		t.Fatal("len != 3")
+	}
+}

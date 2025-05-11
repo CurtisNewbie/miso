@@ -708,7 +708,7 @@ func (w wrappingListener) Handle(rail miso.Rail, payload string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			util.PanicLog("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
-			err = miso.NewErrf("listener panic recovered, %v", v)
+			err = miso.NewErrf("rabbitmq listener panic recovered, %v", v)
 		}
 	}()
 

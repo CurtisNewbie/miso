@@ -365,3 +365,9 @@ func EqualAnyStr(s string, canditates ...string) bool {
 	}
 	return false
 }
+
+func TrimSlice(s []string) {
+	for i, v := range s {
+		s[i] = strings.TrimSpace(v)
+	}
+}

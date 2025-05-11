@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -60,9 +61,7 @@ type MisoApp struct {
 	// channel for signaling server shutdown
 	manualSigQuit chan int
 
-	shuttingDown   bool
-	shutingDownRwm sync.RWMutex // rwmutex for shuttingDown
-
+	shuttingDown *atomic.Bool
 	shutdownHook []OrderedShutdownHook
 	shmu         sync.Mutex // mutex for shutdownHook
 
@@ -86,7 +85,7 @@ func newApp() *MisoApp {
 	return &MisoApp{
 		manualSigQuit: make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:  false,
-		shuttingDown:  false,
+		shuttingDown:  &atomic.Bool{},
 		store:         &appStore{store: util.NewRWMap[string, any]()},
 		config:        newAppConfig(),
 	}
@@ -255,16 +254,12 @@ func (a *MisoApp) AddOrderedShutdownHook(order int, hook func()) {
 
 // check if the server is shutting down
 func (a *MisoApp) IsShuttingDown() bool {
-	a.shutingDownRwm.RLock()
-	defer a.shutingDownRwm.RUnlock()
-	return a.shuttingDown
+	return a.shuttingDown.Load()
 }
 
 // mark that the server is shutting down
 func (a *MisoApp) markServerShuttingDown() {
-	a.shutingDownRwm.Lock()
-	defer a.shutingDownRwm.Unlock()
-	a.shuttingDown = true
+	a.shuttingDown.Store(true)
 }
 
 // Shutdown server

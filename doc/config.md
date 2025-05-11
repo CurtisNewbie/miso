@@ -86,6 +86,13 @@ The tables shown below list all configuration that you can tune. You can also re
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
 
+## Kafka Configuration
+
+| property          | description                    | default value  |
+| ----------------- | ------------------------------ | -------------- |
+| kafka.enabled     | Enable kafka client            | false          |
+| kafka.server.addr | list of kafka server addresses | localhost:9092 |
+
 ## Logging Configuration
 
 | property                  | description                                                      | default value |

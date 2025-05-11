@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 )
 
@@ -67,7 +68,15 @@ func (a *AppConfig) GetPropIntSlice(prop string) []int {
 
 // Get prop as string slice
 func (a *AppConfig) GetPropStrSlice(prop string) []string {
-	return returnWithReadLock(a, func() []string { return a.vp.GetStringSlice(prop) })
+	return returnWithReadLock(a, func() []string {
+		v := a.vp.Get(prop)
+		if s, ok := v.(string); ok {
+			sp := strings.Split(s, ",")
+			util.TrimSlice(sp)
+			return sp
+		}
+		return cast.ToStringSlice(v)
+	})
 }
 
 // Get prop as int

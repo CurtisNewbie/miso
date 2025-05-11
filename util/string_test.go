@@ -300,3 +300,9 @@ func TestMatchPath(t *testing.T) {
 		t.Fatal("should not match")
 	}
 }
+
+func TestTrimSlice(t *testing.T) {
+	s := []string{"1 ", "2 ", "3 "}
+	TrimSlice(s)
+	t.Logf("%#v", s)
+}
