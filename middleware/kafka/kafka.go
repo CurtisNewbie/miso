@@ -46,7 +46,7 @@ type KafkaReaderConfig struct {
 	Topic       string
 	GroupId     string
 	Concurrency int
-	Listen      func(rail miso.Rail, m kafka.Message) error
+	Listen      func(rail miso.Rail, m Message) error
 }
 
 // Create new Kafka Writer using default Transport.
@@ -145,7 +145,7 @@ func bootstrapKafka(rail miso.Rail) error {
 		r := NewReader(addrs, rc.GroupId, rc.Topic)
 
 		// wrap provided listener, make sure it's panic free
-		listen := func(rail miso.Rail, m kafka.Message) (err error) {
+		listen := func(rail miso.Rail, m Message) (err error) {
 			defer func() {
 				if v := recover(); v != nil {
 					util.PanicLog("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
@@ -171,7 +171,7 @@ func bootstrapKafka(rail miso.Rail) error {
 			go func() {
 				for {
 					rail := miso.EmptyRail()
-					m, err := r.FetchMessage(rail.Context())
+					km, err := r.FetchMessage(rail.Context())
 					if err != nil {
 						if errors.Is(err, io.EOF) {
 							rail.Infof("Kafka Reader for (%v, %v) closed, exiting", rc.GroupId, rc.Topic)
@@ -186,7 +186,7 @@ func bootstrapKafka(rail miso.Rail) error {
 					for _, k := range miso.GetPropagationKeys() {
 						tracedHeaders[k] = ""
 					}
-					for _, h := range m.Headers {
+					for _, h := range km.Headers {
 						if _, ok := tracedHeaders[h.Key]; ok {
 							tracedHeaders[h.Key] = string(h.Value)
 						}
@@ -198,17 +198,20 @@ func bootstrapKafka(rail miso.Rail) error {
 						rail = rail.WithCtxVal(k, v)
 					}
 
+					m := Message{}
+					m.load(km)
+
 					if err := listen(rail, m); err != nil {
 						rail.Errorf("Failed to handle Kafka message (%v, %v), %v", rc.GroupId, rc.Topic, err)
 						continue
 					}
 
-					if err := r.CommitMessages(rail.Context(), m); err != nil {
-						rail.Errorf("Failed to commit Kafka message (%v, %v), offset: %v, %v", rc.GroupId, rc.Topic, m.Offset, err)
+					if err := r.CommitMessages(rail.Context(), km); err != nil {
+						rail.Errorf("Failed to commit Kafka message (%v, %v), offset: %v, %v", rc.GroupId, rc.Topic, km.Offset, err)
 						continue
 					}
 
-					rail.Infof("Kafka message commited at topic: %v, partition: %v, offset: %v", m.Topic, m.Partition, m.Offset)
+					rail.Infof("Kafka message commited at topic: %v, partition: %v, offset: %v", km.Topic, km.Partition, km.Offset)
 				}
 			}()
 		}
@@ -217,4 +220,19 @@ func bootstrapKafka(rail miso.Rail) error {
 	}
 
 	return nil
+}
+
+type Message struct {
+	Key     []byte
+	Value   []byte
+	Headers map[string][]byte
+}
+
+func (m *Message) load(km kafka.Message) {
+	m.Key = km.Key
+	m.Value = km.Value
+	m.Headers = make(map[string][]byte, len(km.Headers))
+	for _, h := range km.Headers {
+		m.Headers[h.Key] = h.Value
+	}
 }
