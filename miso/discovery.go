@@ -1,3 +1,11 @@
+// Service Discovery Provider must implement following:
+//
+// type ServerList
+// func ChangeGetServerList(...)
+//
+// Provider must bootstrap server component at order: `BootstrapOrderL4`,
+// and deregister service in shutdown hook with order `DefShutdownOrder-1`
+
 package miso
 
 import (
