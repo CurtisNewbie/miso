@@ -230,7 +230,7 @@ func bootstrapKafka(rail miso.Rail) error {
 			}()
 		}
 
-		rail.Infof("Created Kafka Reader for (%v, %v)", rc.GroupId, rc.Topic)
+		rail.Infof("Created Kafka Reader for (%v, %v), currency: %v", rc.GroupId, rc.Topic, rc.Concurrency)
 	}
 
 	return nil
