@@ -58,7 +58,8 @@ func NewWriter(addrs []string) (*kafka.Writer, error) {
 		Balancer:               &kafka.RoundRobin{},
 		RequiredAcks:           kafka.RequireOne,
 		AllowAutoTopicCreation: true,
-		Logger:                 miso.EmptyRail(),
+		Logger:                 kafkaInfoLogger{},
+		ErrorLogger:            kafkaErrorLogger{},
 	}
 	return w, nil
 }
@@ -77,7 +78,8 @@ func NewReader(addrs []string, groupId string, topic string) *kafka.Reader {
 		Topic:                 topic,
 		MaxAttempts:           math.MaxInt, // retry forever?
 		MaxBytes:              10e6,        // 10MB
-		Logger:                miso.EmptyRail(),
+		Logger:                kafkaInfoLogger{},
+		ErrorLogger:           kafkaErrorLogger{},
 		WatchPartitionChanges: true,
 	})
 }
@@ -247,4 +249,18 @@ func (m *Message) load(km kafka.Message) {
 	for _, h := range km.Headers {
 		m.Headers[h.Key] = h.Value
 	}
+}
+
+type kafkaInfoLogger struct {
+}
+
+func (k kafkaInfoLogger) Printf(p string, ar ...interface{}) {
+	miso.Infof(p, ar...)
+}
+
+type kafkaErrorLogger struct {
+}
+
+func (k kafkaErrorLogger) Printf(p string, ar ...interface{}) {
+	miso.Errorf(p, ar...)
 }
