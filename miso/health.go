@@ -86,3 +86,11 @@ func IsHealthcheckPass(rail Rail) bool {
 	rail.Debugf("Service healthcheck pass")
 	return true
 }
+
+func healthCheckUrl() string {
+	consulUrl := GetPropStr(PropConsulHealthCheckUrl)
+	if consulUrl == "" || consulUrl == "/health" {
+		return GetPropStr(PropHealthCheckUrl)
+	}
+	return consulUrl
+}

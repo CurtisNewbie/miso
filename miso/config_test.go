@@ -40,9 +40,6 @@ func TestParseArg(t *testing.T) {
 	if s := GetPropStr(PropConsulAddress); s != "localhost:8500" {
 		t.Error(s)
 	}
-	if s := GetPropStr(PropConsulHealthcheckUrl); s != "/some/health" {
-		t.Error(s)
-	}
 	if s := GetPropStr(PropConsulHealthCheckInterval); s != "5s" {
 		t.Error(s)
 	}
@@ -116,9 +113,6 @@ func TestResolveArgForParsedConf(t *testing.T) {
 		t.Error(s)
 	}
 	if s := GetPropStr(PropConsulAddress); s != "localhost:8500" {
-		t.Error(s)
-	}
-	if s := GetPropStr(PropConsulHealthcheckUrl); s != "/some/health" {
 		t.Error(s)
 	}
 	if s := GetPropStr(PropConsulHealthCheckInterval); s != "5s" {

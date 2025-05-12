@@ -351,7 +351,10 @@ func addRoutesRegistar(reg routesRegistar) {
 
 // Register GIN route for consul healthcheck
 func registerRouteForConsulHealthcheck(router *gin.Engine) {
-	router.GET(GetPropStr(PropConsulHealthcheckUrl), DefaultHealthCheck)
+	url := healthCheckUrl()
+	if !util.IsBlankStr(url) {
+		router.GET(url, DefaultHealthCheck)
+	}
 }
 
 func startHttpServer(rail Rail, server *http.Server) {
@@ -742,7 +745,7 @@ func webServerBootstrap(rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
+	if !defaultHealthCheckHandlerDisabled {
 		registerRouteForConsulHealthcheck(engine)
 	}
 

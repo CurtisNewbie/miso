@@ -25,6 +25,9 @@ const (
 	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
+	// misoconfig-prop: health check url | /health
+	PropHealthCheckUrl = "server.health-check-url"
+
 	// misoconfig-prop: log all http server routes in INFO level | false
 	PropServerLogRoutes = "server.log-routes"
 
@@ -109,8 +112,10 @@ const (
 	// misoconfig-prop: consul server address | localhost:8500
 	PropConsulAddress = "consul.consulAddress"
 
-	// misoconfig-prop: health check url | /health
-	PropConsulHealthcheckUrl = "consul.healthCheckUrl"
+	// deprecated: changed to "server.health-check-url"
+	//
+	// misoconfig-prop: health check url. (deprecated since v0.1.23, use `server.health-check-url` instead) |
+	PropConsulHealthCheckUrl = "consul.healthCheckUrl"
 
 	// misoconfig-prop: health check interval | 5s
 	PropConsulHealthCheckInterval = "consul.healthCheckInterval"
@@ -120,9 +125,6 @@ const (
 
 	// misoconfig-prop: for how long the current instance is deregistered after first health check failure | 30m
 	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
-
-	// misoconfig-prop: register default health check endpoint on startup | true
-	PropConsulRegisterDefaultHealthcheck = "consul.registerDefaultHealthCheck"
 
 	// misoconfig-prop: fetch server list from Consul in ever N seconds | 30
 	PropConsulFetchServerInterval = "consul.fetchServerInterval"
@@ -202,11 +204,9 @@ func init() {
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
 	SetDefProp(PropConsulRegisterAddress, "${server.host}")
 	SetDefProp(PropConsulAddress, "localhost:8500")
-	SetDefProp(PropConsulHealthcheckUrl, "/health")
 	SetDefProp(PropConsulHealthCheckInterval, "5s")
 	SetDefProp(PropConsulHealthcheckTimeout, "3s")
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "30m")
-	SetDefProp(PropConsulRegisterDefaultHealthcheck, true)
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
@@ -223,6 +223,7 @@ func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
+	SetDefProp(PropHealthCheckUrl, "/health")
 	SetDefProp(PropServerLogRoutes, false)
 	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
 	SetDefProp(PropServerPerfEnabled, false)

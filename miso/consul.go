@@ -303,7 +303,7 @@ func RegisterConsulService() error {
 	serverPort := GetPropInt(PropServerActualPort)
 	registerName := GetPropStr(PropConsuleRegisterName)
 	registerAddress := GetPropStr(PropConsulRegisterAddress)
-	healthCheckUrl := GetPropStr(PropConsulHealthcheckUrl)
+	healthCheckUrl := healthCheckUrl()
 	healthCheckInterval := GetPropStr(PropConsulHealthCheckInterval)
 	healthCheckTimeout := GetPropStr(PropConsulHealthcheckTimeout)
 	healthCheckDeregAfter := GetPropStr(PropConsulHealthCheckFailedDeregAfter)
