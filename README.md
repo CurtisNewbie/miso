@@ -30,6 +30,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [Service Healthcheck](./doc/health.md)
 - [Json Processing Behaviour](./doc/json.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
+- [Kafka](./doc/kafka.md)
 - [API Documentation Generation](./doc/api_doc_gen.md)
 - [Using pprof](./doc/pprof.md)
 
