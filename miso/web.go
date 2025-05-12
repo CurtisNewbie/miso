@@ -742,7 +742,7 @@ func webServerBootstrap(rail Rail) error {
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
 	// register consul health check
-	if GetPropBool(PropConsulEnabled) && GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
+	if GetPropBool(PropConsulRegisterDefaultHealthcheck) && !defaultHealthCheckHandlerDisabled {
 		registerRouteForConsulHealthcheck(engine)
 	}
 
