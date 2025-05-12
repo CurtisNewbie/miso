@@ -9,7 +9,7 @@ import (
 
 var getPrimaryDbOnce sync.Once
 var getPrimaryDb func() *gorm.DB = func() *gorm.DB {
-	miso.Error("GetPrimaryDBFunc not implemented, returning nil")
+	miso.Error("GetPrimaryDBFunc not implemented, returning nil ... maybe you forget to import module for db connection?")
 	return nil
 }
 
