@@ -9,6 +9,13 @@ import (
 	"github.com/curtisnewbie/miso/util"
 )
 
+const (
+	// Zero value for empty serviceId
+	ServiceIdNil = "nil"
+
+	ServierMetaRegisterTime = "miso-register_time"
+)
+
 var (
 	_ ServiceRegistry = ServerListServiceRegistry{}
 	_ ServiceRegistry = hardcodedServiceRegistry{}

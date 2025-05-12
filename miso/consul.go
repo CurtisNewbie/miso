@@ -15,15 +15,8 @@ import (
 )
 
 const (
-	ConsulMetaRegisterTime = "miso-register_time"
-)
-
-const (
 	// Service registration status - passing.
 	ConsulStatusPassing = "passing"
-
-	// Zero value for empty serviceId
-	ServiceIdNil = "nil"
 )
 
 var (
@@ -85,19 +78,6 @@ func CatalogFetchServiceNames(rail Rail) (map[string][]string, error) {
 	services, _, err := client.Catalog().Services(nil)
 	rail.Debugf("CatalogFetchServiceNames, %+v, %v", services, err)
 	return services, err
-}
-
-func DeregisterService(serviceId string) error {
-	client := GetConsulClient()
-	return client.Agent().ServiceDeregister(serviceId)
-}
-
-func RegisterService(registration *api.AgentServiceRegistration) error {
-	client := GetConsulClient()
-	if err := client.Agent().ServiceRegister(registration); err != nil {
-		return fmt.Errorf("failed to register consul service, registration: %+v, %w", registration, err)
-	}
-	return nil
 }
 
 // Holder of a list of ServiceHolder
@@ -258,7 +238,7 @@ func DeregisterConsulService() error {
 
 	Infof("Deregistering current instance on Consul, service_id: '%s'", consulRegistration.serviceId)
 
-	err := DeregisterService(consulRegistration.serviceId)
+	err := GetConsulClient().Agent().ServiceDeregister(consulRegistration.serviceId)
 	if err == nil {
 		consulRegistration.serviceId = ServiceIdNil
 	}
@@ -319,7 +299,7 @@ func RegisterConsulService() error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[ConsulMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+	meta[ServierMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
 
 	completeHealthCheckUrl := fmt.Sprintf("http://%s:%v%s", registerAddress, serverPort, healthCheckUrl)
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)
@@ -338,8 +318,8 @@ func RegisterConsulService() error {
 		Meta: meta,
 	}
 
-	if err := RegisterService(registration); err != nil {
-		return err
+	if err := GetConsulClient().Agent().ServiceRegister(registration); err != nil {
+		return WrapErrf(err, "failed to register consul service")
 	}
 	consulRegistration.serviceId = proposedServiceId
 	consulRegistration.serviceName = registerName
