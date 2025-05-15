@@ -151,6 +151,7 @@ var jsonParseTimeFormats = []string{
 	SQLDateTimeFormat,
 	SQLDateFormat,
 	SQLDateTimeFormatWithT,
+	time.RFC3339Nano,
 }
 
 func AddETimeParseFormat(fmt ...string) {
