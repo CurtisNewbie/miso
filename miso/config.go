@@ -28,6 +28,14 @@ type AppConfig struct {
 	fastBoolCache *util.RWMap[string, bool]
 }
 
+func (a *AppConfig) WriteConfigAs(filename string) (err error) {
+	a._appConfigDoWithRLock(func() any {
+		err = a.vp.WriteConfigAs(filename)
+		return nil
+	})
+	return
+}
+
 func (a *AppConfig) _appConfigDoWithWLock(f func()) {
 	a.rwmu.Lock()
 	defer a.rwmu.Unlock()
@@ -219,7 +227,6 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 	var eo error
 
 	doWithWriteLock(a, func() {
-		a.vp.SetConfigType("yml")
 		if err := a.vp.MergeConfig(reader); err != nil {
 			eo = fmt.Errorf("failed to load config from reader: %v", err)
 		}
@@ -302,11 +309,13 @@ func (a *AppConfig) ResolveArg(arg string) string {
 }
 
 func newAppConfig() *AppConfig {
-	return &AppConfig{
+	ac := &AppConfig{
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
 		fastBoolCache: util.NewRWMap[string, bool](),
 	}
+	ac.vp.SetConfigType("yml")
+	return ac
 }
 
 // Set value for the prop
