@@ -52,6 +52,12 @@ func (t ETime) EndOfDay() ETime {
 	return ETime{tt}
 }
 
+func (t ETime) StartOfDay() ETime {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
+	return ETime{tt}
+}
+
 func (t ETime) ToTime() time.Time {
 	return t.Time
 }
@@ -237,4 +243,9 @@ func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {
 
 func SetETimeMarshalFormat(fmt string) {
 	etimeMarshalFormat = fmt
+}
+
+func ParseETime(s string) (ETime, error) {
+	var t ETime
+	return t, t.Scan(s)
 }
