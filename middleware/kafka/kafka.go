@@ -32,7 +32,7 @@ func init() {
 		Condition: func(rail miso.Rail) (bool, error) {
 			return miso.GetPropBool(PropKafkaEnabled), nil
 		},
-		Order: miso.BootstrapOrderL1,
+		Order: miso.BootstrapOrderL4,
 	})
 }
 
