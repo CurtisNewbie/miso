@@ -249,3 +249,9 @@ func ParseETime(s string) (ETime, error) {
 	var t ETime
 	return t, t.Scan(s)
 }
+
+func MayParseETime(s string) ETime {
+	var t ETime
+	t.Scan(s)
+	return t
+}
