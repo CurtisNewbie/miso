@@ -60,6 +60,8 @@ const (
 	// misoconfig-prop: enable http server | true
 	PropServerEnabled = "server.enabled"
 
+	// misoconfig-default-start
+	// misoconfig-default-end
 )`)
 	}
 	flag.Parse()
