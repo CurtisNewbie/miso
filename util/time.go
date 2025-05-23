@@ -245,13 +245,13 @@ func SetETimeMarshalFormat(fmt string) {
 	etimeMarshalFormat = fmt
 }
 
-func ParseETime(s string) (ETime, error) {
+func ParseETime(v any) (ETime, error) {
 	var t ETime
-	return t, t.Scan(s)
+	return t, t.Scan(v)
 }
 
-func MayParseETime(s string) ETime {
+func MayParseETime(v any) ETime {
 	var t ETime
-	t.Scan(s)
+	t.Scan(v)
 	return t
 }
