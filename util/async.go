@@ -13,6 +13,7 @@ import (
 
 var (
 	_ Future[any] = (*future[any])(nil)
+	_ Future[any] = (*completedFuture[any])(nil)
 
 	PanicLog func(pat string, args ...any) = Printlnf
 	DebugLog func(pat string, args ...any) = func(pat string, args ...any) {}
@@ -35,6 +36,23 @@ type Future[T any] interface {
 	//
 	// Then callback should only be set once for every Future.
 	Then(tf func(T, error))
+}
+
+type completedFuture[T any] struct {
+	res T
+	err error
+}
+
+func (f *completedFuture[T]) Get() (T, error) {
+	return f.res, f.err
+}
+
+func (f *completedFuture[T]) TimedGet(timeout int) (T, error) {
+	return f.res, f.err
+}
+
+func (f *completedFuture[T]) Then(tf func(T, error)) {
+	tf(f.res, f.err)
 }
 
 type future[T any] struct {
@@ -459,4 +477,8 @@ func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (
 	}
 	bt.preHeat()
 	return bt
+}
+
+func NewCompletedFuture[T any](t T, err error) Future[T] {
+	return &completedFuture[T]{res: t, err: err}
 }
