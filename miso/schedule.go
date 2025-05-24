@@ -219,7 +219,7 @@ func schedulerBootstrap(rail Rail) error {
 	m := scheduleModule()
 	m.startAsync()
 	rail.Info("Cron Scheduler started")
-	AddShutdownHook(func() { m.stop() })
+	AddAsyncShutdownHook(func() { m.stop() })
 	return nil
 }
 

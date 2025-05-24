@@ -650,7 +650,7 @@ func rabbitBootstrap(rail miso.Rail) error {
 	if e := m.startClient(rail); e != nil {
 		return miso.WrapErrf(e, "failed to establish connection to RabbitMQ")
 	}
-	miso.AddShutdownHook(func() {
+	miso.AddAsyncShutdownHook(func() {
 		if err := m.close(miso.EmptyRail()); err != nil {
 			miso.Errorf("Failed to close rabbitmq connection, %v", err)
 		}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"runtime/debug"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -204,16 +205,32 @@ func (a *MisoApp) LoadConfig(args []string) {
 func (a *MisoApp) triggerShutdownHook() {
 	timeout := a.Config().GetPropInt(PropServerGracefulShutdownTimeSec)
 
+	panicSafeFunc := func(op func() util.Future[any]) func() util.Future[any] {
+		return func() util.Future[any] {
+			defer func() {
+				if v := recover(); v != nil {
+					Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+				}
+			}()
+			return op()
+		}
+	}
+
 	f := util.RunAsync(func() (any, error) {
 		a.shmu.Lock()
 		defer a.shmu.Unlock()
 
 		sort.Slice(a.shutdownHook, func(i, j int) bool { return a.shutdownHook[i].Order < a.shutdownHook[j].Order })
+		futures := make([]util.Future[any], 0, len(a.shutdownHook))
 		for _, hook := range a.shutdownHook {
-			util.PanicSafeFunc(hook.Hook)() // hook can never panic
+			futures = append(futures, panicSafeFunc(hook.Hook)())
+		}
+		for _, hookFtr := range futures {
+			_, _ = hookFtr.Get()
 		}
 		return nil, nil
 	})
+
 	if timeout > 0 {
 		timeoutDur := time.Duration(timeout * int(time.Second))
 		_, err := f.TimedGet(int(timeoutDur / time.Millisecond))
@@ -243,12 +260,38 @@ func (a *MisoApp) AddShutdownHook(hook func()) {
 	})
 }
 
+func (a *MisoApp) AddAsyncShutdownHook(hook func()) {
+	caller := getCallerFnUpN(1)
+	a.AddOrderedAsyncShutdownHook(DefShutdownOrder, func() {
+		Debugf("Triggering Async ShutdownHook: %v", caller)
+		defer Debugf("Async ShutdownHook exited: %v", caller)
+		hook()
+	})
+}
+
+func (a *MisoApp) AddOrderedAsyncShutdownHook(order int, hook func()) {
+	a.shmu.Lock()
+	defer a.shmu.Unlock()
+	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
+		Order: order,
+		Hook: func() util.Future[any] {
+			return util.RunAsync(func() (any, error) {
+				hook()
+				return nil, nil
+			})
+		},
+	})
+}
+
 func (a *MisoApp) AddOrderedShutdownHook(order int, hook func()) {
 	a.shmu.Lock()
 	defer a.shmu.Unlock()
 	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
 		Order: order,
-		Hook:  hook,
+		Hook: func() util.Future[any] {
+			hook()
+			return util.NewCompletedFuture[any](nil, nil)
+		},
 	})
 }
 
@@ -421,17 +464,24 @@ func RegisterBootstrapCallback(c ComponentBootstrap) {
 	App().RegisterBootstrapCallback(c)
 }
 
-// Register shutdown hook, hook should never panic
 func AddShutdownHook(hook func()) {
 	App().AddShutdownHook(hook)
+}
+
+func AddAsyncShutdownHook(hook func()) {
+	App().AddAsyncShutdownHook(hook)
 }
 
 func AddOrderedShutdownHook(order int, hook func()) {
 	App().AddOrderedShutdownHook(order, hook)
 }
 
+func AddOrderedAsyncShutdownHook(order int, hook func()) {
+	App().AddOrderedAsyncShutdownHook(order, hook)
+}
+
 type OrderedShutdownHook struct {
-	Hook  func()
+	Hook  func() util.Future[any]
 	Order int
 }
 

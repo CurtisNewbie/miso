@@ -146,7 +146,7 @@ func bootstrapKafka(rail miso.Rail) error {
 		return err
 	}
 	m.w = w
-	miso.AddShutdownHook(func() {
+	miso.AddAsyncShutdownHook(func() {
 		if err := w.Close(); err != nil {
 			miso.Warnf("Failed to close kafka Writer, %v", err)
 		} else {
@@ -171,7 +171,7 @@ func bootstrapKafka(rail miso.Rail) error {
 			return
 		}
 
-		miso.AddShutdownHook(func() {
+		miso.AddAsyncShutdownHook(func() {
 			if err := r.Close(); err != nil {
 				miso.Warnf("Failed to close kafka Reader (%v, %v), %v", rc.GroupId, rc.Topic, err)
 			} else {

@@ -421,7 +421,7 @@ func shutdownHttpServer(server *http.Server) {
 
 	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
 	if timeout > 0 {
-		dur := (time.Duration(timeout) / 3)
+		dur := (time.Duration(timeout) / 2)
 		if dur > 0 {
 			// http server also has a timeout to avoid blocking the graceful shutdown period the whole time.
 			c, cancel := context.WithTimeout(context.Background(), dur*time.Second)
@@ -760,7 +760,7 @@ func webServerBootstrap(rail Rail) error {
 	server := createHttpServer(engine)
 	startHttpServer(rail, server)
 
-	AddShutdownHook(func() { shutdownHttpServer(server) })
+	AddAsyncShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
 }
 
