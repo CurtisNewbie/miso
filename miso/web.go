@@ -417,21 +417,21 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 
 func shutdownHttpServer(server *http.Server) {
 	Info("Shutting down http server")
+	defer Infof("Http server exited")
+
 	timeout := GetPropInt(PropServerGracefulShutdownTimeSec)
 	if timeout > 0 {
-		dur := (time.Duration(timeout) / 2)
+		dur := (time.Duration(timeout) / 3)
 		if dur > 0 {
 			// http server also has a timeout to avoid blocking the graceful shutdown period the whole time.
 			c, cancel := context.WithTimeout(context.Background(), dur*time.Second)
 			defer cancel()
 			server.Shutdown(c)
-		} else {
-			server.Shutdown(context.Background())
+			return
 		}
 	}
 
 	server.Shutdown(context.Background())
-	Infof("Http server exited")
 }
 
 // Default Recovery func
