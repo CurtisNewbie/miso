@@ -750,7 +750,7 @@ func webServerBootstrap(rail Rail) error {
 	}
 
 	if err := serveApiDocTmpl(rail); err != nil {
-		rail.Errorf("failed to buildEndpointDocTmpl, %v", err)
+		rail.Errorf("failed to server apidoc, %v", err)
 	}
 
 	// register http routes
