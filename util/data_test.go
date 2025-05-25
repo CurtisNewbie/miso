@@ -1,6 +1,7 @@
 package util
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/spf13/cast"
@@ -143,6 +144,7 @@ func TestMapTo(t *testing.T) {
 func TestRWMap(t *testing.T) {
 	m := NewRWMap[string, string]()
 	aw := NewAwaitFutures[any](NewAsyncPool(100, 5))
+	keys := []string{"ky", "kn", "ke"}
 
 	aw.SubmitAsync(func() (any, error) {
 		m.Put("ky", "yes")
@@ -160,7 +162,7 @@ func TestRWMap(t *testing.T) {
 	})
 	aw.Await()
 
-	for _, k := range m.Keys() {
+	for _, k := range keys {
 		v, ok := m.Get(k)
 		if !ok {
 			t.Fatal("!ok")
@@ -291,4 +293,94 @@ func TestHeap(t *testing.T) {
 		}
 		prev = p
 	}
+}
+
+func TestStrRWMap(t *testing.T) {
+	m := NewStrRWMap[string]()
+	aw := NewAwaitFutures[any](NewAsyncPool(100, 5))
+	keys := []string{"ky", "kn", "ke"}
+
+	aw.SubmitAsync(func() (any, error) {
+		m.Put("ky", "yes")
+		return nil, nil
+	})
+
+	aw.SubmitAsync(func() (any, error) {
+		m.Put("kn", "no")
+		return nil, nil
+	})
+
+	aw.SubmitAsync(func() (any, error) {
+		m.GetElse("ke", func(k string) string { return k + "lse" })
+		return nil, nil
+	})
+	aw.Await()
+
+	for _, k := range keys {
+		v, ok := m.Get(k)
+		if !ok {
+			t.Fatal("!ok")
+		}
+		t.Logf("%v -> %v", k, v)
+	}
+}
+
+func BenchmarkRWMap(b *testing.B) {
+	m := NewRWMap[string, string]()
+	sm := NewStrRWMap[string]()
+
+	keyCnt := 30
+	keys := []string{}
+	for i := range keyCnt {
+		s := cast.ToString(i)
+		keys = append(keys, s)
+		m.Put(s, s)
+		sm.Put(s, s)
+	}
+
+	/*
+		shards = 32
+		keyCnt = 30
+
+		goos: darwin
+		goarch: arm64
+		pkg: github.com/curtisnewbie/miso/util
+		cpu: Apple M3 Pro
+		=== RUN   BenchmarkRWMap
+		BenchmarkRWMap
+		=== RUN   BenchmarkRWMap/RWMap.Get
+		BenchmarkRWMap/RWMap.Get
+		BenchmarkRWMap/RWMap.Get-11               452205              2616 ns/op              50 B/op          1 allocs/op
+		=== RUN   BenchmarkRWMap/StrRWMap.Get
+		BenchmarkRWMap/StrRWMap.Get
+		BenchmarkRWMap/StrRWMap.Get-11           1704829               692.7 ns/op            48 B/op          1 allocs/op
+	*/
+
+	sg1 := sync.WaitGroup{}
+	b.Run("RWMap.Get", func(b *testing.B) {
+		for range b.N {
+			sg1.Add(1)
+			go func() {
+				defer sg1.Done()
+				for _, k := range keys {
+					m.Get(k)
+				}
+			}()
+		}
+		sg1.Wait()
+	})
+
+	sg2 := sync.WaitGroup{}
+	b.Run("StrRWMap.Get", func(b *testing.B) {
+		for range b.N {
+			sg2.Add(1)
+			go func() {
+				defer sg2.Done()
+				for _, k := range keys {
+					sm.Get(k)
+				}
+			}()
+		}
+		sg2.Wait()
+	})
 }

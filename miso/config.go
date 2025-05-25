@@ -25,7 +25,7 @@ type AppConfig struct {
 	rwmu *sync.RWMutex
 
 	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
-	fastBoolCache *util.RWMap[string, bool]
+	fastBoolCache *util.StrRWMap[bool]
 }
 
 func (a *AppConfig) WriteConfigAs(filename string) (err error) {
@@ -232,7 +232,7 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 		}
 
 		// reset the whole fastBoolCache
-		a.fastBoolCache.Clear()
+		a.fastBoolCache = util.NewStrRWMap[bool]()
 	})
 
 	return eo
@@ -312,7 +312,7 @@ func newAppConfig() *AppConfig {
 	ac := &AppConfig{
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
-		fastBoolCache: util.NewRWMap[string, bool](),
+		fastBoolCache: util.NewStrRWMap[bool](),
 	}
 	ac.vp.SetConfigType("yml")
 	return ac

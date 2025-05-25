@@ -87,7 +87,7 @@ func newApp() *MisoApp {
 		manualSigQuit: make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:  false,
 		shuttingDown:  &atomic.Bool{},
-		store:         &appStore{store: util.NewRWMap[string, any]()},
+		store:         &appStore{store: util.NewStrRWMap[any]()},
 		config:        newAppConfig(),
 	}
 }
@@ -486,7 +486,7 @@ type OrderedShutdownHook struct {
 }
 
 type appStore struct {
-	store *util.RWMap[string, any]
+	store *util.StrRWMap[any]
 }
 
 func (a *appStore) Get(k string) (any, bool) {
