@@ -299,7 +299,7 @@ func RegisterConsulService() error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[ServierMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+	meta[ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
 
 	completeHealthCheckUrl := fmt.Sprintf("http://%s:%v%s", registerAddress, serverPort, healthCheckUrl)
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)

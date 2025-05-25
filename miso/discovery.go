@@ -21,7 +21,7 @@ const (
 	// Zero value for empty serviceId
 	ServiceIdNil = "nil"
 
-	ServierMetaRegisterTime = "miso-register_time"
+	ServiceMetaRegisterTime = "miso-register_time"
 )
 
 var (
