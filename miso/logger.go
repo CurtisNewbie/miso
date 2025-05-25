@@ -370,20 +370,31 @@ func putCallerUintptrPool(pcs *[]uintptr) {
 // 	return nil
 // }
 
-func getShortFnName(fn string) string {
-	j := strings.LastIndex(fn, "/")
-	if j < 0 {
-		return fn
-	}
-	return string([]rune(fn)[j+1:])
-}
+// func getShortFnName(fn string) string {
+// 	j := strings.LastIndex(fn, "/")
+// 	if j < 0 {
+// 		return fn
+// 	}
+// 	return string([]rune(fn)[j+1:])
+// }
 
 func unsafeGetShortFnName(fn string) string {
-	j := strings.LastIndexByte(fn, '/')
-	if j < 0 {
+	if fn == "" {
 		return fn
 	}
-	return util.UnsafeByt2Str(util.UnsafeStr2Byt(fn)[j+1:])
+	fnb := util.UnsafeStr2Byt(fn)
+	for i := len(fnb) - 1; i >= 0; i-- {
+		ib := fnb[i]
+		if ib == '/' {
+			if i+1 < len(fnb) {
+				return util.UnsafeByt2Str(fnb[i+1:])
+			}
+			return util.UnsafeByt2Str(fnb[i:])
+		} else if ib == '(' {
+			return util.UnsafeByt2Str(fnb[i:])
+		}
+	}
+	return fn
 }
 
 // Setup error log handler.

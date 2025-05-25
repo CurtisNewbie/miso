@@ -25,6 +25,10 @@ func BenchmarkDebugf(b *testing.B) {
 }
 
 func TestUnsafeGetShortFnName(t *testing.T) {
+	if v := unsafeGetShortFnName(""); v != "" {
+		t.Fatal(v)
+	}
+
 	if v := unsafeGetShortFnName("shortFunc"); v != "shortFunc" {
 		t.Fatal(v)
 	}
@@ -37,26 +41,23 @@ func TestUnsafeGetShortFnName(t *testing.T) {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vvvv/pck.shortFunc"); v != "pck.shortFunc" {
+	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc"); v != "(*abc).shortFunc" {
 		t.Fatal(v)
 	}
 }
 
-func TestGetShortFnName(t *testing.T) {
-	if v := getShortFnName("shortFunc"); v != "shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("pck.shortFunc"); v != "pck.shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("vvvv/pck.shortFunc"); v != "pck.shortFunc" {
-		t.Fatal(v)
-	}
-
-	if v := getShortFnName("gggg/vvvv/pck.shortFunc"); v != "pck.shortFunc" {
-		t.Fatal(v)
+func BenchmarkUnsafeGetShortFnName(b *testing.B) {
+	/*
+		goos: darwin
+		goarch: arm64
+		pkg: github.com/curtisnewbie/miso/miso
+		cpu: Apple M3 Pro
+		=== RUN   BenchmarkUnsafeGetShortFnName
+		BenchmarkUnsafeGetShortFnName
+		BenchmarkUnsafeGetShortFnName-11        203311693                5.792 ns/op           0 B/op          0 allocs/op
+	*/
+	for range b.N {
+		unsafeGetShortFnName("gggg/vvvv/pck.(*abc).shortFunc")
 	}
 }
 
