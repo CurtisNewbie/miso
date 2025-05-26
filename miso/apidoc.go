@@ -961,6 +961,7 @@ func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 	}
 }
 
+/*
 type structFieldVal struct {
 	v reflect.Value
 	t reflect.StructField
@@ -986,6 +987,7 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 	}
 	return fields
 }
+*/
 
 // generate one or more golang type definitions.
 func genJsonGoDef(rv JsonPayloadDesc) (string, string) {
