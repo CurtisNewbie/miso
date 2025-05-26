@@ -95,6 +95,18 @@ func TestResolveArgForParsedConf(t *testing.T) {
 		t.Error()
 	}
 
+	if s := GetPropStr("mysql.database"); s != "fileServer" {
+		t.Error(s)
+	}
+
+	if s := GetPropStr("file.test-abc"); s != "1234" {
+		t.Error(s)
+	}
+
+	if s := GetPropStr("file.test-def"); s != "123" {
+		t.Error(s)
+	}
+
 	if s := GetPropStr(PropServerHost); s != "localhost" {
 		t.Error(s)
 	}
@@ -150,6 +162,13 @@ func TestResolveArg(t *testing.T) {
 	resolved = ResolveArg("abc.${abc}.com")
 	if resolved != "abc.123.com" {
 		t.Errorf("resolved is not '%s' but '%s'", "abc.123.com", resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def:321:123}.com")
+	if resolved != "abc.321:123.com" {
+		t.Fatal(resolved)
 		return
 	}
 	Infof("resolved: %s", resolved)

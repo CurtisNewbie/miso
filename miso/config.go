@@ -17,7 +17,7 @@ import (
 
 var (
 	// regex for arg expansion
-	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
+	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.:]+}`)
 )
 
 type AppConfig struct {
@@ -295,14 +295,18 @@ func (a *AppConfig) ResolveArg(arg string) string {
 	return resolveArgRegexp.ReplaceAllStringFunc(arg, func(s string) string {
 		r := []rune(s)
 		key := string(r[2 : len(r)-1])
+		pair := strings.SplitN(key, ":", 2)
+		key = pair[0]
+		defVal := s
+		if len(pair) > 1 {
+			defVal = pair[1]
+		}
 		val := GetEnv(key)
-
 		if val == "" {
 			val = a.GetPropStr(key)
 		}
-
 		if val == "" {
-			val = s
+			val = defVal
 		}
 		return val
 	})

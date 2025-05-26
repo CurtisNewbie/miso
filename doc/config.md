@@ -41,6 +41,13 @@ mysql:
   password: "${MYSQL_PASSWORD}"
 ```
 
+The `${}` expression also support default value. For example, if `my-schema` property is missing, `my_db` is provided as the default value.
+
+```yaml
+mysql:
+  database: "${my-schema:my_db}"
+```
+
 The tables shown below list all configuration that you can tune. You can also read [example_conf.yml](./example_conf.yml) to get a better understanding on how these configuration properties are mapped in a yaml file.
 
 <!-- misoconfig-table-start -->

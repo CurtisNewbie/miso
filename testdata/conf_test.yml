@@ -2,33 +2,37 @@ mode.production: false
 
 mysql:
   enabled: false
-  user: "${DB_USER}" 
-  password: "${DB_PASSWORD}" 
-  database: "${DB_DATABASE}" 
-  host: "${DB_HOST}" 
-  port: "${DB_PORT}" 
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  database: "${DB_DATABASE}"
+  host: "${DB_HOST}"
+  port: "${DB_PORT}"
 
 redis:
   enabled: false
-  address: "${REDIS_ADD}" 
-  port: "${REDIS_PORT}" 
-  username: "${REDIS_USERNAME}" 
-  password: "${REDIS_PASSWORD}" 
+  address: "${REDIS_ADD}"
+  port: "${REDIS_PORT}"
+  username: "${REDIS_USERNAME}"
+  password: "${REDIS_PASSWORD}"
   database: 0
 
-server: 
+server:
   web.enabled: true
-  host: "${SERVER_HOST}" 
-  port: "${SERVER_PORT}" 
+  host: "${SERVER_HOST}"
+  port: "${SERVER_PORT}"
   gracefulShutdownTimeSec: 5
 
-file: 
-  base: "${FILE_BASE}" 
-  temp: "${FILE_TEMP}" 
+file:
+  base: "${FILE_BASE}"
+  temp: "${FILE_TEMP}"
+  test-abc: "${abc:123}"
+  test-def: "${def:123}"
 
-consul: 
+abc: 1234
+
+consul:
   enabled: true
-  registerName: "${CONSUL_REGNAME}" 
+  registerName: "${CONSUL_REGNAME}"
   consulAddress: "${CONSUL_ADD}"
   healthCheckUrl: "${CONSUL_HC_URL}"
   healthCheckInterval: "${CONSUL_HC_ITV}"
@@ -39,20 +43,20 @@ client:
   fileServiceUrl: "${CLIENT_FS}"
   authServiceUrl: "${CLIENT_AS}"
 
-rabbitmq: 
-  consumer: 
+rabbitmq:
+  consumer:
     parallism: 1
-  declaration: 
-    queue: 
+  declaration:
+    queue:
       - my-first-queue
       - my-second-queue
-    exchange: 
+    exchange:
       - my-exchange-one
       - my-exchange-two
-    binding: 
-      my-first-queue: 
+    binding:
+      my-first-queue:
         key: myKey1
         exchange: my-exchange-one
-      my-second-queue: 
+      my-second-queue:
         key: mykey2
         exchange: my-exchange-two
