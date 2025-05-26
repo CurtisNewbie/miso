@@ -118,7 +118,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
-	rail.Infof("\n\n---------------------------------------------- starting %s -------------------------------------------------------\n", appName)
+	rail.Infof("\n\n---------------------------------------------------- starting %s -------------------------------------------------------------\n", appName)
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 
@@ -163,7 +163,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	a.serverBootrapCallbacks = nil
 
 	end := time.Now().UnixMilli()
-	rail.Infof("\n\n---------------------------------------------- %s started (took: %dms) --------------------------------------------\n", appName, end-start)
+	rail.Infof("\n\n---------------------------------------------------- %s started (took: %dms) --------------------------------------------------\n", appName, end-start)
 
 	// invoke listener for serverBootstraped event
 	{
