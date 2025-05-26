@@ -113,6 +113,7 @@ type httpRouteDoc struct {
 	Curl                  string           // curl demo
 	JsonReqTsDef          string           // json request type def in ts
 	JsonRespTsDef         string           // json response type def in ts
+	JsonTsDef             string           // json requests & response type def in ts
 	JsonReqGoDef          string           // json request type def in go
 	JsonReqGoDefTypeName  string           // json request type name in go
 	JsonRespGoDef         string           // json response type def in go
@@ -371,12 +372,17 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
 			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
 			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc)
+			d.JsonTsDef = d.JsonReqTsDef
 		}
 
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
 			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
 			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc)
+			if d.JsonTsDef != "" {
+				d.JsonTsDef += "\n"
+			}
+			d.JsonTsDef += d.JsonRespTsDef
 		}
 
 		// curl
@@ -510,19 +516,11 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.JsonReqTsDef != "" {
+		if r.JsonTsDef != "" {
 			b.WriteRune('\n')
-			b.WriteString("- JSON Request Object In TypeScript:\n")
+			b.WriteString("- JSON Request / Response Object In TypeScript:\n")
 			b.WriteString(util.Spaces(2) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonReqTsDef, util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
-		}
-
-		if r.JsonRespTsDef != "" {
-			b.WriteRune('\n')
-			b.WriteString("- JSON Response Object In TypeScript:\n")
-			b.WriteString(util.Spaces(2) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonRespTsDef, util.Spaces(2)))
+			b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 

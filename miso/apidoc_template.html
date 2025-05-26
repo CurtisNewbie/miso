@@ -117,21 +117,12 @@
                 </p>
             {{end}}
 
-            {{if and (.JsonReqTsDef) (ne .JsonReqTsDef "")}}
+            {{if and (.JsonTsDef) (ne .JsonTsDef "")}}
                 <p>
                     <div style="text-indent:8px;border-left: 4px solid #757575;">
-                        <b><i>JSON Request Object In TypeScript:</i></b>
+                        <b><i>JSON Request / Response Object In TypeScript:</i></b>
                     </div>
-                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.JsonReqTsDef}}</code></pre></p>
-                </p>
-            {{end}}
-
-            {{if .JsonRespTsDef}}
-                <p>
-                    <div style="text-indent:8px;border-left: 4px solid #757575;">
-                        <b><i>JSON Response Object In TypeScript:</i></b>
-                    </div>
-                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.JsonRespTsDef}}</code></pre></p>
+                    <p><pre><code style="margin-left: 15px; margin-right: 15px; border-radius: 10px;" class="language-ts">{{.JsonTsDef}}</code></pre></p>
                 </p>
             {{end}}
 
