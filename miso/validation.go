@@ -29,10 +29,23 @@ const (
 	ValidNegativeOrZero = "negativeOrZero" // less than or equal to 0, only supports int... or string type
 	ValidNotZero        = "notZero"        // not zero, only supports int... or string type
 	Validated           = "validated"      // mark a nested struct or pointer validated, nil pointer is ignored, one may combine "notNil,validated"
+	ValidTrim           = "trim"           // trim string and *string value
 )
 
 var (
-	rules                             = util.NewSet[string]()
+	rules = util.NewSet[string](
+		ValidMaxLen,
+		ValidNotEmpty,
+		ValidNotNil,
+		ValidMember,
+		ValidPositive,
+		ValidPositiveOrZero,
+		ValidNegative,
+		ValidNegativeOrZero,
+		ValidNotZero,
+		Validated,
+		ValidTrim,
+	)
 	ValidateWalkTagCallbackDeprecated = util.WalkTagCallback{
 		Tag:      TagValidationV1,
 		OnWalked: validateOnWalked,
@@ -42,19 +55,6 @@ var (
 		OnWalked: validateOnWalked,
 	}
 )
-
-func init() {
-	rules.AddThen(ValidMaxLen).
-		AddThen(ValidNotEmpty).
-		AddThen(ValidNotNil).
-		AddThen(ValidMember).
-		AddThen(ValidPositive).
-		AddThen(ValidPositiveOrZero).
-		AddThen(ValidNegative).
-		AddThen(ValidNegativeOrZero).
-		AddThen(ValidNotZero).
-		Add(Validated)
-}
 
 // Validation Error
 type ValidationError struct {
@@ -233,6 +233,20 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 		case reflect.Array:
 			value = value.Slice(0, value.Len())
 			return validateSlice(fname, value)
+		}
+	case ValidTrim:
+		switch value.Kind() {
+		case reflect.String:
+			value.SetString(strings.TrimSpace(value.String()))
+			return nil
+		case reflect.Pointer:
+			if value.IsNil() {
+				return nil
+			}
+			v := value.Elem().Interface()
+			if s, ok := v.(string); ok {
+				value.Elem().SetString(strings.TrimSpace(s))
+			}
 		}
 	}
 	return nil
