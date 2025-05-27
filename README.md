@@ -25,6 +25,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [Application Lifecycle](./doc/lifecycle.md)
 - [HTTP API Declaration](./doc/web.md)
 - [Tracing](./doc/trace.md)
+- [Database](./doc/database.md)
 - [Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
