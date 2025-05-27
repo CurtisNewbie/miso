@@ -726,7 +726,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 				}
 			} else {
 				appendable = false // e.g., the any field in GnResp[any]{}
-				Debugf("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
+				Tracef("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
 			}
 		} else {
 			switch fv.Kind() {

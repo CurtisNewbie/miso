@@ -810,7 +810,7 @@ func (r *rabbitManagedChannel) onNotifyCancelClose(ch *amqp.Channel) {
 				r.retryStart(rail)
 				return
 			}
-			miso.Infof("receive from notifyCloseChan, %v exiting", r.name)
+			miso.Debugf("receive from notifyCloseChan, %v exiting", r.name)
 		case err := <-notifyCancelChan:
 			rail := miso.EmptyRail()
 			rail.Errorf("receive from notifyCancelChan, %v reconnecting to amqp server, %v", r.name, err)

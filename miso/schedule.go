@@ -60,11 +60,8 @@ func (m *scheduleMdoule) stop() {
 	m.scheduler.Stop()
 }
 
-func (m *scheduleMdoule) doScheduleCron(job Job) error {
-	var err error
-	s := m.scheduler
-
-	wrappedJob := util.PanicSafeFunc(func() {
+func (m *scheduleMdoule) wrapJob(job Job) func() {
+	return util.PanicSafeFunc(func() {
 
 		rail := EmptyRail()
 
@@ -104,24 +101,23 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 			}
 		}
 	})
+}
 
+func (m *scheduleMdoule) doScheduleCron(job Job) error {
+	var err error
+	s := m.scheduler
+	wrappedJob := m.wrapJob(job)
 	if job.CronWithSeconds {
 		_, err = s.CronWithSeconds(job.Cron).Tag(job.Name).Do(wrappedJob)
 	} else {
 		_, err = s.Cron(job.Cron).Tag(job.Name).Do(wrappedJob)
 	}
-
 	if err != nil {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 
 	PostServerBootstrap(func(rail Rail) error {
-		taggedJobs, err := m.scheduler.FindJobsByTag(job.Name)
-		if err != nil {
-			rail.Warnf("Failed to FindJobsByTag, jobName: %v, %v", job.Name, err)
-			return nil
-		}
-
+		taggedJobs, _ := m.scheduler.FindJobsByTag(job.Name)
 		for _, j := range taggedJobs {
 			rail.Debugf("Job '%v' next run scheduled at: %v", job.Name, j.NextRun())
 		}
