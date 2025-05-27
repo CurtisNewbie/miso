@@ -1,6 +1,6 @@
 # Database
 
-miso currently supports MySQL and SQLite. Integration is internally backed by `gorm`, so essentially, miso focuese on managing these gorm instances for you, and maybe provide you with some tools to query database more easily.
+miso currently supports MySQL and SQLite. Integration is internally backed by `gorm`, so essentially, miso focuses on managing these gorm instances for you, and maybe provide you with some tools to query database more easily.
 
 To use MySQL or SQLite, you need to follow the configuration guide [config.md](./config.md), and enable the related middleware.
 
@@ -101,4 +101,22 @@ func ListSitePasswords(rail miso.Rail, req ListSitePasswordReq, user common.User
 		}).
 		Scan(rail, req.Paging)
 }
+```
+
+`dbquery` also supports method to iterate all rows that match the given conditions:
+
+```go
+err := dbquery.NewPagedQuery[ScrapingTask](db).
+    WithBaseQuery(func(q *dbquery.Query) *dbquery.Query {
+        return q.Table("task").
+            Eq("status", TaskStatusPending)
+    }).
+    WithSelectQuery(func(q *dbquery.Query) *dbquery.Query {
+        return q.Select("task_id").Order("id ASC")
+    }).
+    IterateAll(rail, dbquery.IteratePageParam{Limit: 10}, func(v ScrapingTask) (stop bool, err error) {
+        // do something for each row
+        doScrape(v)
+        return false, nil
+    })
 ```
