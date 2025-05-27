@@ -136,6 +136,23 @@ The tables shown below list all configuration that you can tune. You can also re
 | mysql.connection.open.max   | max number of open connections                                                      | 10                                                                                                                |
 | mysql.connection.idle.max   | max number of idle connections                                                      | 10                                                                                                                |
 
+## Nacos Configuration
+
+| property                    | description                 | default value    |
+| --------------------------- | --------------------------- | ---------------- |
+| nacos.enabled               | enable nacos client         | false            |
+| nacos.server.addr           | nacos server address        | localhost        |
+| nacos.server.scheme         | nacos server address scheme | http             |
+| nacos.server.port           | nacos server port           | 80               |
+| nacos.server.context-path   | nacos server context path   |                  |
+| nacos.server.namespace      | nacos server namespace      |                  |
+| nacos.server.username       | nacos server username       |                  |
+| nacos.server.password       | nacos server password       |                  |
+| nacos.server.config.data-id | nacos config data-id        | ${app.name}      |
+| nacos.server.config.group   | nacos config group          | DEFAULT_GROUP    |
+| nacos.log-dir               | nacos log dir               | /tmp/nacos/log   |
+| nacos.cache-dir             | nacos cache dir             | /tmp/nacos/cache |
+
 ## RabbitMQ Configuration
 
 | property              | description                        | default value |
