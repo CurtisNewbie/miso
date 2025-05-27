@@ -237,6 +237,19 @@ func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V
 	return m
 }
 
+// Build a map with string type key and slice value of any type
+func StrSliceMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V) map[string][]V {
+	m := map[string][]V{}
+	if l == nil {
+		return m
+	}
+	for i := range l {
+		li := l[i]
+		m[keyMapper(li)] = append(m[keyMapper(li)], valueMapper(li))
+	}
+	return m
+}
+
 // Map with sync.RWMutex embeded.
 type RWMap[K comparable, V any] struct {
 	mu      sync.RWMutex

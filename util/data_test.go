@@ -384,3 +384,34 @@ func BenchmarkRWMap(b *testing.B) {
 		sg2.Wait()
 	})
 }
+
+func TestStrSliceMap(t *testing.T) {
+	var l []struct {
+		Key   string
+		Value string
+	}
+	l = append(l, struct {
+		Key   string
+		Value string
+	}{"1", "1"}, struct {
+		Key   string
+		Value string
+	}{"1", "2"}, struct {
+		Key   string
+		Value string
+	}{"2", "3"})
+
+	m := StrSliceMap(l, func(v struct {
+		Key   string
+		Value string
+	}) string {
+		return v.Key
+	}, func(v struct {
+		Key   string
+		Value string
+	}) string {
+		return v.Value
+	})
+
+	t.Logf("%#v", m)
+}
