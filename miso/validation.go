@@ -16,8 +16,8 @@ const (
 
 	ValidMaxLen = "maxLen" // max length of a string, array, slice, e.g., `valid:"maxLen:10"`
 
-	ValidNotEmpty = "notEmpty" // not empty, supports string, array, slice, map
-	ValidNotNil   = "notNil"   // not nil, only validates slice, map, pointer, func
+	ValidNotEmpty = "notEmpty" // not empty, e.g., `valid:"notEmpty"` or `valid:"notEmpty:MyField is required"`. Supports string, array, slice, map.
+	ValidNotNil   = "notNil"   // not nil, e.g., `valid:"notNil"` or `valid:"notNil:MyField is required"`. Only validates slice, map, pointer, func.
 
 	// must be one of the values listed, e.g., 'valid:"member:PUBLIC|PROTECTED"', means that the tag value must be either PUBLIC or PROTECTED.
 	// only string type is supported.
@@ -58,9 +58,10 @@ var (
 
 // Validation Error
 type ValidationError struct {
-	Field         string
-	Rule          string
-	ValidationMsg string
+	Field               string
+	Rule                string
+	ValidationMsg       string
+	CustomValidationMsg string
 }
 
 func ChainValidationError(parentField string, e error) error {
@@ -75,6 +76,9 @@ func ChainValidationError(parentField string, e error) error {
 }
 
 func (ve *ValidationError) Error() string {
+	if ve.CustomValidationMsg != "" {
+		return ve.CustomValidationMsg
+	}
 	return ve.Field + " " + ve.ValidationMsg
 }
 
@@ -163,32 +167,38 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 			case reflect.Slice, reflect.Array:
 				currLen := value.Len()
 				if currLen > maxLen {
-					return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
+					return &ValidationError{Field: fname, Rule: rule,
+						ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
 				}
 			case reflect.String:
 				currLen := utf8.RuneCountInString(value.String())
 				if currLen > maxLen {
-					return &ValidationError{Field: fname, Rule: rule, ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
+					return &ValidationError{Field: fname, Rule: rule,
+						ValidationMsg: fmt.Sprintf("exceeded maximum length %d, current length: %d", maxLen, currLen)}
 				}
 			}
 		}
 	case ValidNotEmpty:
+		customMsg := strings.TrimSpace(ruleParam)
 		switch value.Kind() {
 		case reflect.String:
 			sval := value.String()
 			if util.IsBlankStr(sval) {
-				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty",
+					CustomValidationMsg: customMsg}
 			}
 		case reflect.Array, reflect.Slice, reflect.Map:
 			if value.Len() < 1 {
-				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty"}
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty",
+					CustomValidationMsg: customMsg}
 			}
 		}
 	case ValidNotNil:
+		customMsg := strings.TrimSpace(ruleParam)
 		switch value.Kind() {
 		case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Func:
 			if value.IsNil() {
-				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "cannot be nil"}
+				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "cannot be nil", CustomValidationMsg: customMsg}
 			}
 		}
 	case ValidMember:
