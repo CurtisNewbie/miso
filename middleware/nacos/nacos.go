@@ -47,8 +47,9 @@ func nacosBootstrapCondition(rail miso.Rail) (bool, error) {
 }
 
 type nacosModule struct {
-	mut          *sync.RWMutex
-	configClient config_client.IConfigClient
+	mut            *sync.RWMutex
+	configClient   config_client.IConfigClient
+	onConfigChange []func()
 }
 
 func (m *nacosModule) init(rail miso.Rail) error {
@@ -66,25 +67,33 @@ func (m *nacosModule) init(rail miso.Rail) error {
 		return miso.WrapErrf(err, "failed to create nacos config client")
 	}
 	m.configClient = cc
-	m.configClient.ListenConfig(vo.ConfigParam{
-		DataId: miso.GetPropStr(PropNacosConfigDataId),
-		Group:  miso.GetPropStr(PropNacosConfigGroup),
-		OnChange: func(namespace, group, dataId, data string) {
-			rail := miso.EmptyRail()
-			rail.Infof("nacos config changed, %v-%v", group, dataId)
-			if err := miso.LoadConfigFromStr(data, rail); err != nil {
-				rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
-			}
-		},
-	})
+
+	dataId := miso.GetPropStr(PropNacosConfigDataId)
+	group := miso.GetPropStr(PropNacosConfigGroup)
+	if dataId != "" {
+		rail.Infof("Listening nacos config: %v-%v", group, dataId)
+		m.configClient.ListenConfig(vo.ConfigParam{
+			DataId: dataId,
+			Group:  group,
+			OnChange: func(namespace, group, dataId, data string) {
+				rail := miso.EmptyRail()
+				rail.Infof("nacos config changed, %v-%v", group, dataId)
+				if err := miso.LoadConfigFromStr(data, rail); err != nil {
+					rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
+				}
+
+				m.mut.RLock()
+				defer m.mut.RUnlock()
+				for _, cbk := range m.onConfigChange {
+					go cbk()
+				}
+			},
+		})
+	}
 	return nil
 }
 
 func (m *nacosModule) shutdown(rail miso.Rail) {
-	m.configClient.CancelListenConfig(vo.ConfigParam{
-		DataId: miso.GetPropStr(PropNacosConfigDataId),
-		Group:  miso.GetPropStr(PropNacosConfigGroup),
-	})
 }
 
 func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerConfig) {
@@ -107,6 +116,13 @@ func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerCon
 		},
 	}
 	return clientConfig, serverConfigs
+}
+
+func OnConfigChanged(f func()) {
+	m := module()
+	m.mut.Lock()
+	defer m.mut.Unlock()
+	m.onConfigChange = append(m.onConfigChange, f)
 }
 
 type nacosLogger struct {
