@@ -2,6 +2,7 @@ package miso
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -21,6 +22,10 @@ var (
 // returns ProxyHttpStatusError to respond a specific http status code.
 type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 
+// Http Reverse Proxy.
+//
+// HttpProxy by default use http.Client with 5s connect timeout and 30s response header timeout.
+// In terms of connection reuse, the IdleConnTimeout is 5min, MaxIdleConns is 5, MaxIdleConnsPerHost is 100 and MaxConnsPerHost is 500.
 type HttpProxy struct {
 	client        *http.Client
 	filters       []ProxyFilter
@@ -146,6 +151,11 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 
 		if tr.Err != nil {
 			pc.Rail.Warnf("Proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
+			if nerr, ok := tr.Err.(net.Error); ok && nerr.Timeout() {
+				pc.Rail.Errorf("Proxy request failed, request timeout, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
+				w.WriteHeader(http.StatusGatewayTimeout)
+				return
+			}
 			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
@@ -256,12 +266,21 @@ func newProxyFilters(c *ProxyContext, pi []ProxyFilter, handler func(pc *ProxyCo
 	}
 }
 
-func newProxyClient() *http.Client {
-	c := &http.Client{Timeout: 0}
+func newProxyClient(opts ...func(*http.Transport)) *http.Client {
+	c := &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 0
-	transport.MaxIdleConnsPerHost = 1000
+	transport.MaxIdleConnsPerHost = 100
+	transport.MaxConnsPerHost = 500
 	transport.IdleConnTimeout = time.Minute * 5
+	transport.DialContext = (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 15 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = 30 * time.Second
 	c.Transport = transport
+	for _, op := range opts {
+		op(transport)
+	}
 	return c
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -38,11 +39,16 @@ var (
 )
 
 func init() {
-	MisoDefaultClient = &http.Client{Timeout: 15 * time.Second}
+	MisoDefaultClient = &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
 	transport.MaxIdleConnsPerHost = 50
 	transport.IdleConnTimeout = time.Minute * 5
+	transport.DialContext = (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 15 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = 15 * time.Second
 	MisoDefaultClient.Transport = transport
 }
 
