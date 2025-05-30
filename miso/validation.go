@@ -70,7 +70,7 @@ func ChainValidationError(parentField string, e error) error {
 	}
 
 	if ve, ok := e.(*ValidationError); ok {
-		return &ValidationError{Field: parentField + "." + ve.Field, Rule: ve.Rule, ValidationMsg: ve.ValidationMsg}
+		return &ValidationError{Field: parentField + "." + ve.Field, Rule: ve.Rule, ValidationMsg: ve.ValidationMsg, CustomValidationMsg: ve.CustomValidationMsg}
 	}
 	return e
 }
