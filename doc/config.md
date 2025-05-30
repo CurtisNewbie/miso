@@ -112,14 +112,14 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Metrics Configuration
 
-| property                        | description                                                              | default value |
-| ------------------------------- | ------------------------------------------------------------------------ | ------------- |
-| metrics.enabled                 | enable metrics collection using prometheus                               | true          |
-| metrics.route                   | route used to expose collected metrics                                   | /metrics      |
-| metrics.auth.enabled            | enable authorization for metrics endpoint                                | false         |
-| metrics.auth.bearer             | bearer token for metrics endpoint authorization                          |               |
-| metrics.memstat.log.job.enabled | enable job that logs memory stats periodically (using `runtime/metrics`) | false         |
-| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                              | 0 */1 * * * * |
+| property                        | description                                                                      | default value  |
+| ------------------------------- | -------------------------------------------------------------------------------- | -------------- |
+| metrics.enabled                 | enable metrics collection using prometheus                                       | true           |
+| metrics.route                   | route used to expose collected metrics                                           | /metrics       |
+| metrics.auth.enabled            | enable authorization for metrics endpoint                                        | false          |
+| metrics.auth.bearer             | bearer token for metrics endpoint authorization                                  |                |
+| metrics.memstat.log.job.enabled | enable job that logs memory and cpu stats periodically (using `runtime/metrics`) | false          |
+| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                                      | 0/30 * * * * * |
 
 ## MySQL Configuration
 
@@ -150,7 +150,6 @@ The tables shown below list all configuration that you can tune. You can also re
 | nacos.server.password       | nacos server password       |                  |
 | nacos.server.config.data-id | nacos config data-id        | ${app.name}      |
 | nacos.server.config.group   | nacos config group          | DEFAULT_GROUP    |
-| nacos.log-dir               | nacos log dir               | /tmp/nacos/log   |
 | nacos.cache-dir             | nacos cache dir             | /tmp/nacos/cache |
 
 ## RabbitMQ Configuration

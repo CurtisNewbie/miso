@@ -2,10 +2,13 @@ package miso
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"runtime"
 	"runtime/metrics"
 	"sync"
+
+	"github.com/shirou/gopsutil/process"
 )
 
 const (
@@ -34,8 +37,7 @@ const (
 
 var (
 	MetricsMemoryMatcher = regexp.MustCompile(`^/memory/.*`)
-
-	memStatsCollector *MetricsCollector
+	memStatsCollector    *MetricsCollector
 )
 
 func init() {
@@ -49,12 +51,13 @@ func init() {
 			collector := NewMetricsCollector(DefaultMetricDesc(nil))
 			memStatsCollector = &collector
 			return ScheduleCron(Job{
-				Name:            "MetricsMemStatLogJob",
+				Name:            "MetricsStatLogJob",
 				CronWithSeconds: true,
 				Cron:            GetPropStr(PropMetricsMemStatsLogJobCron),
 				Run: func(r Rail) error {
 					memStatsCollector.Read()
-					r.Infof("\n\n%s", SprintMemStats(memStatsCollector.MemStats()))
+					cs, _ := CollectCpuStats()
+					r.Infof("\n\n%s", SprintStats(memStatsCollector.MemStats(), cs))
 					return nil
 				},
 			})
@@ -204,4 +207,46 @@ func SprintMemStats(ms runtime.MemStats) string {
 		s += fmt.Sprintf("%-40s %v\n", v.Name, v.Stats)
 	}
 	return s
+}
+
+func SprintStats(ms runtime.MemStats, cs CpuStats) string {
+	type NamedStats struct {
+		Name  string
+		Stats any
+	}
+	l := []NamedStats{
+		{"Heap Alloc", toMbStr(ms.HeapAlloc)},
+		{"Stack Sys (Stack In-Use + OS Stack)", toMbStr(ms.StackSys)},
+		{"Allocated Heap Objects (Cumulative)", ms.Mallocs},
+		{"Alive Heap Objects", ms.HeapObjects},
+		{"Cpu Usage", cs.CpuUsage},
+		{"Goroutines", cs.Goroutines},
+	}
+	s := ""
+	for _, v := range l {
+		s += fmt.Sprintf("%-40s %v\n", v.Name, v.Stats)
+	}
+	return s
+}
+
+type CpuStats struct {
+	Goroutines int
+	CpuUsage   float64
+}
+
+func CollectCpuStats() (CpuStats, error) {
+	process, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return CpuStats{}, err
+	}
+	var cpuUsage float64
+	if c, err := process.CPUPercent(); err == nil {
+		cpuUsage = c
+	}
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return CpuStats{
+		Goroutines: runtime.NumGoroutine(),
+		CpuUsage:   cpuUsage,
+	}, nil
 }

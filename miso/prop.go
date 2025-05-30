@@ -168,10 +168,10 @@ const (
 	// misoconfig-prop: bearer token for metrics endpoint authorization
 	PropMetricsAuthBearer = "metrics.auth.bearer"
 
-	// misoconfig-prop: enable job that logs memory stats periodically (using `runtime/metrics`) | false
+	// misoconfig-prop: enable job that logs memory and cpu stats periodically (using `runtime/metrics`) | false
 	PropMetricsEnableMemStatsLogJob = "metrics.memstat.log.job.enabled"
 
-	// misoconfig-prop: job cron expresson for memory stats log job | 0 */1 * * * *
+	// misoconfig-prop: job cron expresson for memory stats log job | 0/30 * * * * *
 	PropMetricsMemStatsLogJobCron = "metrics.memstat.log.job.cron"
 )
 
@@ -219,7 +219,7 @@ func init() {
 	SetDefProp(PropMetricsRoute, "/metrics")
 	SetDefProp(PropMetricsAuthEnabled, false)
 	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
-	SetDefProp(PropMetricsMemStatsLogJobCron, "0 */1 * * * *")
+	SetDefProp(PropMetricsMemStatsLogJobCron, "0/30 * * * * *")
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
