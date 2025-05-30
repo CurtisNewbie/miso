@@ -44,3 +44,26 @@ func TestSaveTmpFile(t *testing.T) {
 	}
 	t.Log(p)
 }
+
+func TestFileHasSuffix(t *testing.T) {
+	n := "abc.txt"
+	ok := FileHasSuffix(n, "txt")
+	if !ok {
+		t.Fatal("should be ok")
+	}
+	v, ok := FileCutSuffix(n, "txt")
+	if !ok {
+		t.Fatal("should be ok")
+	}
+	if v != "abc" {
+		t.Fatalf(v)
+	}
+
+	v, ok = FileCutSuffix(n, "tx")
+	if ok {
+		t.Fatal("should not be ok")
+	}
+	if v != n {
+		t.Fatalf(v)
+	}
+}

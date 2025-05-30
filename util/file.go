@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -83,4 +84,24 @@ func SaveTmpFile(tmpDir string, reader io.Reader) (string, error) {
 		return "", fmt.Errorf("failed to save temp file, %v, %w", f.Name(), err)
 	}
 	return f.Name(), nil
+}
+
+func FileHasSuffix(name string, ext string) bool {
+	if name == "" || ext == "" {
+		return false
+	}
+	if strings.HasSuffix(strings.ToLower(name), "."+ext) {
+		return true
+	}
+	return false
+}
+
+func FileCutSuffix(name string, ext string) (string, bool) {
+	if name == "" || ext == "" {
+		return name, false
+	}
+	if strings.HasSuffix(strings.ToLower(name), "."+ext) {
+		return name[:len(name)-len(ext)-1], true
+	}
+	return name, false
 }
