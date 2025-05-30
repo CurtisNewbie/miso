@@ -42,7 +42,7 @@ var (
 
 func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
-		Name:  "BootstrapMetrics",
+		Name:  "Bootstrap MetricsStatLogJob",
 		Order: BootstrapOrderL4,
 		Condition: func(rail Rail) (bool, error) {
 			return GetPropBool(PropMetricsEnableMemStatsLogJob), nil
