@@ -51,12 +51,18 @@ func TestFileHasSuffix(t *testing.T) {
 	if !ok {
 		t.Fatal("should be ok")
 	}
-	v := FileCutSuffix(n, "txt")
+	v, ok := FileCutSuffix(n, "txt")
+	if !ok {
+		t.Fatal("should be ok")
+	}
 	if v != "abc" {
 		t.Fatalf(v)
 	}
 
-	v = FileCutSuffix(n, "tx")
+	v, ok = FileCutSuffix(n, "tx")
+	if ok {
+		t.Fatal("should not be ok")
+	}
 	if v != n {
 		t.Fatalf(v)
 	}

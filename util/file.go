@@ -96,12 +96,12 @@ func FileHasSuffix(name string, ext string) bool {
 	return false
 }
 
-func FileCutSuffix(name string, ext string) string {
+func FileCutSuffix(name string, ext string) (string, bool) {
 	if name == "" || ext == "" {
-		return name
+		return name, false
 	}
 	if strings.HasSuffix(strings.ToLower(name), "."+ext) {
-		return name[:len(name)-len(ext)-1]
+		return name[:len(name)-len(ext)-1], true
 	}
-	return name
+	return name, false
 }
