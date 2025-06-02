@@ -56,8 +56,24 @@ func AppendableFile(name string) (*os.File, error) {
 }
 
 // Create readable & writable file with 0666 permission.
+//
+// If file is missing, new empty file is created.
 func ReadWriteFile(name string) (*os.File, error) {
 	return OpenFile(name, os.O_CREATE|os.O_RDWR)
+}
+
+// Open readable file with 0666 permission.
+func OpenRFile(name string) (*os.File, error) {
+	return OpenFile(name, os.O_RDWR)
+}
+
+// Open readable & writable file with 0666 permission.
+func OpenRWFile(name string, createIfAbsent bool) (*os.File, error) {
+	flag := os.O_RDWR
+	if createIfAbsent {
+		flag = os.O_CREATE | flag
+	}
+	return OpenFile(name, flag)
 }
 
 // MkdirAll with 0755 perm.
