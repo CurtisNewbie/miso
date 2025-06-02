@@ -64,7 +64,7 @@ func ReadWriteFile(name string) (*os.File, error) {
 
 // Open readable file with 0666 permission.
 func OpenRFile(name string) (*os.File, error) {
-	return OpenFile(name, os.O_RDWR)
+	return OpenFile(name, os.O_RDONLY)
 }
 
 // Open readable & writable file with 0666 permission.
