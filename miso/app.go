@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"runtime"
 	"runtime/debug"
 	"sort"
 	"sync"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
+	_ "go.uber.org/automaxprocs"
 )
 
 const (
@@ -121,6 +123,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("\n\n---------------------------------------------------- starting %s -------------------------------------------------------------\n", appName)
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
+	rail.Infof("CPUs: %v", runtime.NumCPU())
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	{

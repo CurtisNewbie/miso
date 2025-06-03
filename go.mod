@@ -98,6 +98,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
