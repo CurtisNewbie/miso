@@ -71,6 +71,20 @@ func (m *nacosModule) init(rail miso.Rail) error {
 	dataId := miso.GetPropStr(PropNacosConfigDataId)
 	group := miso.GetPropStr(PropNacosConfigGroup)
 	if dataId != "" {
+
+		// fetch config on bootstrap
+		configStr, err := m.configClient.GetConfig(vo.ConfigParam{
+			DataId: dataId,
+			Group:  group,
+		})
+		if err != nil {
+			return err
+		}
+		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
+			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, configStr)
+		}
+
+		// subscribe changes
 		rail.Infof("Listening nacos config: %v-%v", group, dataId)
 		m.configClient.ListenConfig(vo.ConfigParam{
 			DataId: dataId,
@@ -90,6 +104,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 			},
 		})
 	}
+
 	return nil
 }
 
