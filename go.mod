@@ -25,6 +25,7 @@ require (
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.14.0
 	github.com/tmaxmax/go-sse v0.10.0
+	go.uber.org/automaxprocs v1.6.0
 	golang.design/x/clipboard v0.7.0
 	golang.org/x/text v0.21.0
 	gopkg.in/inf.v0 v0.9.1
@@ -98,7 +99,6 @@ require (
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
