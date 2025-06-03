@@ -1,6 +1,7 @@
 package nacos
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
@@ -123,7 +124,7 @@ func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerCon
 		constant.WithCustomLogger(&nacosLogger{}),
 	)
 
-	serverAddr := miso.GetPropStr(PropNacosServerAddr)
+	serverAddr := strings.TrimSpace(miso.GetPropStr(PropNacosServerAddr))
 	scheme := miso.GetPropStr(PropNacosServerScheme)
 	if s, ok := util.CutPrefixIgnoreCase(serverAddr, "http://"); ok {
 		scheme = "http"
