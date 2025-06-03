@@ -547,7 +547,9 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		}
 	}
 
+	start := time.Now()
 	r, e := t.client.Do(req) // send HTTP requests
+	t.Rail.Infof("Request '%v %v' took: %v", req.Method, req.URL, time.Since(start))
 
 	var statusCode int
 	var respHeaders http.Header
