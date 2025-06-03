@@ -21,7 +21,7 @@ func init() {
 		Name:      "Boostrap Nacos Config Center",
 		Bootstrap: nacosBootstrap,
 		Condition: nacosBootstrapCondition,
-		Order:     miso.BootstrapOrderL4,
+		Order:     miso.BootstrapOrderL1 - 100, // load configs before any bootstrap component
 	})
 }
 
