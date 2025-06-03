@@ -51,11 +51,33 @@ func HasPrefixIgnoreCase(s string, prefix string) bool {
 	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
 }
 
+// Cut prefix from s in a case-insensitive way.
+func CutPrefixIgnoreCase(s string, prefix string) (string, bool) {
+	prefix = strings.ToLower(prefix)
+	sl := strings.ToLower(s)
+	ok := len(sl) >= len(prefix) && sl[0:len(prefix)] == prefix
+	if ok {
+		return s[len(prefix):], true
+	}
+	return s, false
+}
+
 // Check if s has the suffix in a case-insensitive way.
 func HasSuffixIgnoreCase(s string, suffix string) bool {
 	suffix = strings.ToLower(suffix)
 	s = strings.ToLower(s)
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+}
+
+// Cut suffix from s in a case-insensitive way.
+func CutSuffixIgnoreCase(s string, suffix string) (string, bool) {
+	suffix = strings.ToLower(suffix)
+	sl := strings.ToLower(s)
+	ok := len(sl) >= len(suffix) && sl[len(sl)-len(suffix):] == suffix
+	if ok {
+		return s[:len(sl)-len(suffix)], true
+	}
+	return s, false
 }
 
 func ToStr(v any) string {

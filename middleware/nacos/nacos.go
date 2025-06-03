@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
@@ -122,11 +123,21 @@ func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerCon
 		constant.WithCustomLogger(&nacosLogger{}),
 	)
 
+	serverAddr := miso.GetPropStr(PropNacosServerAddr)
+	scheme := miso.GetPropStr(PropNacosServerScheme)
+	if s, ok := util.CutPrefixIgnoreCase(serverAddr, "http://"); ok {
+		scheme = "http"
+		serverAddr = s
+	} else if s, ok := util.CutPrefixIgnoreCase(serverAddr, "https://"); ok {
+		scheme = "https"
+		serverAddr = s
+	}
+
 	serverConfigs := []constant.ServerConfig{
 		{
-			IpAddr:      miso.GetPropStr(PropNacosServerAddr),
+			IpAddr:      serverAddr,
 			ContextPath: miso.GetPropStr(PropNacosServerContextPath),
-			Scheme:      miso.GetPropStr(PropNacosServerScheme),
+			Scheme:      scheme,
 			Port:        uint64(miso.GetPropInt(PropNacosServerPort)),
 		},
 	}

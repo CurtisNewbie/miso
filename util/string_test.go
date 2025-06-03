@@ -78,12 +78,86 @@ func TestHasPrefixIgnoreCase(t *testing.T) {
 	}
 }
 
+func TestCutPrefixIgnoreCase(t *testing.T) {
+	tests := [][3]any{
+		{"abc", "abc", ""},
+		{"abc", "Abc", ""},
+		{"abcd", "Abc", "d"},
+		{"abcd", "AbC", "d"},
+		{"abc", "Abcd", "abc"},
+		{"abc", "", "abc"},
+		{"abc", "a", "bc"},
+		{"abc", "ab", "c"},
+		{"Abc", "abc", ""},
+		{"Abc", "Abc", ""},
+		{"Abcd", "Abc", "d"},
+		{"Abcd", "AbC", "d"},
+		{"Abc", "Abcd", "Abc"},
+		{"Abc", "", "Abc"},
+		{"Abc", "a", "bc"},
+		{"Abc", "ab", "c"},
+	}
+
+	for i := range tests {
+		te := tests[i]
+		s := te[0].(string)
+		p := te[1].(string)
+		m := te[2].(string)
+		r, _ := CutPrefixIgnoreCase(s, p)
+		if r != m {
+			t.Logf("%v:, s: %v, p: %v, m: %v, r: %v", i, s, p, m, r)
+			t.FailNow()
+		}
+	}
+}
+func TestCutSuffixIgnoreCase(t *testing.T) {
+	tests := [][3]any{
+		{"abc", "abc", ""},
+		{"abc", "Abc", ""},
+		{"abcd", "Bcd", "a"},
+		{"abcd", "bcD", "a"},
+		{"abc", "Abcd", "abc"},
+		{"abc", "", "abc"},
+		{"abc", "c", "ab"},
+		{"abc", "bc", "a"},
+		{"Abc", "abc", ""},
+		{"Abc", "Abc", ""},
+		{"Abcd", "Abc", "Abcd"},
+		{"Abcd", "AbC", "Abcd"},
+	}
+
+	for i := range tests {
+		te := tests[i]
+		s := te[0].(string)
+		p := te[1].(string)
+		m := te[2].(string)
+		r, _ := CutSuffixIgnoreCase(s, p)
+		if r != m {
+			t.Logf("%v:, s: %v, p: %v, m: %v, r: %v", i, s, p, m, r)
+			t.FailNow()
+		}
+	}
+}
+
 func TestHasSuffixIgnoreCaseFuzz(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		s := strings.ToLower(RandStr(30))
 		p := strings.ToLower(RandStr(3))
 		if strings.HasSuffix(s, p) != HasSuffixIgnoreCase(s, p) {
 			t.Logf("s: %v, p: %v", s, p)
+			t.FailNow()
+		}
+	}
+}
+
+func TestCutSuffixIgnoreCaseFuzz(t *testing.T) {
+	for i := 0; i < 500; i++ {
+		s := strings.ToLower(RandStr(30))
+		p := strings.ToLower(RandStr(3))
+		v, _ := strings.CutSuffix(s, p)
+		sv, _ := CutSuffixIgnoreCase(s, p)
+		if v != sv {
+			t.Logf("s: %v, p: %v, v: %v", s, p, v)
 			t.FailNow()
 		}
 	}
