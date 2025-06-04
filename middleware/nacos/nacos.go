@@ -164,6 +164,11 @@ func OnConfigChanged(f func()) {
 }
 
 // Completely rewrites existing configs with nacos config changes.
+//
+// This is usually used when all the configurations are managed on nacos.
+//
+// If a key xxx is removed from nacos, then this key is unset as well, because the config map is recreated.
+// However, overrides and defaults will still exist, e.g., SetProp(), SetDefProp().
 func ReloadConfigsOnChange() {
 	completeReload = true
 }
