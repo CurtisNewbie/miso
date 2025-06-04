@@ -18,6 +18,10 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 	}
 })
 
+var (
+	completeReload = false
+)
+
 func init() {
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Boostrap Nacos Config Center",
@@ -94,8 +98,15 @@ func (m *nacosModule) init(rail miso.Rail) error {
 			OnChange: func(namespace, group, dataId, data string) {
 				rail := miso.EmptyRail()
 				rail.Infof("nacos config changed, %v-%v", group, dataId)
-				if err := miso.LoadConfigFromStr(data, rail); err != nil {
-					rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
+
+				if completeReload {
+					if err := miso.ReloadConfigFromStr(data); err != nil {
+						rail.Errorf("Failed to reload Nacos config, %v-%v\n%v", group, dataId, data)
+					}
+				} else {
+					if err := miso.LoadConfigFromStr(data, rail); err != nil {
+						rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
+					}
 				}
 
 				m.mut.RLock()
@@ -150,6 +161,11 @@ func OnConfigChanged(f func()) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 	m.onConfigChange = append(m.onConfigChange, f)
+}
+
+// Completely rewrites existing configs with nacos config changes.
+func ReloadConfigsOnChange() {
+	completeReload = true
 }
 
 type nacosLogger struct {

@@ -228,7 +228,7 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 
 	doWithWriteLock(a, func() {
 		if err := a.vp.MergeConfig(reader); err != nil {
-			eo = fmt.Errorf("failed to load config from reader: %v", err)
+			eo = fmt.Errorf("failed to load config from reader: %w", err)
 		}
 
 		// reset the whole fastBoolCache
@@ -244,6 +244,34 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 func (a *AppConfig) LoadConfigFromStr(s string) error {
 	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
 	return a.LoadConfigFromReader(sr)
+}
+
+// Reload config from string.
+//
+// Calling this method completely reloads previously loaded config.
+func (a *AppConfig) ReloadConfigFromStr(s string) error {
+	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
+	return a.ReloadConfigFromReader(sr)
+}
+
+// Reload config from io Reader.
+//
+// It's the caller's responsibility to close the provided reader.
+//
+// Calling this method completely reloads previously loaded config.
+func (a *AppConfig) ReloadConfigFromReader(reader io.Reader) error {
+	var eo error
+
+	doWithWriteLock(a, func() {
+		if err := a.vp.ReadConfig(reader); err != nil {
+			eo = fmt.Errorf("failed to reload config from reader: %w", err)
+		}
+
+		// reset the whole fastBoolCache
+		a.fastBoolCache = util.NewStrRWMap[bool]()
+	})
+
+	return eo
 }
 
 // Load config from file.
@@ -445,6 +473,22 @@ func LoadConfigFromStr(s string, r Rail) error {
 // Calling this method overides previously loaded config.
 func LoadConfigFromFile(configFile string, r Rail) error {
 	return globalConfig().LoadConfigFromFile(configFile)
+}
+
+// Reload config from string.
+//
+// Calling this method completely reloads previously loaded config.
+func ReloadConfigFromStr(s string) error {
+	return globalConfig().ReloadConfigFromStr(s)
+}
+
+// Reload config from io Reader.
+//
+// It's the caller's responsibility to close the provided reader.
+//
+// Calling this method completely reloads previously loaded config.
+func ReloadConfigFromReader(reader io.Reader) error {
+	return globalConfig().ReloadConfigFromReader(reader)
 }
 
 // Check whether we are running in production mode
