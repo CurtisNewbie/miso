@@ -163,7 +163,7 @@ func OnConfigChanged(f func()) {
 	m.onConfigChange = append(m.onConfigChange, f)
 }
 
-// Completely rewrites existing configs with nacos config changes.
+// Completely reload existing configs with nacos configs.
 //
 // This is usually used when all the configurations are managed on nacos.
 //
