@@ -37,7 +37,7 @@ func zkBootstrap(rail miso.Rail) error {
 	defer m.mut.Unlock()
 	hosts := miso.GetPropStrSlice(PropZkHost)
 	miso.Infof("Connecting to Zookeeper: %+v", hosts)
-	c, _, err := zk.Connect(hosts, time.Second*5, func(zc *zk.Conn) {
+	c, _, err := zk.Connect(hosts, time.Second*time.Duration(miso.GetPropInt(PropZkSessionTimeout)), func(zc *zk.Conn) {
 		zc.SetLogger(miso.EmptyRail())
 	})
 	if err != nil {

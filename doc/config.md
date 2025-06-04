@@ -227,10 +227,11 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Zookeeper Configuration
 
-| property   | description                      | default value |
-| ---------- | -------------------------------- | ------------- |
-| zk.enabled | enable zk client                 | false         |
-| zk.hosts   | zk server host (slice of string) | localhost     |
+| property           | description                         | default value |
+| ------------------ | ----------------------------------- | ------------- |
+| zk.enabled         | enable zk client                    | false         |
+| zk.hosts           | zk server host (slice of string)    | localhost     |
+| zk.session-timeout | zk server session timeout (seconds) | 5             |
 
 <!-- misoconfig-table-end -->
 
