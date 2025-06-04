@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
@@ -299,6 +300,12 @@ func (r Rail) NextSpan() Rail {
 // Create new Rail with context's CancelFunc
 func (r Rail) WithCancel() (Rail, context.CancelFunc) {
 	cc, cancel := context.WithCancel(r.ctx)
+	return NewRail(cc), cancel
+}
+
+// Create new Rail with timeout and context's CancelFunc
+func (r Rail) WithTimeout(timeout time.Duration) (Rail, context.CancelFunc) {
+	cc, cancel := context.WithTimeout(r.ctx, timeout)
 	return NewRail(cc), cancel
 }
 

@@ -225,6 +225,13 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.request.mapping.header                           | automatically map header values to request struct                                                                         | true          |
 | server.gin.validation.disabled                          | disable gin's builtin validation                                                                                          | true          |
 
+## Zookeeper Configuration
+
+| property   | description                      | default value |
+| ---------- | -------------------------------- | ------------- |
+| zk.enabled | enable zk client                 | false         |
+| zk.hosts   | zk server host (slice of string) | localhost     |
+
 <!-- misoconfig-table-end -->
 
 ## Client Package Configuration

@@ -12,6 +12,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/consul/api v1.15.3
 	github.com/json-iterator/go v1.1.12
