@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 var CliErrLog func(pat string, args ...any) = Printlnf
@@ -46,27 +47,22 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 // CLI runs command.
 //
 // If err is not nil, out may still contain output from the command.
+//
+// If possible, use ExecCmd() instead.
 func CliRun(executable string, args ...string) (out []byte, err error) {
-	cmd := exec.Command(executable, args...)
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		return out, err
-	}
-	return out, nil
+	return ExecCmd(executable, args)
 }
 
 // CLI runs command with env.
 //
 // If err is not nil, out may still contain output from the command.
+//
+// If possible, use ExecCmd() instead.
 func CliRunWithEnv(dir string, env []string, executable string, args ...string) (out []byte, err error) {
-	cmd := exec.Command(executable, args...)
-	cmd.Dir = dir
-	cmd.Env = append(cmd.Env, env...)
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		return out, err
-	}
-	return out, nil
+	return ExecCmd(executable, args, func(c *exec.Cmd) {
+		c.Dir = dir
+		c.Env = append(c.Env, env...)
+	})
 }
 
 func Printlnf(pat string, args ...any) {
@@ -105,4 +101,41 @@ func MustGet[V any](v V, err error) V {
 		panic(err)
 	}
 	return v
+}
+
+// Run python script.
+//
+// Python executable must be available beforehand.
+func RunPyScript(pyExec string, pyContent string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
+	// '-' tells python to read from stdin
+	if len(args) < 1 {
+		args = append(args, "")
+		copy(args[1:], args)
+		args[0] = "-"
+	} else if args[0] != "-" {
+		args = append(args, "-")
+	}
+	// remove '-' flag in script
+	pyContent = "import sys\nsys.argv = sys.argv[1:]\n" + pyContent
+
+	opts = append(opts, func(c *exec.Cmd) {
+		c.Stdin = strings.NewReader(pyContent)
+	})
+	return ExecCmd(pyExec, args, opts...)
+}
+
+// CLI runs command.
+//
+// If err is not nil, out may still contain output from the command.
+func ExecCmd(executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
+	cmd := exec.Command(executable, args...)
+	for _, op := range opts {
+		op(cmd)
+	}
+
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return out, err
+	}
+	return out, nil
 }

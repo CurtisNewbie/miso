@@ -12,3 +12,16 @@ func TestFlagStrSlice(t *testing.T) {
 	flag.Parse()
 	t.Log(sf.String())
 }
+
+func TestRunEmbedPy(t *testing.T) {
+	py := "python3"
+	script := `
+import sys
+print("args:", sys.argv)
+`
+	out, err := RunPyScript(py, script, []string{})
+	t.Log(string(out))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
