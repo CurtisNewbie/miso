@@ -138,7 +138,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 					m.configContent.Put(w.Key(), data)
 					m.reloadConfigs(rail)
 				} else {
-					rail.Debugf("Loading nacos config:\n", data)
+					rail.Debugf("Loading nacos config:\n%v", data)
 					if err := miso.LoadConfigFromStr(data, rail); err != nil {
 						rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
 					}
