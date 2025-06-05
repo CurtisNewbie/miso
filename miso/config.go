@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -250,6 +251,19 @@ func (a *AppConfig) LoadConfigFromStr(s string) error {
 //
 // Calling this method completely reloads previously loaded config.
 func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
+
+	for _, c := range sl {
+		if c != "" {
+			// test yaml format before we load anything into viper
+			//
+			// if viper.ReadConfig() failed, all configs are lost, we have to avoid that.
+			var tmp map[string]interface{}
+			if err := yaml.Unmarshal(util.UnsafeStr2Byt(c), &tmp); err != nil {
+				return WrapErrf(err, "Failed reload nacos configs, invalid format\n:%v", c)
+			}
+		}
+	}
+
 	var eo error
 	doWithWriteLock(a, func() {
 		for i, s := range sl {
