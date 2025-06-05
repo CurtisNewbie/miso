@@ -35,6 +35,9 @@ const (
 	// misoconfig-prop: nacos config group | DEFAULT_GROUP
 	PropNacosConfigGroup = "nacos.server.config.group"
 
+	// misoconfig-prop: extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`)
+	PropNacosConfigWatch = "nacos.server.config.watch"
+
 	// misoconfig-prop: nacos cache dir | /tmp/nacos/cache
 	PropNacosCacheDir = "nacos.cache-dir"
 )

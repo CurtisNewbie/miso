@@ -639,3 +639,11 @@ func (r *StrRWMap[V]) Del(k string) {
 func (r *StrRWMap[V]) GetElse(k string, elseFunc func(k string) V) (V, bool) {
 	return r.shard(k).GetElse(k, elseFunc)
 }
+
+func (r *StrRWMap[V]) Keys() []string {
+	keys := make([]string, 0, 10)
+	for _, st := range r.storage {
+		keys = append(keys, st.Keys()...)
+	}
+	return keys
+}

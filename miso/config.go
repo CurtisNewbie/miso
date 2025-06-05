@@ -249,9 +249,28 @@ func (a *AppConfig) LoadConfigFromStr(s string) error {
 // Reload config from string.
 //
 // Calling this method completely reloads previously loaded config.
-func (a *AppConfig) ReloadConfigFromStr(s string) error {
-	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
-	return a.ReloadConfigFromReader(sr)
+func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
+	var eo error
+	doWithWriteLock(a, func() {
+		for i, s := range sl {
+			sr := bytes.NewReader(util.UnsafeStr2Byt(s))
+			if i == 0 {
+				if err := a.vp.ReadConfig(sr); err != nil {
+					eo = fmt.Errorf("failed to reload config: %w", err)
+					return
+				}
+			} else {
+				if err := a.vp.MergeConfig(sr); err != nil {
+					eo = fmt.Errorf("failed to reload config: %w", err)
+					return
+				}
+			}
+		}
+
+		// reset the whole fastBoolCache
+		a.fastBoolCache = util.NewStrRWMap[bool]()
+	})
+	return eo
 }
 
 // Reload config from io Reader.
@@ -478,8 +497,8 @@ func LoadConfigFromFile(configFile string, r Rail) error {
 // Reload config from string.
 //
 // Calling this method completely reloads previously loaded config.
-func ReloadConfigFromStr(s string) error {
-	return globalConfig().ReloadConfigFromStr(s)
+func ReloadConfigFromStr(s ...string) error {
+	return globalConfig().ReloadConfigFromStr(s...)
 }
 
 // Reload config from io Reader.

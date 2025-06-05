@@ -138,19 +138,20 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Nacos Configuration
 
-| property                    | description                 | default value    |
-| --------------------------- | --------------------------- | ---------------- |
-| nacos.enabled               | enable nacos client         | false            |
-| nacos.server.addr           | nacos server address        | localhost        |
-| nacos.server.scheme         | nacos server address scheme | http             |
-| nacos.server.port           | nacos server port           | 80               |
-| nacos.server.context-path   | nacos server context path   |                  |
-| nacos.server.namespace      | nacos server namespace      |                  |
-| nacos.server.username       | nacos server username       |                  |
-| nacos.server.password       | nacos server password       |                  |
-| nacos.server.config.data-id | nacos config data-id        | ${app.name}      |
-| nacos.server.config.group   | nacos config group          | DEFAULT_GROUP    |
-| nacos.cache-dir             | nacos cache dir             | /tmp/nacos/cache |
+| property                    | description                                                                               | default value    |
+| --------------------------- | ----------------------------------------------------------------------------------------- | ---------------- |
+| nacos.enabled               | enable nacos client                                                                       | false            |
+| nacos.server.addr           | nacos server address                                                                      | localhost        |
+| nacos.server.scheme         | nacos server address scheme                                                               | http             |
+| nacos.server.port           | nacos server port                                                                         | 80               |
+| nacos.server.context-path   | nacos server context path                                                                 |                  |
+| nacos.server.namespace      | nacos server namespace                                                                    |                  |
+| nacos.server.username       | nacos server username                                                                     |                  |
+| nacos.server.password       | nacos server password                                                                     |                  |
+| nacos.server.config.data-id | nacos config data-id                                                                      | ${app.name}      |
+| nacos.server.config.group   | nacos config group                                                                        | DEFAULT_GROUP    |
+| nacos.server.config.watch   | extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`) |                  |
+| nacos.cache-dir             | nacos cache dir                                                                           | /tmp/nacos/cache |
 
 ## RabbitMQ Configuration
 
