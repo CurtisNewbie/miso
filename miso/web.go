@@ -709,6 +709,15 @@ func webServerBootstrap(rail Rail) error {
 	}
 	ginPreProcessors = nil
 
+	serverAuthBearer := strings.TrimSpace(GetPropStr(PropServerAuthBearer))
+	if serverAuthBearer != "" {
+		AddBearerInterceptor(
+			func(method, url string) bool { return true },
+			func() string { return serverAuthBearer },
+		)
+		rail.Infof("Registered bearer authorization for all endpoints")
+	}
+
 	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
 			HttpGet("", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
@@ -719,26 +728,29 @@ func webServerBootstrap(rail Rail) error {
 			HttpGet("/trace", RawHandler(func(inb *Inbound) { pprof.Trace(inb.Unwrap()) })),
 		)
 		rail.Infof("Registered /debug/pprof APIs for debugging")
+
 		if GetPropBool(PropServerPprofAuthEnabled) {
-			bearer := GetPropStr(PropServerPprofAuthBearer)
-			if bearer == "" {
-				return Errf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
+			if serverAuthBearer == "" {
+				bearer := GetPropStr(PropServerPprofAuthBearer)
+				if bearer == "" {
+					return NewErrf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
+				}
+
+				AddBearerInterceptor(
+					MatchPathPatternFunc("/debug/pprof/**"),
+					func() string { return bearer },
+				)
+				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerPprofAuthBearer)
+			} else {
+				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerAuthBearer)
 			}
-
-			AddBearerInterceptor(
-				MatchPathPatternFunc("/debug/pprof/**"),
-				func() string { return bearer },
-			)
+		} else if IsProdMode() {
+			if serverAuthBearer == "" {
+				rail.Warnf("pprof authentication is not enabled in production mode, pprof APIs are not protected")
+			} else {
+				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerAuthBearer)
+			}
 		}
-	}
-
-	serverAuthBearer := GetPropStr(PropServerAuthBearer)
-	if serverAuthBearer != "" {
-		AddBearerInterceptor(
-			func(method, url string) bool { return true },
-			func() string { return serverAuthBearer },
-		)
-		rail.Infof("Registered bearer authorization for all endpoints")
 	}
 
 	// register customer recovery func
