@@ -52,9 +52,6 @@ const (
 	// misoconfig-prop: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
 	PropServerPprofEnabled = "server.pprof.enabled"
 
-	// misoconfig-prop: enable bearer authentication for pprof endpoints | false
-	PropServerPprofAuthEnabled = "server.pprof.auth.enabled"
-
 	// misoconfig-prop: bearer token for pprof endpoints' authentication
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
@@ -231,7 +228,6 @@ func init() {
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerRequestLogEnabled, false)
 	SetDefProp(PropServerPprofEnabled, false)
-	SetDefProp(PropServerPprofAuthEnabled, false)
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocFileExclTClientDemo, false)

@@ -729,26 +729,22 @@ func webServerBootstrap(rail Rail) error {
 		)
 		rail.Infof("Registered /debug/pprof APIs for debugging")
 
-		if GetPropBool(PropServerPprofAuthEnabled) {
-			if serverAuthBearer == "" {
-				bearer := GetPropStr(PropServerPprofAuthBearer)
-				if bearer == "" {
-					return NewErrf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
-				}
+		if serverAuthBearer != "" { // server.auth.bearer is already set for all apis
+			rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerAuthBearer)
 
+		} else {
+			pprofAuthBearer := GetPropStrTrimmed(PropServerPprofAuthBearer)
+			if pprofAuthBearer != "" { // we have set auth bearer for pprof apis specifically
 				AddBearerInterceptor(
 					MatchPathPatternFunc("/debug/pprof/**"),
-					func() string { return bearer },
+					func() string { return pprofAuthBearer },
 				)
-				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerPprofAuthBearer)
-			} else {
-				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerAuthBearer)
-			}
-		} else if IsProdMode() {
-			if serverAuthBearer == "" {
+				rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerPprofAuthBearer)
+
+			} else if IsProdMode() { // in prod mode, print warning
 				rail.Warnf("pprof authentication is not enabled in production mode, pprof APIs are not protected")
 			} else {
-				rail.Infof("Using configuration '%v' in authentication interceptor for /debug/pprof/**", PropServerAuthBearer)
+				// pprof apis not protected, but we are not in prod mode either
 			}
 		}
 	}

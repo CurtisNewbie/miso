@@ -130,6 +130,15 @@ func (a *AppConfig) GetPropStr(prop string) string {
 	return a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) }))
 }
 
+// Same as GetPropStr() except the returned string is trimmed
+func (a *AppConfig) GetPropStrTrimmed(prop string) string {
+	v := a.GetPropStr(prop)
+	if v == "" {
+		return v
+	}
+	return strings.TrimSpace(v)
+}
+
 // Unmarshal configuration.
 func (a *AppConfig) UnmarshalFromProp(ptr any) {
 	doWithReadLock(a, func() {
@@ -457,6 +466,11 @@ This func will attempt to resolve the actual value for '${secretName}'.
 */
 func GetPropStr(prop string) string {
 	return globalConfig().GetPropStr(prop)
+}
+
+// Same as GetPropStr() except the returned string is trimmed
+func GetPropStrTrimmed(prop string) string {
+	return globalConfig().GetPropStrTrimmed(prop)
 }
 
 // Unmarshal configuration.

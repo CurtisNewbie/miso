@@ -8,7 +8,7 @@ server:
     enabled: true
 ```
 
-The pprof is exposed at endpoint '/debug/pprof', it's not customizable at the moment.
+The pprof is exposed at endpoint '/debug/pprof/**', it's not customizable at the moment.
 
 You can enable authentication for the endpoints if necessary, only Bearer authentication is supported:
 
@@ -17,7 +17,6 @@ server:
   pprof:
     enabled: true
     auth:
-      enabled: true
       bearer: "your_secret_token"
 ```
 

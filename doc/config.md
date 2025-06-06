@@ -211,7 +211,6 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.validate.request.enabled                         | enable inbound request parameter validation                                                                               | true          |
 | server.request-log.enabled                              | enable server request log                                                                                                 | false         |
 | server.pprof.enabled                                    | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
-| server.pprof.auth.enabled                               | enable bearer authentication for pprof endpoints                                                                          | false         |
 | server.pprof.auth.bearer                                | bearer token for pprof endpoints' authentication                                                                          |               |
 | server.generate-endpoint-doc.enabled                    | generate api doc                                                                                                          | true          |
 | server.generate-endpoint-doc.web.enabled                | build webpage for the generated api doc                                                                                   | true          |
