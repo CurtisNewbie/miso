@@ -52,7 +52,7 @@ func (a *AppConfig) _appConfigDoWithRLock(f func() any) any {
 // Set value for the prop
 func (a *AppConfig) SetProp(prop string, val any) {
 	doWithWriteLock(a, func() {
-		a.fastBoolCache.Del(prop)
+		a.delFastBoolCache(prop)
 		a.vp.Set(prop, val)
 	})
 }
@@ -60,9 +60,13 @@ func (a *AppConfig) SetProp(prop string, val any) {
 // Set default value for the prop
 func (a *AppConfig) SetDefProp(prop string, defVal any) {
 	doWithWriteLock(a, func() {
-		a.fastBoolCache.Del(prop)
+		a.delFastBoolCache(prop)
 		a.vp.SetDefault(prop, defVal)
 	})
+}
+
+func (a *AppConfig) delFastBoolCache(prop string) {
+	a.fastBoolCache.Del(strings.ToLower(prop))
 }
 
 // Check whether the prop exists
@@ -106,7 +110,7 @@ func (a *AppConfig) GetPropDur(prop string, unit time.Duration) time.Duration {
 // Get prop as bool
 func (a *AppConfig) GetPropBool(prop string) bool {
 	return returnWithReadLock(a, func() bool {
-		v, _ := a.fastBoolCache.GetElse(prop, func(k string) bool {
+		v, _ := a.fastBoolCache.GetElse(strings.ToLower(prop), func(k string) bool {
 			return a.vp.GetBool(k)
 		})
 		return v
