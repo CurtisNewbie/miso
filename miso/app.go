@@ -17,7 +17,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
-	_ "go.uber.org/automaxprocs"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 const (
@@ -46,6 +46,10 @@ var (
 
 	globalApp *MisoApp = newApp()
 )
+
+func init() {
+	maxprocs.Set()
+}
 
 type ComponentBootstrap struct {
 	// name of the component.
