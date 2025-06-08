@@ -361,11 +361,14 @@ func (a *AppConfig) overwriteConf(kvs map[string][]string, src string) {
 		prevSet := a.HasProp(k)
 		if prevSet {
 			if _, ok := a.GetPropAny(k).(map[string]interface{}); ok {
+				// k is a parent node
 				prevSet = false
 			}
 		}
 		if prevSet {
 			Infof("Overwrote config: '%v', source: %v", k, src)
+		} else {
+			Debugf("Overwrote config: '%v', source: %v", k, src)
 		}
 		a.SetProp(k, vv)
 	}
@@ -623,6 +626,10 @@ func ArgKeyVal(args []string) map[string][]string {
 		}
 
 		key := strings.ToLower(strings.TrimSpace(s[:eq]))
+		if key == "" || key == "_" || key == "." || strings.HasPrefix(key, "bash_func") {
+			continue
+		}
+
 		val := strings.TrimSpace(s[eq+1:])
 		doAppend(key, val)
 
