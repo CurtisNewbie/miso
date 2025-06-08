@@ -69,7 +69,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	clientConfig, serverConfigs := m.buildConfig()
+	clientConfig, serverConfigs := m.buildConfig(rail)
 	cc, err := clients.NewConfigClient(
 		vo.NacosClientParam{
 			ClientConfig:  &clientConfig,
@@ -177,13 +177,15 @@ func (m *nacosModule) reloadConfigs(rail miso.Rail) {
 	}
 }
 
-func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerConfig) {
+func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []constant.ServerConfig) {
+	ns := miso.GetPropStr(PropNacosServerNamespace)
+	un := miso.GetPropStr(PropNacosServerUsername)
 	clientConfig := *constant.NewClientConfig(
-		constant.WithNamespaceId(miso.GetPropStr(PropNacosServerNamespace)),
+		constant.WithNamespaceId(ns),
 		constant.WithTimeoutMs(5000),
 		constant.WithNotLoadCacheAtStart(true),
 		constant.WithCacheDir(miso.GetPropStr(PropNacosCacheDir)),
-		constant.WithUsername(miso.GetPropStr(PropNacosServerUsername)),
+		constant.WithUsername(un),
 		constant.WithPassword(miso.GetPropStr(PropNacosServerPassword)),
 		constant.WithCustomLogger(&nacosLogger{}),
 	)
@@ -206,6 +208,7 @@ func (m *nacosModule) buildConfig() (constant.ClientConfig, []constant.ServerCon
 			Port:        uint64(miso.GetPropInt(PropNacosServerPort)),
 		},
 	}
+	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", serverAddr, ns, un)
 	return clientConfig, serverConfigs
 }
 
