@@ -107,6 +107,13 @@ func (a *AppConfig) GetPropDur(prop string, unit time.Duration) time.Duration {
 	return time.Duration(a.GetPropInt(prop)) * unit
 }
 
+// Get prop as any
+func (a *AppConfig) GetPropAny(prop string) any {
+	return returnWithReadLock(a, func() any {
+		return a.vp.Get(prop)
+	})
+}
+
 // Get prop as bool
 func (a *AppConfig) GetPropBool(prop string) bool {
 	return returnWithReadLock(a, func() bool {
@@ -352,10 +359,15 @@ func (a *AppConfig) overwriteConf(kvs map[string][]string, src string) {
 			vv = v[0]
 		}
 		prevSet := a.HasProp(k)
-		a.SetProp(k, vv)
+		if prevSet {
+			if _, ok := a.GetPropAny(k).(map[string]interface{}); ok {
+				prevSet = false
+			}
+		}
 		if prevSet {
 			Infof("Overwrote config: '%v', source: %v", k, src)
 		}
+		a.SetProp(k, vv)
 	}
 }
 
@@ -466,6 +478,11 @@ This func will attempt to resolve the actual value for '${secretName}'.
 */
 func GetPropStr(prop string) string {
 	return globalConfig().GetPropStr(prop)
+}
+
+// Get prop as any
+func GetPropAny(prop string) any {
+	return globalConfig().GetPropAny(prop)
 }
 
 // Same as GetPropStr() except the returned string is trimmed
@@ -587,22 +604,33 @@ func ResolveServerHost(address string) string {
 	return address
 }
 
+var argKeyValRegex = regexp.MustCompile("[_]+")
+
 // Parse CLI args to key-value map
 func ArgKeyVal(args []string) map[string][]string {
 	m := map[string][]string{}
+	doAppend := func(key, val string) {
+		if prev, ok := m[key]; ok {
+			m[key] = append(prev, val)
+		} else {
+			m[key] = []string{val}
+		}
+	}
 	for _, s := range args {
 		var eq int = strings.Index(s, "=")
 		if eq == -1 {
 			continue
 		}
 
-		key := strings.TrimSpace(s[:eq])
+		key := strings.ToLower(strings.TrimSpace(s[:eq]))
 		val := strings.TrimSpace(s[eq+1:])
-		if prev, ok := m[key]; ok {
-			m[key] = append(prev, val)
-		} else {
-			m[key] = []string{val}
+		doAppend(key, val)
+
+		key2 := argKeyValRegex.ReplaceAllLiteralString(key, ".")
+		if key2 == key {
+			continue
 		}
+		doAppend(key2, val)
 	}
 	return m
 }
