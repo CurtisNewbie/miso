@@ -59,6 +59,7 @@ func init() {
 		if outf == "" {
 			return nil
 		}
+		_ = util.MkdirParentAll(outf)
 		f, err := util.ReadWriteFile(outf)
 		if err != nil {
 			rail.Debugf("Failed to open API doc file, %v, %v", outf, err)
