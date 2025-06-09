@@ -90,7 +90,9 @@ func (m *nacosModule) init(rail miso.Rail) error {
 	}
 
 	watched := miso.GetPropStrSlice(PropNacosConfigWatch)
-	rail.Debugf("watched: %#v", watched)
+	if len(watched) > 0 {
+		rail.Debugf("watched: %#v", watched)
+	}
 	for _, w := range watched {
 		tok := strings.SplitN(w, ":", 2)
 		if len(tok) > 0 {
@@ -121,6 +123,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
 		}
+		rail.Debugf("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
 		m.configContent.Put(w.Key(), configStr)
 	}
 
@@ -165,10 +168,10 @@ func (m *nacosModule) reloadConfigs(rail miso.Rail) {
 	defer m.reloadMut.Unlock()
 
 	wcl := make([]string, 0, len(m.watchedConfigs))
-	for i, w := range m.watchedConfigs {
+	for _, w := range m.watchedConfigs {
 		if c, ok := m.configContent.Get(w.Key()); ok {
 			c = strings.TrimSpace(c)
-			rail.Debugf("Reloading nacos config - %v:\n%v", i, c)
+			rail.Debugf("Reloading nacos config, %v-%v:\n%v", w.Group, w.DataId, c)
 			wcl = append(wcl, c)
 		}
 	}
