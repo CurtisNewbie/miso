@@ -101,14 +101,15 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Logging Configuration
 
-| property                  | description                                                      | default value |
-| ------------------------- | ---------------------------------------------------------------- | ------------- |
-| logging.level             | log level                                                        | info          |
-| logging.rolling.file      | path to rolling log file                                         |               |
-| logging.file.max-age      | max age of log files in days, 0 means files are retained forever | 0             |
-| logging.file.max-size     | max size of each log file (in mb)                                | 50            |
-| logging.file.max-backups  | max number of backup log files                                   | 10            |
-| logging.file.rotate-daily | rotate log file at every day 00:00 (local)                       | true          |
+| property                   | description                                                      | default value |
+| -------------------------- | ---------------------------------------------------------------- | ------------- |
+| logging.level              | log level                                                        | info          |
+| logging.rolling.file       | path to rolling log file                                         |               |
+| logging.file.log-file-only | logs are written to log file only                                | false         |
+| logging.file.max-age       | max age of log files in days, 0 means files are retained forever | 0             |
+| logging.file.max-size      | max size of each log file (in mb)                                | 50            |
+| logging.file.max-backups   | max number of backup log files                                   | 10            |
+| logging.file.rotate-daily  | rotate log file at every day 00:00 (local)                       | true          |
 
 ## Metrics Configuration
 

@@ -374,8 +374,14 @@ func (a *MisoApp) configureLogging() error {
 			MaxAge:     c.GetPropInt(PropLoggingRollingFileMaxAge),  //days
 			MaxBackups: c.GetPropInt(PropLoggingRollingFileMaxBackups),
 		})
-		loggerOut = log
-		loggerErrOut = log
+
+		if c.GetPropBool(PropLoggingRollingFileOnly) {
+			loggerOut = log
+			loggerErrOut = log
+		} else {
+			loggerOut = io.MultiWriter(os.Stdout, log)
+			loggerErrOut = io.MultiWriter(os.Stderr, log)
+		}
 
 		if c.GetPropBool(PropLoggingRollingFileRotateDaily) {
 			// schedule a job to rotate the log at 00:00:00

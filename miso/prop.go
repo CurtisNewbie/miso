@@ -181,6 +181,9 @@ const (
 	// misoconfig-prop: path to rolling log file
 	PropLoggingRollingFile = "logging.rolling.file"
 
+	// misoconfig-prop: logs are written to log file only | false
+	PropLoggingRollingFileOnly = "logging.file.log-file-only"
+
 	// misoconfig-prop: max age of log files in days, 0 means files are retained forever | 0
 	PropLoggingRollingFileMaxAge = "logging.file.max-age"
 
@@ -208,6 +211,7 @@ func init() {
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
 	SetDefProp(PropLoggingLevel, "info")
+	SetDefProp(PropLoggingRollingFileOnly, false)
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
 	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
