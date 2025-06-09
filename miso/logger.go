@@ -19,7 +19,7 @@ const (
 
 const (
 	traceSpanIdWidth = 16
-	fnWidth          = 35
+	fnWidth          = 30
 	levelWidth       = 5
 )
 
