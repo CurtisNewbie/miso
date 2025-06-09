@@ -81,18 +81,37 @@ func (m *nacosModule) init(rail miso.Rail) error {
 	}
 	m.configClient = cc
 
-	{
-		appDataId := miso.GetPropStr(PropNacosConfigDataId)
-		appGroup := miso.GetPropStr(PropNacosConfigGroup)
-		if appDataId != "" {
-			m.watchedConfigs = append(m.watchedConfigs, watchingConfig{DataId: appDataId, Group: appGroup})
+	mergeConfig := func(w watchingConfig) error {
+		// fetch config on bootstrap
+		configStr, err := m.configClient.GetConfig(vo.ConfigParam{
+			DataId: w.DataId,
+			Group:  w.Group,
+		})
+		if err != nil {
+			return err
 		}
+		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
+			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
+		}
+		rail.Debugf("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
+		m.configContent.Put(w.Key(), configStr)
+		return nil
+	}
+
+	appDataId := miso.GetPropStr(PropNacosConfigDataId)
+	appGroup := miso.GetPropStr(PropNacosConfigGroup)
+	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
+
+	// merge app's nacos config first before we read `PropNacosConfigWatch`
+	if err := mergeConfig(appConfig); err != nil {
+		return err
 	}
 
 	watched := miso.GetPropStrSlice(PropNacosConfigWatch)
 	if len(watched) > 0 {
 		rail.Debugf("watched: %#v", watched)
 	}
+
 	for _, w := range watched {
 		tok := strings.SplitN(w, ":", 2)
 		if len(tok) > 0 {
@@ -107,27 +126,16 @@ func (m *nacosModule) init(rail miso.Rail) error {
 			if group == "" {
 				group = "DEFAULT_GROUP"
 			}
-			m.watchedConfigs = append(m.watchedConfigs, watchingConfig{DataId: dataId, Group: group})
+			w := watchingConfig{DataId: dataId, Group: group}
+			m.watchedConfigs = append(m.watchedConfigs, w)
+			if err := mergeConfig(w); err != nil {
+				return err
+			}
 		}
-	}
-
-	for _, w := range m.watchedConfigs {
-		// fetch config on bootstrap
-		configStr, err := m.configClient.GetConfig(vo.ConfigParam{
-			DataId: w.DataId,
-			Group:  w.Group,
-		})
-		if err != nil {
-			return err
-		}
-		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
-			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
-		}
-		rail.Debugf("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
-		m.configContent.Put(w.Key(), configStr)
 	}
 
 	// subscribe changes
+	m.watchedConfigs = append(m.watchedConfigs, appConfig) // app's config
 	for _, w := range m.watchedConfigs {
 		rail.Infof("Listening nacos config: %#v", w)
 		m.configClient.ListenConfig(vo.ConfigParam{
