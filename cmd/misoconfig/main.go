@@ -52,17 +52,25 @@ func main() {
 		util.Printlnf("  Supported miso version: %v\n", version.Version)
 		util.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
-		util.Printlnf("\nFor example:\n")
+		util.Printlnf("\nFor example:")
 		util.Printlnf(`
-// misoconfig-section: Web Server Configuration
-const (
+In prop.go:
 
-	// misoconfig-prop: enable http server | true
-	PropServerEnabled = "server.enabled"
+  // misoconfig-section: Web Server Configuration
+  const (
 
-	// misoconfig-default-start
-	// misoconfig-default-end
-)`)
+	  // misoconfig-prop: enable http server | true
+	  PropServerEnabled = "server.enabled"
+
+	  // misoconfig-default-start
+	  // misoconfig-default-end
+  )
+
+In ./doc/config.md:
+
+  <!-- misoconfig-table-start -->
+  <!-- misoconfig-table-end -->
+`)
 	}
 	flag.Parse()
 
