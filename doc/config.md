@@ -144,7 +144,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | nacos.enabled               | enable nacos client                                                                       | false            |
 | nacos.server.addr           | nacos server address                                                                      | localhost        |
 | nacos.server.scheme         | nacos server address scheme                                                               | http             |
-| nacos.server.port           | nacos server port                                                                         | 80               |
+| nacos.server.port           | nacos server port (by default it's either 80 or 443)                                      |                  |
 | nacos.server.context-path   | nacos server context path                                                                 |                  |
 | nacos.server.namespace      | nacos server namespace                                                                    |                  |
 | nacos.server.username       | nacos server username                                                                     |                  |
@@ -212,7 +212,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.validate.request.enabled                         | enable inbound request parameter validation                                                                               | true          |
 | server.request-log.enabled                              | enable server request log                                                                                                 | false         |
 | server.pprof.enabled                                    | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
-| server.pprof.auth.bearer                                | bearer token for pprof endpoints' authentication                                                                          |               |
+| server.pprof.auth.bearer                                | bearer token for pprof endpoints' authentication. however, if `server.auth.bearer` is set, this prop is ignored.          |               |
 | server.generate-endpoint-doc.enabled                    | generate api doc                                                                                                          | true          |
 | server.generate-endpoint-doc.web.enabled                | build webpage for the generated api doc                                                                                   | true          |
 | server.generate-endpoint-doc.file                       | generate markdown api doc to the specified file                                                                           |               |

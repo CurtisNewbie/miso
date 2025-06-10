@@ -52,7 +52,7 @@ const (
 	// misoconfig-prop: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
 	PropServerPprofEnabled = "server.pprof.enabled"
 
-	// misoconfig-prop: bearer token for pprof endpoints' authentication
+	// misoconfig-prop: bearer token for pprof endpoints' authentication. however, if `server.auth.bearer` is set, this prop is ignored.
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
 	// misoconfig-prop: generate api doc | true
