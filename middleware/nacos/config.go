@@ -14,7 +14,7 @@ const (
 	// misoconfig-prop: nacos server address scheme | http
 	PropNacosServerScheme = "nacos.server.scheme"
 
-	// misoconfig-prop: nacos server port | 80
+	// misoconfig-prop: nacos server port (by default it's either 80 or 443)
 	PropNacosServerPort = "nacos.server.port"
 
 	// misoconfig-prop: nacos server context path |
@@ -47,7 +47,6 @@ func init() {
 	miso.SetDefProp(PropNacosEnabled, false)
 	miso.SetDefProp(PropNacosServerAddr, "localhost")
 	miso.SetDefProp(PropNacosServerScheme, "http")
-	miso.SetDefProp(PropNacosServerPort, 80)
 	miso.SetDefProp(PropNacosConfigDataId, "${app.name}")
 	miso.SetDefProp(PropNacosConfigGroup, "DEFAULT_GROUP")
 	miso.SetDefProp(PropNacosCacheDir, "/tmp/nacos/cache")

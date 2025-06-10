@@ -201,6 +201,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		constant.WithCustomLogger(&nacosLogger{}),
 	)
 
+	port := miso.GetPropInt(PropNacosServerPort)
 	serverAddr := strings.TrimSpace(miso.GetPropStr(PropNacosServerAddr))
 	scheme := miso.GetPropStr(PropNacosServerScheme)
 	if s, ok := util.CutPrefixIgnoreCase(serverAddr, "http://"); ok {
@@ -209,6 +210,12 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 	} else if s, ok := util.CutPrefixIgnoreCase(serverAddr, "https://"); ok {
 		scheme = "https"
 		serverAddr = s
+		if port == 0 {
+			port = 443
+		}
+	}
+	if port == 0 {
+		port = 80
 	}
 
 	serverConfigs := []constant.ServerConfig{
@@ -216,7 +223,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 			IpAddr:      serverAddr,
 			ContextPath: miso.GetPropStr(PropNacosServerContextPath),
 			Scheme:      scheme,
-			Port:        uint64(miso.GetPropInt(PropNacosServerPort)),
+			Port:        uint64(port),
 		},
 	}
 	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", serverAddr, ns, un)
