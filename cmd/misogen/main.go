@@ -7,10 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/curtisnewbie/miso/middleware/mysql"
-	"github.com/curtisnewbie/miso/middleware/rabbit"
-	"github.com/curtisnewbie/miso/middleware/redis"
-	"github.com/curtisnewbie/miso/middleware/sqlite"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/version"
@@ -219,78 +215,125 @@ func main() {
 			panic(fmt.Errorf("failed to open file %s, %v", ConfFile, err))
 		}
 
-		sb, writef := util.NewIndWritef("  ")
+		s := `# https://github.com/CurtisNewbie/miso/blob/main/doc/config.md
+# To use following middlewares, make sure you have already imported relevant go module
 
-		writef(0, "# %s", ConfigDocUrl)
-		writef(0, "")
-		writef(0, "mode.production: \"%s\"", "false")
-		writef(0, "app.name: \"%s\"", modName)
+# production mode, must be true in production.
+mode.production: false
 
-		writef(0, "")
-		writef(0, "server: # http server")
-		serverEnabled := miso.GetPropStr(miso.PropServerEnabled)
-		if *DisableWebFlag {
-			serverEnabled = "false"
-		}
-		writef(1, "enabled: \"%s\"", serverEnabled)
-		writef(1, "host: \"%s\"", miso.GetPropStr(miso.PropServerHost))
-		writef(1, "port: \"%s\"", miso.GetPropStr(miso.PropServerPort))
+# app's name, required
+app.name: "${modName}"
 
-		writef(0, "")
-		writef(0, "consul:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(miso.PropConsulEnabled))
-		writef(1, "consulAddress: \"%s\"", miso.GetPropStr(miso.PropConsulAddress))
+# http server
+server:
+  enabled: false
+  host: 127.0.0.1
+  port: 8080
+  request-log:
+    enabled: false
+  health-check-url: "/health"
+  log-routes: false # log all routes in INFO level
+  gracefulShutdownTimeSec: 30
+  auth:
+    bearer: "" # bearer token for all api (including pprof)
+  pprof:
+    enabled: false
+    auth:
+      bearer: "" # bearer token for pprof api
+  generate-endpoint-doc:
+    enabled: true
+    file: ""
+    web:
+      enabled: true
+    path-prefix-app: true
 
-		writef(0, "")
-		writef(0, "redis:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(redis.PropRedisEnabled))
-		writef(1, "address: \"%s\"", miso.GetPropStr(redis.PropRedisAddress))
-		writef(1, "port: \"%s\"", miso.GetPropStr(redis.PropRedisPort))
-		writef(1, "username: \"%s\"", miso.GetPropStr(redis.PropRedisUsername))
-		writef(1, "password: \"%s\"", miso.GetPropStr(redis.PropRedisPassword))
-		writef(1, "database: \"%s\"", miso.GetPropStr(redis.PropRedisDatabase))
+# consul for service discovery
+consul:
+  enabled: false
+  consulAddress: "localhost:8500"
 
-		writef(0, "")
-		writef(0, "mysql:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(mysql.PropMySQLEnabled))
-		writef(1, "host: \"%s\"", miso.GetPropStr(mysql.PropMySQLHost))
-		writef(1, "port: \"%s\"", miso.GetPropStr(mysql.PropMySQLPort))
-		writef(1, "user: \"%s\"", miso.GetPropStr(mysql.PropMySQLUser))
-		writef(1, "password: \"%s\"", miso.GetPropStr(mysql.PropMySQLPassword))
-		writef(1, "database: \"%s\"", guessSchemaName(modName))
-		writef(1, "connection:")
-		writef(2, "parameters:")
-		for _, s := range []string{
-			"charset=utf8mb4",
-			"parseTime=True",
-			"loc=Local",
-			"readTimeout=30s",
-			"writeTimeout=30s",
-			"timeout=3s",
-		} {
-			writef(3, "- \"%s\"", s)
-		}
+# redis connection
+redis:
+  enabled: false
+  address: "localhost"
+  port: 6379
+  username: ""
+  password: ""
+  database: 0
 
-		writef(0, "")
-		writef(0, "sqlite:")
-		writef(1, "file: \"%s\"", miso.GetPropStr(sqlite.PropSqliteFile))
+# mysql connection
+mysql:
+  enabled: false
+  host: "localhost"
+  port: 3306
+  user: ""
+  password: ""
+  database: "${dbName}"
+  connection:
+    - "charset=utf8mb4"
+    - "parseTime=True"
+    - "loc=UTC"
+    - "readTimeout=30s"
+    - "writeTimeout=30s"
+    - "timeout=5s"
 
-		writef(0, "")
-		writef(0, "rabbitmq:")
-		writef(1, "enabled: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqEnabled))
-		writef(1, "host: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqHost))
-		writef(1, "port: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqPort))
-		writef(1, "username: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqUsername))
-		writef(1, "password: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqPassword))
-		writef(1, "vhost: \"%s\"", miso.GetPropStr(rabbit.PropRabbitMqVhost))
+# sqlite configuration
+sqlite:
+  file: ""
 
-		writef(0, "")
-		writef(0, "logging:")
-		writef(1, "level: \"%s\"", "info")
-		writef(1, "# rolling:")
-		writef(2, "# file: \"logs/%s.log\"", modName)
+# rabbitmq connection
+rabbitmq:
+  enabled: false
+  host: "localhost"
+  port: "5672"
+  username: "guest"
+  password: "guest"
+  vhost: ""
 
-		if _, err := conf.WriteString(sb.String()); err != nil {
+# zookeeper connection
+zk:
+  enabled: false
+  hosts:
+    - "localhost"
+  session-timeout: 5
+
+# kafka connection
+kafka:
+  enabled: false
+  server:
+    addr:
+      - "localhost:9092"
+
+# nacos config center
+nacos:
+  enabled: false
+  server:
+    addr: "localhost"
+    namespace: ""
+    username: ""
+    password: ""
+
+# prometheus metrics
+metrics:
+  enabled: true
+  route: "/metrics"
+  auth:
+    enabled: false
+    bearer: "" # bearer for metrics api
+
+logging:
+  level: "info"
+  rolling:
+    file: "logs/${modName}.log"
+`
+
+		dbName := strings.ReplaceAll(strings.ToLower(modName), "-", "_")
+		s = util.NamedSprintf(s, map[string]any{
+			"modName": modName,
+			"dbName":  dbName,
+		})
+
+		if _, err := conf.WriteString(s); err != nil {
 			panic(err)
 		}
 	}
