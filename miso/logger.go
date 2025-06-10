@@ -3,6 +3,7 @@ package miso
 import (
 	"context"
 	"io"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -336,6 +337,30 @@ func getCallerFn() string {
 		return unsafeGetShortFnName(f.Function)
 	}
 	return ""
+}
+
+type callerFileLine struct {
+	Func string
+	File string
+	Line int
+}
+
+func getCallerFileLine() callerFileLine {
+	pcs := callerUintptrPool.Get().(*[]uintptr)
+	defer putCallerUintptrPool(pcs)
+
+	depth := runtime.Callers(3, *pcs)
+	frames := runtime.CallersFrames((*pcs)[:depth])
+
+	// we only need the first frame
+	for f, next := frames.Next(); next; {
+		return callerFileLine{
+			Func: unsafeGetShortFnName(f.Function),
+			File: path.Base(f.File),
+			Line: f.Line,
+		}
+	}
+	return callerFileLine{}
 }
 
 func getCallerFnUpN(n int) string {
