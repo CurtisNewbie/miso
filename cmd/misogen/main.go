@@ -513,10 +513,6 @@ func main() {
 		writef(1, "// PropMyProp = \"123\"")
 		writef(0, ")")
 		writef(0, "")
-		writef(0, "func init() {")
-		writef(1, "// miso.SetDefProp(...)")
-		writef(0, "}")
-		writef(0, "")
 		writef(0, "// misoconfig-default-start")
 		writef(0, "// misoconfig-default-end")
 
