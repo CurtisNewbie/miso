@@ -216,6 +216,7 @@ func main() {
 		}
 
 		s := `# https://github.com/CurtisNewbie/miso/blob/main/doc/config.md
+
 # To use following middlewares, make sure you have already imported relevant go module
 
 # production mode, must be true in production.
@@ -242,7 +243,7 @@ server:
       bearer: "" # bearer token for pprof api
   generate-endpoint-doc:
     enabled: true
-    file: ""
+    file: "" # generated api doc file
     web:
       enabled: true
     path-prefix-app: true
