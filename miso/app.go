@@ -126,8 +126,8 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
-	split := strings.Repeat("-", 52)
-	rail.Infof("\n\n%s starting %s %sn", split, appName, split)
+	split := strings.Repeat("-", 58)
+	rail.Infof("\n\n%s starting %s %s\n", split, appName, split)
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 	rail.Infof("CPUs: %v", runtime.NumCPU())
@@ -183,7 +183,8 @@ func (a *MisoApp) Bootstrap(args []string) {
 	a.serverBootrapCallbacks = nil
 
 	end := time.Now().UnixMilli()
-	rail.Infof("\n\n---------------------------------------------------- %s started (took: %dms) --------------------------------------------------\n", appName, end-start)
+	split = strings.Repeat("-", 52)
+	rail.Infof("\n\n%s %s started (took: %dms) %s\n", split, appName, end-start, split)
 
 	// invoke listener for serverBootstraped event
 	{
