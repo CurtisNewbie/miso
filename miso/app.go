@@ -115,11 +115,10 @@ func (a *MisoApp) Bootstrap(args []string) {
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
 
-	a.AddOrderedShutdownHook(0, a.markServerShuttingDown) // the first hook to be called
 	rail := EmptyRail()
-
 	start := time.Now().UnixMilli()
 	defer a.triggerShutdownHook()
+	defer a.markServerShuttingDown()
 
 	appName := GetPropStr(PropAppName)
 	if appName == "" {
@@ -224,8 +223,8 @@ func (a *MisoApp) LoadConfig(args []string) {
 
 // Trigger shutdown hook
 func (a *MisoApp) triggerShutdownHook() {
+	Info("Triggering shutdown hooks")
 	timeout := a.Config().GetPropInt(PropServerGracefulShutdownTimeSec)
-
 	panicSafeFunc := func(op func() util.Future[any]) func() util.Future[any] {
 		return func() util.Future[any] {
 			defer func() {
