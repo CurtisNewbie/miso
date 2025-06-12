@@ -203,3 +203,34 @@ func ReflectFuncName(fun any) string {
 	}
 	return funcName
 }
+
+func IsBasicKind(k reflect.Kind) bool {
+	yes := false
+	switch k {
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
+		reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+		reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.String, reflect.Complex64,
+		reflect.Complex128:
+		yes = true
+	}
+	return yes
+}
+
+func ReflectBasicValue(rv reflect.Value) (any, bool) {
+	ftk := rv.Kind()
+	if IsBasicKind(ftk) {
+		return rv.Interface(), true
+	}
+	if ftk == reflect.Pointer {
+		if rv.IsNil() {
+			return nil, true
+		}
+
+		rve := rv.Elem()
+		if IsBasicKind(rve.Kind()) {
+			return rve.Interface(), true
+		}
+	}
+	return nil, false
+}

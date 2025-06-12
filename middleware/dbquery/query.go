@@ -2,6 +2,7 @@ package dbquery
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
@@ -330,7 +331,10 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 		return q
 	}
 
-	colSet := util.NewSet(cols...)
+	colSet := util.NewSet[string]()
+	for _, c := range cols {
+		colSet.AddAll(strings.Split(c, ","))
+	}
 	colName := func(s string) string { return q.DB().NamingStrategy.ColumnName("", s) }
 
 	rt := rv.Type()
@@ -342,31 +346,9 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 		}
 
 		fv := rv.Field(i)
-		switch ft.Type.Kind() {
-		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
-			reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
-			reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
-			reflect.Float32, reflect.Float64, reflect.String:
-			q.Set(fname, fv.Interface())
-		case reflect.Pointer:
-			if fv.IsNil() {
-				if colSet.IsEmpty() {
-					continue
-				}
-				q.Set(fname, nil)
-				continue
-			}
-
-			fve := fv.Elem()
-			switch fve.Kind() {
-			case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
-				reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
-				reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
-				reflect.Float32, reflect.Float64, reflect.String:
-				q.Set(fname, fve.Interface())
-			}
-		default:
-			continue
+		val, ok := util.ReflectBasicValue(fv)
+		if ok {
+			q.Set(fname, val)
 		}
 	}
 
