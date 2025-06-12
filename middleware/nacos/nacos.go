@@ -27,12 +27,19 @@ var (
 )
 
 func init() {
-	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
-		Name:      "Boostrap Nacos Config Center",
-		Bootstrap: nacosBootstrap,
-		Condition: nacosBootstrapCondition,
-		Order:     miso.BootstrapOrderL1 - 100, // load configs before any bootstrap component
+	miso.RegisterConfigLoader(func(rail miso.Rail) error {
+		if !miso.GetPropBool(PropNacosEnabled) {
+			return nil
+		}
+		return nacosBootstrap(rail)
 	})
+
+	// miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
+	// 	Name:      "Boostrap Nacos Config Center",
+	// 	Bootstrap: nacosBootstrap,
+	// 	Condition: nacosBootstrapCondition,
+	// 	Order:     miso.BootstrapOrderL1 - 100, // load configs before any bootstrap component
+	// })
 }
 
 func nacosBootstrap(rail miso.Rail) error {
@@ -50,10 +57,6 @@ func nacosBootstrap(rail miso.Rail) error {
 	})
 
 	return nil
-}
-
-func nacosBootstrapCondition(rail miso.Rail) (bool, error) {
-	return miso.GetPropBool(PropNacosEnabled), nil
 }
 
 type nacosModule struct {

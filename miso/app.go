@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -73,6 +74,7 @@ type MisoApp struct {
 	shmu         sync.Mutex // mutex for shutdownHook
 
 	serverBootrapCallbacks      []ComponentBootstrap
+	configLoader                []func(r Rail) error
 	preServerBootstrapListener  []func(r Rail) error
 	postServerBootstrapListener []func(r Rail) error
 
@@ -124,10 +126,21 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
-	rail.Infof("\n\n---------------------------------------------------- starting %s -------------------------------------------------------------\n", appName)
+	split := strings.Repeat("-", 52)
+	rail.Infof("\n\n%s starting %s %sn", split, appName, split)
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 	rail.Infof("CPUs: %v", runtime.NumCPU())
+
+	if len(a.configLoader) > 0 {
+		rail.Infof("Running ConfigLoader")
+		start := time.Now()
+		if e := a.callConfigLoaders(rail); e != nil {
+			rail.Errorf("Error occurred while running ConfigLoader, %v", e)
+			return
+		}
+		rail.Infof("ConfigLoader finished, took: %v", time.Since(start))
+	}
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	{
@@ -329,6 +342,18 @@ func (a *MisoApp) callPostServerBootstrapListeners(rail Rail) error {
 	return nil
 }
 
+func (a *MisoApp) callConfigLoaders(rail Rail) error {
+	i := 0
+	for i < len(a.configLoader) {
+		if e := a.configLoader[i](rail); e != nil {
+			return e
+		}
+		i++
+	}
+	a.configLoader = nil
+	return nil
+}
+
 func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
 	i := 0
 	for i < len(a.preServerBootstrapListener) {
@@ -357,6 +382,13 @@ func (a *MisoApp) PreServerBootstrap(callback ...func(rail Rail) error) {
 		return
 	}
 	a.preServerBootstrapListener = append(a.preServerBootstrapListener, callback...)
+}
+
+func (a *MisoApp) RegisterConfigLoader(callback ...func(rail Rail) error) {
+	if callback == nil {
+		return
+	}
+	a.configLoader = append(a.configLoader, callback...)
 }
 
 func (a *MisoApp) configureLogging() error {
@@ -467,6 +499,10 @@ func PostServerBootstrap(f ...func(rail Rail) error) {
 // Caller is free to call PostServerBootstrap or PreServerBootstrap inside another PreServerBootstrap callback.
 func PreServerBootstrap(f ...func(rail Rail) error) {
 	App().PreServerBootstrap(f...)
+}
+
+func RegisterConfigLoader(callback ...func(rail Rail) error) {
+	App().RegisterConfigLoader(callback...)
 }
 
 // Register server component bootstrap callback
