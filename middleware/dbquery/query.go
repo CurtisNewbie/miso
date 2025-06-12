@@ -1,6 +1,8 @@
 package dbquery
 
 import (
+	"reflect"
+
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/gorm"
@@ -312,6 +314,62 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 
 func (q *Query) Set(col string, arg any) *Query {
 	q.updateColumns[col] = arg
+	return q
+}
+
+func (q *Query) SetCols(arg any, cols ...string) *Query {
+	if arg == nil {
+		return q
+	}
+
+	rv := reflect.ValueOf(arg)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return q
+	}
+
+	colSet := util.NewSet(cols...)
+	colName := func(s string) string { return q.DB().NamingStrategy.ColumnName("", s) }
+
+	rt := rv.Type()
+	for i := range rv.NumField() {
+		ft := rt.Field(i)
+		fname := colName(ft.Name)
+		if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
+			continue
+		}
+
+		fv := rv.Field(i)
+		switch ft.Type.Kind() {
+		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
+			reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+			reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+			reflect.Float32, reflect.Float64, reflect.String:
+			q.Set(fname, fv.Interface())
+		case reflect.Pointer:
+			if fv.IsNil() {
+				if colSet.IsEmpty() {
+					continue
+				}
+				q.Set(fname, nil)
+				continue
+			}
+
+			fve := fv.Elem()
+			switch fve.Kind() {
+			case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
+				reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+				reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+				reflect.Float32, reflect.Float64, reflect.String:
+				q.Set(fname, fve.Interface())
+			}
+		default:
+			continue
+		}
+	}
+
 	return q
 }
 
