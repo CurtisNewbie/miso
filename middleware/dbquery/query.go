@@ -420,7 +420,9 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 	caller := miso.GetCallerFn()
 	rail.Debugf("IterateAll '%v' start", caller)
 	defer rail.Debugf("IterateAll '%v' finished", caller)
-
+	if param.Limit < 1 {
+		param.Limit = 1
+	}
 	p := miso.Paging{Page: 1, Limit: param.Limit}
 	for {
 		rail.Debugf("IterateAll '%v', page: %v", caller, p.Page)
@@ -428,7 +430,7 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 		if err != nil {
 			return miso.WrapErr(err)
 		}
-		if len(l.Payload) < 1 {
+		if len(l.Payload) < p.Limit {
 			return nil
 		}
 		for _, l := range l.Payload {
