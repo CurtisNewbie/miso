@@ -28,24 +28,24 @@ var (
 
 func init() {
 	miso.RegisterConfigLoader(func(rail miso.Rail) error {
-		if !miso.GetPropBool(PropNacosEnabled) {
-			return nil
-		}
-		return nacosBootstrap(rail)
+		return NacosBootstrap(rail)
 	})
-
-	// miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
-	// 	Name:      "Boostrap Nacos Config Center",
-	// 	Bootstrap: nacosBootstrap,
-	// 	Condition: nacosBootstrapCondition,
-	// 	Order:     miso.BootstrapOrderL1 - 100, // load configs before any bootstrap component
-	// })
 }
 
-func nacosBootstrap(rail miso.Rail) error {
+// Bootstrap Nacos Config Center
+//
+// In most cases, this should be called by miso itself when server bootstraps.
+func NacosBootstrap(rail miso.Rail) error {
+	if !miso.GetPropBool(PropNacosEnabled) {
+		return nil
+	}
 
-	if err := module().init(rail); err != nil {
+	ok, err := module().init(rail)
+	if err != nil {
 		return miso.WrapErrf(err, "Failed to initialize nacos module")
+	}
+	if !ok {
+		return nil // already initialized
 	}
 	rail.Info("Nacos Config Client Bootstrapped")
 
@@ -61,6 +61,7 @@ func nacosBootstrap(rail miso.Rail) error {
 
 type nacosModule struct {
 	mut            *sync.RWMutex
+	initialized    bool
 	configClient   config_client.IConfigClient
 	onConfigChange []func()
 	configContent  *util.StrRWMap[string]
@@ -68,9 +69,12 @@ type nacosModule struct {
 	reloadMut      *sync.Mutex
 }
 
-func (m *nacosModule) init(rail miso.Rail) error {
+func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
+	if m.initialized {
+		return false, nil
+	}
 
 	clientConfig, serverConfigs := m.buildConfig(rail)
 	cc, err := clients.NewConfigClient(
@@ -80,7 +84,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 		},
 	)
 	if err != nil {
-		return miso.WrapErrf(err, "failed to create nacos config client")
+		return false, miso.WrapErrf(err, "failed to create nacos config client")
 	}
 	m.configClient = cc
 
@@ -107,7 +111,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 
 	// merge app's nacos config first before we read `PropNacosConfigWatch`
 	if err := mergeConfig(appConfig); err != nil {
-		return err
+		return false, err
 	}
 
 	watched := miso.GetPropStrSlice(PropNacosConfigWatch)
@@ -132,7 +136,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 			w := watchingConfig{DataId: dataId, Group: group}
 			m.watchedConfigs = append(m.watchedConfigs, w)
 			if err := mergeConfig(w); err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
@@ -167,7 +171,8 @@ func (m *nacosModule) init(rail miso.Rail) error {
 		})
 	}
 
-	return nil
+	m.initialized = true
+	return true, nil
 }
 
 func (m *nacosModule) shutdown(rail miso.Rail) {
