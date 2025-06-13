@@ -135,7 +135,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 			if err := m.scheduler.RunByTag(job.Name); err != nil {
 				rail.Errorf("Failed to triggered immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
 			} else {
-				rail.Debugf("Job %v triggered on server bootstrapped", job.Name)
+				rail.Debugf("Job '%v' triggered on server bootstrapped", job.Name)
 			}
 		}
 		return nil
