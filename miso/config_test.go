@@ -172,6 +172,41 @@ func TestResolveArg(t *testing.T) {
 		return
 	}
 	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def:123-456}.com")
+	if resolved != "abc.123-456.com" {
+		t.Fatal(resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def:123_456}.com")
+	if resolved != "abc.123_456.com" {
+		t.Fatal(resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def:123/456}.com")
+	if resolved != `abc.123/456.com` {
+		t.Fatal(resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def:123.456}.com")
+	if resolved != `abc.123.456.com` {
+		t.Fatal(resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
+
+	resolved = ResolveArg("abc.${def}.com")
+	if resolved != `abc..com` {
+		t.Fatal(resolved)
+		return
+	}
+	Infof("resolved: %s", resolved)
 }
 
 func TestArgKeyVal(t *testing.T) {

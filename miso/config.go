@@ -18,7 +18,7 @@ import (
 
 var (
 	// regex for arg expansion
-	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.:]+}`)
+	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\/\-\_\.:]+}`)
 )
 
 type AppConfig struct {
@@ -389,6 +389,8 @@ func (a *AppConfig) ResolveArg(arg string) string {
 		defVal := s
 		if len(pair) > 1 {
 			defVal = pair[1]
+		} else {
+			defVal = ""
 		}
 		val := GetEnv(key)
 		if val == "" {

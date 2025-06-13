@@ -43,7 +43,7 @@ func NacosBootstrap(rail miso.Rail) error {
 
 	ok, err := module().init(rail)
 	if err != nil {
-		return miso.WrapErrf(err, "Failed to initialize nacos module")
+		return miso.WrapErrf(err, "failed to initialize nacos module")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
@@ -92,12 +92,10 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 
 	mergeConfig := func(w watchingConfig) error {
 		// fetch config on bootstrap
-		configStr, err := m.configClient.GetConfig(vo.ConfigParam{
-			DataId: w.DataId,
-			Group:  w.Group,
-		})
+		p := vo.ConfigParam{DataId: w.DataId, Group: w.Group}
+		configStr, err := m.configClient.GetConfig(p)
 		if err != nil {
-			return miso.WrapErr(err)
+			return miso.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
@@ -109,6 +107,9 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 
 	appDataId := miso.GetPropStr(PropNacosConfigDataId)
 	appGroup := miso.GetPropStr(PropNacosConfigGroup)
+	if util.IsBlankStr(appDataId) {
+		return false, miso.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
+	}
 	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
 
 	// merge app's nacos config first before we read `PropNacosConfigWatch`
