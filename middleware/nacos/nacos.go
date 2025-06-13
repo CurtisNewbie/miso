@@ -91,7 +91,7 @@ func (m *nacosModule) init(rail miso.Rail) error {
 			Group:  w.Group,
 		})
 		if err != nil {
-			return err
+			return miso.WrapErr(err)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)

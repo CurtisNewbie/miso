@@ -125,12 +125,6 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
-	split := strings.Repeat("-", 58)
-	rail.Infof("\n\n%s starting %s %s\n", split, appName, split)
-	rail.Infof("Miso Version: %s", version.Version)
-	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
-	rail.Infof("CPUs: %v", runtime.NumCPU())
-
 	if len(a.configLoader) > 0 {
 		rail.Infof("Running ConfigLoader")
 		start := time.Now()
@@ -140,6 +134,16 @@ func (a *MisoApp) Bootstrap(args []string) {
 		}
 		rail.Infof("ConfigLoader finished, took: %v", time.Since(start))
 	}
+
+	if err := a.configureLogging(); err != nil {
+		panic(fmt.Errorf("configure logging failed, %v", err))
+	}
+
+	split := strings.Repeat("-", 58)
+	rail.Infof("\n\n%s starting %s %s\n", split, appName, split)
+	rail.Infof("Miso Version: %s", version.Version)
+	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
+	rail.Infof("CPUs: %v", runtime.NumCPU())
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	{
@@ -214,10 +218,6 @@ func (a *MisoApp) LoadConfig(args []string) {
 
 	// default way to load configuration
 	a.Config().DefaultReadConfig(args)
-
-	if err := a.configureLogging(); err != nil {
-		panic(fmt.Errorf("configure logging failed, %v", err))
-	}
 	a.configLoaded = true
 }
 
@@ -426,6 +426,7 @@ func (a *MisoApp) configureLogging() error {
 				return fmt.Errorf("failed to register RotateLogJob, %v", err)
 			}
 		}
+		Infof("Configured Log File: %v", logFile)
 	}
 
 	SetLogOutput(loggerOut)
