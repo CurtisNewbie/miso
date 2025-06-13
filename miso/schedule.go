@@ -24,12 +24,12 @@ func init() {
 }
 
 type Job struct {
-	Name                   string           // name of the job.
-	Cron                   string           // cron expr.
-	CronWithSeconds        bool             // whether cron expr contains the second field.
-	Run                    func(Rail) error // actual job execution logic.
-	LogJobExec             bool             // should job execution be logged, error msg is always logged regardless.
-	TriggeredOnBoostrapped bool             // should job be triggered when server is fully bootstrapped
+	Name                   string                // name of the job.
+	Cron                   string                // cron expr.
+	CronWithSeconds        bool                  // whether cron expr contains the second field.
+	Run                    func(rail Rail) error // actual job execution logic.
+	LogJobExec             bool                  // should job execution be logged, error msg is always logged regardless.
+	TriggeredOnBoostrapped bool                  // should job be triggered when server is fully bootstrapped
 
 	concRunMutex *sync.Mutex
 }
