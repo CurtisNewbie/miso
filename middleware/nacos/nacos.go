@@ -37,6 +37,7 @@ func init() {
 // In most cases, this should be called by miso itself when server bootstraps.
 func NacosBootstrap(rail miso.Rail) error {
 	if !miso.GetPropBool(PropNacosEnabled) {
+		miso.Debug("nacos disabled")
 		return nil
 	}
 
@@ -45,6 +46,7 @@ func NacosBootstrap(rail miso.Rail) error {
 		return miso.WrapErrf(err, "Failed to initialize nacos module")
 	}
 	if !ok {
+		miso.Debug("nacos already initialized")
 		return nil // already initialized
 	}
 	rail.Info("Nacos Config Client Bootstrapped")
