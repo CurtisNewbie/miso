@@ -61,7 +61,7 @@ func GetDB() *gorm.DB {
 func NewConn(path string, wal bool) (*gorm.DB, error) {
 	miso.Infof("Connecting to SQLite database '%s', enable WAL: %v", path, wal)
 
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{PrepareStmt: true, CreateBatchSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SQLite, %w", err)
 	}
