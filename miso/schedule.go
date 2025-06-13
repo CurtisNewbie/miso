@@ -30,6 +30,8 @@ type Job struct {
 	Run                    func(Rail) error // actual job execution logic.
 	LogJobExec             bool             // should job execution be logged, error msg is always logged regardless.
 	TriggeredOnBoostrapped bool             // should job be triggered when server is fully bootstrapped
+
+	concRunMutex *sync.Mutex
 }
 
 // Hook triggered before job's execution.
@@ -61,7 +63,14 @@ func (m *scheduleMdoule) stop() {
 }
 
 func (m *scheduleMdoule) wrapJob(job Job) func() {
+	if job.concRunMutex == nil {
+		job.concRunMutex = &sync.Mutex{}
+	}
 	return util.PanicSafeFunc(func() {
+		if ok := job.concRunMutex.TryLock(); !ok {
+			return
+		}
+		defer job.concRunMutex.Unlock()
 
 		rail := EmptyRail()
 
