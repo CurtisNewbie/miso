@@ -430,14 +430,14 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 		if err != nil {
 			return miso.WrapErr(err)
 		}
-		if len(l.Payload) < p.Limit {
-			return nil
-		}
 		for _, l := range l.Payload {
 			stop, err := forEach(l)
 			if err != nil || stop {
 				return err
 			}
+		}
+		if len(l.Payload) < p.Limit {
+			return nil
 		}
 		p.NextPage()
 	}
