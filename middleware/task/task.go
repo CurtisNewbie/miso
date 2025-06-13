@@ -88,10 +88,10 @@ func (m *taskModule) isTaskMaster(rail miso.Rail) bool {
 	key := m.getTaskMasterKey()
 	val, e := redis.GetStr(key)
 	if e != nil {
-		rail.Errorf("check is master failed: %v", e)
+		rail.Errorf("Check is master failed: %v", e)
 		return false
 	}
-	rail.Debugf("check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, m.nodeId)
+	rail.Debugf("Check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, m.nodeId)
 	return val == m.nodeId
 }
 
@@ -199,7 +199,7 @@ func (m *taskModule) releaseMasterNodeLock() {
 		miso.Errorf("Failed to release master node lock, %v", cmd.Err())
 		return
 	}
-	miso.Debugf("Release master node lock, released? %v", cmd.Val())
+	miso.Debugf("Release master node lock, released? %v", cmd.Val() == int64(1))
 }
 
 // Stop refreshing master lock ticker
