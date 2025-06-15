@@ -222,9 +222,6 @@ func main() {
 # production mode, must be true in production.
 mode.production: false
 
-# app's name, required
-app.name: "${modName}"
-
 # http server
 server:
   enabled: false
@@ -475,7 +472,13 @@ logging:
 		}
 		writef(1, "\"github.com/curtisnewbie/miso/miso\"")
 		writef(0, ")")
+		writef(0, "")
 		writef(0, "func init() {")
+		writef(1, "")
+		writef(1, "// default name of the app")
+		writef(1, "miso.SetDefProp(miso.PropAppName, \"%v\")", modName)
+		writef(1, "")
+		writef(1, "// log app's name on startup")
 		writef(1, "miso.PreServerBootstrap(func(rail miso.Rail) error {")
 		writef(2, "rail.Infof(\"%%v version: %%v\", miso.GetPropStr(miso.PropAppName), Version)")
 		writef(2, "return nil")
@@ -496,6 +499,7 @@ logging:
 			writef(1, "static.PrepareWebStaticFs()")
 			writef(1, "")
 		}
+		writef(1, "")
 		writef(1, "// declare http endpoints, jobs/tasks, and other components here")
 		if !*DisableWebFlag {
 			writef(1, "miso.PreServerBootstrap(web.PrepareWebServer)")
@@ -503,8 +507,11 @@ logging:
 			writef(1, "miso.PreServerBootstrap()")
 		}
 
+		writef(1, "")
 		writef(1, "// do stuff right after server being fully bootstrapped")
 		writef(1, "miso.PostServerBootstrap()")
+		writef(1, "")
+		writef(1, "// boostrap server")
 		writef(1, "miso.BootstrapServer(os.Args)")
 		writef(0, "}")
 		writef(0, "")
@@ -592,11 +599,8 @@ logging:
 	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
 		panic(err)
 	}
-}
 
-func guessSchemaName(name string) string {
-	name = strings.TrimSpace(name)
-	name = strings.ReplaceAll(name, "-", "_")
-	name = strings.ToLower(name)
-	return name
+	if err := exec.Command("go", "fmt", "./...").Run(); err != nil {
+		util.Printlnf("failed to fmt source code, %v", err)
+	}
 }
