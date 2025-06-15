@@ -136,7 +136,8 @@ func (a *MisoApp) Bootstrap(args []string) {
 	}
 
 	if err := a.configureLogging(); err != nil {
-		panic(fmt.Errorf("configure logging failed, %v", err))
+		rail.Errorf("Configure logging failed, %v", err)
+		return
 	}
 
 	split := strings.Repeat("-", 58)
