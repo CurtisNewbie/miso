@@ -508,7 +508,7 @@ logging:
 		}
 
 		writef(1, "")
-		writef(1, "// do stuff right after server being fully bootstrapped")
+		writef(1, "// do stuff right after the server has been fully bootstrapped")
 		writef(1, "miso.PostServerBootstrap()")
 		writef(1, "")
 		writef(1, "// boostrap server")
