@@ -100,7 +100,7 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
 		}
-		rail.Debugf("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
+		rail.Tracef("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
 		m.configContent.Put(w.Key(), configStr)
 		return nil
 	}
@@ -159,7 +159,7 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 					m.configContent.Put(w.Key(), data)
 					m.reloadConfigs(rail)
 				} else {
-					rail.Debugf("Loading nacos config:\n%v", data)
+					rail.Tracef("Loading nacos config:\n%v", data)
 					if err := miso.LoadConfigFromStr(data, rail); err != nil {
 						rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
 					}
