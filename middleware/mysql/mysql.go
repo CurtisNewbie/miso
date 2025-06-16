@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	minimumConnParam = "parseTime=True&loc=Local"
+	minimumConnParam = "parseTime=true&loc=Local"
 )
 
 func init() {

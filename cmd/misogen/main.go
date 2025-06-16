@@ -269,7 +269,7 @@ mysql:
   database: "${dbName}"
   connection:
     - "charset=utf8mb4"
-    - "parseTime=True"
+    - "parseTime=true"
     - "loc=UTC"
     - "readTimeout=30s"
     - "writeTimeout=30s"
