@@ -1,11 +1,24 @@
 package ptr
 
 func StrVal(p *string) string {
-	return PtrVal[string](p)
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 func IntVal(p *int) int {
-	return PtrVal[int](p)
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+func FloatVal(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 func PtrVal[T any](p *T) T {
