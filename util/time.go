@@ -42,6 +42,10 @@ func Now() ETime {
 	return ToETime(time.Now())
 }
 
+func NowUTC() ETime {
+	return ToETime(time.Now().UTC())
+}
+
 func ToETime(t time.Time) ETime {
 	return ETime{t}
 }
