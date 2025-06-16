@@ -91,13 +91,14 @@ func App() *MisoApp {
 
 // only one MisoApp is supported for now.
 func newApp() *MisoApp {
-	return &MisoApp{
+	a := &MisoApp{
 		manualSigQuit: make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:  false,
 		shuttingDown:  &atomic.Bool{},
 		store:         &appStore{store: util.NewStrRWMap[any]()},
 		config:        newAppConfig(),
 	}
+	return a
 }
 
 func (a *MisoApp) Config() *AppConfig {

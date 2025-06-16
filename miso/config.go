@@ -2,6 +2,7 @@ package miso
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,7 +27,12 @@ type AppConfig struct {
 	rwmu *sync.RWMutex
 
 	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
+	// key is always the real key not the alias
 	fastBoolCache *util.StrRWMap[bool]
+
+	// aliases of keys
+	// alias -> key
+	aliases map[string]string
 }
 
 func (a *AppConfig) WriteConfigAs(filename string) (err error) {
@@ -35,6 +41,32 @@ func (a *AppConfig) WriteConfigAs(filename string) (err error) {
 		return nil
 	})
 	return
+}
+
+func (a *AppConfig) aliasLookup(k string) string {
+	newkey, exists := a.aliases[k]
+	if exists {
+		return a.aliasLookup(newkey)
+	}
+	return k
+}
+
+func (a *AppConfig) RegisterAlias(alias, key string) {
+	alias = strings.ToLower(alias)
+	key = strings.ToLower(key)
+	if alias == key {
+		return
+	}
+	if strings.Contains(alias, ".") {
+		panic(errors.New("alias should not container delimiter '.'"))
+	}
+	a._appConfigDoWithWLock(func() {
+		if a.aliasLookup(key) == alias {
+			return
+		}
+		a.vp.RegisterAlias(alias, key)
+		a.aliases[alias] = key
+	})
 }
 
 func (a *AppConfig) _appConfigDoWithWLock(f func()) {
@@ -66,7 +98,8 @@ func (a *AppConfig) SetDefProp(prop string, defVal any) {
 }
 
 func (a *AppConfig) delFastBoolCache(prop string) {
-	a.fastBoolCache.Del(strings.ToLower(prop))
+	prop = a.aliasLookup(strings.ToLower(prop))
+	a.fastBoolCache.Del(prop)
 }
 
 // Check whether the prop exists
@@ -117,7 +150,8 @@ func (a *AppConfig) GetPropAny(prop string) any {
 // Get prop as bool
 func (a *AppConfig) GetPropBool(prop string) bool {
 	return returnWithReadLock(a, func() bool {
-		v, _ := a.fastBoolCache.GetElse(strings.ToLower(prop), func(k string) bool {
+		prop = a.aliasLookup(strings.ToLower(prop))
+		v, _ := a.fastBoolCache.GetElse(prop, func(k string) bool {
 			return a.vp.GetBool(k)
 		})
 		return v
@@ -408,9 +442,19 @@ func newAppConfig() *AppConfig {
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
 		fastBoolCache: util.NewStrRWMap[bool](),
+		aliases:       map[string]string{},
 	}
 	ac.vp.SetConfigType("yml")
 	return ac
+}
+
+// Register alias.
+//
+// Only use this for backward compatibility.
+//
+// Alias should not contain any delimiter '.'.
+func RegisterAlias(alias, key string) {
+	globalConfig().RegisterAlias(alias, key)
 }
 
 // Set value for the prop

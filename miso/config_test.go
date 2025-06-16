@@ -315,3 +315,91 @@ func TestPropSlice(t *testing.T) {
 		t.Fatal("len != 3")
 	}
 }
+
+func TestAlias(t *testing.T) {
+	SetProp("v1", true)
+	RegisterAlias("v2", "v1")
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	v := GetPropBool("v2")
+	if !v {
+		t.Fatalf("'%v'", v)
+	}
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	SetProp("v1", false)
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	v = GetPropBool("v2")
+	if v {
+		t.Fatal(v)
+	}
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	SetProp("v2", true)
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	v = GetPropBool("v2")
+	if !v {
+		t.Fatal(v)
+	}
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	v = GetPropBool("v1")
+	if !v {
+		t.Fatal(v)
+	}
+	t.Logf("v1: %v, v2: %v", GetPropStr("v1"), GetPropStr("v2"))
+
+	SetDefProp("v3", "333")
+	RegisterAlias("v4", "v3")
+	s := GetPropStr("v4")
+	if s != "333" {
+		t.Fatal(s)
+	}
+	t.Logf("v3: %v, v4: %v", GetPropStr("v3"), GetPropStr("v4"))
+
+	SetProp("v4", "444")
+	s = GetPropStr("v4")
+	if s != "444" {
+		t.Fatal(s)
+	}
+	t.Logf("v3: %v, v4: %v", GetPropStr("v3"), GetPropStr("v4"))
+
+	SetProp("v3", "555")
+	s = GetPropStr("v3")
+	if s != "555" {
+		t.Fatal(s)
+	}
+	s = GetPropStr("v4")
+	if s != "555" {
+		t.Fatal(s)
+	}
+	t.Logf("v3: %v, v4: %v", GetPropStr("v3"), GetPropStr("v4"))
+
+	SetProp("level.v5", "333")
+	RegisterAlias("v6", "level.v5")
+	s = GetPropStr("v6")
+	if s != "333" {
+		t.Fatal(s)
+	}
+	t.Logf("level.v5: %v, v6: %v", GetPropStr("level.v5"), GetPropStr("v6"))
+
+	SetProp("v6", "444")
+	s = GetPropStr("v6")
+	if s != "444" {
+		t.Fatal(s)
+	}
+	t.Logf("level.v5: %v, v6: %v", GetPropStr("level.v5"), GetPropStr("v6"))
+
+	SetProp("level.v5", "555")
+	s = GetPropStr("level.v5")
+	if s != "555" {
+		t.Fatal(s)
+	}
+	s = GetPropStr("v6")
+	if s != "555" {
+		t.Fatal(s)
+	}
+	t.Logf("level.v5: %v, v6: %v", GetPropStr("level.v5"), GetPropStr("v6"))
+}
