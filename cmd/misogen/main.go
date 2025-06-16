@@ -274,7 +274,7 @@ mysql:
     - "readTimeout=30s"
     - "writeTimeout=30s"
     - "timeout=5s"
-    - "collation_connection=utf8mb4_general_ci"
+    - "collation=utf8mb4_general_ci"
 
 # sqlite configuration
 sqlite:
