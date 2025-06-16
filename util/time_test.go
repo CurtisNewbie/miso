@@ -100,3 +100,12 @@ func TestEndOfDay(t *testing.T) {
 	t.Logf("%v", et)
 	t.Logf("%v", et.EndOfDay())
 }
+
+func TestTimeGoStringer(t *testing.T) {
+	type dummy struct {
+		Time ETime
+	}
+
+	d := dummy{Time: Now()}
+	t.Logf("%#v", d)
+}

@@ -46,6 +46,10 @@ func ToETime(t time.Time) ETime {
 	return ETime{t}
 }
 
+func (t ETime) GoString() string {
+	return t.String()
+}
+
 func (t ETime) EndOfDay() ETime {
 	yyyy, mm, dd := t.Date()
 	tt := time.Date(yyyy, mm, dd, 23, 59, 59, 999_999999, t.Location())
@@ -117,7 +121,7 @@ func (t ETime) Value() (driver.Value, error) {
 }
 
 func (t ETime) String() string {
-	return t.FormatStdMilli()
+	return t.ToTime().Format("2006-01-02 15:04:05.999999 (MST)")
 }
 
 // Implements encoding/json Marshaler
