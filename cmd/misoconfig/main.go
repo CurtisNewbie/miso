@@ -26,6 +26,7 @@ const (
 
 	tagSection = "section"
 	tagProp    = "prop"
+	tagAlias   = "alias"
 )
 
 var (
@@ -61,6 +62,10 @@ In prop.go:
 
 	  // misoconfig-prop: enable http server | true
 	  PropServerEnabled = "server.enabled"
+
+	  // misoconfig-prop: my prop
+	  // misoconfig-alias: old-prop
+	  PropDeprecated = "new-prop"
 
 	  // misoconfig-default-start
 	  // misoconfig-default-end
@@ -243,6 +248,8 @@ type ConfigDecl struct {
 	ConstName    string
 	Description  string
 	DefaultValue string
+	Alias        string
+	AliasSince   string
 }
 
 func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs map[string][]ConfigDecl) (newSection string) {
@@ -282,6 +289,11 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 				p, _ := t.BodyKVTok("|")
 				cd.Description = p.K
 				cd.DefaultValue = p.V
+			case tagAlias:
+				found = true
+				p, _ := t.BodyKVTok("|")
+				cd.Alias = p.K
+				cd.AliasSince = p.V
 			}
 		}
 
@@ -349,7 +361,19 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		maxNameLen := len("property")
 		maxDescLen := len("description")
 		maxValLen := len("default value")
-		for _, c := range sec.Configs {
+
+		configs := util.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
+		configs = util.MapTo(configs, func(c ConfigDecl) ConfigDecl {
+			if c.Alias != "" {
+				if c.AliasSince != "" {
+					c.Description += fmt.Sprintf(" (was named '%v' before '%v')", c.Alias, c.AliasSince)
+				} else {
+					c.Description += fmt.Sprintf(" (was named '%v')", c.Alias)
+				}
+			}
+			return c
+		})
+		for _, c := range configs {
 			if len(c.Name) > maxNameLen {
 				maxNameLen = len(c.Name)
 			}
@@ -372,7 +396,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			"Description":  util.PadToken(-maxDescLen, "---", "-"),
 			"DefaultValue": util.PadToken(-maxValLen, "---", "-"),
 		}))
-		for _, c := range sec.Configs {
+		for _, c := range configs {
 			c.Name = util.PadSpace(-maxNameLen, c.Name)
 			c.Description = util.PadSpace(-maxDescLen, c.Description)
 			c.DefaultValue = util.PadSpace(-maxValLen, c.DefaultValue)
@@ -429,8 +453,9 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		defer f.Close()
 
 		n := 0
+		skipConfig := func(c ConfigDecl) bool { return c.DefaultValue == "" && c.Alias == "" }
 		for _, c := range src {
-			if c.DefaultValue == "" {
+			if skipConfig(c) {
 				continue
 			}
 			n++
@@ -441,30 +466,49 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 
 		b := strings.Builder{}
 		b.WriteString("func init() {")
+
 		for _, c := range src {
-			if c.DefaultValue == "" {
+			if skipConfig(c) {
 				continue
 			}
-			dv := c.DefaultValue
-			dvLower := strings.ToLower(dv)
-			if dvLower == "true" || dvLower == "false" || digits.MatchString(dv) {
-				// bool or int
-			} else if codeBlock.MatchString(dv) {
-				// code block
-				vv := codeBlock.FindAllStringSubmatch(dv, 1)[0][1]
-				dv = vv
-			} else {
-				rdv := []rune(dv)
-				if len(rdv) < 1 || rdv[0] != '"' || rdv[len(rdv)-1] != '"' {
-					dv = "\"" + dv + "\""
-				}
+
+			var pkgPrefix = ""
+			if pkg != "miso" {
+				pkgPrefix = "miso."
 			}
-			if pkg == "miso" {
-				b.WriteString("\n\t" + fmt.Sprintf("SetDefProp(%v, %v)", c.ConstName, dv))
-			} else {
-				b.WriteString("\n\t" + fmt.Sprintf("miso.SetDefProp(%v, %v)", c.ConstName, dv))
+			if c.DefaultValue != "" {
+				dv := c.DefaultValue
+				dvLower := strings.ToLower(dv)
+				if dvLower == "true" || dvLower == "false" || digits.MatchString(dv) {
+					// bool or int
+				} else if codeBlock.MatchString(dv) {
+					// code block
+					vv := codeBlock.FindAllStringSubmatch(dv, 1)[0][1]
+					dv = vv
+				} else {
+					rdv := []rune(dv)
+					if len(rdv) < 1 || rdv[0] != '"' || rdv[len(rdv)-1] != '"' {
+						dv = "\"" + dv + "\""
+					}
+				}
+				b.WriteString("\n\t" + fmt.Sprintf("%vSetDefProp(%v, %v)", pkgPrefix, c.ConstName, dv))
+			}
+
+		}
+
+		for _, c := range src {
+			if skipConfig(c) {
+				continue
+			}
+			var pkgPrefix = ""
+			if pkg != "miso" {
+				pkgPrefix = "miso."
+			}
+			if c.Alias != "" {
+				b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
 			}
 		}
+
 		b.WriteString("\n}")
 
 		buf, err := io.ReadAll(f)

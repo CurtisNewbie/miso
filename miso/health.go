@@ -88,9 +88,5 @@ func IsHealthcheckPass(rail Rail) bool {
 }
 
 func healthCheckUrl() string {
-	consulUrl := GetPropStr(PropConsulHealthCheckUrl)
-	if consulUrl == "" || consulUrl == "/health" {
-		return GetPropStr(PropHealthCheckUrl)
-	}
-	return consulUrl
+	return GetPropStr(PropHealthCheckUrl)
 }

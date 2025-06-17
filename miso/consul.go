@@ -284,8 +284,8 @@ func RegisterConsulService() error {
 	registerName := GetPropStr(PropConsuleRegisterName)
 	registerAddress := GetPropStr(PropConsulRegisterAddress)
 	healthCheckUrl := healthCheckUrl()
-	healthCheckInterval := GetPropStr(PropConsulHealthCheckInterval)
-	healthCheckTimeout := GetPropStr(PropConsulHealthcheckTimeout)
+	healthCheckInterval := GetPropStr(PropHealthCheckInterval)
+	healthCheckTimeout := GetPropStr(PropHealthcheckTimeout)
 	healthCheckDeregAfter := GetPropStr(PropConsulHealthCheckFailedDeregAfter)
 
 	// registerAddress not specified, resolve the ip address used for the server

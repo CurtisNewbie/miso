@@ -26,7 +26,16 @@ const (
 	PropServerPort = "server.port"
 
 	// misoconfig-prop: health check url | /health
+	// misoconfig-alias: consul.healthCheckUrl | v0.2.0
 	PropHealthCheckUrl = "server.health-check-url"
+
+	// misoconfig-prop: health check interval | 5s
+	// misoconfig-alias: consul.healthCheckInterval | v0.2.0
+	PropHealthCheckInterval = "server.health-check-interval"
+
+	// misoconfig-prop: health check timeout | 3s
+	// misoconfig-alias: consul.healthCheckTimeout | v0.2.0
+	PropHealthcheckTimeout = "server.health-check-timeout"
 
 	// misoconfig-prop: log all http server routes in INFO level | false
 	PropServerLogRoutes = "server.log-routes"
@@ -35,7 +44,8 @@ const (
 	PropServerAuthBearer = "server.auth.bearer"
 
 	// misoconfig-prop: time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30
-	PropServerGracefulShutdownTimeSec = "server.gracefulShutdownTimeSec"
+	// misoconfig-alias: server.gracefulShutdownTimeSec | v0.2.0
+	PropServerGracefulShutdownTimeSec = "server.graceful-shutdown-time-sec"
 
 	// misoconfig-prop: logs time duration for each inbound http request | false
 	PropServerPerfEnabled = "server.perf.enabled"
@@ -56,34 +66,44 @@ const (
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
 	// misoconfig-prop: generate api doc | true
-	PropServerGenerateEndpointDocEnabled = "server.generate-endpoint-doc.enabled"
+	// misoconfig-alias: server.generate-endpoint-doc.enabled | v0.2.0
+	PropServerGenerateEndpointDocEnabled = "server.api-doc.enabled"
 
 	// misoconfig-prop: build webpage for the generated api doc | true
-	PropServerGenerateEndpointDocApiEnabled = "server.generate-endpoint-doc.web.enabled"
+	// misoconfig-alias: server.generate-endpoint-doc.web.enabled | v0.2.0
+	PropServerGenerateEndpointDocApiEnabled = "server.api-doc.web.enabled"
 
 	// misoconfig-prop: generate markdown api doc to the specified file
-	PropServerGenerateEndpointDocFile = "server.generate-endpoint-doc.file"
+	// misoconfig-alias: server.generate-endpoint-doc.file | v0.2.0
+	PropServerGenerateEndpointDocFile = "server.api-doc.file"
 
-	// misoconfig-prop: whether the markdown api doc should exclude miso.TClient demo | false
-	PropServerGenerateEndpointDocFileExclTClientDemo = "server.generate-endpoint-doc.file-excl-tclient-demo"
+	// misoconfig-prop: the generated markdown api doc should exclude miso.TClient demo | false
+	// misoconfig-alias: server.generate-endpoint-doc.file-excl-tclient-demo | v0.2.0
+	PropServerGenerateEndpointDocFileExclTClientDemo = "server.api-doc.file-excl-tclient-demo"
 
-	// misoconfig-prop: whether the markdown api doc should exclude Angular HttpClient demo | false
-	PropServerGenerateEndpointDocFileExclNgClientDemo = "server.generate-endpoint-doc.file-excl-ng-client-demo"
+	// misoconfig-prop: the generated markdown api doc should exclude Angular HttpClient demo | false
+	// misoconfig-alias: server.generate-endpoint-doc.file-excl-ng-client-demo | v0.2.0
+	PropServerGenerateEndpointDocFileExclNgClientDemo = "server.api-doc.file-excl-ngclient-demo"
 
-	// misoconfig-prop: whether the markdown api doc should exclude openapi json for each endpoint | true
-	PropServerGenerateEndpointDocFileExclOpenApi = "server.generate-endpoint-doc.file-excl-openapi-spec"
+	// misoconfig-prop: the generated markdown api doc should exclude openapi json for each endpoint | true
+	// misoconfig-alias: server.generate-endpoint-doc.file-excl-openapi-spec | v0.2.0
+	PropServerGenerateEndpointDocFileExclOpenApi = "server.api-doc.file-excl-openapi-spec"
 
-	// misoconfig-prop: whether the generated endpoint documentation should include app name as the path prefix | true
-	PropServerGenerateEndpointDocInclPrefix = "server.generate-endpoint-doc.path-prefix-app"
+	// misoconfig-prop: the generated endpoint documentation should include app name as the path prefix | true
+	// misoconfig-alias: server.generate-endpoint-doc.path-prefix-app | v0.2.0
+	PropServerGenerateEndpointDocInclPrefix = "server.api-doc.path-prefix-app"
 
 	// misoconfig-prop: server address specified in openapi json doc |
-	PropServerGenerateEndpointDocOpenApiSpecServer = "server.generate-endpoint-doc.openapi-spec.server"
+	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.server | v0.2.0
+	PropServerGenerateEndpointDocOpenApiSpecServer = "server.api-doc.openapi-spec.server"
 
 	// misoconfig-prop: path to generated openapi json for all endpoints |
-	PropServerGenerateEndpointDocOpenApiSpecFile = "server.generate-endpoint-doc.openapi-spec.file"
+	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.file | v0.2.0
+	PropServerGenerateEndpointDocOpenApiSpecFile = "server.api-doc.openapi-spec.file"
 
 	// misoconfig-prop: path patterns for endpoints in openapi json (`slice of string`) |
-	PropServerGenerateEndpointDocOpenApiSpecPathPatterns = "server.generate-endpoint-doc.openapi-spec.path-patterns"
+	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.path-patterns | v0.2.0
+	PropServerGenerateEndpointDocOpenApiSpecPathPatterns = "server.api-doc.openapi-spec.path-patterns"
 
 	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
@@ -101,36 +121,32 @@ const (
 	PropConsulEnabled = "consul.enabled"
 
 	// misoconfig-prop: registered service name | `"${app.name}"`
-	PropConsuleRegisterName = "consul.registerName"
+	// misoconfig-alias: consul.registerName | v0.2.0
+	PropConsuleRegisterName = "consul.register-name"
 
 	// misoconfig-prop: registered service address | `"${server.host}"`
-	PropConsulRegisterAddress = "consul.registerAddress"
+	// misoconfig-alias: consul.registerAddress | v0.2.0
+	PropConsulRegisterAddress = "consul.register-address"
 
 	// misoconfig-prop: consul server address | localhost:8500
-	PropConsulAddress = "consul.consulAddress"
-
-	// deprecated: changed to "server.health-check-url"
-	//
-	// misoconfig-prop: health check url. (deprecated since v0.1.23, use `server.health-check-url` instead) |
-	PropConsulHealthCheckUrl = "consul.healthCheckUrl"
-
-	// misoconfig-prop: health check interval | 5s
-	PropConsulHealthCheckInterval = "consul.healthCheckInterval"
-
-	// misoconfig-prop: health check timeout | 3s
-	PropConsulHealthcheckTimeout = "consul.healthCheckTimeout"
+	// misoconfig-alias: consul.consulAddress | v0.2.0
+	PropConsulAddress = "consul.consul-address"
 
 	// misoconfig-prop: for how long the current instance is deregistered after first health check failure | 30m
-	PropConsulHealthCheckFailedDeregAfter = "consul.healthCheckFailedDeregisterAfter"
+	// misoconfig-alias: consul.healthCheckFailedDeregisterAfter | v0.2.0
+	PropConsulHealthCheckFailedDeregAfter = "consul.health-check-failed-deregister-time"
 
 	// misoconfig-prop: fetch server list from Consul in ever N seconds | 30
-	PropConsulFetchServerInterval = "consul.fetchServerInterval"
+	// misoconfig-alias: consul.fetchServerInterval | v0.2.0
+	PropConsulFetchServerInterval = "consul.fetch-server-interval"
 
 	// misoconfig-prop: enable endpoint for manual Consul service deregistration | false
-	PropConsulEnableDeregisterUrl = "consul.enableDeregisterUrl"
+	// misoconfig-alias: consul.enableDeregisterUrl | v0.2.0
+	PropConsulEnableDeregisterUrl = "consul.enable-deregister-url"
 
 	// misoconfig-prop: endpoint url for manual Consul service deregistration | /consul/deregister
-	PropConsulDeregisterUrl = "consul.deregisterUrl"
+	// misoconfig-alias: consul.deregisterUrl | v0.2.0
+	PropConsulDeregisterUrl = "consul.deregister-url"
 
 	// misoconfig-prop: instance metadata (`map[string]string`)
 	PropConsulMetadata = "consul.metadata"
@@ -204,8 +220,6 @@ func init() {
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
 	SetDefProp(PropConsulRegisterAddress, "${server.host}")
 	SetDefProp(PropConsulAddress, "localhost:8500")
-	SetDefProp(PropConsulHealthCheckInterval, "5s")
-	SetDefProp(PropConsulHealthcheckTimeout, "3s")
 	SetDefProp(PropConsulHealthCheckFailedDeregAfter, "30m")
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
@@ -225,6 +239,8 @@ func init() {
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
 	SetDefProp(PropHealthCheckUrl, "/health")
+	SetDefProp(PropHealthCheckInterval, "5s")
+	SetDefProp(PropHealthcheckTimeout, "3s")
 	SetDefProp(PropServerLogRoutes, false)
 	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
 	SetDefProp(PropServerPerfEnabled, false)
@@ -240,6 +256,27 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
 	SetDefProp(PropServerGinValidationDisabled, true)
+	RegisterAlias(PropConsuleRegisterName, "consul.registerName")
+	RegisterAlias(PropConsulRegisterAddress, "consul.registerAddress")
+	RegisterAlias(PropConsulAddress, "consul.consulAddress")
+	RegisterAlias(PropConsulHealthCheckFailedDeregAfter, "consul.healthCheckFailedDeregisterAfter")
+	RegisterAlias(PropConsulFetchServerInterval, "consul.fetchServerInterval")
+	RegisterAlias(PropConsulEnableDeregisterUrl, "consul.enableDeregisterUrl")
+	RegisterAlias(PropConsulDeregisterUrl, "consul.deregisterUrl")
+	RegisterAlias(PropHealthCheckUrl, "consul.healthCheckUrl")
+	RegisterAlias(PropHealthCheckInterval, "consul.healthCheckInterval")
+	RegisterAlias(PropHealthcheckTimeout, "consul.healthCheckTimeout")
+	RegisterAlias(PropServerGracefulShutdownTimeSec, "server.gracefulShutdownTimeSec")
+	RegisterAlias(PropServerGenerateEndpointDocEnabled, "server.generate-endpoint-doc.enabled")
+	RegisterAlias(PropServerGenerateEndpointDocApiEnabled, "server.generate-endpoint-doc.web.enabled")
+	RegisterAlias(PropServerGenerateEndpointDocFile, "server.generate-endpoint-doc.file")
+	RegisterAlias(PropServerGenerateEndpointDocFileExclTClientDemo, "server.generate-endpoint-doc.file-excl-tclient-demo")
+	RegisterAlias(PropServerGenerateEndpointDocFileExclNgClientDemo, "server.generate-endpoint-doc.file-excl-ng-client-demo")
+	RegisterAlias(PropServerGenerateEndpointDocFileExclOpenApi, "server.generate-endpoint-doc.file-excl-openapi-spec")
+	RegisterAlias(PropServerGenerateEndpointDocInclPrefix, "server.generate-endpoint-doc.path-prefix-app")
+	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecServer, "server.generate-endpoint-doc.openapi-spec.server")
+	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecFile, "server.generate-endpoint-doc.openapi-spec.file")
+	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecPathPatterns, "server.generate-endpoint-doc.openapi-spec.path-patterns")
 }
 
 // misoconfig-default-end

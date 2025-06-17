@@ -2,7 +2,6 @@ package miso
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -56,9 +55,6 @@ func (a *AppConfig) RegisterAlias(alias, key string) {
 	key = strings.ToLower(key)
 	if alias == key {
 		return
-	}
-	if strings.Contains(alias, ".") {
-		panic(errors.New("alias should not container delimiter '.'"))
 	}
 	a._appConfigDoWithWLock(func() {
 		if a.aliasLookup(key) == alias {
@@ -452,7 +448,9 @@ func newAppConfig() *AppConfig {
 //
 // Only use this for backward compatibility.
 //
-// Alias should not contain any delimiter '.'.
+// E.g.,
+//
+//	miso.RegisterAlias(newKey, oldkey)
 func RegisterAlias(alias, key string) {
 	globalConfig().RegisterAlias(alias, key)
 }
