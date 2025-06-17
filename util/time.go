@@ -186,31 +186,35 @@ func AddETimeParseFormat(fmt ...string) {
 
 // Implements sql.Scanner in database/sql.
 func (et *ETime) Scan(value interface{}) error {
+	return et.ScanLoc(value, time.Local)
+}
+
+func (et *ETime) ScanLoc(value interface{}, loc *time.Location) error {
 	if value == nil {
 		return nil
 	}
 
 	switch v := value.(type) {
 	case time.Time:
-		*et = ToETime(v)
+		*et = ToETime(v.In(loc))
 	case []byte:
 		sv := string(v)
 		var t time.Time
-		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, sv, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, sv, loc)
 		if err != nil {
 			return err
 		}
 		*et = ToETime(t)
 	case string:
 		var t time.Time
-		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, v, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, v, loc)
 		if err != nil {
 			return err
 		}
 		*et = ToETime(t)
 	case *string:
 		var t time.Time
-		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, *v, time.Local)
+		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, *v, loc)
 		if err != nil {
 			return err
 		}
@@ -218,9 +222,9 @@ func (et *ETime) Scan(value interface{}) error {
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
 		if val > unixSecPersudoMax {
-			*et = ToETime(time.UnixMilli(val)) // in milli-sec
+			*et = ToETime(time.UnixMilli(val).In(loc)) // in milli-sec
 		} else {
-			*et = ToETime(time.Unix(val, 0)) // in sec
+			*et = ToETime(time.Unix(val, 0).In(loc)) // in sec
 		}
 	default:
 		err := fmt.Errorf("invalid field type '%v' for ETime, unable to convert, %#v", reflect.TypeOf(value), v)
@@ -271,5 +275,16 @@ func ParseETime(v any) (ETime, error) {
 func MayParseETime(v any) ETime {
 	var t ETime
 	t.Scan(v)
+	return t
+}
+
+func ParseETimeLoc(v any, loc *time.Location) (ETime, error) {
+	var t ETime
+	return t, t.ScanLoc(v, loc)
+}
+
+func MayParseETimeLoc(v any, loc *time.Location) ETime {
+	var t ETime
+	t.ScanLoc(v, loc)
 	return t
 }
