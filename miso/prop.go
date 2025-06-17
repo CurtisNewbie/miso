@@ -29,11 +29,11 @@ const (
 	// misoconfig-alias: consul.healthCheckUrl | v0.2.0
 	PropHealthCheckUrl = "server.health-check-url"
 
-	// misoconfig-prop: health check interval | 5s
+	// misoconfig-prop: health check interval, it's only used for service discovery, e.g., Consul | 5s
 	// misoconfig-alias: consul.healthCheckInterval | v0.2.0
 	PropHealthCheckInterval = "server.health-check-interval"
 
-	// misoconfig-prop: health check timeout | 3s
+	// misoconfig-prop: health check timeout, it's only used for service discovery, e.g., Consul | 3s
 	// misoconfig-alias: consul.healthCheckTimeout | v0.2.0
 	PropHealthcheckTimeout = "server.health-check-timeout"
 

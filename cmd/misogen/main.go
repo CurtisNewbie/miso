@@ -230,15 +230,15 @@ server:
   request-log:
     enabled: false
   health-check-url: "/health"
-  log-routes: false # log all routes in INFO level
-  gracefulShutdownTimeSec: 30
+  log-routes: false
+  graceful-shutdown-time-sec: 30
   auth:
     bearer: "" # bearer token for all api (including pprof)
   pprof:
     enabled: false
     auth:
       bearer: "" # bearer token for pprof api
-  generate-endpoint-doc:
+  api-doc:
     enabled: true
     file: "" # generated api doc file
     web:
@@ -248,7 +248,7 @@ server:
 # consul for service discovery
 consul:
   enabled: false
-  consulAddress: "localhost:8500"
+  consul-address: "localhost:8500"
 
 # redis connection
 redis:
