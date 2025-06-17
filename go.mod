@@ -15,6 +15,7 @@ require (
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/consul/api v1.15.3
+	github.com/jinzhu/copier v0.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/nacos-group/nacos-sdk-go v1.1.5
 	github.com/natefinch/lumberjack v2.0.0+incompatible
