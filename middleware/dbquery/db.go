@@ -25,3 +25,10 @@ func ImplGetPrimaryDBFunc(impl func() *gorm.DB) (implSet bool) {
 	})
 	return set
 }
+
+type GormWriter struct {
+}
+
+func (g GormWriter) Printf(f string, args ...interface{}) {
+	miso.Infof(f, args...)
+}

@@ -3,12 +3,14 @@ package sqlite
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func init() {
@@ -61,7 +63,11 @@ func GetDB() *gorm.DB {
 func NewConn(path string, wal bool) (*gorm.DB, error) {
 	miso.Infof("Connecting to SQLite database '%s', enable WAL: %v", path, wal)
 
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{PrepareStmt: true, CreateBatchSize: 100})
+	cfg := &gorm.Config{
+		PrepareStmt: true, CreateBatchSize: 100,
+		Logger: logger.New(dbquery.GormWriter{}, logger.Config{SlowThreshold: 200 * time.Millisecond, LogLevel: logger.Warn}),
+	}
+	db, err := gorm.Open(sqlite.Open(path), cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SQLite, %w", err)
 	}

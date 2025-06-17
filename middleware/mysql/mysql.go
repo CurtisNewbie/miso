@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -176,7 +177,11 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s%s", p.User, p.Password, p.Host, p.Port, p.Schema, p.ConnParam)
 	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s'", p.Host, p.Port, p.Schema, p.ConnParam)
 
-	conn, err := gorm.Open(mysql.Open(dsn), &gorm.Config{PrepareStmt: true, CreateBatchSize: 100})
+	cfg := &gorm.Config{
+		PrepareStmt: true, CreateBatchSize: 100,
+		Logger: logger.New(dbquery.GormWriter{}, logger.Config{SlowThreshold: 500 * time.Millisecond, LogLevel: logger.Warn}),
+	}
+	conn, err := gorm.Open(mysql.Open(dsn), cfg)
 	if err != nil {
 		rail.Infof("Failed to connect to MySQL, err: %v", err)
 		return nil, err
