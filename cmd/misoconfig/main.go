@@ -366,9 +366,9 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		configs = util.MapTo(configs, func(c ConfigDecl) ConfigDecl {
 			if c.Alias != "" {
 				if c.AliasSince != "" {
-					c.Description += fmt.Sprintf(" (was named '%v' before `%v`)", c.Alias, c.AliasSince)
+					c.Description += fmt.Sprintf(" (was named `%v` before `%v`)", c.Alias, c.AliasSince)
 				} else {
-					c.Description += fmt.Sprintf(" (was named '%v')", c.Alias)
+					c.Description += fmt.Sprintf(" (was named `%v`)", c.Alias)
 				}
 			}
 			return c
