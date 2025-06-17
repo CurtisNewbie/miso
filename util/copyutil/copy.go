@@ -1,4 +1,4 @@
-package copy
+package copyutil
 
 import (
 	"github.com/curtisnewbie/miso/miso"
