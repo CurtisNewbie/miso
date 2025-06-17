@@ -228,9 +228,18 @@ func (tr *TResponse) Require2xx() error {
 		if err == nil {
 			body = util.UnsafeByt2Str(byt)
 		}
-		return NewErrf("2xx status check failed, status code: %v, body: %v", tr.StatusCode, body)
+		return WrapErr(HttpError{StatusCode: tr.StatusCode, Body: body})
 	}
 	return nil
+}
+
+type HttpError struct {
+	StatusCode int
+	Body       string
+}
+
+func (he HttpError) Error() string {
+	return fmt.Sprintf("http request failed, status: %v, body: %v", he.StatusCode, he.Body)
 }
 
 // Helper type for sending HTTP requests
