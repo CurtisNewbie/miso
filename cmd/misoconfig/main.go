@@ -467,6 +467,21 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		b := strings.Builder{}
 		b.WriteString("func init() {")
 
+		// register alias before SetDefProp()
+		for _, c := range src {
+			if skipConfig(c) {
+				continue
+			}
+			var pkgPrefix = ""
+			if pkg != "miso" {
+				pkgPrefix = "miso."
+			}
+			if c.Alias != "" {
+				b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
+			}
+		}
+
+		// SetDefProp(...)
 		for _, c := range src {
 			if skipConfig(c) {
 				continue
@@ -494,19 +509,6 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 				b.WriteString("\n\t" + fmt.Sprintf("%vSetDefProp(%v, %v)", pkgPrefix, c.ConstName, dv))
 			}
 
-		}
-
-		for _, c := range src {
-			if skipConfig(c) {
-				continue
-			}
-			var pkgPrefix = ""
-			if pkg != "miso" {
-				pkgPrefix = "miso."
-			}
-			if c.Alias != "" {
-				b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
-			}
 		}
 
 		b.WriteString("\n}")
