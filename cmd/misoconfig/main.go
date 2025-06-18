@@ -363,16 +363,16 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		maxValLen := len("default value")
 
 		configs := util.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
-		configs = util.MapTo(configs, func(c ConfigDecl) ConfigDecl {
-			if c.Alias != "" {
-				if c.AliasSince != "" {
-					c.Description += fmt.Sprintf(" (was named `%v` before `%v`)", c.Alias, c.AliasSince)
-				} else {
-					c.Description += fmt.Sprintf(" (was named `%v`)", c.Alias)
-				}
-			}
-			return c
-		})
+		// configs = util.MapTo(configs, func(c ConfigDecl) ConfigDecl {
+		// 	if c.Alias != "" {
+		// 		if c.AliasSince != "" {
+		// 			c.Description += fmt.Sprintf(" (was named `%v` before `%v`)", c.Alias, c.AliasSince)
+		// 		} else {
+		// 			c.Description += fmt.Sprintf(" (was named `%v`)", c.Alias)
+		// 		}
+		// 	}
+		// 	return c
+		// })
 		for _, c := range configs {
 			if len(c.Name) > maxNameLen {
 				maxNameLen = len(c.Name)
