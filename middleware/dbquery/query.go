@@ -42,6 +42,37 @@ func (q *Query) Select(cols string, args ...any) *Query {
 	return q
 }
 
+func (q *Query) SelectCols(v any) *Query {
+	if v == nil {
+		return q
+	}
+
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return q
+	}
+	if rv.NumField() < 1 {
+		return q
+	}
+
+	rt := rv.Type()
+	colSet := util.NewSet[string]()
+	for i := range rv.NumField() {
+		ft := rt.Field(i)
+		fname := q.ColumnName(ft.Name)
+		colSet.Add(fname)
+	}
+
+	return q.Select(strings.Join(colSet.CopyKeys(), ","))
+}
+
+func (q *Query) ColumnName(s string) string {
+	return q.DB().NamingStrategy.ColumnName("", s)
+}
+
 func (q *Query) Where(query string, args ...any) *Query {
 	q.tx = q.tx.Where(query, args...)
 	return q
@@ -335,12 +366,11 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 	for _, c := range cols {
 		colSet.AddAll(strings.Split(c, ","))
 	}
-	colName := func(s string) string { return q.DB().NamingStrategy.ColumnName("", s) }
 
 	rt := rv.Type()
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
-		fname := colName(ft.Name)
+		fname := q.ColumnName(ft.Name)
 		if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
 			continue
 		}
