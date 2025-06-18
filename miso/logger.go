@@ -407,16 +407,34 @@ func unsafeGetShortFnName(fn string) string {
 	if fn == "" {
 		return fn
 	}
+
+	trimLengthyName := func(fnb []byte) string {
+		const maxDotCnt = 2
+		if len(fnb) > fnWidth {
+			dcnt := 0
+			for i := len(fnb) - 1; i >= 0; i-- {
+				ib := fnb[i]
+				if ib == '.' {
+					dcnt += 1
+					if dcnt > maxDotCnt {
+						return util.UnsafeByt2Str(fnb[i+1:])
+					}
+				}
+			}
+		}
+		return util.UnsafeByt2Str(fnb)
+	}
+
 	fnb := util.UnsafeStr2Byt(fn)
 	for i := len(fnb) - 1; i >= 0; i-- {
 		ib := fnb[i]
 		if ib == '/' {
 			if i+1 < len(fnb) {
-				return util.UnsafeByt2Str(fnb[i+1:])
+				return trimLengthyName(fnb[i+1:])
 			}
-			return util.UnsafeByt2Str(fnb[i:])
+			return trimLengthyName(fnb[i:])
 		} else if ib == '(' {
-			return util.UnsafeByt2Str(fnb[i:])
+			return trimLengthyName(fnb[i:])
 		}
 	}
 	return fn

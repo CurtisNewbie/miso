@@ -44,6 +44,22 @@ func TestUnsafeGetShortFnName(t *testing.T) {
 	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc"); v != "(*abc).shortFunc" {
 		t.Fatal(v)
 	}
+
+	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
+		t.Fatal(v)
+	}
+
+	if v := unsafeGetShortFnName("gggg/vv漢字vv/(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
+		t.Fatal(v)
+	}
+
+	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.func2.func"); v != "(*abc).shortFunc.func2.func" {
+		t.Fatal(v)
+	}
+
+	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.funcA.funcB.do"); v != "funcA.funcB.do" {
+		t.Fatal(v)
+	}
 }
 
 func BenchmarkUnsafeGetShortFnName(b *testing.B) {
