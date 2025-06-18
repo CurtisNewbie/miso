@@ -679,11 +679,14 @@ func ArgKeyVal(args []string) map[string][]string {
 		val := strings.TrimSpace(s[eq+1:])
 		doAppend(key, val)
 
-		key2 := argKeyValRegex.ReplaceAllLiteralString(key, ".")
-		if key2 == key {
-			continue
+		// e.g., 'miso_nacos_server_address' becomes 'nacos.server.address'
+		if key2, ok := util.CutPrefixIgnoreCase(key, "miso_"); ok {
+			key2 = argKeyValRegex.ReplaceAllLiteralString(key2, ".")
+			if key2 == key {
+				continue
+			}
+			doAppend(key2, val)
 		}
-		doAppend(key2, val)
 	}
 	return m
 }
