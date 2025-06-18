@@ -350,10 +350,10 @@ func addRoutesRegistar(reg routesRegistar) {
 }
 
 // Register GIN route for consul healthcheck
-func registerRouteForConsulHealthcheck(router *gin.Engine) {
+func registerRouteForConsulHealthcheck() {
 	url := healthCheckUrl()
 	if !util.IsBlankStr(url) {
-		router.GET(url, DefaultHealthCheck)
+		HttpGet(url, RawHandler(DefaultHealthCheckInbound))
 	}
 }
 
@@ -754,7 +754,7 @@ func webServerBootstrap(rail Rail) error {
 
 	// register consul health check
 	if !defaultHealthCheckHandlerDisabled {
-		registerRouteForConsulHealthcheck(engine)
+		registerRouteForConsulHealthcheck()
 	}
 
 	if err := serveApiDocTmpl(rail); err != nil {
@@ -1114,6 +1114,14 @@ func (i *Inbound) WriteJson(v any) {
 	i.SetHeader("Content-Type", applicationJson)
 	w, _ := i.Unwrap()
 	if err := json.EncodeJson(w, v); err != nil {
+		panic(err)
+	}
+}
+
+func (i *Inbound) WriteString(v string) {
+	i.SetHeader("Content-Type", textPlain)
+	w, _ := i.Unwrap()
+	if _, err := w.Write([]byte(v)); err != nil {
 		panic(err)
 	}
 }

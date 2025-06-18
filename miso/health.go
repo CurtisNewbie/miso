@@ -57,7 +57,7 @@ func CheckHealth(rail Rail) []HealthStatus {
 	return hs
 }
 
-// Create a default health check endpoint that simply doesn't nothing except returing 200
+// Create a default health check endpoint that simply does nothing except returing 200
 func DefaultHealthCheck(ctx *gin.Context) {
 	rail := EmptyRail()
 	hs := CheckHealth(rail)
@@ -71,6 +71,24 @@ func DefaultHealthCheck(ctx *gin.Context) {
 	}
 	rail.Debugf("Service healthcheck pass")
 	ctx.String(http.StatusOK, ServiceStatusUp)
+}
+
+// Create a default health check endpoint that simply does nothing except returing 200
+func DefaultHealthCheckInbound(inb *Inbound) {
+	rail := EmptyRail()
+	hs := CheckHealth(rail)
+	for i := range hs {
+		s := hs[i]
+		if !s.Healthy {
+			rail.Warnf("Component %s is down, healthcheck failed", s.Name)
+			inb.Status(http.StatusServiceUnavailable)
+			inb.WriteString(ServiceStatusDown)
+			return
+		}
+	}
+	rail.Debugf("Service healthcheck pass")
+	inb.Status(http.StatusOK)
+	inb.WriteString(ServiceStatusUp)
 }
 
 // Check health status, return true if all health check pass
