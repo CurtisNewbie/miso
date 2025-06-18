@@ -451,6 +451,8 @@ func newAppConfig() *AppConfig {
 // E.g.,
 //
 //	miso.RegisterAlias(newKey, oldkey)
+//
+// It may not work as expected if you are trying to call GetPropAny() on root node of a subtree.
 func RegisterAlias(alias, key string) {
 	globalConfig().RegisterAlias(alias, key)
 }
