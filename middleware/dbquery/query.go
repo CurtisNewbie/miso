@@ -407,6 +407,12 @@ func NewQuery(db *gorm.DB) *Query {
 	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 }
 
+func NewQueryFunc(db *gorm.DB, table string) func(db *gorm.DB) *Query {
+	return func(db *gorm.DB) *Query {
+		return NewQuery(db).Table(table)
+	}
+}
+
 type ChainedPageQuery func(q *Query) *Query
 
 // Create param for page query.
