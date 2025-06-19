@@ -407,9 +407,13 @@ func NewQuery(db *gorm.DB) *Query {
 	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 }
 
-func NewQueryFunc(table string) func(db *gorm.DB) *Query {
+func NewQueryFunc(table string, ops ...func(db *Query) *Query) func(db *gorm.DB) *Query {
 	return func(db *gorm.DB) *Query {
-		return NewQuery(db).Table(table)
+		q := NewQuery(db).Table(table)
+		for _, op := range ops {
+			q = op(q)
+		}
+		return q
 	}
 }
 
