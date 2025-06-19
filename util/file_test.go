@@ -56,7 +56,7 @@ func TestFileHasSuffix(t *testing.T) {
 		t.Fatal("should be ok")
 	}
 	if v != "abc" {
-		t.Fatalf(v)
+		t.Fatal(v)
 	}
 
 	v, ok = FileCutSuffix(n, "tx")
@@ -64,6 +64,19 @@ func TestFileHasSuffix(t *testing.T) {
 		t.Fatal("should not be ok")
 	}
 	if v != n {
-		t.Fatalf(v)
+		t.Fatal(v)
+	}
+}
+
+func TestFileAddSuffix(t *testing.T) {
+	n := "abc.txt"
+	v := FileAddSuffix(n, "txt")
+	if v != n {
+		t.Fatal(v)
+	}
+	n = "abc"
+	v = FileAddSuffix(n, "txt")
+	if v != n+".txt" {
+		t.Fatal(v)
 	}
 }

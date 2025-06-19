@@ -106,10 +106,14 @@ func FileHasSuffix(name string, ext string) bool {
 	if name == "" || ext == "" {
 		return false
 	}
-	if strings.HasSuffix(strings.ToLower(name), "."+ext) {
-		return true
+	return HasSuffixIgnoreCase(name, "."+ext)
+}
+
+func FileAddSuffix(name string, ext string) string {
+	if FileHasSuffix(name, ext) {
+		return name
 	}
-	return false
+	return name + "." + ext
 }
 
 func FileCutSuffix(name string, ext string) (string, bool) {
