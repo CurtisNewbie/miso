@@ -247,15 +247,18 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 	case ValidTrim:
 		switch value.Kind() {
 		case reflect.String:
-			value.SetString(strings.TrimSpace(value.String()))
+			if value.CanSet() {
+				value.SetString(strings.TrimSpace(value.String()))
+			}
 			return nil
 		case reflect.Pointer:
 			if value.IsNil() {
 				return nil
 			}
-			v := value.Elem().Interface()
-			if s, ok := v.(string); ok {
-				value.Elem().SetString(strings.TrimSpace(s))
+			ele := value.Elem()
+			v := ele.Interface()
+			if s, ok := v.(string); ok && ele.CanSet() {
+				ele.SetString(strings.TrimSpace(s))
 			}
 		}
 	}
