@@ -197,9 +197,9 @@ func (a *AppConfig) UnmarshalFromPropKey(key string, ptr any) {
 // Overwrite existing conf using environment and cli args.
 func (a *AppConfig) OverwriteConf(args []string) {
 	// overwrite loaded configuration with environment variables
-	a.overwriteConf(ArgKeyVal(os.Environ()), "Environment Variables")
+	a.overwriteConf(buildArgKeyValMap(os.Environ(), true), "Environment Variables")
 	// overwrite the loaded configuration with cli arguments
-	a.overwriteConf(ArgKeyVal(args), "CLI Args")
+	a.overwriteConf(buildArgKeyValMap(args, false), "CLI Args")
 }
 
 /*
@@ -395,12 +395,8 @@ func (a *AppConfig) overwriteConf(kvs map[string][]string, src string) {
 				prevSet = false
 			}
 		}
-		if prevSet {
-			Infof("Overwrote config: '%v', source: %v", k, src)
-		} else {
-			Debugf("Overwrote config: '%v', source: %v", k, src)
-		}
 		a.SetProp(k, vv)
+		Infof("Overwrote config: '%v', source: %v", k, src)
 	}
 }
 
@@ -672,19 +668,38 @@ func ArgKeyVal(args []string) map[string][]string {
 		}
 
 		key := strings.ToLower(strings.TrimSpace(s[:eq]))
-		if key == "" || key == "_" || key == "." || strings.HasPrefix(key, "bash_func") {
+		val := strings.TrimSpace(s[eq+1:])
+		doAppend(key, val)
+	}
+	return m
+}
+
+// Parse CLI args to key-value map
+func buildArgKeyValMap(args []string, requirePrefix bool) map[string][]string {
+	m := map[string][]string{}
+	doAppend := func(key, val string) {
+		if prev, ok := m[key]; ok {
+			m[key] = append(prev, val)
+		} else {
+			m[key] = []string{val}
+		}
+	}
+	for _, s := range args {
+		var eq int = strings.Index(s, "=")
+		if eq == -1 {
 			continue
 		}
 
+		key := strings.ToLower(strings.TrimSpace(s[:eq]))
 		val := strings.TrimSpace(s[eq+1:])
-		doAppend(key, val)
+		if !requirePrefix {
+			doAppend(key, val)
+			continue
+		}
 
 		// e.g., 'miso_nacos_server_address' becomes 'nacos.server.address'
 		if key2, ok := util.CutPrefixIgnoreCase(key, "miso_"); ok {
 			key2 = argKeyValRegex.ReplaceAllLiteralString(key2, ".")
-			if key2 == key {
-				continue
-			}
 			doAppend(key2, val)
 		}
 	}
