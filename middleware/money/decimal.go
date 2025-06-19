@@ -1,12 +1,9 @@
 package money
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-
-	j "encoding/json"
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
@@ -17,11 +14,6 @@ import (
 
 var (
 	marshalAsString = true
-
-	_ sql.Scanner   = (*Amt)(nil)
-	_ driver.Valuer = (*Amt)(nil)
-	_ j.Marshaler   = (*Amt)(nil)
-	_ j.Unmarshaler = (*Amt)(nil)
 )
 
 func init() {

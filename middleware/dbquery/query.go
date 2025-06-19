@@ -1,6 +1,7 @@
 package dbquery
 
 import (
+	"database/sql/driver"
 	"reflect"
 	"strings"
 
@@ -376,7 +377,7 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 		}
 
 		fv := rv.Field(i)
-		val, ok := util.ReflectBasicValue(fv)
+		val, ok := reflectValue(fv)
 		if ok {
 			q.Set(fname, val)
 		}
@@ -575,4 +576,38 @@ func (n *NilableValue) IsZero() bool {
 
 func (n *NilableValue) MarkZero(isZero bool) {
 	n.zero = isZero
+}
+
+func isValueKind(v reflect.Value) (any, bool) {
+	k := v.Kind()
+	switch k {
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
+		reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+		reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.String, reflect.Complex64,
+		reflect.Complex128:
+		return v.Interface(), true
+	}
+	if _, ok := v.Interface().(driver.Valuer); ok {
+		return v.Interface(), true
+	}
+	return nil, false
+}
+
+func reflectValue(rv reflect.Value) (any, bool) {
+	if v, ok := isValueKind(rv); ok {
+		return v, true
+	}
+	ftk := rv.Kind()
+	if ftk == reflect.Pointer {
+		if rv.IsNil() {
+			return nil, true
+		}
+
+		rve := rv.Elem()
+		if v, ok := isValueKind(rve); ok {
+			return v, true
+		}
+	}
+	return nil, false
 }

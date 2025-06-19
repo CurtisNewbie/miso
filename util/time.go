@@ -1,9 +1,7 @@
 package util
 
 import (
-	"database/sql"
 	"database/sql/driver"
-	j "encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -26,11 +24,6 @@ const (
 
 var (
 	etimeMarshalFormat = ""
-
-	_ sql.Scanner   = (*ETime)(nil)
-	_ driver.Valuer = (*ETime)(nil)
-	_ j.Marshaler   = (*ETime)(nil)
-	_ j.Unmarshaler = (*ETime)(nil)
 )
 
 // ETime enhanced wrapper of time.Time.
