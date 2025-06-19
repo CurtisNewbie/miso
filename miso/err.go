@@ -221,6 +221,24 @@ func WrapErr(err error) error {
 	return me
 }
 
+// Wrap multi errors to create new *MisoErr with stacktrace.
+//
+// If err is nil, nil is returned.
+//
+// If err is *MisoErr, err is returned directly.
+func WrapErrMulti(errs ...error) error {
+	if len(errs) < 1 {
+		return nil
+	}
+	errs = util.Filter(errs, func(err error) bool { return err != nil })
+	if len(errs) < 1 {
+		return nil
+	}
+	me := &MisoErr{msg: "", internalMsg: "", err: errors.Join(errs...), code: ""}
+	me.withStack()
+	return me
+}
+
 // Equivalent to ErrUnknownError.Wrapf(..).
 //
 // If err is nil, nil is returned.
