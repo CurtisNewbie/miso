@@ -401,7 +401,7 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	tx := q.tx.Create(v)
 	rowsAffected = tx.RowsAffected
-	err = tx.Error
+	err = miso.WrapErr(tx.Error)
 	return
 }
 
