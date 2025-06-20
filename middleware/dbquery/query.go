@@ -350,6 +350,12 @@ func (q *Query) Set(col string, arg any) *Query {
 	return q
 }
 
+func (q *Query) Count() (int64, error) {
+	var n int64
+	tx := q.tx.Count(&n)
+	return n, tx.Error
+}
+
 func (q *Query) SetCols(arg any, cols ...string) *Query {
 	if arg == nil {
 		return q
