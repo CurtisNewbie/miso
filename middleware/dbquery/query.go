@@ -320,8 +320,7 @@ func (q *Query) OrFunc(f func(*Query) *Query) *Query {
 func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	tx := q.tx.Scan(ptr)
 	rowsAffected = tx.RowsAffected
-	err = tx.Error
-
+	err = miso.WrapErr(tx.Error)
 	if v, ok := ptr.(Nilable); ok && v != nil {
 		v.MarkZero(rowsAffected < 1)
 	}
@@ -331,7 +330,7 @@ func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	tx := q.tx.Exec(sql, args...)
 	rowsAffected = tx.RowsAffected
-	err = tx.Error
+	err = miso.WrapErr(tx.Error)
 	return
 }
 
@@ -341,7 +340,7 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 	}
 	tx := q.tx.Updates(q.updateColumns)
 	rowsAffected = tx.RowsAffected
-	err = tx.Error
+	err = miso.WrapErr(tx.Error)
 	return
 }
 
@@ -353,7 +352,7 @@ func (q *Query) Set(col string, arg any) *Query {
 func (q *Query) Count() (int64, error) {
 	var n int64
 	tx := q.tx.Count(&n)
-	return n, tx.Error
+	return n, miso.WrapErr(tx.Error)
 }
 
 func (q *Query) SetCols(arg any, cols ...string) *Query {
