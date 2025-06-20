@@ -131,6 +131,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | mysql.database              | database                                                                                                                                              |                                                                                                                                                   |
 | mysql.host                  | host                                                                                                                                                  | localhost                                                                                                                                         |
 | mysql.port                  | port                                                                                                                                                  | 3306                                                                                                                                              |
+| mysql.log-sql               | log sql statements                                                                                                                                    | false                                                                                                                                             |
 | mysql.connection.parameters | connection parameters (slices of strings) (see [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name)) | `[]string{"charset=utf8mb4", "parseTime=true", "loc=Local", "readTimeout=30s", "writeTimeout=30s", "timeout=3s", "collation=utf8mb4_general_ci"}` |
 | mysql.connection.lifetime   | connection lifetime in minutes (hikari recommends 1800000, so we do the same thing)                                                                   | 30                                                                                                                                                |
 | mysql.connection.open.max   | max number of open connections                                                                                                                        | 10                                                                                                                                                |
@@ -182,6 +183,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | ------------------ | ---------------------------- | ------------- |
 | sqlite.file        | path to SQLite database file |               |
 | sqlite.wal.enabled | enable WAL mode              | true          |
+| sqlite.log-sql     | log sql statements           | false         |
 
 ## Service Discovery Configuration
 

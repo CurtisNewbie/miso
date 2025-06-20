@@ -179,7 +179,7 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 
 	cfg := &gorm.Config{
 		PrepareStmt: true, CreateBatchSize: 100,
-		Logger: logger.New(dbquery.GormWriter{}, logger.Config{SlowThreshold: 500 * time.Millisecond, LogLevel: logger.Warn}),
+		Logger: dbquery.NewGormLogger(logger.Config{SlowThreshold: 500 * time.Millisecond, LogLevel: logger.Warn}),
 	}
 	conn, err := gorm.Open(mysql.Open(dsn), cfg)
 	if err != nil {

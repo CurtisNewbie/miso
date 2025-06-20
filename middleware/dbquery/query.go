@@ -414,9 +414,14 @@ func NewQuery(db *gorm.DB) *Query {
 	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 }
 
-func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(db *gorm.DB) *Query {
-	return func(db *gorm.DB) *Query {
-		q := NewQuery(db).Table(table)
+func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
+	db = db.WithContext(r.Context())
+	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
+}
+
+func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(r miso.Rail, db *gorm.DB) *Query {
+	return func(r miso.Rail, db *gorm.DB) *Query {
+		q := NewQueryRail(r, db).Table(table)
 		for _, op := range ops {
 			q = op(q)
 		}

@@ -23,6 +23,9 @@ const (
 	// misoconfig-prop: port | 3306
 	PropMySQLPort = "mysql.port"
 
+	// misoconfig-prop: log sql statements | false
+	PropMySQLLogSQL = "mysql.log-sql"
+
 	// misoconfig-prop: connection parameters (slices of strings) (see [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name)) | `[]string{"charset=utf8mb4", "parseTime=true", "loc=Local", "readTimeout=30s", "writeTimeout=30s", "timeout=3s", "collation=utf8mb4_general_ci"}`
 	PropMySQLConnParam = "mysql.connection.parameters"
 
@@ -42,6 +45,7 @@ func init() {
 	miso.SetDefProp(PropMySQLUser, "root")
 	miso.SetDefProp(PropMySQLHost, "localhost")
 	miso.SetDefProp(PropMySQLPort, 3306)
+	miso.SetDefProp(PropMySQLLogSQL, false)
 	miso.SetDefProp(PropMySQLConnParam, []string{"charset=utf8mb4", "parseTime=true", "loc=Local", "readTimeout=30s", "writeTimeout=30s", "timeout=3s", "collation=utf8mb4_general_ci"})
 	miso.SetDefProp(PropMySQLConnLifetime, 30)
 	miso.SetDefProp(PropMySQLMaxOpenConns, 10)

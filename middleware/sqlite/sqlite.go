@@ -65,7 +65,7 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 
 	cfg := &gorm.Config{
 		PrepareStmt: true, CreateBatchSize: 100,
-		Logger: logger.New(dbquery.GormWriter{}, logger.Config{SlowThreshold: 200 * time.Millisecond, LogLevel: logger.Warn}),
+		Logger: dbquery.NewGormLogger(logger.Config{SlowThreshold: 200 * time.Millisecond, LogLevel: logger.Warn}),
 	}
 	db, err := gorm.Open(sqlite.Open(path), cfg)
 	if err != nil {
