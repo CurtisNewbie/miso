@@ -26,11 +26,15 @@ func init() {
 	})
 }
 
-var module = miso.InitAppModuleFunc(func() *mysqlModule {
-	return &mysqlModule{
-		mu: &sync.RWMutex{},
-	}
-})
+var (
+	slowThreshold = 500 * time.Millisecond
+	dbLogger      = dbquery.NewGormLogger(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn})
+	module        = miso.InitAppModuleFunc(func() *mysqlModule {
+		return &mysqlModule{
+			mu: &sync.RWMutex{},
+		}
+	})
+)
 
 type MySQLBootstrapCallback func(rail miso.Rail, db *gorm.DB) error
 
@@ -179,7 +183,7 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 
 	cfg := &gorm.Config{
 		PrepareStmt: true, CreateBatchSize: 100,
-		Logger: dbquery.NewGormLogger(logger.Config{SlowThreshold: 500 * time.Millisecond, LogLevel: logger.Warn}),
+		Logger: dbLogger,
 	}
 	conn, err := gorm.Open(mysql.Open(dsn), cfg)
 	if err != nil {
@@ -246,6 +250,10 @@ func mysqlBootstrap(rail miso.Rail) error {
 	m.registerHealthIndicator()
 
 	dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetMySQL() })
+
+	if !miso.IsProdMode() && miso.GetPropStr(miso.PropLoggingRollingFile) == "" {
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: true})
+	}
 
 	return nil
 }

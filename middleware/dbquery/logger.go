@@ -10,7 +10,19 @@ import (
 	lg "gorm.io/gorm/logger"
 )
 
-func NewGormLogger(config lg.Config) lg.Interface {
+func NewGormLogger(config lg.Config) *gormLogger {
+	l := &gormLogger{}
+	l.UpdateConfig(config)
+	return l
+}
+
+type gormLogger struct {
+	lg.Config
+	infoStr, warnStr, errStr            string
+	traceStr, traceErrStr, traceWarnStr string
+}
+
+func (l *gormLogger) UpdateConfig(config lg.Config) {
 	var (
 		infoStr      = "[info] "
 		warnStr      = "[warn] "
@@ -24,26 +36,17 @@ func NewGormLogger(config lg.Config) lg.Interface {
 		infoStr = lg.Green + "[info] " + lg.Reset
 		warnStr = lg.Magenta + "[warn] " + lg.Reset
 		errStr = lg.Red + "[error] " + lg.Reset
-		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s"
+		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Green + " %s" + lg.Reset
 		traceWarnStr = lg.RedBold + "[%.3fms] " + lg.Yellow + "[rows:%v]" + lg.Magenta + " %s" + lg.Reset
 		traceErrStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s" + lg.Reset
 	}
-
-	return &gormLogger{
-		Config:       config,
-		infoStr:      infoStr,
-		warnStr:      warnStr,
-		errStr:       errStr,
-		traceStr:     traceStr,
-		traceWarnStr: traceWarnStr,
-		traceErrStr:  traceErrStr,
-	}
-}
-
-type gormLogger struct {
-	lg.Config
-	infoStr, warnStr, errStr            string
-	traceStr, traceErrStr, traceWarnStr string
+	l.Config = config
+	l.infoStr = infoStr
+	l.warnStr = warnStr
+	l.errStr = errStr
+	l.traceStr = traceStr
+	l.traceWarnStr = traceWarnStr
+	l.traceErrStr = traceErrStr
 }
 
 // LogMode log mode
