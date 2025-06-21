@@ -251,7 +251,7 @@ func mysqlBootstrap(rail miso.Rail) error {
 
 	dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetMySQL() })
 
-	if !miso.IsProdMode() && miso.GetPropStr(miso.PropLoggingRollingFile) == "" {
+	if logSql() && miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
 		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: true})
 	}
 
@@ -264,4 +264,8 @@ func mysqlBootstrapCondition(rail miso.Rail) (bool, error) {
 
 func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 	module().addMySQLBootstrapCallback(cbk)
+}
+
+func logSql() bool {
+	return miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropMySQLLogSQL)
 }

@@ -27,11 +27,15 @@ type sqliteModule struct {
 	sqliteOnce *sync.Once
 }
 
-var module = miso.InitAppModuleFunc(func() *sqliteModule {
-	return &sqliteModule{
-		sqliteOnce: &sync.Once{},
-	}
-})
+var (
+	slowThreshold = 200 * time.Millisecond
+	dbLogger      = dbquery.NewGormLogger(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn})
+	module        = miso.InitAppModuleFunc(func() *sqliteModule {
+		return &sqliteModule{
+			sqliteOnce: &sync.Once{},
+		}
+	})
+)
 
 // Get SQLite client.
 func (m *sqliteModule) sqlite() *gorm.DB {
@@ -65,7 +69,7 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 
 	cfg := &gorm.Config{
 		PrepareStmt: true, CreateBatchSize: 100,
-		Logger: dbquery.NewGormLogger(logger.Config{SlowThreshold: 200 * time.Millisecond, LogLevel: logger.Warn}),
+		Logger: dbLogger,
 	}
 	db, err := gorm.Open(sqlite.Open(path), cfg)
 	if err != nil {
@@ -116,9 +120,17 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 
 func sqliteBootstrap(rail miso.Rail) error {
 	module().initOnce()
+
+	if logSql() && miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: true})
+	}
 	return nil
 }
 
 func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
 	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
+}
+
+func logSql() bool {
+	return miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropSqliteLogSQL)
 }
