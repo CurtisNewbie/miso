@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
@@ -211,6 +212,9 @@ func (m *nacosModule) shutdown(rail miso.Rail) {
 }
 
 func (m *nacosModule) reloadConfigs(rail miso.Rail) {
+	start := time.Now()
+	defer miso.TimeOp(rail, start, "nacos configs reload")
+
 	m.reloadMut.Lock()
 	defer m.reloadMut.Unlock()
 
