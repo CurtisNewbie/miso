@@ -27,6 +27,7 @@ var (
 )
 
 func init() {
+	completeReload.Store(true)
 	miso.RegisterConfigLoader(func(rail miso.Rail) error {
 		return NacosBootstrap(rail)
 	})
@@ -67,6 +68,7 @@ type nacosModule struct {
 	configClient   config_client.IConfigClient
 	onConfigChange []func()
 	configContent  *util.StrRWMap[string]
+	preloadedFiles []string
 	watchedConfigs []watchingConfig
 	reloadMut      *sync.Mutex
 }
@@ -78,7 +80,33 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 		return false, nil
 	}
 
-	clientConfig, serverConfigs := m.buildConfig(rail)
+	// preserve content of the already loaded config files
+	loadedConfigFiles := miso.App().Config().GetDefaultConfigFileLoaded()
+	for _, f := range util.Distinct(loadedConfigFiles) {
+		if f == "" {
+			continue
+		}
+		contentByte, err := util.ReadFileAll(f)
+		if err != nil {
+			return false, miso.WrapErr(err)
+		}
+		content := strings.TrimSpace(string(contentByte))
+		if content != "" {
+			m.configContent.Put("file:"+f, content)
+
+			if miso.IsTraceLevel() {
+				rail.Tracef("Preserved the already loaded config file: %v\n%v", f, content)
+			} else {
+				rail.Debugf("Preserved the already loaded config file: %v", f)
+			}
+			m.preloadedFiles = append(m.preloadedFiles, f)
+		}
+	}
+
+	clientConfig, serverConfigs, err := m.buildConfig(rail)
+	if err != nil {
+		return false, err
+	}
 	cc, err := clients.NewConfigClient(
 		vo.NacosClientParam{
 			ClientConfig:  &clientConfig,
@@ -186,11 +214,27 @@ func (m *nacosModule) reloadConfigs(rail miso.Rail) {
 	m.reloadMut.Lock()
 	defer m.reloadMut.Unlock()
 
-	wcl := make([]string, 0, len(m.watchedConfigs))
+	wcl := make([]string, 0, len(m.preloadedFiles)+len(m.watchedConfigs))
+	for _, f := range m.preloadedFiles {
+		if c, ok := m.configContent.Get("file:" + f); ok {
+			c = strings.TrimSpace(c)
+			if miso.IsTraceLevel() {
+				rail.Tracef("Reloading preloaded config file, %v:\n%v", f, c)
+			} else {
+				rail.Debugf("Reloading preloaded config file, %v", f)
+			}
+			wcl = append(wcl, c)
+		}
+	}
+
 	for _, w := range m.watchedConfigs {
 		if c, ok := m.configContent.Get(w.Key()); ok {
 			c = strings.TrimSpace(c)
-			rail.Debugf("Reloading nacos config, %v-%v:\n%v", w.Group, w.DataId, c)
+			if miso.IsTraceLevel() {
+				rail.Tracef("Reloading nacos config, %v-%v:\n%v", w.Group, w.DataId, c)
+			} else {
+				rail.Debugf("Reloading nacos config, %v-%v", w.Group, w.DataId)
+			}
 			wcl = append(wcl, c)
 		}
 	}
@@ -199,7 +243,7 @@ func (m *nacosModule) reloadConfigs(rail miso.Rail) {
 	}
 }
 
-func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []constant.ServerConfig) {
+func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []constant.ServerConfig, error) {
 	ns := miso.GetPropStr(PropNacosServerNamespace)
 	un := miso.GetPropStr(PropNacosServerUsername)
 	clientConfig := *constant.NewClientConfig(
@@ -214,6 +258,9 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 
 	port := miso.GetPropInt(PropNacosServerPort)
 	serverAddr := strings.TrimSpace(miso.GetPropStr(PropNacosServerAddr))
+	if serverAddr == "" {
+		return constant.ClientConfig{}, nil, miso.NewErrf("Missing config: '%v'", PropNacosServerAddr)
+	}
 	scheme := miso.GetPropStr(PropNacosServerScheme)
 	if s, ok := util.CutPrefixIgnoreCase(serverAddr, "http://"); ok {
 		scheme = "http"
@@ -238,7 +285,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		},
 	}
 	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", serverAddr, ns, un)
-	return clientConfig, serverConfigs
+	return clientConfig, serverConfigs, nil
 }
 
 func OnConfigChanged(f func()) {
@@ -248,14 +295,14 @@ func OnConfigChanged(f func()) {
 	m.onConfigChange = append(m.onConfigChange, f)
 }
 
-// Completely reload existing configs with nacos configs.
+// Whether we should completely reload existing configs with nacos configs, by default it's true.
 //
 // This is usually used when all the configurations are managed on nacos.
 //
 // If a key xxx is removed from nacos, then this key is unset as well, because the config map is recreated.
 // However, overrides and defaults will still exist, e.g., SetProp(), SetDefProp().
-func ReloadConfigsOnChange() {
-	completeReload.Store(true)
+func ReloadConfigsOnChange(v bool) {
+	completeReload.Store(v)
 }
 
 type nacosLogger struct {

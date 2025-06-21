@@ -196,6 +196,18 @@ func IsDebugLevel() bool {
 	return logger.GetLevel() == logrus.DebugLevel
 }
 
+func IsTraceLevel() bool {
+	return logger.GetLevel() == logrus.TraceLevel
+}
+
+func IsLogLevel(logLevel string) bool {
+	v, ok := ParseLogLevel(logLevel)
+	if !ok {
+		return false
+	}
+	return logger.GetLevel() == v
+}
+
 // Parse log level
 func ParseLogLevel(logLevel string) (logrus.Level, bool) {
 	logLevel = strings.ToUpper(logLevel)

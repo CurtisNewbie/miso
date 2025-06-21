@@ -25,6 +25,8 @@ type AppConfig struct {
 	vp   *viper.Viper
 	rwmu *sync.RWMutex
 
+	defaultConfigFileLoaded []string
+
 	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
 	// key is always the real key not the alias
 	fastBoolCache *util.StrRWMap[bool]
@@ -202,17 +204,11 @@ func (a *AppConfig) OverwriteConf(args []string) {
 	a.overwriteConf(buildArgKeyValMap(args, false), "CLI Args")
 }
 
-/*
-Default way to read config file.
-
-Repetitively calling this method overides previously loaded config.
-
-You can also use ReadConfig to load your custom configFile. This func is essentially:
-
-	LoadConfigFromFile(GuessConfigFilePath(args))
-
-Notice that the loaded configuration can be overriden by the cli arguments as well by using `KEY=VALUE` syntax.
-*/
+// Default way to read config file.
+//
+// Normally, this func is called by *MisoApp. Use this only when it's necessary. and you should call this func only once.
+//
+// The loaded configuration can be overriden by the cli arguments and environment variables.
 func (a *AppConfig) DefaultReadConfig(args []string) {
 	loaded := util.NewSet[string]()
 
@@ -223,6 +219,7 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 		Debugf("Failed to load config file, file: %v, %v", defConfigFile, err)
 	} else {
 		Infof("Loaded config file: %v", defConfigFile)
+		a.defaultConfigFileLoaded = append(a.defaultConfigFileLoaded, defConfigFile)
 	}
 
 	// the load config file may specifiy extra files to be loaded
@@ -248,6 +245,7 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 			Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
 			Infof("Loaded config file: %v", f)
+			a.defaultConfigFileLoaded = append(a.defaultConfigFileLoaded, f)
 		}
 	}
 
@@ -265,8 +263,13 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 			Warnf("Failed to load extra config file, %v, %v", f, err)
 		} else {
 			Infof("Loaded extra config file: %v", f)
+			a.defaultConfigFileLoaded = append(a.defaultConfigFileLoaded, f)
 		}
 	}
+}
+
+func (a *AppConfig) GetDefaultConfigFileLoaded() []string {
+	return util.SliceCopy(a.defaultConfigFileLoaded)
 }
 
 // Load config from io Reader.

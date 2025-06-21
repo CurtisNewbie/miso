@@ -112,6 +112,7 @@ func (a *MisoApp) Store() *appStore {
 // Bootstrap miso app.
 func (a *MisoApp) Bootstrap(args []string) {
 	a.LoadConfig(args)
+	a.changeLogLevel()
 
 	osSigQuit := make(chan os.Signal, 2)
 	signal.Notify(osSigQuit, os.Interrupt, syscall.SIGTERM)
@@ -133,6 +134,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 			rail.Errorf("Error occurred while running ConfigLoader, %v", e)
 			return
 		}
+		a.changeLogLevel()
 		rail.Infof("ConfigLoader finished, took: %v", time.Since(start))
 	}
 
@@ -221,6 +223,12 @@ func (a *MisoApp) LoadConfig(args []string) {
 	// default way to load configuration
 	a.Config().DefaultReadConfig(args)
 	a.configLoaded = true
+}
+
+func (a *MisoApp) changeLogLevel() {
+	if a.config.HasProp(PropLoggingLevel) {
+		SetLogLevel(a.config.GetPropStr(PropLoggingLevel))
+	}
 }
 
 // Trigger shutdown hook
@@ -433,9 +441,8 @@ func (a *MisoApp) configureLogging() error {
 
 	SetLogOutput(loggerOut)
 
-	if c.HasProp(PropLoggingLevel) {
-		SetLogLevel(c.GetPropStr(PropLoggingLevel))
-	}
+	a.changeLogLevel()
+
 	return nil
 }
 
