@@ -8,6 +8,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Query struct {
@@ -396,6 +397,11 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 		return q.Set(col, arg)
 	}
 	return q
+}
+
+func (q *Query) CreateIngore(v any) (rowsAffected int64, err error) {
+	q.tx = q.tx.Clauses(clause.Insert{Modifier: "IGNORE"})
+	return q.Create(v)
 }
 
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
