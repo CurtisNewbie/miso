@@ -405,6 +405,11 @@ func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	return
 }
 
+func (q *Query) Omit(col ...string) *Query {
+	q.tx = q.tx.Omit(col...)
+	return q
+}
+
 func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
