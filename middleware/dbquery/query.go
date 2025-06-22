@@ -218,10 +218,10 @@ func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 }
 
 func (q *Query) WhereNotNil(query string, v any) *Query {
-	if v != nil {
-		return q.Where(query, v)
+	if util.IsAnyNil(v) {
+		return q
 	}
-	return q
+	return q.Where(query, v)
 }
 
 func (q *Query) Group(name string) *Query {

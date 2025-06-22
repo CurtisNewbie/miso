@@ -234,3 +234,16 @@ func ReflectBasicValue(rv reflect.Value) (any, bool) {
 	}
 	return nil, false
 }
+
+func IsAnyNil(v any) bool {
+	if v == nil {
+		return true
+	}
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+		if reflect.ValueOf(v).IsNil() {
+			return true
+		}
+	}
+	return false
+}
