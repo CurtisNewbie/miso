@@ -399,7 +399,7 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 	return q
 }
 
-func (q *Query) CreateIngore(v any) (rowsAffected int64, err error) {
+func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 	q.tx = q.tx.Clauses(clause.Insert{Modifier: "IGNORE"})
 	return q.Create(v)
 }
