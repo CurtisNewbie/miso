@@ -251,8 +251,12 @@ func mysqlBootstrap(rail miso.Rail) error {
 
 	dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetMySQL() })
 
-	if logSql() && miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
-		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: true})
+	if logSql() {
+		colorful := false
+		if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+			colorful = true
+		}
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
 	}
 
 	return nil

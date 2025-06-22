@@ -121,8 +121,12 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 func sqliteBootstrap(rail miso.Rail) error {
 	module().initOnce()
 
-	if logSql() && miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
-		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: true})
+	if logSql() {
+		colorful := false
+		if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+			colorful = true
+		}
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
 	}
 	return nil
 }
