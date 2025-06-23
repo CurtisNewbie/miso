@@ -41,6 +41,10 @@ const (
 	BootstrapOrderL4 = -5
 )
 
+const (
+	misoAppHealthIndicatorName = "MisoAppBoostrap"
+)
+
 var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
@@ -64,7 +68,8 @@ type ComponentBootstrap struct {
 }
 
 type MisoApp struct {
-	configLoaded bool
+	configLoaded     bool
+	fullyBoostrapped *atomic.Bool
 
 	// channel for signaling server shutdown
 	manualSigQuit chan int
@@ -92,11 +97,12 @@ func App() *MisoApp {
 // only one MisoApp is supported for now.
 func newApp() *MisoApp {
 	a := &MisoApp{
-		manualSigQuit: make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
-		configLoaded:  false,
-		shuttingDown:  &atomic.Bool{},
-		store:         &appStore{store: util.NewStrRWMap[any]()},
-		config:        newAppConfig(),
+		manualSigQuit:    make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
+		configLoaded:     false,
+		shuttingDown:     &atomic.Bool{},
+		store:            &appStore{store: util.NewStrRWMap[any]()},
+		config:           newAppConfig(),
+		fullyBoostrapped: &atomic.Bool{},
 	}
 	return a
 }
@@ -148,6 +154,9 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 	rail.Infof("CPUs: %v", runtime.NumCPU())
+
+	// bootstrap health indicator
+	a.addBootstrapHealthIndicator()
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
 	{
@@ -204,6 +213,8 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Infof("PostServerBootstrap finished, took: %v", time.Since(start))
 	}
 
+	a.fullyBoostrapped.Store(true)
+
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	select {
 	case sig := <-osSigQuit:
@@ -229,6 +240,15 @@ func (a *MisoApp) changeLogLevel() {
 	if a.config.HasProp(PropLoggingLevel) {
 		SetLogLevel(a.config.GetPropStr(PropLoggingLevel))
 	}
+}
+
+func (a *MisoApp) addBootstrapHealthIndicator() {
+	AddHealthIndicator(HealthIndicator{
+		Name: misoAppHealthIndicatorName,
+		CheckHealth: func(rail Rail) bool {
+			return a.fullyBoostrapped.Load()
+		},
+	})
 }
 
 // Trigger shutdown hook
