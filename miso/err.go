@@ -23,9 +23,10 @@ var (
 	ErrCodeNotPermitted    string = "NOT_PERMITTED"
 	ErrCodeIllegalArgument string = "ILLEGAL_ARGUMENT"
 
-	ErrUnknownError    *MisoErr = NewErrf("Unknown Error").WithCode(ErrCodeUnknownError)
-	ErrNotPermitted    *MisoErr = NewErrf("Not Permitted").WithCode(ErrCodeNotPermitted)
-	ErrIllegalArgument *MisoErr = NewErrf("Illegal Argument").WithCode(ErrCodeIllegalArgument)
+	ErrUnknownError       *MisoErr = NewErrf("Unknown Error").WithCode(ErrCodeUnknownError)
+	ErrNotPermitted       *MisoErr = NewErrf("Not Permitted").WithCode(ErrCodeNotPermitted)
+	ErrIllegalArgument    *MisoErr = NewErrf("Illegal Argument").WithCode(ErrCodeIllegalArgument)
+	ErrServerShuttingDown *MisoErr = NewErrf("Server shutting down")
 )
 
 var (
@@ -106,6 +107,16 @@ func (e *MisoErr) copyNew() *MisoErr {
 	n.internalMsg = e.internalMsg
 	n.stack = e.stack
 	n.err = e.err
+	return n
+}
+
+func (e *MisoErr) Clone() error {
+	n := new(MisoErr)
+	n.code = e.code
+	n.msg = e.msg
+	n.internalMsg = e.internalMsg
+	n.err = e.err
+	n.withStack()
 	return n
 }
 
