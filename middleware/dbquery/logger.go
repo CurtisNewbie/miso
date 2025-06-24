@@ -28,8 +28,8 @@ func (l *gormLogger) UpdateConfig(config lg.Config) {
 		warnStr      = "[warn] "
 		errStr       = "[error] "
 		traceStr     = "[%.3fms] [rows:%v] %s"
-		traceWarnStr = "[%.3fms] [rows:%v] %s"
-		traceErrStr  = "[%.3fms] [rows:%v] %s"
+		traceWarnStr = "%s [%.3fms] [rows:%v] %s"
+		traceErrStr  = "[%.3fms] [rows:%v] %s\n\t%v"
 	)
 
 	if config.Colorful {
@@ -37,8 +37,8 @@ func (l *gormLogger) UpdateConfig(config lg.Config) {
 		warnStr = lg.Magenta + "[warn] " + lg.Reset
 		errStr = lg.Red + "[error] " + lg.Reset
 		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Green + " %s" + lg.Reset
-		traceWarnStr = lg.RedBold + "[%.3fms] " + lg.Yellow + "[rows:%v]" + lg.Magenta + " %s" + lg.Reset
-		traceErrStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s" + lg.Reset
+		traceWarnStr = lg.Yellow + "%s " + lg.RedBold + "[%.3fms] " + lg.Yellow + "[rows:%v]" + lg.Magenta + " %s" + lg.Reset
+		traceErrStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s\n\t" + lg.RedBold + "%s" + lg.Reset
 	}
 	l.Config = config
 	l.infoStr = infoStr
@@ -88,9 +88,9 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 	case err != nil && l.LogLevel >= lg.Error && (!errors.Is(err, lg.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		sql, rows := fc()
 		if rows == -1 {
-			miso.NewRail(ctx).Infof(l.traceErrStr, err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			miso.NewRail(ctx).Infof(l.traceErrStr, float64(elapsed.Nanoseconds())/1e6, "-", sql, err)
 		} else {
-			miso.NewRail(ctx).Infof(l.traceErrStr, err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			miso.NewRail(ctx).Infof(l.traceErrStr, float64(elapsed.Nanoseconds())/1e6, rows, sql, err)
 		}
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= lg.Warn:
 		sql, rows := fc()
