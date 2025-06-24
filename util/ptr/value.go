@@ -21,6 +21,13 @@ func FloatVal(p *float64) float64 {
 	return *p
 }
 
+func BoolVal(p *bool) bool {
+	if p == nil {
+		return false
+	}
+	return *p
+}
+
 func PtrVal[T any](p *T) T {
 	if p == nil {
 		var z T
