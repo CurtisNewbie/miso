@@ -7,7 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -47,7 +47,7 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 		return fmt.Errorf("failed to serialze value, %w", err)
 	}
 	op := func() error {
-		return r.getClient().Set(cacheKey, val, r.exp).Err()
+		return r.getClient().Set(rail.Context(), cacheKey, val, r.exp).Err()
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -58,7 +58,7 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 func (r *RCache[T]) Del(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
-		return r.getClient().Del(cacheKey).Err()
+		return r.getClient().Del(rail.Context(), cacheKey).Err()
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -89,7 +89,7 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 		cacheKey := r.cacheKey(key)
 		var t T
 
-		cmd := r.getClient().Get(cacheKey)
+		cmd := r.getClient().Get(rail.Context(), cacheKey)
 		if cmd.Err() == nil {
 			return t, r.ValueSerializer.Deserialize(&t, cmd.Val()) // key found
 		}
@@ -116,7 +116,7 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 		}
 
 		// cache the serialized value
-		scmd := r.getClient().Set(cacheKey, v, r.exp)
+		scmd := r.getClient().Set(rail.Context(), cacheKey, v, r.exp)
 		if scmd.Err() != nil {
 			return t, scmd.Err()
 		}
@@ -133,7 +133,7 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 	op := func() (bool, error) {
 		cacheKey := r.cacheKey(key)
-		cmd := r.getClient().Exists(cacheKey)
+		cmd := r.getClient().Exists(rail.Context(), cacheKey)
 		if cmd.Err() == nil {
 			return cmd.Val() > 0, nil
 		}
@@ -152,18 +152,18 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 
 func (r *RCache[T]) DelAll(rail miso.Rail) error {
 	pat := r.cacheKeyPattern()
-	cmd := r.getClient().Scan(0, pat, rcacheScanLimit)
+	cmd := r.getClient().Scan(rail.Context(), 0, pat, rcacheScanLimit)
 	if cmd.Err() != nil {
 		return fmt.Errorf("failed to scan redis with pattern '%v', %w", pat, cmd.Err())
 	}
 
 	iter := cmd.Iterator()
-	for iter.Next() {
+	for iter.Next(rail.Context()) {
 		if iter.Err() != nil {
 			return fmt.Errorf("failed to iterate using scan, pattern: '%v', %w", pat, iter.Err())
 		}
 		key := iter.Val()
-		dcmd := r.getClient().Del(key)
+		dcmd := r.getClient().Del(rail.Context(), key)
 		if dcmd.Err() != nil {
 			if !errors.Is(dcmd.Err(), redis.Nil) {
 				return fmt.Errorf("failed to del key %v, %w", key, dcmd.Err())

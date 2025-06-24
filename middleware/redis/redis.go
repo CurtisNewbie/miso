@@ -1,12 +1,13 @@
 package redis
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -40,7 +41,7 @@ func (m *redisModule) redis() *redis.Client {
 }
 
 func (m *redisModule) getStr(key string) (string, error) {
-	scmd := m.redis().Get(key)
+	scmd := m.redis().Get(context.Background(), key)
 	e := scmd.Err()
 	if e != nil {
 		if errors.Is(e, redis.Nil) {
@@ -85,7 +86,7 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 		DB:       p.Db,
 	})
 
-	cmd := rdb.Ping()
+	cmd := rdb.Ping(rail.Context())
 	if cmd.Err() != nil {
 		return nil, miso.WrapErrf(cmd.Err(), "ping redis failed")
 	}
@@ -99,7 +100,7 @@ func (m *redisModule) addHealthIndicator() {
 	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "Redis Component",
 		CheckHealth: func(rail miso.Rail) bool {
-			cmd := m.redis().Ping()
+			cmd := m.redis().Ping(rail.Context())
 			if err := cmd.Err(); err != nil {
 				rail.Errorf("Redis ping failed, %v", err)
 				return false

@@ -1,31 +1,38 @@
 package redis
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis_rate/v7"
-	"golang.org/x/time/rate"
+	"github.com/curtisnewbie/miso/miso"
+	"github.com/go-redis/redis_rate/v10"
 )
 
 type rateLimiter struct {
-	name     string
-	limiter  *redis_rate.Limiter
-	max      int64
-	interval time.Duration
+	name    string
+	limiter *redis_rate.Limiter
+	max     int
+	period  time.Duration
 }
 
-func NewRateLimiter(name string, max int64, interval time.Duration) *rateLimiter {
+func NewRateLimiter(name string, max int, period time.Duration) *rateLimiter {
 	limiter := redis_rate.NewLimiter(GetRedis())
-	limiter.Fallback = rate.NewLimiter(rate.Inf, 0) // permits all if redis is not available
 	return &rateLimiter{
-		name:     name,
-		limiter:  limiter,
-		max:      max,
-		interval: interval,
+		name:    name,
+		limiter: limiter,
+		max:     max,
+		period:  period,
 	}
 }
 
-func (r *rateLimiter) Acquire() bool {
-	_, _, ok := r.limiter.Allow(r.name, r.max, r.interval)
-	return ok
+func (r *rateLimiter) Acquire() (bool, error) {
+	res, err := r.limiter.Allow(context.Background(), r.name, redis_rate.Limit{
+		Rate:   r.max,
+		Burst:  r.max,
+		Period: r.period,
+	})
+	if err != nil {
+		return false, miso.WrapErr(err)
+	}
+	return res.Allowed > 0, nil
 }

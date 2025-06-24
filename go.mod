@@ -5,14 +5,13 @@ go 1.22.5
 require (
 	github.com/ChimeraCoder/gojson v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.8.0
-	github.com/bsm/redislock v0.5.0
+	github.com/bsm/redislock v0.9.4
 	github.com/curtisnewbie/svc v0.0.8
 	github.com/dave/dst v0.27.3
 	github.com/getkin/kin-openapi v0.131.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
-	github.com/go-redis/redis/v7 v7.4.1
-	github.com/go-redis/redis_rate/v7 v7.0.1
+	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/consul/api v1.15.3
@@ -22,6 +21,7 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/prometheus/client_golang v1.12.2
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/redis/go-redis/v9 v9.0.3
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.0
@@ -31,7 +31,6 @@ require (
 	go.uber.org/automaxprocs v1.6.0
 	golang.design/x/clipboard v0.7.0
 	golang.org/x/text v0.21.0
-	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 	gopkg.in/inf.v0 v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.3.6
@@ -45,6 +44,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -84,8 +84,6 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/gomega v1.18.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect

@@ -132,7 +132,7 @@ func (r *RLock) TryLock() (locked bool, err error) {
 // Acquire lock.
 func (r *RLock) Lock() error {
 	rlocker := ObtainRLocker()
-	lock, err := rlocker.Obtain(r.key, lockLeaseTime, &redislock.Options{
+	lock, err := rlocker.Obtain(context.Background(), r.key, lockLeaseTime, &redislock.Options{
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),
 	})
 	if err != nil {
@@ -153,7 +153,7 @@ func (r *RLock) Lock() error {
 		for {
 			select {
 			case <-ticker.C:
-				if err := lock.Refresh(lockLeaseTime, nil); err != nil {
+				if err := lock.Refresh(context.Background(), lockLeaseTime, nil); err != nil {
 					if errors.Is(err, redislock.ErrNotObtained) {
 						return
 					}
@@ -180,8 +180,11 @@ func (r *RLock) Unlock() error {
 	}
 
 	if r.lock != nil {
-		err := r.lock.Release()
+		err := r.lock.Release(context.Background())
 		if err != nil {
+			if errors.Is(err, redislock.ErrLockNotHeld) {
+				return nil
+			}
 			r.rail.Errorf("Failed to release lock for key '%s', err: %v", r.key, err)
 			return err
 		} else {

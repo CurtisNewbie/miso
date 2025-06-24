@@ -126,12 +126,12 @@ func TestRLockCount(t *testing.T) {
 
 			err := lock.Lock()
 			if err != nil {
-				t.Logf("failed to obtain lock, %v", err)
+				t.Log(err)
 				return
 			}
 			defer lock.Unlock()
 
-			time.Sleep(time.Millisecond * 3)
+			time.Sleep(time.Millisecond * 1)
 			atomic.StoreInt32(&count, atomic.LoadInt32(&count)+1)
 		}()
 	}

@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -185,7 +186,7 @@ func (m *taskModule) startTaskMasterLockTicker() {
 }
 
 func (m *taskModule) releaseMasterNodeLock() {
-	cmd := redis.GetRedis().Eval(`
+	cmd := redis.GetRedis().Eval(context.Background(), `
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -214,7 +215,7 @@ func (m *taskModule) stopTaskMasterLockTicker() {
 
 // Refresh master lock key ttl
 func (m *taskModule) refreshTaskMasterLock() error {
-	return redis.GetRedis().Expire(m.getTaskMasterKey(), defMstLockTtl).Err()
+	return redis.GetRedis().Expire(context.Background(), m.getTaskMasterKey(), defMstLockTtl).Err()
 }
 
 // Try to become master node
@@ -223,7 +224,7 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 		return true
 	}
 
-	bcmd := redis.GetRedis().SetNX(m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
+	bcmd := redis.GetRedis().SetNX(context.Background(), m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
 		rail.Errorf("try to become master node: '%v'", bcmd.Err())
 		return false
