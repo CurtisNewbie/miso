@@ -12,6 +12,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
 	github.com/go-redis/redis/v7 v7.4.1
+	github.com/go-redis/redis_rate/v7 v7.0.1
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/consul/api v1.15.3
@@ -30,6 +31,7 @@ require (
 	go.uber.org/automaxprocs v1.6.0
 	golang.design/x/clipboard v0.7.0
 	golang.org/x/text v0.21.0
+	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 	gopkg.in/inf.v0 v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.3.6
