@@ -313,7 +313,6 @@ func RegisterConsulService() error {
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
-			Status:                         ConsulStatusPassing, // for responsiveness (TODO)
 		},
 		Meta: meta,
 	}

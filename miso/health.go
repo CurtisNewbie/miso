@@ -62,7 +62,9 @@ func DefaultHealthCheckInbound(inb *Inbound) {
 	for i := range hs {
 		s := hs[i]
 		if !s.Healthy {
-			rail.Warnf("Component %s is down, healthcheck failed", s.Name)
+			if s.Name != misoAppHealthIndicatorName {
+				rail.Warnf("Component '%s' is down, healthcheck failed", s.Name)
+			}
 			inb.Status(http.StatusServiceUnavailable)
 			inb.WriteString(ServiceStatusDown)
 			return
