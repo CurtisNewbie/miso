@@ -311,6 +311,15 @@ func UnwrapErrStack(err error) (string, bool) {
 	return stack, stack != ""
 }
 
+func ErrorStackTrace(err error) string {
+	stackTrace, withStack := UnwrapErrStack(err)
+	m := err.Error()
+	if withStack {
+		m += stackTrace
+	}
+	return m
+}
+
 var stackPool = sync.Pool{
 	New: func() any {
 		var v []uintptr = make([]uintptr, 50)

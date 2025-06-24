@@ -24,6 +24,7 @@ func TestNewErr(t *testing.T) {
 	if err.Error() != "unknown error, nope, that is not unknown error, that is " {
 		t.Fatalf("%v != 'unknown error'", err.Error())
 	}
+	t.Log(ErrorStackTrace(err))
 }
 
 func TestErrReuse(t *testing.T) {
@@ -39,9 +40,9 @@ func TestErrReuse(t *testing.T) {
 	if !errors.Is(e2, ErrBase) {
 		t.Fatal("e2 should be ErrBase")
 	}
-	t.Logf("%#v", ErrBase)
-	t.Logf("%#v", e1)
-	t.Logf("%#v", e2)
+	t.Logf("%#v\n%v", ErrBase, ErrorStackTrace(ErrBase))
+	t.Logf("%#v\n%v", e1, ErrorStackTrace(e1))
+	t.Logf("%#v\n%v", e2, ErrorStackTrace(e2))
 }
 
 func TestUnwrapErrStack(t *testing.T) {
@@ -55,6 +56,7 @@ func TestUnwrapErrStack(t *testing.T) {
 	}
 	t.Log(e)
 	t.Log(stack)
+	t.Log(ErrorStackTrace(e))
 }
 
 func testUnwrapErrStack1() error {
