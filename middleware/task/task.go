@@ -113,7 +113,7 @@ func (m *taskModule) scheduleDistributedTask(t miso.Job) error {
 		m.dtaskMut.Lock()
 		if !m.tryTaskMaster(rail) {
 			m.dtaskMut.Unlock()
-			rail.Debug("Not master node, skip scheduled task")
+			rail.Info("Not master node, skip scheduled task")
 			return nil
 		}
 		m.dtaskMut.Unlock()
