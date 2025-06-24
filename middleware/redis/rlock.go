@@ -176,7 +176,7 @@ func (r *RLock) Lock() error {
 // If the lock is not obtained, method call will be ignored.
 func (r *RLock) Unlock() error {
 	if r.cancelRefresher != nil {
-		defer r.cancelRefresher()
+		r.cancelRefresher()
 	}
 
 	if r.lock != nil {
