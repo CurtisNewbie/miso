@@ -5,13 +5,13 @@ go 1.22.5
 require (
 	github.com/ChimeraCoder/gojson v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.8.0
-	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e
+	github.com/bsm/redislock v0.5.0
 	github.com/curtisnewbie/svc v0.0.8
 	github.com/dave/dst v0.27.3
 	github.com/getkin/kin-openapi v0.131.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
-	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/consul/api v1.15.3
