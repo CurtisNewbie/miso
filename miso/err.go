@@ -110,7 +110,7 @@ func (e *MisoErr) copyNew() *MisoErr {
 	return n
 }
 
-func (e *MisoErr) Clone() error {
+func (e *MisoErr) New() error {
 	n := new(MisoErr)
 	n.code = e.code
 	n.msg = e.msg
