@@ -312,6 +312,9 @@ func UnwrapErrStack(err error) (string, bool) {
 }
 
 func ErrorStackTrace(err error) string {
+	if err == nil {
+		return "nil"
+	}
 	stackTrace, withStack := UnwrapErrStack(err)
 	m := err.Error()
 	if withStack {
