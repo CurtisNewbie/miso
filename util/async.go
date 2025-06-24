@@ -208,6 +208,20 @@ func (a *AwaitFutures[T]) AwaitAnyErr() error {
 	return nil
 }
 
+// Await results of all tasks and return any error that is found in the task Futures.
+func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
+	fut := a.Await()
+	res := make([]T, 0, len(fut))
+	for _, f := range fut {
+		v, err := f.Get()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, v)
+	}
+	return res, nil
+}
+
 // Create new AwaitFutures for a group of tasks.
 //
 // *AsyncPool is optional, provide nil if not needed.

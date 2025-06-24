@@ -127,6 +127,35 @@ func TestAwaitFutures(t *testing.T) {
 	t.Logf("sum: %v, time: %v", sum, time.Since(start))
 }
 
+func TestAwaitResultAnyErr(t *testing.T) {
+	cnt := 1000
+	pool := NewAsyncPool(cnt+1, 100)
+	awaitFutures := NewAwaitFutures[int](pool)
+	start := time.Now()
+
+	for i := 1; i < cnt+1; i++ {
+		j := i
+		awaitFutures.SubmitAsync(func() (int, error) {
+			time.Sleep(5 * time.Millisecond)
+			return j, nil
+		})
+	}
+
+	res, err := awaitFutures.AwaitResultAnyErr()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sum int
+	for _, v := range res {
+		sum += v
+	}
+	expected := (cnt * (cnt + 1)) / 2
+	if sum != expected {
+		t.Fatalf("expected: %v, actual: %v", expected, sum)
+	}
+	t.Logf("sum: %v, time: %v", sum, time.Since(start))
+}
+
 func TestPoolPanic(t *testing.T) {
 	pool := NewAsyncPool(1, 10)
 	var wg sync.WaitGroup
