@@ -351,7 +351,7 @@ func addRoutesRegistar(reg routesRegistar) {
 
 // Register GIN route for consul healthcheck
 func registerRouteForConsulHealthcheck() {
-	url := healthCheckUrl()
+	url := GetPropStr(PropHealthCheckUrl)
 	if !util.IsBlankStr(url) {
 		HttpGet(url, RawHandler(DefaultHealthCheckInbound))
 	}

@@ -10,8 +10,11 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
+	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
+	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
+	"github.com/spf13/cast"
 )
 
 var module = miso.InitAppModuleFunc(func() *nacosModule {
@@ -20,64 +23,194 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 		configContent:  util.NewStrRWMap[string](),
 		watchedConfigs: make([]watchingConfig, 0, 1),
 		reloadMut:      &sync.Mutex{},
+		serverList:     &NacosServerList{},
 	}
 })
 
 var (
 	completeReload = &atomic.Bool{}
+
+	_ miso.ServerList = (*NacosServerList)(nil)
 )
 
 func init() {
 	completeReload.Store(true)
 	miso.RegisterConfigLoader(func(rail miso.Rail) error {
-		return NacosBootstrap(rail)
+		err := BootstrapConfigCenter(rail)
+		if err != nil {
+			return err
+		}
+		module().prepareDeregisterUrl(rail)
+		return nil
+	})
+
+	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
+		Name:      "Boostrap Nacos Service Discovery",
+		Bootstrap: BootstrapServiceDiscovery,
+		Condition: func(rail miso.Rail) (bool, error) {
+			return miso.GetPropBool(PropNacosDiscoveryEnabled), nil
+		},
+		Order: miso.BootstrapOrderL4,
 	})
 }
 
 // Bootstrap Nacos Config Center
 //
 // In most cases, this should be called by miso itself when server bootstraps.
-func NacosBootstrap(rail miso.Rail) error {
+func BootstrapConfigCenter(rail miso.Rail) error {
 	if !miso.GetPropBool(PropNacosEnabled) {
 		miso.Debug("nacos disabled")
 		return nil
 	}
 
-	ok, err := module().init(rail)
+	ok, err := module().initConfigCenter(rail)
 	if err != nil {
-		return miso.WrapErrf(err, "failed to initialize nacos module")
+		return miso.WrapErrf(err, "failed to initialize nacos module for config center")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
 		return nil // already initialized
 	}
 	rail.Info("Nacos Config Client Bootstrapped")
+	return nil
+}
 
-	// deregister on shutdown, we specify the order explicitly to make sure the service
-	// is deregistered before shutting down the web server
-	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() {
-		rail := miso.EmptyRail()
-		module().shutdown(rail)
-	})
+// Bootstrap Nacos ServiceDiscovery
+//
+// In most cases, this should be called by miso itself when server bootstraps.
+func BootstrapServiceDiscovery(rail miso.Rail) error {
+	if !miso.GetPropBool(PropNacosEnabled) {
+		miso.Debug("nacos disabled")
+		return nil
+	}
 
+	ok, err := module().initDiscovery(rail)
+	if err != nil {
+		return miso.WrapErrf(err, "failed to initialize nacos module for service discovery")
+	}
+	if !ok {
+		miso.Debug("nacos already initialized")
+		return nil // already initialized
+	}
+	rail.Info("Nacos Service Discovery Bootstrapped")
 	return nil
 }
 
 type nacosModule struct {
-	mut            *sync.RWMutex
-	initialized    bool
-	configClient   config_client.IConfigClient
-	onConfigChange []func()
-	configContent  *util.StrRWMap[string]
-	preloadedFiles []string
-	watchedConfigs []watchingConfig
-	reloadMut      *sync.Mutex
+	mut                  *sync.RWMutex
+	configInitialized    bool
+	discoveryInitialized bool
+	configClient         config_client.IConfigClient
+	onConfigChange       []func()
+	configContent        *util.StrRWMap[string]
+	preloadedFiles       []string
+	watchedConfigs       []watchingConfig
+	reloadMut            *sync.Mutex
+	serverList           *NacosServerList
 }
 
-func (m *nacosModule) init(rail miso.Rail) (bool, error) {
+func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
+	if miso.GetPropBool(PropNacosDiscoveryEnabled) && miso.GetPropBool(PropNacosDiscoveryEnableDeregisterUrl) {
+		deregisterUrl := miso.GetPropStr(PropNacosDiscoveryDeregisterUrl)
+		if !util.IsBlankStr(deregisterUrl) {
+			rail.Infof("Enabled 'GET %v' for manual nacos service deregistration", deregisterUrl)
+
+			miso.HttpGet(deregisterUrl, miso.ResHandler(
+				func(inb *miso.Inbound) (any, error) {
+					rail.Info("Deregistering nacos service registration")
+					if err := deregisterNacosService(m.serverList.client); err != nil {
+						rail.Errorf("failed to deregistered nacos service, %v", err)
+						return nil, err
+					} else {
+						rail.Info("nacos service deregistered")
+					}
+					return nil, nil
+				})).
+				Desc("Endpoint used to trigger Nacos service deregistration")
+		}
+	}
+}
+
+func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
-	if m.initialized {
+	if m.discoveryInitialized {
+		return false, nil
+	}
+
+	// preserve content of the already loaded config files
+	loadedConfigFiles := miso.App().Config().GetDefaultConfigFileLoaded()
+	for _, f := range util.Distinct(loadedConfigFiles) {
+		if f == "" {
+			continue
+		}
+		contentByte, err := util.ReadFileAll(f)
+		if err != nil {
+			return false, miso.WrapErr(err)
+		}
+		content := strings.TrimSpace(string(contentByte))
+		if content != "" {
+			m.configContent.Put("file:"+f, content)
+
+			if miso.IsTraceLevel() {
+				rail.Tracef("Preserved the already loaded config file: %v\n%v", f, content)
+			} else {
+				rail.Debugf("Preserved the already loaded config file: %v", f)
+			}
+			m.preloadedFiles = append(m.preloadedFiles, f)
+		}
+	}
+
+	clientConfig, serverConfigs, err := m.buildConfig(rail)
+	if err != nil {
+		return false, err
+	}
+
+	if miso.GetPropBool(PropNacosDiscoveryEnabled) {
+
+		// setup api
+		miso.ChangeGetServerList(func() miso.ServerList { return m.serverList })
+		rail.Debug("Using Nacos based GetServerList")
+
+		nc, err := clients.NewNamingClient(
+			vo.NacosClientParam{
+				ClientConfig:  &clientConfig,
+				ServerConfigs: serverConfigs,
+			},
+		)
+		if err != nil {
+			return false, miso.WrapErrf(err, "failed to create nacos naming client")
+		}
+		m.serverList.client = nc
+		rail.Infof("Created nacos naming client")
+
+		// deregister on shutdown, we specify the order explicitly to make sure the service
+		// is deregistered before shutting down the web server
+		miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() {
+			rail := miso.EmptyRail()
+			rail.Infof("Deregistering Nacos service")
+			if e := deregisterNacosService(m.serverList.client); e != nil {
+				rail.Errorf("Failed to deregister on Nacos, %v", e)
+			}
+		})
+
+		// register current instance
+		miso.OnAppReady(func(rail miso.Rail) error {
+			if err := registerNacosService(nc); err != nil {
+				return miso.WrapErrf(err, "failed to register on nacos")
+			}
+			return nil
+		})
+	}
+
+	m.discoveryInitialized = true
+	return true, nil
+}
+
+func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+	if m.configInitialized {
 		return false, nil
 	}
 
@@ -203,12 +336,8 @@ func (m *nacosModule) init(rail miso.Rail) (bool, error) {
 		})
 	}
 
-	m.initialized = true
+	m.configInitialized = true
 	return true, nil
-}
-
-func (m *nacosModule) shutdown(rail miso.Rail) {
-
 }
 
 func (m *nacosModule) reloadConfigs(rail miso.Rail) {
@@ -254,6 +383,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		constant.WithNamespaceId(ns),
 		constant.WithTimeoutMs(5000),
 		constant.WithNotLoadCacheAtStart(true),
+		constant.WithUpdateCacheWhenEmpty(true),
 		constant.WithCacheDir(miso.GetPropStr(PropNacosCacheDir)),
 		constant.WithUsername(un),
 		constant.WithPassword(miso.GetPropStr(PropNacosServerPassword)),
@@ -265,29 +395,35 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 	if serverAddr == "" {
 		return constant.ClientConfig{}, nil, miso.NewErrf("Missing config: '%v'", PropNacosServerAddr)
 	}
-	scheme := miso.GetPropStr(PropNacosServerScheme)
-	if s, ok := util.CutPrefixIgnoreCase(serverAddr, "http://"); ok {
-		scheme = "http"
-		serverAddr = s
-	} else if s, ok := util.CutPrefixIgnoreCase(serverAddr, "https://"); ok {
-		scheme = "https"
-		serverAddr = s
-		if port == 0 {
-			port = 443
-		}
-	}
-	if port == 0 {
-		port = 80
-	}
 
-	serverConfigs := []constant.ServerConfig{
-		{
-			IpAddr:      serverAddr,
+	serverConfigs := []constant.ServerConfig{}
+	for _, host := range strings.Split(serverAddr, ",") {
+		if host == "" {
+			continue
+		}
+		scheme := miso.GetPropStr(PropNacosServerScheme)
+		if s, ok := util.CutPrefixIgnoreCase(host, "http://"); ok {
+			scheme = "http"
+			host = s
+		} else if s, ok := util.CutPrefixIgnoreCase(host, "https://"); ok {
+			scheme = "https"
+			host = s
+			if port == 0 {
+				port = 443
+			}
+		}
+		if port == 0 {
+			port = 8848
+		}
+		host = strings.TrimSpace(host)
+		serverConfigs = append(serverConfigs, constant.ServerConfig{
+			IpAddr:      host,
 			ContextPath: miso.GetPropStr(PropNacosServerContextPath),
 			Scheme:      scheme,
 			Port:        uint64(port),
-		},
+		})
 	}
+	rail.Debugf("Nacos serverConfigs: %#v", serverConfigs)
 	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", serverAddr, ns, un)
 	return clientConfig, serverConfigs, nil
 }
@@ -328,4 +464,113 @@ type watchingConfig struct {
 
 func (w watchingConfig) Key() string {
 	return w.DataId + ":" + w.Group
+}
+
+// Holder of a list of ServiceHolder
+type NacosServerList struct {
+	client naming_client.INamingClient
+}
+
+func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server {
+	inst, err := s.client.SelectAllInstances(vo.SelectAllInstancesParam{ServiceName: name})
+	if err != nil {
+		rail.Errorf("Failed to select instances for %v, %v", name, err)
+		return nil
+	}
+	rail.Debugf("ListServers: %v, instances: %#v", name, inst)
+	inst = util.CopyFilter(inst, func(i model.Instance) bool { return i.Enable && i.Weight > 0 && i.Healthy })
+	return util.MapTo(inst, func(v model.Instance) miso.Server {
+		return miso.Server{
+			Address: v.Ip,
+			Port:    int(v.Port),
+			Meta:    util.MapCopy(v.Metadata),
+		}
+	})
+}
+
+func (s *NacosServerList) IsSubscribed(rail miso.Rail, service string) bool {
+	return true
+}
+
+func (s *NacosServerList) Subscribe(rail miso.Rail, service string) error {
+	return nil
+}
+
+func (s *NacosServerList) Unsubscribe(rail miso.Rail, service string) error {
+	return nil
+}
+
+func (s *NacosServerList) PollInstance(rail miso.Rail, name string) error {
+	return nil
+}
+
+func registerNacosService(nc naming_client.INamingClient) error {
+	serverPort := miso.GetPropInt(miso.PropServerActualPort)
+	registerName := miso.GetPropStr(PropNacosDiscoveryRegisterName)
+	registerAddress := miso.GetPropStr(PropNacosDiscoveryRegisterAddress)
+
+	// registerAddress not specified, resolve the ip address used for the server
+	if registerAddress == "" {
+		registerAddress = miso.ResolveServerHost(miso.GetPropStr(miso.PropServerHost))
+	} else {
+		registerAddress = miso.ResolveServerHost(registerAddress)
+	}
+
+	meta := miso.GetPropStrMap(PropNacosDiscoveryMetadata)
+	if meta == nil {
+		meta = map[string]string{}
+	}
+	meta[miso.ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+
+	ok, err := nc.RegisterInstance(vo.RegisterInstanceParam{
+		ServiceName: registerName,
+		Ip:          registerAddress,
+		Port:        uint64(serverPort),
+		Weight:      1,
+		Healthy:     true,
+		Metadata:    meta,
+		Ephemeral:   true,
+		Enable:      true,
+	})
+	if err != nil {
+		return miso.WrapErr(err)
+	}
+	if !ok {
+		return miso.NewErrf("Register nacos service failed")
+	}
+
+	miso.Infof("Registered on nacos, %v %v:%v", registerName, registerAddress, serverPort)
+	return nil
+}
+
+func deregisterNacosService(nc naming_client.INamingClient) error {
+	serverPort := miso.GetPropInt(miso.PropServerActualPort)
+	registerName := miso.GetPropStr(PropNacosDiscoveryRegisterName)
+	registerAddress := miso.GetPropStr(PropNacosDiscoveryRegisterAddress)
+
+	// registerAddress not specified, resolve the ip address used for the server
+	if registerAddress == "" {
+		registerAddress = miso.ResolveServerHost(miso.GetPropStr(miso.PropServerHost))
+	} else {
+		registerAddress = miso.ResolveServerHost(registerAddress)
+	}
+
+	meta := miso.GetPropStrMap(PropNacosDiscoveryMetadata)
+	if meta == nil {
+		meta = map[string]string{}
+	}
+	meta[miso.ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+
+	_, err := nc.DeregisterInstance(vo.DeregisterInstanceParam{
+		ServiceName: registerName,
+		Ip:          registerAddress,
+		Port:        uint64(serverPort),
+		Ephemeral:   true,
+	})
+	if err != nil {
+		return err
+	}
+
+	miso.Infof("Deregistered on nacos, %v %v:%v", registerName, registerAddress, serverPort)
+	return nil
 }

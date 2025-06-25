@@ -283,7 +283,7 @@ func RegisterConsulService() error {
 	serverPort := GetPropInt(PropServerActualPort)
 	registerName := GetPropStr(PropConsuleRegisterName)
 	registerAddress := GetPropStr(PropConsulRegisterAddress)
-	healthCheckUrl := healthCheckUrl()
+	healthCheckUrl := GetPropStr(PropHealthCheckUrl)
 	healthCheckInterval := GetPropStr(PropHealthCheckInterval)
 	healthCheckTimeout := GetPropStr(PropHealthcheckTimeout)
 	healthCheckDeregAfter := GetPropStr(PropConsulHealthCheckFailedDeregAfter)
@@ -313,6 +313,7 @@ func RegisterConsulService() error {
 			Interval:                       healthCheckInterval,
 			Timeout:                        healthCheckTimeout,
 			DeregisterCriticalServiceAfter: healthCheckDeregAfter,
+			Status:                         ConsulStatusPassing,
 		},
 		Meta: meta,
 	}
@@ -447,9 +448,12 @@ func consulBootstrap(rail Rail) error {
 		}
 	})
 
-	if e := RegisterConsulService(); e != nil {
-		return fmt.Errorf("failed to register on Consul, %w", e)
-	}
+	OnAppReady(func(rail Rail) error {
+		if e := RegisterConsulService(); e != nil {
+			return WrapErrf(e, "failed to register on Consul")
+		}
+		return nil
+	})
 
 	return nil
 }

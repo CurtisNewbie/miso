@@ -476,6 +476,14 @@ func SliceCopy[T any](v []T) []T {
 	return cp
 }
 
+func MapCopy[T comparable, V any](v map[T]V) map[T]V {
+	cp := make(map[T]V, len(v))
+	for k, v := range v {
+		cp[k] = v
+	}
+	return cp
+}
+
 func SliceRemove[T any](v []T, idx ...int) []T {
 	cp := make([]T, 0, len(v)-len(idx))
 	idSet := NewSet[int]()

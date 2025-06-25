@@ -21,7 +21,7 @@ func PreTest(t *testing.T) Rail {
 
 func TestPollInstances(t *testing.T) {
 	rail := PreTest(t)
-	sl := GetServerList()
+	sl := GetServerList().(*ConsulServerList)
 	if sl == nil {
 		t.Fatal("sl is nil")
 	}
@@ -77,7 +77,7 @@ func TestSubscribe(t *testing.T) {
 
 func TestUnsubscribeAll(t *testing.T) {
 	rail := PreTest(t)
-	sl := GetServerList()
+	sl := GetServerList().(*ConsulServerList)
 	if sl == nil {
 		t.Fatal("sl is nil")
 	}

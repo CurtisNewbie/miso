@@ -82,6 +82,7 @@ type MisoApp struct {
 	configLoader                []func(r Rail) error
 	preServerBootstrapListener  []func(r Rail) error
 	postServerBootstrapListener []func(r Rail) error
+	appReadyListener            []func(r Rail) error
 
 	store  *appStore
 	config *AppConfig
@@ -214,6 +215,17 @@ func (a *MisoApp) Bootstrap(args []string) {
 	}
 
 	a.fullyBoostrapped.Store(true)
+
+	// invoke listener for appReady event
+	{
+		rail.Infof("Triggering OnAppReady")
+		start := time.Now()
+		if e := a.callAppReadyListeners(rail); e != nil {
+			rail.Errorf("Error occurred while triggering OnAppReady callbacks, %v", e)
+			return
+		}
+		rail.Infof("OnAppReady finished, took: %v", time.Since(start))
+	}
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	select {
@@ -361,6 +373,16 @@ func (a *MisoApp) Shutdown() {
 	a.manualSigQuit <- 1
 }
 
+func (a *MisoApp) callAppReadyListeners(rail Rail) error {
+	for _, c := range a.appReadyListener {
+		if e := c(rail); e != nil {
+			return e
+		}
+	}
+	a.appReadyListener = nil
+	return nil
+}
+
 func (a *MisoApp) callPostServerBootstrapListeners(rail Rail) error {
 	i := 0
 	for i < len(a.postServerBootstrapListener) {
@@ -399,6 +421,13 @@ func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
 
 func (a *MisoApp) RegisterBootstrapCallback(bootstrapComponent ComponentBootstrap) {
 	a.serverBootrapCallbacks = append(a.serverBootrapCallbacks, bootstrapComponent)
+}
+
+func (a *MisoApp) OnAppReady(callback ...func(rail Rail) error) {
+	if callback == nil {
+		return
+	}
+	a.appReadyListener = append(a.appReadyListener, callback...)
 }
 
 func (a *MisoApp) PostServerBootstrap(callback ...func(rail Rail) error) {
@@ -513,6 +542,13 @@ func Shutdown() {
 
 // deprecated: use PostServerBootstrap(...) instead.
 var PostServerBootstrapped = PostServerBootstrap
+
+// Add listener that is invoked when server is ready.
+//
+// OnAppReady(...) callbacks are invoked after PostServerBoostrap().
+func OnAppReady(f ...func(rail Rail) error) {
+	App().OnAppReady(f...)
+}
 
 // Add listener that is invoked when server is finally bootstrapped
 //

@@ -134,7 +134,7 @@ func (m *discoveryModule) getServiceRegistry() ServiceRegistry {
 func (m *discoveryModule) subscribeServerChanges(rail Rail, name string, cbk func()) error {
 	sl := m.getServerList()
 	if sl == nil {
-		return ErrServerListNotFound
+		return ErrServerListNotFound.New()
 	}
 	if err := sl.Subscribe(rail, name); err != nil {
 		return UnknownErrf(err, "failed to subscribe to service %v", name)
@@ -148,13 +148,14 @@ func (m *discoveryModule) triggerServerChangeListeners(service string) {
 }
 
 type ServerList interface {
-	PollInstances(rail Rail) error
 	PollInstance(rail Rail, name string) error
 	ListServers(rail Rail, name string) []Server
 	IsSubscribed(rail Rail, service string) bool
 	Subscribe(rail Rail, service string) error
 	Unsubscribe(rail Rail, service string) error
-	UnsubscribeAll(rail Rail) error
+
+	// PollInstances(rail Rail) error
+	// UnsubscribeAll(rail Rail) error
 }
 
 // Server selector, returns index of the selected one.
@@ -201,7 +202,7 @@ type hardcodedServiceRegistry struct {
 
 func (r hardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
 	if util.IsBlankStr(service) {
-		return "", ErrMissingServiceName
+		return "", ErrMissingServiceName.New()
 	}
 
 	host := r.serverHostFromProp(service)
@@ -216,7 +217,7 @@ func (r hardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relative
 
 func (r hardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
 	if util.IsBlankStr(service) {
-		return []Server{}, ErrMissingServiceName
+		return []Server{}, ErrMissingServiceName.New()
 	}
 
 	host := r.serverHostFromProp(service)
@@ -226,7 +227,7 @@ func (r hardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Serv
 		return []Server{{Address: host, Port: port, Meta: map[string]string{}}}, nil
 	}
 
-	return []Server{{Address: service, Port: port, Meta: map[string]string{}}}, nil
+	return nil, ErrServiceInstanceNotFound.New()
 }
 
 func (r hardcodedServiceRegistry) serverHostFromProp(name string) string {
@@ -289,7 +290,7 @@ func (c ServerListServiceRegistry) ListServers(rail Rail, service string) ([]Ser
 	m := discModule()
 	sl := m.getServerList()
 	if sl == nil {
-		return nil, ErrServerListNotFound
+		return nil, ErrServerListNotFound.New()
 	}
 	servers := sl.ListServers(rail, service)
 	if len(servers) < 1 {

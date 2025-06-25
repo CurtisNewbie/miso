@@ -139,20 +139,26 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Nacos Configuration
 
-| property                    | description                                                                               | default value    |
-| --------------------------- | ----------------------------------------------------------------------------------------- | ---------------- |
-| nacos.enabled               | enable nacos client                                                                       | false            |
-| nacos.server.addr           | nacos server address                                                                      | localhost        |
-| nacos.server.scheme         | nacos server address scheme                                                               | http             |
-| nacos.server.port           | nacos server port (by default it's either 80 or 443)                                      |                  |
-| nacos.server.context-path   | nacos server context path                                                                 |                  |
-| nacos.server.namespace      | nacos server namespace                                                                    |                  |
-| nacos.server.username       | nacos server username                                                                     |                  |
-| nacos.server.password       | nacos server password                                                                     |                  |
-| nacos.server.config.data-id | nacos config data-id                                                                      | ${app.name}      |
-| nacos.server.config.group   | nacos config group                                                                        | DEFAULT_GROUP    |
-| nacos.server.config.watch   | extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`) |                  |
-| nacos.cache-dir             | nacos cache dir                                                                           | /tmp/nacos/cache |
+| property                              | description                                                                               | default value      |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------ |
+| nacos.enabled                         | enable nacos client                                                                       | false              |
+| nacos.server.addr                     | nacos server address                                                                      | localhost          |
+| nacos.server.scheme                   | nacos server address scheme                                                               | http               |
+| nacos.server.port                     | nacos server port (by default it's either 80, 443 or 8848)                                |                    |
+| nacos.server.context-path             | nacos server context path                                                                 |                    |
+| nacos.server.namespace                | nacos server namespace                                                                    |                    |
+| nacos.server.username                 | nacos server username                                                                     |                    |
+| nacos.server.password                 | nacos server password                                                                     |                    |
+| nacos.server.config.data-id           | nacos config data-id                                                                      | ${app.name}        |
+| nacos.server.config.group             | nacos config group                                                                        | DEFAULT_GROUP      |
+| nacos.server.config.watch             | extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`) |                    |
+| nacos.discovery.enabled               | enable nacos client for service discovery                                                 | false              |
+| nacos.discovery.register-address      | register service address                                                                  | `"${server.host}"` |
+| nacos.discovery.register-name         | register service name                                                                     | `"${app.name}"`    |
+| nacos.discovery.enable-deregister-url | enable endpoint for manual Nacos service deregistration                                   | false              |
+| nacos.discovery.deregister-url        | endpoint url for manual Nacos service deregistration                                      | /nacos/deregister  |
+| nacos.discovery.metadata              | instance metadata (`map[string]string`)                                                   |                    |
+| nacos.cache-dir                       | nacos cache dir                                                                           | /tmp/nacos/cache   |
 
 ## RabbitMQ Configuration
 

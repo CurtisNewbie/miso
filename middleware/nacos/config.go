@@ -14,7 +14,7 @@ const (
 	// misoconfig-prop: nacos server address scheme | http
 	PropNacosServerScheme = "nacos.server.scheme"
 
-	// misoconfig-prop: nacos server port (by default it's either 80 or 443)
+	// misoconfig-prop: nacos server port (by default it's either 80, 443 or 8848)
 	PropNacosServerPort = "nacos.server.port"
 
 	// misoconfig-prop: nacos server context path |
@@ -38,6 +38,24 @@ const (
 	// misoconfig-prop: extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`)
 	PropNacosConfigWatch = "nacos.server.config.watch"
 
+	// misoconfig-prop: enable nacos client for service discovery | false
+	PropNacosDiscoveryEnabled = "nacos.discovery.enabled"
+
+	// misoconfig-prop: register service address | `"${server.host}"`
+	PropNacosDiscoveryRegisterAddress = "nacos.discovery.register-address"
+
+	// misoconfig-prop: register service name | `"${app.name}"`
+	PropNacosDiscoveryRegisterName = "nacos.discovery.register-name"
+
+	// misoconfig-prop: enable endpoint for manual Nacos service deregistration | false
+	PropNacosDiscoveryEnableDeregisterUrl = "nacos.discovery.enable-deregister-url"
+
+	// misoconfig-prop: endpoint url for manual Nacos service deregistration | /nacos/deregister
+	PropNacosDiscoveryDeregisterUrl = "nacos.discovery.deregister-url"
+
+	// misoconfig-prop: instance metadata (`map[string]string`)
+	PropNacosDiscoveryMetadata = "nacos.discovery.metadata"
+
 	// misoconfig-prop: nacos cache dir | /tmp/nacos/cache
 	PropNacosCacheDir = "nacos.cache-dir"
 )
@@ -49,6 +67,11 @@ func init() {
 	miso.SetDefProp(PropNacosServerScheme, "http")
 	miso.SetDefProp(PropNacosConfigDataId, "${app.name}")
 	miso.SetDefProp(PropNacosConfigGroup, "DEFAULT_GROUP")
+	miso.SetDefProp(PropNacosDiscoveryEnabled, false)
+	miso.SetDefProp(PropNacosDiscoveryRegisterAddress, "${server.host}")
+	miso.SetDefProp(PropNacosDiscoveryRegisterName, "${app.name}")
+	miso.SetDefProp(PropNacosDiscoveryEnableDeregisterUrl, false)
+	miso.SetDefProp(PropNacosDiscoveryDeregisterUrl, "/nacos/deregister")
 	miso.SetDefProp(PropNacosCacheDir, "/tmp/nacos/cache")
 }
 

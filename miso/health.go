@@ -88,7 +88,3 @@ func IsHealthcheckPass(rail Rail) bool {
 	rail.Debugf("Service healthcheck pass")
 	return true
 }
-
-func healthCheckUrl() string {
-	return GetPropStr(PropHealthCheckUrl)
-}
