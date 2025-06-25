@@ -134,3 +134,20 @@ func FileCutSuffix(name string, ext string) (string, bool) {
 	}
 	return name, false
 }
+
+func TempFilePath() (string, error) {
+	tmpFile, err := os.CreateTemp("/tmp", "temp_*")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+	return tmpFile.Name(), nil
+}
+
+func TempFile() (*os.File, error) {
+	tmpFile, err := os.CreateTemp("/tmp", "temp_*")
+	if err != nil {
+		return nil, err
+	}
+	return tmpFile, nil
+}
