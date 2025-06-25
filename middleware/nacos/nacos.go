@@ -1,6 +1,7 @@
 package nacos
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -396,7 +397,9 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		return constant.ClientConfig{}, nil, miso.NewErrf("Missing config: '%v'", PropNacosServerAddr)
 	}
 
+	contextPath := miso.GetPropStr(PropNacosServerContextPath)
 	serverConfigs := []constant.ServerConfig{}
+	scsb := []string{}
 	for _, host := range strings.Split(serverAddr, ",") {
 		if host == "" {
 			continue
@@ -418,13 +421,13 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		host = strings.TrimSpace(host)
 		serverConfigs = append(serverConfigs, constant.ServerConfig{
 			IpAddr:      host,
-			ContextPath: miso.GetPropStr(PropNacosServerContextPath),
+			ContextPath: contextPath,
 			Scheme:      scheme,
 			Port:        uint64(port),
 		})
+		scsb = append(scsb, fmt.Sprintf("%v:%v (%v)", host, port, scheme))
 	}
-	rail.Debugf("Nacos serverConfigs: %#v", serverConfigs)
-	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", serverAddr, ns, un)
+	rail.Infof("Connecting to Nacos Server: %v, ns: %v, user: %v", strings.Join(scsb, ", "), ns, un)
 	return clientConfig, serverConfigs, nil
 }
 
