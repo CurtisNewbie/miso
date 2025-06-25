@@ -162,7 +162,7 @@ func (r *RLock) Lock() error {
 					rail.Infof("Refreshed rlock for '%v', source span_id: %v", r.key, srcSpan)
 				}
 			case <-ctx.Done():
-				rail.Infof("RLock Refresher cancelled for '%v', source span_id: %v", r.key, srcSpan)
+				rail.Debugf("RLock Refresher cancelled for '%v', source span_id: %v", r.key, srcSpan)
 				return
 			}
 		}
