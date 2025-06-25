@@ -109,6 +109,15 @@ func FileHasSuffix(name string, ext string) bool {
 	return HasSuffixIgnoreCase(name, "."+ext)
 }
 
+func FileHasAnySuffix(name string, ext ...string) bool {
+	for _, ex := range ext {
+		if FileHasSuffix(name, ex) {
+			return true
+		}
+	}
+	return false
+}
+
 func FileAddSuffix(name string, ext string) string {
 	if FileHasSuffix(name, ext) {
 		return name
