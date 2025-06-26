@@ -105,7 +105,7 @@ func (m *taskModule) getTaskMasterKey(jobName string) string {
 	return "task:master:group:" + m.group + ":" + jobName
 }
 
-func (m *taskModule) scheduleDistributedTask(t miso.Job) error {
+func (m *taskModule) scheduleTask(t miso.Job) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
 
@@ -282,7 +282,7 @@ func SetScheduleGroup(groupName string) {
 //	}
 //	ScheduleDistributedTask(job)
 func ScheduleDistributedTask(t miso.Job) error {
-	return module().scheduleDistributedTask(t)
+	return module().scheduleTask(t)
 }
 
 // Start distributed scheduler asynchronously
