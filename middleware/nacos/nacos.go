@@ -125,6 +125,10 @@ func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
 					} else {
 						rail.Info("nacos service deregistered")
 					}
+
+					// wait for a few extra seconds to make sure the instances change events are propagated to other apps before we shutdown
+					time.Sleep(time.Second * 3)
+
 					return nil, nil
 				})).
 				Desc("Endpoint used to trigger Nacos service deregistration")
