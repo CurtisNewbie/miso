@@ -111,6 +111,11 @@ func (m *taskModule) scheduleDistributedTask(t miso.Job) error {
 	miso.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 	actualRun := t.Run
 	t.Run = func(rail miso.Rail) error {
+		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
+			rail.Debugf("Task '%v' disabled, skipped", t.Name)
+			return nil
+		}
+
 		m.dtaskMut.Lock()
 		if !m.tryTaskMaster(rail) {
 			m.dtaskMut.Unlock()
