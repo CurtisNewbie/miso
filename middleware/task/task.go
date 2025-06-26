@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/curtisnewbie/miso/middleware/redis"
@@ -29,9 +30,10 @@ func init() {
 
 var module = miso.InitAppModuleFunc(func() *taskModule {
 	return &taskModule{
-		dtaskMut:      &sync.Mutex{},
-		group:         "default",
-		masterTickers: map[string]*time.Ticker{},
+		dtaskMut:       &sync.Mutex{},
+		group:          "default",
+		masterTickers:  map[string]*time.Ticker{},
+		rebalanceMarks: map[string]*atomic.Bool{},
 	}
 })
 
@@ -50,13 +52,49 @@ type taskModule struct {
 
 	// ticker for refreshing master node lock
 	masterTickers map[string]*time.Ticker
+
+	// marks for node rebalancing
+	rebalanceMarks map[string]*atomic.Bool
 }
 
 func (m *taskModule) enabled() bool {
 	return miso.GetPropBool(PropTaskSchedulingEnabled) && len(m.dtasks) > 0
 }
 
-func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) error {
+func (m *taskModule) prepareNodeRebalancing(rail miso.Rail) error {
+	rd := redis.GetRedis()
+	channel := "task:node:rebalance:" + m.group
+	pubsub := rd.Subscribe(context.Background(), channel)
+	cctx, cancel := context.WithCancel(context.Background())
+	miso.AddShutdownHook(cancel)
+	rch := pubsub.Channel()
+	go func() {
+		for {
+			select {
+			case v := <-rch:
+				if v.Payload != m.nodeId {
+					rail.Infof("New task node joined, %v, rebalancing", v.Payload)
+					for _, dt := range m.dtasks {
+						if m.isTaskMaster(rail, dt.Name) {
+							m.rebalanceMarks[dt.Name].CompareAndSwap(false, true)
+						}
+					}
+				}
+			case <-cctx.Done():
+				rail.Infof("Server shutting down, exit task node rebalancing subscription")
+				return
+			}
+		}
+	}()
+
+	miso.PostServerBootstrap(func(rail miso.Rail) error {
+		return rd.Publish(context.Background(), channel, m.nodeId).Err()
+	})
+	return nil
+}
+
+func (m *taskModule) prepareTaskScheduling(rail miso.Rail) error {
+	tasks := m.dtasks
 	if len(tasks) < 1 {
 		return nil
 	}
@@ -69,6 +107,15 @@ func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) err
 	if err := m.registerTasks(tasks); err != nil {
 		return err
 	}
+
+	for _, dt := range tasks {
+		m.rebalanceMarks[dt.Name] = &atomic.Bool{}
+	}
+
+	if err := m.prepareNodeRebalancing(rail); err != nil {
+		return err
+	}
+
 	rail.Infof("Scheduled %d distributed tasks, current node id: '%s', group: '%s'", len(tasks), m.nodeId, m.group)
 	return nil
 }
@@ -120,10 +167,24 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		m.dtaskMut.Lock()
 		if !m.tryTaskMaster(rail, t.Name) {
 			m.dtaskMut.Unlock()
+			m.rebalanceMarks[t.Name].CompareAndSwap(true, false) // no need to rebalance
 			rail.Infof("Not master node, skip scheduled task '%v'", t.Name)
 			return nil
 		}
 		m.dtaskMut.Unlock()
+
+		defer func() {
+			if m.rebalanceMarks[t.Name].Load() {
+				rail.Infof("Rebalancing task: %v", t.Name)
+				m.rebalanceMarks[t.Name].Store(false)
+				if m.releaseMasterNodeLock(t.Name) {
+					m.dtaskMut.Lock()
+					defer m.dtaskMut.Unlock()
+					m.stopTaskMasterLockTicker(t.Name)
+				}
+			}
+		}()
+
 		return actualRun(rail)
 	}
 	m.dtasks = append(m.dtasks, t)
@@ -137,7 +198,7 @@ func (m *taskModule) startTaskSchedulerAsync(rail miso.Rail) error {
 	if len(m.dtasks) < 1 {
 		return nil
 	}
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareTaskScheduling(rail); err != nil {
 		return err
 	}
 	miso.StartSchedulerAsync()
@@ -151,7 +212,7 @@ func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 	if len(m.dtasks) < 1 {
 		return nil
 	}
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareTaskScheduling(rail); err != nil {
 		return err
 	}
 	miso.StartSchedulerBlocking()
@@ -161,7 +222,7 @@ func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 func (m *taskModule) bootstrapAsComponent(rail miso.Rail) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareTaskScheduling(rail); err != nil {
 		return fmt.Errorf("failed to prepareTaskScheduling, %w", err)
 	}
 	return nil
@@ -193,7 +254,7 @@ func (m *taskModule) startTaskMasterLockTicker(jobName string) {
 	}(tk.C)
 }
 
-func (m *taskModule) releaseMasterNodeLock(jobName string) {
+func (m *taskModule) releaseMasterNodeLock(jobName string) bool {
 	cmd := redis.GetRedis().Eval(context.Background(), `
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
@@ -206,9 +267,11 @@ func (m *taskModule) releaseMasterNodeLock(jobName string) {
 	return 0;`, []string{m.getTaskMasterKey(jobName)}, m.nodeId)
 	if cmd.Err() != nil {
 		miso.Errorf("Failed to release master node lock for %v, %v", jobName, miso.WrapErr(cmd.Err()))
-		return
+		return false
 	}
-	miso.Debugf("Release master node lock for %v, released? %v", jobName, cmd.Val() == int64(1))
+	released := cmd.Val() == int64(1)
+	miso.Debugf("Release master node lock for %v, released? %v", jobName, released)
+	return released
 }
 
 // Stop refreshing master lock ticker
