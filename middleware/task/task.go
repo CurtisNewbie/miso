@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -14,7 +15,8 @@ import (
 
 const (
 	// default ttl for master lock key in redis (1 min)
-	defMstLockTtl = 1 * time.Minute
+	defMstLockTtl    = 1 * time.Minute
+	defMstLockTtlSec = 60
 )
 
 func init() {
@@ -120,7 +122,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		m.dtaskMut.Lock()
 		if !m.tryTaskMaster(rail, t.Name) {
 			m.dtaskMut.Unlock()
-			rail.Infof("Not master node, skip scheduled task '%v'", t.Name)
+			rail.Debugf("Not master node, skip scheduled task '%v'", t.Name)
 			return nil
 		}
 		m.dtaskMut.Unlock()
@@ -187,7 +189,7 @@ func (m *taskModule) startTaskMasterLockTicker(jobName string) {
 	m.masterTickers[jobName] = tk
 	go func(c <-chan time.Time) {
 		for {
-			m.refreshTaskMasterLock(jobName)
+			_ = m.refreshTaskMasterLock(jobName)
 			<-c
 		}
 	}(tk.C)
@@ -205,6 +207,9 @@ func (m *taskModule) releaseMasterNodeLock(jobName string) {
 	end;
 	return 0;`, []string{m.getTaskMasterKey(jobName)}, m.nodeId)
 	if cmd.Err() != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return
+		}
 		miso.Errorf("Failed to release master node lock for %v, %v", jobName, miso.WrapErr(cmd.Err()))
 		return
 	}
@@ -223,7 +228,23 @@ func (m *taskModule) stopTaskMasterLockTicker(jobName string) {
 
 // Refresh master lock key ttl
 func (m *taskModule) refreshTaskMasterLock(jobName string) error {
-	return redis.GetRedis().Expire(context.Background(), m.getTaskMasterKey(jobName), defMstLockTtl).Err()
+	err := redis.GetRedis().Eval(context.Background(), `
+	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
+		redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
+		return 1;
+	end;
+	return 0;
+	`, []string{m.getTaskMasterKey(jobName)}, m.nodeId, defMstLockTtlSec).Err()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			miso.Debugf("Failed to refreshTaskMasterLock for job '%v', masterLock not obtained", jobName)
+			return nil
+		}
+		miso.Errorf("Failed to refreshTaskMasterLock for job '%v', %v", jobName, err)
+	} else {
+		miso.Debugf("Did refreshTaskMasterLock for job '%v'", jobName)
+	}
+	return err
 }
 
 // Try to become master node
