@@ -9,6 +9,7 @@ import (
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
 	"github.com/spf13/cast"
+	"golang.org/x/text/width"
 )
 
 var (
@@ -271,30 +272,34 @@ func FmtFloat(f float64, width int, precision int) string {
 }
 
 func PadSpace(n int, s string) string {
-	r := []rune(s)
-	rl := len(r)
-	an := n
-	if n < 0 {
-		an = n * -1
+	return PadToken(n, s, " ")
+}
+
+func RuneWidth(r rune) int {
+	k := width.LookupRune(r).Kind()
+	switch k {
+	case width.EastAsianWide, width.EastAsianFullwidth, width.EastAsianAmbiguous:
+		return 2
+	default:
+		return 1
 	}
-	if len(r) >= an {
-		return s
+}
+
+func StrWidth(s string) int {
+	n := 0
+	for _, r := range s {
+		n += RuneWidth(r)
 	}
-	pad := an - rl
-	if n < 0 {
-		return s + strings.Repeat(" ", pad)
-	}
-	return strings.Repeat(" ", pad) + s
+	return n
 }
 
 func PadToken(n int, s string, tok string) string {
-	r := []rune(s)
-	rl := len(r)
+	rl := StrWidth(s)
 	an := n
 	if n < 0 {
 		an = n * -1
 	}
-	if len(r) >= an {
+	if rl >= an {
 		return s
 	}
 	pad := an - rl

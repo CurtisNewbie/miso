@@ -361,25 +361,28 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	defer f.Close()
 
 	sb := util.SLPinter{}
+	wlen := func(s string) int { return util.StrWidth(s) }
 
 	for _, sec := range sections {
 		if len(sec.Configs) < 1 {
 			continue
 		}
-		maxNameLen := len("property")
-		maxDescLen := len("description")
-		maxValLen := len("default value")
-
+		maxNameLen := wlen("property")
+		maxDescLen := wlen("description")
+		maxValLen := wlen("default value")
 		configs := util.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
 		for _, c := range configs {
-			if len(c.Name) > maxNameLen {
-				maxNameLen = len(c.Name)
+			nameLen := wlen(c.Name)
+			descLen := wlen(c.Description)
+			defValLen := wlen(c.DefaultValue)
+			if nameLen > maxNameLen {
+				maxNameLen = nameLen
 			}
-			if len(c.Description) > maxDescLen {
-				maxDescLen = len(c.Description)
+			if descLen > maxDescLen {
+				maxDescLen = descLen
 			}
-			if len(c.DefaultValue) > maxValLen {
-				maxValLen = len(c.DefaultValue)
+			if defValLen > maxValLen {
+				maxValLen = defValLen
 			}
 		}
 
