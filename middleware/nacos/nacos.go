@@ -24,7 +24,10 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 		configContent:  util.NewStrRWMap[string](),
 		watchedConfigs: make([]watchingConfig, 0, 1),
 		reloadMut:      &sync.Mutex{},
-		serverList:     &NacosServerList{},
+		serverList: &NacosServerList{
+			watchedServices: util.NewSetPtr[string](),
+			wsmu:            &sync.RWMutex{},
+		},
 	}
 })
 
@@ -118,12 +121,13 @@ func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
 
 			miso.HttpGet(deregisterUrl, miso.ResHandler(
 				func(inb *miso.Inbound) (any, error) {
-					rail.Info("Deregistering nacos service registration")
+					_, r := inb.Unwrap()
+					rail.Infof("Deregistering nacos service registration, remote_addr: %v", r.RemoteAddr)
 					if err := deregisterNacosService(m.serverList.client); err != nil {
 						rail.Errorf("failed to deregistered nacos service, %v", err)
 						return nil, err
 					} else {
-						rail.Info("nacos service deregistered")
+						rail.Info("Nacos service deregistered")
 					}
 
 					// wait for a few extra seconds to make sure the instances change events are propagated to other apps before we shutdown
@@ -475,10 +479,34 @@ func (w watchingConfig) Key() string {
 
 // Holder of a list of ServiceHolder
 type NacosServerList struct {
-	client naming_client.INamingClient
+	client          naming_client.INamingClient
+	watchedServices *util.Set[string]
+	wsmu            *sync.RWMutex
 }
 
 func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server {
+	s.wsmu.RLock()
+	if !s.watchedServices.Has(name) {
+		s.wsmu.RUnlock()
+
+		s.wsmu.Lock()
+		if s.watchedServices.Add(name) {
+			err := s.client.Subscribe(&vo.SubscribeParam{
+				ServiceName: name,
+				SubscribeCallback: func(services []model.SubscribeService, err error) {
+					rail.Infof("Service '%v' instances changed: %#v", name, services)
+				},
+			})
+			if err != nil {
+				rail.Errorf("Failed to subscribe service '%v', %v", name, err)
+				s.watchedServices.Del(name)
+			}
+		}
+		s.wsmu.Unlock()
+	} else {
+		s.wsmu.RUnlock()
+	}
+
 	inst, err := s.client.SelectAllInstances(vo.SelectAllInstancesParam{ServiceName: name})
 	if err != nil {
 		rail.Errorf("Failed to select instances for %v, %v", name, err)

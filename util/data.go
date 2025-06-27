@@ -130,6 +130,12 @@ func (s *Set[T]) CopyKeys() []T {
 	return keys
 }
 
+// Create ptr to a new Set
+func NewSetPtr[T comparable](keys ...T) *Set[T] {
+	s := NewSet[T](keys...)
+	return &s
+}
+
 // Create new Set
 func NewSet[T comparable](keys ...T) Set[T] {
 	s := Set[T]{Keys: map[T]Void{}}
