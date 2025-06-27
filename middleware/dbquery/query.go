@@ -420,6 +420,10 @@ func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
 
+func (q *Query) Transaction(onTransaction func(db *gorm.DB) error) error {
+	return q.tx.Transaction(onTransaction)
+}
+
 func NewQuery(db *gorm.DB) *Query {
 	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 }
