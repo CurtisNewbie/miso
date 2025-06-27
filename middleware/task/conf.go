@@ -10,6 +10,10 @@ const (
 
 	// misoconfig-prop: name of the cluster | `"${app.name}"`
 	PropTaskSchedulingGroup = "task.scheduling.group"
+
+	// misoconfig-prop: disable specific task by it's name | false
+	// misoconfig-doc-only
+	PropTaskSchedulingTaskDisabled = "task.scheduling.${taskName}.disabled"
 )
 
 // misoconfig-default-start

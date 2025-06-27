@@ -78,10 +78,11 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Distributed Task Scheduling Configuration
 
-| property                | description                        | default value   |
-| ----------------------- | ---------------------------------- | --------------- |
-| task.scheduling.enabled | enable distributed task scheduling | true            |
-| task.scheduling.group   | name of the cluster                | `"${app.name}"` |
+| property                             | description                        | default value   |
+| ------------------------------------ | ---------------------------------- | --------------- |
+| task.scheduling.enabled              | enable distributed task scheduling | true            |
+| task.scheduling.group                | name of the cluster                | `"${app.name}"` |
+| task.scheduling.${taskName}.disabled | disable specific task by it's name | false           |
 
 ## JWT Configuration
 

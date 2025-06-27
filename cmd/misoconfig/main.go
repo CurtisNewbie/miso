@@ -27,6 +27,7 @@ const (
 	tagSection = "section"
 	tagProp    = "prop"
 	tagAlias   = "alias"
+	tagDocOnly = "doc-only"
 )
 
 var (
@@ -66,6 +67,10 @@ In prop.go:
 	  // misoconfig-prop: my prop
 	  // misoconfig-alias: old-prop
 	  PropDeprecated = "new-prop"
+
+	  // misoconfig-prop: my special prop
+	  // misoconfig-doc-only
+	  PropDocOnly = "prod-only-shown-in-doc"
 
 	  // misoconfig-default-start
 	  // misoconfig-default-end
@@ -250,6 +255,7 @@ type ConfigDecl struct {
 	DefaultValue string
 	Alias        string
 	AliasSince   string
+	DocOnly      bool
 }
 
 func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs map[string][]ConfigDecl) (newSection string) {
@@ -294,6 +300,8 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 				p, _ := t.BodyKVTok("|")
 				cd.Alias = p.K
 				cd.AliasSince = p.V
+			case tagDocOnly:
+				cd.DocOnly = true
 			}
 		}
 
@@ -363,16 +371,6 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		maxValLen := len("default value")
 
 		configs := util.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
-		// configs = util.MapTo(configs, func(c ConfigDecl) ConfigDecl {
-		// 	if c.Alias != "" {
-		// 		if c.AliasSince != "" {
-		// 			c.Description += fmt.Sprintf(" (was named `%v` before `%v`)", c.Alias, c.AliasSince)
-		// 		} else {
-		// 			c.Description += fmt.Sprintf(" (was named `%v`)", c.Alias)
-		// 		}
-		// 	}
-		// 	return c
-		// })
 		for _, c := range configs {
 			if len(c.Name) > maxNameLen {
 				maxNameLen = len(c.Name)
@@ -453,7 +451,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		defer f.Close()
 
 		n := 0
-		skipConfig := func(c ConfigDecl) bool { return c.DefaultValue == "" && c.Alias == "" }
+		skipConfig := func(c ConfigDecl) bool { return (c.DefaultValue == "" && c.Alias == "") || c.DocOnly }
 		for _, c := range src {
 			if skipConfig(c) {
 				continue
