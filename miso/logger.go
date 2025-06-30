@@ -426,7 +426,7 @@ func unsafeGetShortFnName(fn string) string {
 			dcnt := 0
 			for i := len(fnb) - 1; i >= 0; i-- {
 				ib := fnb[i]
-				if ib == '.' {
+				if ib == '.' && (i-1 < 0 || fnb[i-1] != '.') {
 					dcnt += 1
 					if dcnt > maxDotCnt {
 						return util.UnsafeByt2Str(fnb[i+1:])
