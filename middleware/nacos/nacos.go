@@ -540,6 +540,10 @@ func (s *NacosServerList) PollInstance(rail miso.Rail, name string) error {
 }
 
 func registerNacosService(nc naming_client.INamingClient) error {
+	if !miso.GetPropBool(PropNacosDiscoveryRegisterInstance) {
+		return nil
+	}
+
 	serverPort := miso.GetPropInt(miso.PropServerActualPort)
 	registerName := miso.GetPropStr(PropNacosDiscoveryRegisterName)
 	registerAddress := miso.GetPropStr(PropNacosDiscoveryRegisterAddress)
@@ -579,6 +583,10 @@ func registerNacosService(nc naming_client.INamingClient) error {
 }
 
 func deregisterNacosService(nc naming_client.INamingClient) error {
+	if !miso.GetPropBool(PropNacosDiscoveryRegisterInstance) {
+		return nil
+	}
+
 	serverPort := miso.GetPropInt(miso.PropServerActualPort)
 	registerName := miso.GetPropStr(PropNacosDiscoveryRegisterName)
 	registerAddress := miso.GetPropStr(PropNacosDiscoveryRegisterAddress)

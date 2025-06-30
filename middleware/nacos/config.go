@@ -41,6 +41,9 @@ const (
 	// misoconfig-prop: enable nacos client for service discovery | false
 	PropNacosDiscoveryEnabled = "nacos.discovery.enabled"
 
+	// misoconfig-prop: register current instance on nacos for service discovery | true
+	PropNacosDiscoveryRegisterInstance = "nacos.discovery.register-instance"
+
 	// misoconfig-prop: register service address | `"${server.host}"`
 	PropNacosDiscoveryRegisterAddress = "nacos.discovery.register-address"
 
@@ -68,6 +71,7 @@ func init() {
 	miso.SetDefProp(PropNacosConfigDataId, "${app.name}")
 	miso.SetDefProp(PropNacosConfigGroup, "DEFAULT_GROUP")
 	miso.SetDefProp(PropNacosDiscoveryEnabled, false)
+	miso.SetDefProp(PropNacosDiscoveryRegisterInstance, true)
 	miso.SetDefProp(PropNacosDiscoveryRegisterAddress, "${server.host}")
 	miso.SetDefProp(PropNacosDiscoveryRegisterName, "${app.name}")
 	miso.SetDefProp(PropNacosDiscoveryEnableDeregisterUrl, false)
