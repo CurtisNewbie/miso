@@ -300,3 +300,18 @@ func buildCronJob(j Job, options ...func(j Job) Job) Job {
 	}
 	return j
 }
+
+// Build cron expression (with sceond field) for every X seconds.
+func CronExprEveryXSec(n int) string {
+	return fmt.Sprintf("*/%d * * * * *", n)
+}
+
+// Build cron expression (with sceond field) for every X minutes.
+func CronExprEveryXMin(n int) string {
+	return fmt.Sprintf("0 */%d * * * *", n)
+}
+
+// Build cron expression (with sceond field) for every X hours.
+func CronExprEveryXHour(n int) string {
+	return fmt.Sprintf("0 0 */%d * * *", n)
+}

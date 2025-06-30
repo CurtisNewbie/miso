@@ -146,6 +146,12 @@ func (e *MisoErr) WithCode(code string) *MisoErr {
 	return n
 }
 
+func (e *MisoErr) WithMsg(msg string) *MisoErr {
+	n := e.copyNew()
+	n.msg = msg
+	return n
+}
+
 // Implements *MisoErr Is check.
 //
 // Returns true, if both are *MisoErr and the code matches.
