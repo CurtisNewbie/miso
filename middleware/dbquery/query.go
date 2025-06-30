@@ -236,7 +236,7 @@ func (q *Query) Order(order string) *Query {
 }
 
 func (q *Query) OrderDesc(col string) *Query {
-	q.tx = q.tx.Order(col + " DSEC")
+	q.tx = q.tx.Order(col + " DESC")
 	return q
 }
 
