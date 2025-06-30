@@ -48,7 +48,7 @@ func init() {
 		Timeout:   5 * time.Second,
 		KeepAlive: 15 * time.Second,
 	}).DialContext
-	transport.ResponseHeaderTimeout = 15 * time.Second
+	transport.ResponseHeaderTimeout = 0
 	MisoDefaultClient.Transport = transport
 }
 
