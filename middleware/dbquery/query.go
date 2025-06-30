@@ -235,6 +235,16 @@ func (q *Query) Order(order string) *Query {
 	return q
 }
 
+func (q *Query) OrderDesc(col string) *Query {
+	q.tx = q.tx.Order(col + " DSEC")
+	return q
+}
+
+func (q *Query) OrderAsc(col string) *Query {
+	q.tx = q.tx.Order(col + " ASC")
+	return q
+}
+
 func (q *Query) Join(query string, args ...any) *Query {
 	q.tx = q.tx.Joins(query, args...)
 	return q
