@@ -272,7 +272,7 @@ func (t *TickRunner) Stop() {
 
 func CronEveryXSec(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            fmt.Sprintf("*/%d * * * * *", n),
+		Cron:            CronExprEveryXSec(n),
 		CronWithSeconds: true,
 	}
 	return buildCronJob(j, options...)
@@ -280,7 +280,7 @@ func CronEveryXSec(n int, options ...func(j Job) Job) Job {
 
 func CronEveryXMin(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            fmt.Sprintf("0 */%d * * * *", n),
+		Cron:            CronExprEveryXMin(n),
 		CronWithSeconds: true,
 	}
 	return buildCronJob(j, options...)
@@ -288,7 +288,7 @@ func CronEveryXMin(n int, options ...func(j Job) Job) Job {
 
 func CronEveryXHour(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            fmt.Sprintf("0 0 */%d * * *", n),
+		Cron:            CronExprEveryXHour(n),
 		CronWithSeconds: true,
 	}
 	return buildCronJob(j, options...)
