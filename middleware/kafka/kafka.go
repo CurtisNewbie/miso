@@ -162,7 +162,7 @@ func bootstrapKafka(rail miso.Rail) error {
 		listen := func(rail miso.Rail, m Message) (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					util.PanicLog("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+					miso.Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
 					err = miso.NewErrf("kafka listener panic recovered, %v", v)
 				}
 			}()

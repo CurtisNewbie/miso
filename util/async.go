@@ -14,9 +14,6 @@ import (
 var (
 	_ Future[any] = (*future[any])(nil)
 	_ Future[any] = (*completedFuture[any])(nil)
-
-	PanicLog func(pat string, args ...any) = Printlnf
-	DebugLog func(pat string, args ...any) = func(pat string, args ...any) {}
 )
 
 var (
@@ -124,7 +121,7 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 
 			// task() panicked, change err
 			if v := recover(); v != nil {
-				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 				if verr, ok := v.(error); ok {
 					err = verr
 				} else {
@@ -377,7 +374,7 @@ func PanicSafeFunc(op func()) func() {
 	return func() {
 		defer func() {
 			if v := recover(); v != nil {
-				PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 			}
 		}()
 		op()
@@ -386,7 +383,7 @@ func PanicSafeFunc(op func()) func() {
 
 func recoverPanic() {
 	if v := recover(); v != nil {
-		PanicLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+		ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 	}
 }
 

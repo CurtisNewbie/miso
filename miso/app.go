@@ -452,9 +452,8 @@ func (a *MisoApp) RegisterConfigLoader(callback ...func(rail Rail) error) {
 }
 
 func (a *MisoApp) configureLogging() error {
-	util.PanicLog = Errorf
+	util.ErrorLog = Errorf
 	util.DebugLog = Debugf
-	util.CliErrLog = Errorf
 	c := a.Config()
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)

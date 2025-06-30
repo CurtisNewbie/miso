@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-var CliErrLog func(pat string, args ...any) = Printlnf
-
 func TermOpenUrl(url string) error {
 	var cmd string
 	var args []string

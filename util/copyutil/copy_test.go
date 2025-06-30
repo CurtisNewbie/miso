@@ -3,7 +3,6 @@ package copyutil
 import (
 	"testing"
 
-	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 )
 
@@ -23,6 +22,6 @@ func TestCopy(t *testing.T) {
 		Age:  1,
 		Time: util.NowPtr(),
 	}
-	v := CopyNew[DummyTwo](miso.EmptyRail(), &d)
+	v := CopyNew[DummyTwo](&d)
 	t.Logf("%#v", v)
 }

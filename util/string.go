@@ -354,7 +354,7 @@ func MatchPathAny(pattern []string, s string) bool {
 func MatchPath(pattern, s string) bool {
 	ok, err := doublestar.Match(pattern, s)
 	if err != nil {
-		CliErrLog("Path Pattern is invalid, pattern: '%v', %v", pattern, err)
+		ErrorLog("Path Pattern is invalid, pattern: '%v', %v", pattern, err)
 		return false
 	}
 	return ok
