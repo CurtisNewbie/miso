@@ -134,8 +134,15 @@ func (a *AppConfig) GetPropStrMap(prop string) map[string]string {
 }
 
 // Get prop as time.Duration
+//
+// Deprecated: Use GetPropDuration() instead.
 func (a *AppConfig) GetPropDur(prop string, unit time.Duration) time.Duration {
 	return time.Duration(a.GetPropInt(prop)) * unit
+}
+
+// Get prop as time.Duration
+func (a *AppConfig) GetPropDuration(prop string) time.Duration {
+	return cast.ToDuration(a.GetPropStr(prop))
 }
 
 // Get prop as any
@@ -506,8 +513,15 @@ func GetPropStrMap(prop string) map[string]string {
 }
 
 // Get prop as time.Duration
+//
+// Deprecated: Use GetPropDuration() instead.
 func GetPropDur(prop string, unit time.Duration) time.Duration {
 	return globalConfig().GetPropDur(prop, unit)
+}
+
+// Get prop as time.Duration
+func GetPropDuration(prop string) time.Duration {
+	return globalConfig().GetPropDuration(prop)
 }
 
 // Get prop as bool

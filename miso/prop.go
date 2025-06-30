@@ -6,6 +6,9 @@ const (
 	// misoconfig-prop: name of the application
 	PropAppName = "app.name"
 
+	// misoconfig-prop: warning threshold for slow ComponentBootstrap | 5s
+	PropAppSlowBoostrapThresohold = "app.slow-bootstrap-threshold"
+
 	// misoconfig-prop: whether production mode is turned on | true
 	PropProdMode = "mode.production"
 
@@ -236,6 +239,7 @@ func init() {
 	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecServer, "server.generate-endpoint-doc.openapi-spec.server")
 	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecFile, "server.generate-endpoint-doc.openapi-spec.file")
 	RegisterAlias(PropServerGenerateEndpointDocOpenApiSpecPathPatterns, "server.generate-endpoint-doc.openapi-spec.path-patterns")
+	SetDefProp(PropAppSlowBoostrapThresohold, "5s")
 	SetDefProp(PropProdMode, true)
 	SetDefProp(PropConsulEnabled, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")

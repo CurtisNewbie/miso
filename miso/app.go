@@ -173,6 +173,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	// bootstrap components, these are sorted by their orders
 	sort.Slice(a.serverBootrapCallbacks, func(i, j int) bool { return a.serverBootrapCallbacks[i].Order < a.serverBootrapCallbacks[j].Order })
 	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
+	slowBootstrapThreshold := GetPropDuration(PropAppSlowBoostrapThresohold)
 	for _, sbc := range a.serverBootrapCallbacks {
 		if sbc.Condition != nil {
 			ok, ce := sbc.Condition(rail)
@@ -193,7 +194,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 		}
 		took := time.Since(start)
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)
-		if took >= 5*time.Second {
+		if took >= slowBootstrapThreshold {
 			rail.Warnf("Component '%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
 		}
 	}
