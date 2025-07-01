@@ -13,7 +13,7 @@ The overall target is to make it as small and simple as possible, backward compa
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.2.0
+go get github.com/curtisnewbie/miso@v0.2.1
 ```
 
 You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
