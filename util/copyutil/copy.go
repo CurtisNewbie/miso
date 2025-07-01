@@ -6,14 +6,14 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-func Copy(fromPtr any, toPtr any) {
-	if err := copier.Copy(toPtr, fromPtr); err != nil {
+func Copy(from any, toPtr any) {
+	if err := copier.Copy(toPtr, from); err != nil {
 		util.ErrorLog("Failed to copy value, %v", miso.WrapErr(err))
 	}
 }
 
-func CopyNew[V any](fromPtr any) V {
+func CopyNew[V any](from any) V {
 	var v V
-	Copy(fromPtr, &v)
+	Copy(from, &v)
 	return v
 }
