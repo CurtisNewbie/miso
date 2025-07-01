@@ -2,7 +2,6 @@ package redis
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
@@ -44,10 +43,10 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 	cacheKey := r.cacheKey(key)
 	val, err := r.ValueSerializer.Serialize(t)
 	if err != nil {
-		return fmt.Errorf("failed to serialze value, %w", err)
+		return miso.WrapErrf(err, "failed to serialze value")
 	}
 	op := func() error {
-		return r.getClient().Set(rail.Context(), cacheKey, val, r.exp).Err()
+		return miso.WrapErr(r.getClient().Set(rail.Context(), cacheKey, val, r.exp).Err())
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -58,7 +57,7 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 func (r *RCache[T]) Del(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
-		return r.getClient().Del(rail.Context(), cacheKey).Err()
+		return miso.WrapErr(r.getClient().Del(rail.Context(), cacheKey).Err())
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -91,11 +90,11 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 
 		cmd := r.getClient().Get(rail.Context(), cacheKey)
 		if cmd.Err() == nil {
-			return t, r.ValueSerializer.Deserialize(&t, cmd.Val()) // key found
+			return t, miso.WrapErr(r.ValueSerializer.Deserialize(&t, cmd.Val())) // key found
 		}
 
 		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
-			return t, fmt.Errorf("failed to get value from redis, unknown error, %w", cmd.Err())
+			return t, miso.WrapErrf(cmd.Err(), "failed to get value from redis")
 		}
 
 		// nothing to supply, give up
@@ -106,19 +105,19 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 		// call supplier and cache the supplied value
 		supplied, err := supplier()
 		if err != nil {
-			return t, err
+			return t, miso.WrapErr(err)
 		}
 
 		// serialize supplied value
 		v, err := r.ValueSerializer.Serialize(supplied)
 		if err != nil {
-			return t, fmt.Errorf("failed to serialize the supplied value, %w", err)
+			return t, miso.WrapErrf(err, "failed to serialize the supplied value")
 		}
 
 		// cache the serialized value
 		scmd := r.getClient().Set(rail.Context(), cacheKey, v, r.exp)
 		if scmd.Err() != nil {
-			return t, scmd.Err()
+			return t, miso.WrapErr(scmd.Err())
 		}
 		return supplied, nil
 	}
@@ -138,7 +137,7 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 			return cmd.Val() > 0, nil
 		}
 		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
-			return false, fmt.Errorf("failed to get value from redis, unknown error, %w", cmd.Err())
+			return false, miso.WrapErrf(cmd.Err(), "failed to get value from redis, unknown error")
 		}
 		return false, nil
 	}
@@ -154,19 +153,19 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 	pat := r.cacheKeyPattern()
 	cmd := r.getClient().Scan(rail.Context(), 0, pat, rcacheScanLimit)
 	if cmd.Err() != nil {
-		return fmt.Errorf("failed to scan redis with pattern '%v', %w", pat, cmd.Err())
+		return miso.WrapErrf(cmd.Err(), "failed to scan redis with pattern '%v'", pat)
 	}
 
 	iter := cmd.Iterator()
 	for iter.Next(rail.Context()) {
 		if iter.Err() != nil {
-			return fmt.Errorf("failed to iterate using scan, pattern: '%v', %w", pat, iter.Err())
+			return miso.WrapErrf(iter.Err(), "failed to iterate using scan, pattern: '%v'", pat)
 		}
 		key := iter.Val()
 		dcmd := r.getClient().Del(rail.Context(), key)
 		if dcmd.Err() != nil {
 			if !errors.Is(dcmd.Err(), redis.Nil) {
-				return fmt.Errorf("failed to del key %v, %w", key, dcmd.Err())
+				return miso.WrapErrf(dcmd.Err(), "failed to del key: %v", key)
 			}
 		} else {
 			rail.Debugf("Deleted rcache key %v", key)
