@@ -168,6 +168,7 @@ func redisBootstrap(rail miso.Rail) error {
 		return miso.WrapErrf(e, "failed to establish connection to Redis")
 	}
 	m.addHealthIndicator()
+	redis.SetLogger(redisLogger{})
 	return nil
 }
 
@@ -177,4 +178,11 @@ func redisBootstrapCondition(rail miso.Rail) (bool, error) {
 
 func IsNil(err error) bool {
 	return errors.Is(err, Nil)
+}
+
+type redisLogger struct {
+}
+
+func (r redisLogger) Printf(ctx context.Context, format string, v ...interface{}) {
+	miso.NewRail(ctx).Infof(format, v...)
 }
