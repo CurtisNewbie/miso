@@ -96,6 +96,7 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 		if errRun == nil {
 			if job.LogJobExec {
 				rail.Infof("Job '%s' finished, took: %s", job.Name, took)
+				m.logNextRun(rail, job.Name, false)
 			}
 		} else {
 			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
@@ -126,11 +127,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	}
 
 	PostServerBootstrap(func(rail Rail) error {
-		taggedJobs, _ := m.scheduler.FindJobsByTag(job.Name)
-		for _, j := range taggedJobs {
-			rail.Debugf("Job '%v' next run scheduled at: %v", job.Name, j.NextRun())
-		}
-
+		m.logNextRun(rail, job.Name, true)
 		if job.TriggeredOnBoostrapped {
 			if err := m.scheduler.RunByTag(job.Name); err != nil {
 				rail.Errorf("Failed to triggered immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
@@ -142,6 +139,17 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	})
 
 	return nil
+}
+
+func (m *scheduleMdoule) logNextRun(rail Rail, jobName string, debug bool) {
+	taggedJobs, _ := m.scheduler.FindJobsByTag(jobName)
+	for _, j := range taggedJobs {
+		if debug {
+			rail.Debugf("Job '%v' next run scheduled at: %v", jobName, j.NextRun())
+		} else {
+			rail.Infof("Job '%v' next run scheduled at: %v", jobName, j.NextRun())
+		}
+	}
 }
 
 // Start scheduler and block current routine
