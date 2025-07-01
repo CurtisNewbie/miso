@@ -449,7 +449,7 @@ func OnConfigChanged(f func()) {
 func LogConfigChanges(props ...string) {
 	onChanged := func() {
 		for _, p := range props {
-			miso.Infof("'%v': %#v", p, miso.GetPropAny(p))
+			miso.Infof("Prop '%v': %v", p, miso.GetPropAny(p))
 		}
 	}
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
