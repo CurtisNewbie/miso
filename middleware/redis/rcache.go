@@ -54,6 +54,17 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 	return op()
 }
 
+func (r *RCache[T]) RefreshTTL(rail miso.Rail, key string) error {
+	cacheKey := r.cacheKey(key)
+	op := func() error {
+		return miso.WrapErr(r.getClient().Expire(rail.Context(), cacheKey, r.exp).Err())
+	}
+	if r.sync {
+		return RLockExec(rail, r.lockKey(key), op)
+	}
+	return op()
+}
+
 func (r *RCache[T]) Del(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
