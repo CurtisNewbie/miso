@@ -446,6 +446,21 @@ func OnConfigChanged(f func()) {
 	m.onConfigChange = append(m.onConfigChange, f)
 }
 
+func LogConfigChanges(props ...string) {
+	onChanged := func() {
+		for _, p := range props {
+			miso.Infof("'%v': %#v", p, miso.GetPropAny(p))
+		}
+	}
+	miso.PreServerBootstrap(func(rail miso.Rail) error {
+		onChanged()
+		return nil
+	})
+	OnConfigChanged(func() {
+		onChanged()
+	})
+}
+
 // Whether we should completely reload existing configs with nacos configs, by default it's true.
 //
 // This is usually used when all the configurations are managed on nacos.
