@@ -110,6 +110,7 @@ func main() {
 type GroupedApiDecl struct {
 	Dir     string
 	Pkg     string
+	PkgPath string
 	Apis    []ApiDecl
 	Imports util.Set[string]
 }
@@ -131,8 +132,17 @@ func parseFiles(files []FsFile) error {
 		}
 	}
 
+	modName := ""
+	{
+		out, err := util.ExecCmd("go", []string{"list", "-m"})
+		if err != nil {
+			panic(fmt.Errorf("%s, %v", out, err))
+		}
+		modName = strings.TrimSpace(string(out))
+	}
+
 	pathApiDecls := make(map[string]GroupedApiDecl)
-	addApiDecl := func(p string, pkg string, d ApiDecl, imports util.Set[string]) {
+	addApiDecl := func(p string, pkg string, pkgPath string, d ApiDecl, imports util.Set[string]) {
 		dir, _ := path.Split(p)
 		v, ok := pathApiDecls[dir]
 		if ok {
@@ -145,6 +155,7 @@ func parseFiles(files []FsFile) error {
 			pathApiDecls[dir] = GroupedApiDecl{
 				Dir:     dir,
 				Pkg:     pkg,
+				PkgPath: pkgPath,
 				Apis:    []ApiDecl{d},
 				Imports: imp,
 			}
@@ -152,13 +163,14 @@ func parseFiles(files []FsFile) error {
 	}
 
 	for _, df := range dstFiles {
+		pkgPath := modName + "/" + path.Dir(path.Dir(path.Clean(df.Path))) + "/" + df.Dst.Name.Name
 		importSepc := map[string]string{}
 		dstutil.Apply(df.Dst,
 			func(c *dstutil.Cursor) bool {
 				// parse api declaration
 				ad, imports, ok := parseApiDecl(c, df.Path, importSepc)
 				if ok {
-					addApiDecl(df.Path, df.Dst.Name.Name, ad, imports)
+					addApiDecl(df.Path, df.Dst.Name.Name, pkgPath, ad, imports)
 				}
 
 				return true
@@ -176,6 +188,20 @@ func parseFiles(files []FsFile) error {
 				util.Printlnf("[DEBUG] %v (%v) => %#v", dir, v.Pkg, ad)
 			}
 		}
+		// check if package is imported in main
+		{
+			out, err := util.ExecCmd("go", []string{"mod", "why", v.PkgPath})
+			if err != nil {
+				util.Printlnf("[ERROR] check package import failed, out: %s, %v", out, err)
+			} else {
+				util.DebugPrintlnf(*Debug, "check pkg %v is imported, out: %s", v.PkgPath, out)
+				if strings.Contains(string(out), "does not need") {
+					// TODO: fix package import automatically
+					util.Printlnf(util.ANSIRed+"Warning: package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+				}
+			}
+		}
+
 		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
 		if err != nil {
 			util.Printlnf("[ERROR] generate code failed, %v", err)
