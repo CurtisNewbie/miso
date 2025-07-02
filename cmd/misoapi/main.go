@@ -200,13 +200,13 @@ func parseFiles(files []FsFile) error {
 			if err != nil {
 				var extErr *exec.ExitError
 				if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
-					util.Printlnf(util.ANSIRed+"Warning (1): package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+					util.Printlnf(util.ANSIRed+"Warning: (1) package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
 				} else {
 					util.Printlnf("[ERROR] check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
 				}
 			} else {
 				if strings.TrimSpace(string(out)) == "" {
-					util.Printlnf(util.ANSIRed+"Warning (2): package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+					util.Printlnf(util.ANSIRed+"Warning: (2) package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
 				}
 			}
 		}
