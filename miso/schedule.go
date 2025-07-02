@@ -230,9 +230,13 @@ func schedulerBootstrapCondition(rail Rail) (bool, error) {
 
 func schedulerBootstrap(rail Rail) error {
 	m := scheduleModule()
-	m.startAsync()
-	rail.Info("Cron Scheduler started")
-	AddAsyncShutdownHook(func() { m.stop() })
+	PostServerBootstrap(func(rail Rail) error {
+		rail.Info("Cron Scheduler started")
+		m.startAsync()
+		AddAsyncShutdownHook(func() { m.stop() })
+		return nil
+	})
+
 	return nil
 }
 
