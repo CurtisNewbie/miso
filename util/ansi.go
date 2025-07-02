@@ -8,4 +8,8 @@ const (
 	ANSIGreen = "\033[1;32m"
 	ANSICyan  = "\033[1;36m"
 	ANSIReset = "\033[0m"
+
+	ANSIBlinkRed   = "\033[1;5;31m"
+	ANSIBlinkGreen = "\033[1;5;32m"
+	ANSIBlinkCyan  = "\033[1;5;36m"
 )

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"go/parser"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"sort"
@@ -190,14 +192,21 @@ func parseFiles(files []FsFile) error {
 		}
 		// check if package is imported in main
 		{
-			out, err := util.ExecCmd("go", []string{"mod", "why", v.PkgPath})
+			out, err := util.ExecCmd("grep", []string{"-r", v.PkgPath, "--include", "*.go"}, func(c *exec.Cmd) {
+				if *Debug {
+					util.DebugPrintlnf(*Debug, "cmd: %v", c)
+				}
+			})
 			if err != nil {
-				util.Printlnf("[ERROR] check package import failed, out: %s, %v", out, err)
+				var extErr *exec.ExitError
+				if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
+					util.Printlnf(util.ANSIRed+"Warning (1): package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+				} else {
+					util.Printlnf("[ERROR] check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
+				}
 			} else {
-				util.DebugPrintlnf(*Debug, "check pkg %v is imported, out: %s", v.PkgPath, out)
-				if strings.Contains(string(out), "does not need") {
-					// TODO: fix package import automatically
-					util.Printlnf(util.ANSIRed+"Warning: package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+				if strings.TrimSpace(string(out)) == "" {
+					util.Printlnf(util.ANSIRed+"Warning (2): package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
 				}
 			}
 		}
@@ -249,7 +258,7 @@ ${code}
 			}
 			outBody := out[strings.Index(out, "\n")+1:]
 			if prevs == outBody {
-				util.Printlnf("Generated code remain the same, skipping %v", outFile)
+				util.DebugPrintlnf(*Debug, "Generated code remain the same, skipping %v", outFile)
 				continue
 			}
 		}
