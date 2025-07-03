@@ -127,7 +127,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	actualRun := t.Run
 	t.Run = func(rail miso.Rail) error {
 		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
-			rail.Infof("Task '%v' disabled, skipped", t.Name)
+			rail.Debugf("Task '%v' disabled, skipped", t.Name)
 
 			m.dtaskMut.Lock()
 			defer m.dtaskMut.Unlock()
