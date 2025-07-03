@@ -476,6 +476,10 @@ func (a *MisoApp) configureLogging() error {
 		}
 
 		if c.GetPropBool(PropLoggingRollingFileRotateDaily) {
+			if !IsProdMode() { // rotate immediately in dev mode
+				log.Rotate()
+			}
+
 			// schedule a job to rotate the log at 00:00:00
 			if err := ScheduleCron(Job{
 				Name:            "RotateLogJob",
