@@ -120,6 +120,9 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
 
+	logJobExec := t.LogJobExec
+	t.LogJobExec = false
+
 	miso.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
 	actualRun := t.Run
 	t.Run = func(rail miso.Rail) error {
@@ -139,7 +142,20 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 			return nil
 		}
 		m.dtaskMut.Unlock()
-		return actualRun(rail)
+
+		if logJobExec {
+			rail.Infof("Running task '%s'", t.Name)
+		}
+
+		start := time.Now()
+		err := actualRun(rail)
+		took := time.Since(start)
+
+		if logJobExec {
+			rail.Infof("Task '%s' finished, took: %s", t.Name, took)
+		}
+
+		return err
 	}
 	m.dtasks = append(m.dtasks, t)
 	return nil
