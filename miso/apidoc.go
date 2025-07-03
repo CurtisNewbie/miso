@@ -517,15 +517,15 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.JsonTsDef != "" {
-			b.WriteRune('\n')
-			b.WriteString("- JSON Request / Response Object In TypeScript:\n")
-			b.WriteString(util.Spaces(2) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
-		}
-
 		if r.NgHttpClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
+			if r.JsonTsDef != "" {
+				b.WriteRune('\n')
+				b.WriteString("- JSON Request / Response Object In TypeScript:\n")
+				b.WriteString(util.Spaces(2) + "```ts\n")
+				b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
+				b.WriteString(util.Spaces(2) + "```\n")
+			}
+
 			b.WriteRune('\n')
 			b.WriteString("- Angular HttpClient Demo:\n")
 			b.WriteString(util.Spaces(2) + "```ts\n")
