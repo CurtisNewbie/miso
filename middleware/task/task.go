@@ -125,6 +125,10 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	t.Run = func(rail miso.Rail) error {
 		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
 			rail.Infof("Task '%v' disabled, skipped", t.Name)
+
+			m.dtaskMut.Lock()
+			defer m.dtaskMut.Unlock()
+			m.releaseTaskMaster(rail, t.Name)
 			return nil
 		}
 
@@ -179,13 +183,13 @@ func (m *taskModule) bootstrapAsComponent(rail miso.Rail) error {
 }
 
 func (m *taskModule) stop() {
+	rail := miso.EmptyRail()
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
 
 	miso.StopScheduler()
 	for _, dt := range m.dtasks {
-		m.stopTaskMasterLockTicker(dt.Name)
-		m.releaseMasterNodeLock(dt.Name)
+		m.releaseTaskMaster(rail, dt.Name)
 	}
 }
 
@@ -276,6 +280,14 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail, jobName string) bool {
 		m.stopTaskMasterLockTicker(jobName)
 	}
 	return isMaster
+}
+
+func (m *taskModule) releaseTaskMaster(rail miso.Rail, jobName string) {
+	if m.isTaskMaster(rail, jobName) {
+		rail.Infof("Releasing master node for job %v", jobName)
+		m.stopTaskMasterLockTicker(jobName)
+		m.releaseMasterNodeLock(jobName)
+	}
 }
 
 func (m *taskModule) registerTasks(tasks []miso.Job) error {
