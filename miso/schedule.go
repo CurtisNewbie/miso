@@ -126,7 +126,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
 	}
 
-	PostServerBootstrap(func(rail Rail) error {
+	OnAppReady(func(rail Rail) error {
 		m.logNextRun(rail, job.Name, true)
 		if job.TriggeredOnBoostrapped {
 			if err := m.scheduler.RunByTag(job.Name); err != nil {
