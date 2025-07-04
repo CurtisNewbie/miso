@@ -168,18 +168,37 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 	}
 
 	iter := cmd.Iterator()
+	const batchSize = 30
+	buk := make([]string, 0, batchSize)
 	for iter.Next(rail.Context()) {
 		if iter.Err() != nil {
 			return miso.WrapErrf(iter.Err(), "failed to iterate using scan, pattern: '%v'", pat)
 		}
 		key := iter.Val()
-		dcmd := r.getClient().Del(rail.Context(), key)
-		if dcmd.Err() != nil {
-			if !errors.Is(dcmd.Err(), redis.Nil) {
-				return miso.WrapErrf(dcmd.Err(), "failed to del key: %v", key)
+		buk = append(buk, key)
+		if len(buk) == batchSize {
+			err := r.doBatchDel(rail, buk)
+			if err != nil {
+				return err
 			}
-		} else {
-			rail.Debugf("Deleted rcache key %v", key)
+			buk = buk[:0]
+		}
+	}
+	if len(buk) > 0 {
+		return r.doBatchDel(rail, buk)
+	}
+	return nil
+}
+
+func (r *RCache[T]) doBatchDel(rail miso.Rail, keys []string) error {
+	dcmd := r.getClient().Del(rail.Context(), keys...)
+	if dcmd.Err() != nil {
+		if !errors.Is(dcmd.Err(), redis.Nil) {
+			return miso.WrapErrf(dcmd.Err(), "failed to del keys: %v", keys)
+		}
+	} else {
+		if miso.IsDebugLevel() {
+			rail.Debugf("Deleted %v rcache keys %v", len(keys), keys)
 		}
 	}
 	return nil
