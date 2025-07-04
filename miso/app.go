@@ -200,10 +200,6 @@ func (a *MisoApp) Bootstrap(args []string) {
 	}
 	a.serverBootrapCallbacks = nil
 
-	end := time.Now().UnixMilli()
-	split = strings.Repeat("-", 52)
-	rail.Infof("\n\n%s %s started (took: %dms) %s\n", split, appName, end-start, split)
-
 	// invoke listener for serverBootstraped event
 	{
 		rail.Infof("Triggering PostServerBootstrap")
@@ -227,6 +223,10 @@ func (a *MisoApp) Bootstrap(args []string) {
 		}
 		rail.Infof("OnAppReady finished, took: %v", time.Since(start))
 	}
+
+	end := time.Now().UnixMilli()
+	split = strings.Repeat("-", 52)
+	rail.Infof("\n\n%s %s started (took: %dms) %s\n", split, appName, end-start, split)
 
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	select {
