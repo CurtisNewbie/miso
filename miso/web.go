@@ -62,14 +62,14 @@ var (
 
 	endpointResultHandler = func(c *gin.Context, rail Rail, payload any, err error) {
 		if err != nil {
-			DispatchJson(c, resultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
+			dispatchJson(c, resultBodyBuilder.ErrJsonBuilder(rail, c.Request.RequestURI, err))
 			return
 		}
 		if payload != nil {
-			DispatchJson(c, resultBodyBuilder.PayloadJsonBuilder(payload))
+			dispatchJson(c, resultBodyBuilder.PayloadJsonBuilder(payload))
 			return
 		}
-		DispatchJson(c, resultBodyBuilder.OkJsonBuilder())
+		dispatchJson(c, resultBodyBuilder.OkJsonBuilder())
 	}
 
 	// pprof endpoint register disabled
@@ -167,180 +167,6 @@ func recordHttpServerRoute(url string, method string, extra ...util.StrPair) {
 // Get recorded http server routes
 func GetHttpRoutes() []HttpRoute {
 	return serverHttpRoutes
-}
-
-// Register ANY request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpAny() instead.
-func RawAny(url string, handler RawTRouteHandler, extra ...util.StrPair) {
-	HttpAny(url, handler, extra...)
-}
-
-// Register GET request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpGet() instead.
-func RawGet(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpGet(url, RawHandler(handler))
-}
-
-// Register POST request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpPost() instead.
-func RawPost(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpPost(url, RawHandler(handler))
-}
-
-// Register PUT request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpPut() instead.
-func RawPut(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpPut(url, RawHandler(handler))
-}
-
-// Register DELETE request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpDelete() instead.
-func RawDelete(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpDelete(url, RawHandler(handler))
-}
-
-// Register OPTIONS request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpOptions() instead.
-func RawOptions(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpOptions(url, RawHandler(handler))
-}
-
-// Register HEAD request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpHead() instead.
-func RawHead(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpHead(url, RawHandler(handler))
-}
-
-// Register PATCH request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpPatch() instead.
-func RawPatch(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpPatch(url, RawHandler(handler))
-}
-
-// Register CONNECT request route (raw version)
-//
-// Deprecated since v0.1.23, use miso.HttpConnect() instead.
-func RawConnect(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpConnect(url, RawHandler(handler))
-}
-
-// Register CONNECT ACE est route (raw version)
-//
-// Deprecated: since v0.1.23, use miso.HttpTrace() instead.
-func RawTrace(url string, handler RawTRouteHandler) *LazyRouteDecl {
-	return HttpTrace(url, RawHandler(handler))
-}
-
-// Register GET request.
-//
-// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
-// and serialized to json.
-//
-// Deprecated: since v0.1.23, use miso.HttpGet() instead.
-func Get[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return HttpGet(url, ResHandler(handler))
-}
-
-// Register POST request.
-//
-// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
-// and serialized to json.
-//
-// Deprecated: since v0.1.23, use miso.HttpPost() instead.
-func Post[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return HttpPost(url, ResHandler(handler))
-}
-
-// Register PUT request.
-//
-// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
-// and serialized to json.
-//
-// Deprecated: since v0.1.23, use miso.HttpPut() instead.
-func Put[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return HttpPut(url, ResHandler(handler))
-}
-
-// Register DELETE request.
-//
-// The result and error are automatically wrapped to miso.Resp (see miso.SetResultBodyBuilder func)
-// and serialized to json.
-//
-// Deprecated: since v0.1.23, use miso.HttpDelete() instead.
-func Delete[Res any](url string, handler TRouteHandler[Res]) *LazyRouteDecl {
-	return HttpDelete(url, ResHandler(handler))
-}
-
-// Register POST request.
-//
-// Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With both Req and Res type declared, miso will automatically parse these two types using reflect
-// and generate an API documentation describing the endpoint.
-//
-// Deprecated: since v0.1.23, use miso.HttpPost() instead.
-func IPost[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return HttpPost(url, AutoHandler(handler))
-}
-
-// Register GET request.
-//
-// Req type should be a struct, where all fields are automatically mapped from the request
-// using 'form' tag (for form-data, query param) or 'header' tag.
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With both Req and Res type declared, miso will automatically parse these two types using reflect
-// and generate an API documentation describing the endpoint.
-//
-// Deprecated: since v0.1.23, use miso.HttpGet() instead.
-func IGet[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return HttpGet(url, AutoHandler(handler))
-}
-
-// Register DELETE request.
-//
-// Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With both Req and Res type declared, miso will automatically parse these two types using reflect
-// and generate an API documentation describing the endpoint.
-//
-// Deprecated: since v0.1.23, use miso.HttpDelete() instead.
-func IDelete[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return HttpDelete(url, AutoHandler(handler))
-}
-
-// Register PUT request.
-//
-// Req type should be a struct, where all fields are automatically mapped from the request
-// using 'json' tag or 'form' tag (for form-data, query param) or 'header' tag.
-//
-// Res type should be a struct. By default both Res value and error (if not nil) will be wrapped inside
-// miso.Resp and serialized to json. Wrapping to miso.Resp is customizable using miso.SetResultBodyBuilder func.
-//
-// With both Req and Res type declared, miso will automatically parse these two types using reflect
-// and generate an API documentation describing the endpoint.
-//
-// Deprecated: since v0.1.23, use miso.HttpPut() instead.
-func IPut[Req any, Res any](url string, handler MappedTRouteHandler[Req, Res]) *LazyRouteDecl {
-	return HttpPut(url, AutoHandler(handler))
 }
 
 type routesRegistar func(*gin.Engine)
@@ -549,7 +375,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 
 		// bind to payload boject
 		var req Req
-		MustBind(rail, c, &req)
+		mustBind(rail, c, &req)
 
 		wtcbCnt := 0
 		if GetPropBool(PropServerRequestValidateEnabled) {
@@ -625,10 +451,8 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 	endpointResultHandler(c, rail, result, err)
 }
 
-// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
-//
 // Must bind request payload to the given pointer, else panic
-func MustBind(rail Rail, c *gin.Context, ptr any) {
+func mustBind(rail Rail, c *gin.Context, ptr any) {
 	onFailed := func(err error) {
 		rail.Errorf("Bind payload failed, %v", err)
 		panic(NewErrf("Illegal Arguments"))
@@ -648,10 +472,8 @@ func MustBind(rail Rail, c *gin.Context, ptr any) {
 	}
 }
 
-// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
-//
 // Dispatch a json response
-func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
+func dispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	c.Status(code)
 	c.Header("Content-Type", applicationJson)
 
@@ -661,18 +483,14 @@ func DispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	}
 }
 
-// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
-//
 // Dispatch error response in json format
-func DispatchErrMsgJson(c *gin.Context, msg string) {
-	DispatchJson(c, ErrorResp(msg))
+func dispatchErrMsgJson(c *gin.Context, msg string) {
+	dispatchJson(c, ErrorResp(msg))
 }
 
-// deprecated: *gin.Context is leaky abstraction, use *miso.Inbound instead.
-//
 // Dispatch a json response
-func DispatchJson(c *gin.Context, body interface{}) {
-	DispatchJsonCode(c, http.StatusOK, body)
+func dispatchJson(c *gin.Context, body interface{}) {
+	dispatchJsonCode(c, http.StatusOK, body)
 }
 
 func webServerBootstrapCondition(rail Rail) (bool, error) {
@@ -1113,7 +931,7 @@ func (i *Inbound) AddHeader(k string, v string) {
 
 func (i *Inbound) MustBind(ptr any) {
 	c := i.Engine().(*gin.Context)
-	MustBind(i.Rail(), c, ptr)
+	mustBind(i.Rail(), c, ptr)
 }
 
 func (i *Inbound) WriteJson(v any) {
