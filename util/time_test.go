@@ -120,3 +120,14 @@ func TestLastWeekday(t *testing.T) {
 		}
 	}
 }
+
+func TestNextWeekday(t *testing.T) {
+	now := Now().StartOfDay()
+	for k := range 7 {
+		for i := range 7 {
+			d := now.AddDate(0, 0, i)
+			m := d.NextWeekday(time.Weekday(k))
+			t.Logf("%v (%v), %v (%v)", d, d.Weekday(), m, m.Weekday())
+		}
+	}
+}
