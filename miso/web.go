@@ -709,13 +709,16 @@ func webServerBootstrap(rail Rail) error {
 	}
 	ginPreProcessors = nil
 
-	serverAuthBearer := strings.TrimSpace(GetPropStr(PropServerAuthBearer))
+	serverAuthBearer := GetPropStrTrimmed(PropServerAuthBearer)
 	if serverAuthBearer != "" {
-		AddBearerInterceptor(
+		AddBearerAuthInterceptor(
 			func(method, url string) bool { return true },
-			func() string { return serverAuthBearer },
+			func(tok string) bool {
+				v := GetPropStrTrimmed(PropServerAuthBearer) // prop value may change while it's runs
+				return v == "" || v == tok
+			},
 		)
-		rail.Infof("Registered bearer authorization for all endpoints")
+		rail.Infof("Registered bearer authentication interceptor for all APIs")
 	}
 
 	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
@@ -733,11 +736,14 @@ func webServerBootstrap(rail Rail) error {
 			rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerAuthBearer)
 
 		} else {
-			pprofAuthBearer := GetPropStrTrimmed(PropServerPprofAuthBearer)
-			if pprofAuthBearer != "" { // we have set auth bearer for pprof apis specifically
-				AddBearerInterceptor(
+			// we have set auth bearer for pprof apis specifically
+			if GetPropStrTrimmed(PropServerPprofAuthBearer) != "" {
+				AddBearerAuthInterceptor(
 					MatchPathPatternFunc("/debug/pprof/**"),
-					func() string { return pprofAuthBearer },
+					func(tok string) bool {
+						v := GetPropStrTrimmed(PropServerPprofAuthBearer) // prop value may change while it's runs
+						return v == "" || v == tok
+					},
 				)
 				rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerPprofAuthBearer)
 
@@ -1206,6 +1212,7 @@ func MatchPathPatternFunc(patterns ...string) func(method string, url string) bo
 	}
 }
 
+// Deprecated: use [AddBearerAuthInterceptor] instead.
 func AddBearerInterceptor(doIntercept func(method string, url string) bool, bearerToken func() string) {
 	AddInterceptor(func(inb *gin.Context, next func()) {
 		url := inb.Request.RequestURI
@@ -1217,6 +1224,25 @@ func AddBearerInterceptor(doIntercept func(method string, url string) bool, bear
 			w := inb.Writer
 			token, ok := ParseBearer(inb.GetHeader("Authorization"))
 			if !ok || token != bearer {
+				Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+		next()
+	})
+}
+
+func AddBearerAuthInterceptor(doIntercept func(method string, url string) bool, validateBearerToken func(provided string) bool) {
+	AddInterceptor(func(inb *gin.Context, next func()) {
+		url := inb.Request.RequestURI
+		method := inb.Request.Method
+
+		if doIntercept(method, url) {
+			r := inb.Request
+			w := inb.Writer
+			token, ok := ParseBearer(inb.GetHeader("Authorization"))
+			if !ok || !validateBearerToken(token) {
 				Debugf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
 				w.WriteHeader(http.StatusUnauthorized)
 				return
