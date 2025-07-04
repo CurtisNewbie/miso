@@ -154,7 +154,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("\n\n%s starting %s %s\n", split, appName, split)
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
-	rail.Infof("CPUs: %v", runtime.NumCPU())
+	rail.Infof("CPUs: %v, GOMAXPROCS: %v", runtime.NumCPU(), runtime.GOMAXPROCS(0))
 
 	// bootstrap health indicator
 	a.addBootstrapHealthIndicator()
