@@ -76,6 +76,19 @@ func (t ETime) StartOfDay() ETime {
 	return ETime{tt}
 }
 
+func (t ETime) LastWeekday(w time.Weekday) ETime {
+	wkd := t.Weekday()
+	diff := 0
+	if wkd < w {
+		diff = 7 - int(w-wkd)
+	} else if wkd == w {
+		diff = 7
+	} else {
+		diff = int(wkd - w)
+	}
+	return t.AddDate(0, 0, -diff)
+}
+
 func (t ETime) ToTime() time.Time {
 	return t.Time
 }
