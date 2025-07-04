@@ -384,3 +384,40 @@ func TestBatchTask(t *testing.T) {
 	}
 	t.Logf("resultSum: %v", resultSum)
 }
+
+func TestAyncPoolFull(t *testing.T) {
+	DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
+	ap := NewAsyncPool(0, 0, CallerRunTaskWhenPoolFull())
+	v := &atomic.Int32{}
+	ap.Go(func() {
+		t.Log("task 1")
+		v.Add(1)
+	})
+	ap.Go(func() {
+		t.Log("task 2")
+		v.Add(1)
+	})
+	if av := v.Load(); av != 2 {
+		t.Fatalf("task 1 and task 2 should run by caller, %v", av)
+	}
+	ap.StopAndWait()
+	t.Log("---")
+
+	ap = NewAsyncPool(0, 1, DropTaskWhenPoolFull())
+	v.Store(0)
+	ap.Go(func() {
+		t.Log("2 - task 1")
+		time.Sleep(time.Second)
+		v.Add(1)
+	})
+	ap.Go(func() {
+		t.Log("2 - task 2")
+		time.Sleep(time.Second)
+		v.Add(1)
+	})
+
+	if v.Load() == 2 {
+		t.Fatal("either task 1 or task 2 should be dropped")
+	}
+	ap.StopAndWait()
+}

@@ -240,16 +240,22 @@ func NewSubmitAsyncFunc[T any](pool *AsyncPool) func(task func() (T, error)) Fut
 //
 // Use miso.NewAsyncPool to create a new pool.
 //
-// AsyncPool internally maintains a task queue with limited size and limited number of workers. If the task queue is full,
-// the caller of *AsyncPool.Go is blocked indefinitively.
+// AsyncPool internally maintains a task queue with limited size and limited number of workers.
+//
+// By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
+// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
 type AsyncPool struct {
-	stopped      int32
-	stopOnce     *sync.Once
-	drainTasksWg *sync.WaitGroup
-	tasks        chan func()
-	workers      chan struct{}
-	idleDur      time.Duration
+	stopped           int32
+	stopOnce          *sync.Once
+	drainTasksWg      *sync.WaitGroup
+	tasks             chan func()
+	workers           chan struct{}
+	idleDur           time.Duration
+	doWhenPoolFull    func(task func())
+	blockWhenPoolFull bool
 }
+
+type asyncPoolOption func(a *AsyncPool)
 
 // Create a bounded pool of goroutines.
 //
@@ -257,20 +263,48 @@ type AsyncPool struct {
 // the caller of *AsyncPool.Go is blocked.
 //
 // The maxWorkers determines the max number of workers.
-func NewAsyncPool(maxTasks int, maxWorkers int) *AsyncPool {
+func NewAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *AsyncPool {
 	if maxTasks < 0 {
 		maxTasks = 0
 	}
 	if maxWorkers < 1 {
-		maxWorkers = 1
+		maxWorkers = 0
 	}
-	return &AsyncPool{
+	ap := &AsyncPool{
 		tasks:        make(chan func(), maxTasks),
 		workers:      make(chan struct{}, maxWorkers),
 		stopped:      0,
 		stopOnce:     &sync.Once{},
 		drainTasksWg: &sync.WaitGroup{},
 		idleDur:      5 * time.Minute,
+		doWhenPoolFull: func(task func()) {
+			// this doesn't do anything, blockWhenPoolFull is true
+		},
+		blockWhenPoolFull: true,
+	}
+	for _, op := range opts {
+		op(ap)
+	}
+	return ap
+}
+
+func DropTaskWhenPoolFull() asyncPoolOption {
+	return func(a *AsyncPool) {
+		DebugLog("AsyncPool is full, task dropped")
+		a.doWhenPoolFull = func(task func()) {
+			// drop task
+		}
+		a.blockWhenPoolFull = false
+	}
+}
+
+func CallerRunTaskWhenPoolFull() asyncPoolOption {
+	return func(a *AsyncPool) {
+		a.doWhenPoolFull = func(task func()) {
+			DebugLog("AsyncPool is full, caller runs task")
+			task()
+		}
+		a.blockWhenPoolFull = false
 	}
 }
 
@@ -311,13 +345,15 @@ func (p *AsyncPool) isStopped() bool {
 
 // Submit task to the pool.
 //
-// If the task queue is full, the caller is blocked.
-//
 // If the pool is closed, caller will execute the submitted task directly.
 func (p *AsyncPool) Go(f func()) {
 
 	if p.isStopped() {
-		f() // caller runs the task
+		if p.blockWhenPoolFull {
+			f() // caller runs the task
+		} else {
+			p.doWhenPoolFull(f)
+		}
 		return
 	}
 
@@ -327,20 +363,42 @@ func (p *AsyncPool) Go(f func()) {
 		f()
 	}
 
-	select {
-	case p.workers <- struct{}{}:
-		go p.spawn(wrp)
-	case p.tasks <- wrp:
-		// channel select is completely random
-		// extra select is to make sure that we have at least one worker running
-		// or else tasks may be put straight into the task queue without any worker
-		// conc package has the same problem as well :(, but the way we use the pool is different.
+	if p.blockWhenPoolFull {
 		select {
 		case p.workers <- struct{}{}:
-			go p.spawn(nil)
-		default:
+			go p.spawn(wrp)
+		case p.tasks <- wrp:
+			// channel select is completely random
+			// extra select is to make sure that we have at least one worker running
+			// or else tasks may be put straight into the task queue without any worker
+			// conc package has the same problem as well :(, but the way we use the pool is different.
+			select {
+			case p.workers <- struct{}{}:
+				go p.spawn(nil)
+			default:
+			}
+			return
 		}
-		return
+	} else {
+		select {
+		case p.workers <- struct{}{}:
+			go p.spawn(wrp)
+		case p.tasks <- wrp:
+			// channel select is completely random
+			// extra select is to make sure that we have at least one worker running
+			// or else tasks may be put straight into the task queue without any worker
+			// conc package has the same problem as well :(, but the way we use the pool is different.
+			select {
+			case p.workers <- struct{}{}:
+				go p.spawn(nil)
+			default:
+			}
+			return
+		default:
+			// when workers are all busy and queue is full
+			defer p.drainTasksWg.Done()
+			p.doWhenPoolFull(PanicSafeFunc(f))
+		}
 	}
 }
 
