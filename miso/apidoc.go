@@ -178,9 +178,9 @@ func (f FieldDesc) comment(withSlash bool) string {
 		rules := strings.Split(f.Valid, ",")
 		appendRemaining := func(r string) {
 			if remaining != "" && !util.HasAnySuffix(remaining, ".", ",") {
-				remaining += ". "
+				remaining += "."
 			}
-			remaining += r
+			remaining += " " + r
 		}
 
 		for _, r := range rules {
