@@ -212,3 +212,26 @@ func TestValidate(t *testing.T) {
 	}
 
 }
+
+func TestParsedValidRules(t *testing.T) {
+	r := "maxLen  : 10 , notEmpty"
+	rules := parseValidRules(r)
+	if len(rules) != 2 {
+		t.Fatal()
+	}
+	t.Logf("%#v", rules)
+
+	r = "member:PUBLIC|PROTECTED"
+	rules = parseValidRules(r)
+	if len(rules) != 1 {
+		t.Fatal()
+	}
+	t.Logf("%#v", rules)
+
+	r = "notNil,validated"
+	rules = parseValidRules(r)
+	if len(rules) != 2 {
+		t.Fatal()
+	}
+	t.Logf("%#v", rules)
+}

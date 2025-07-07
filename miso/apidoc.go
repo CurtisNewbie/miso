@@ -153,17 +153,61 @@ func (f FieldDesc) pureGoTypeName() string {
 	return pureGoTypeName(n)
 }
 
-func (f FieldDesc) comment() string {
+func (f FieldDesc) comment(withSlash bool) string {
 	var desc string = f.Desc
 	var comment string
+	appendComment := func(r string) {
+		r = strings.TrimSpace(r)
+		if comment != "" {
+			if !util.HasAnySuffix(comment, ".", ",") {
+				comment += "."
+			}
+			comment += " " + r
+		} else {
+			if withSlash {
+				comment += " // "
+			}
+			comment += r
+		}
+	}
 	if desc != "" {
-		comment = " // " + desc
+		appendComment(desc)
 	}
 	if f.Valid != "" {
-		if comment != "" {
-			comment = strings.TrimSpace(comment) + ", " + f.Valid
-		} else {
-			comment = " // " + f.Valid
+		var remaining string
+		rules := strings.Split(f.Valid, ",")
+		appendRemaining := func(r string) {
+			if remaining != "" {
+				remaining += ","
+			}
+			remaining += r
+		}
+
+		for _, r := range rules {
+			ok, pvr := parseValidRule(r)
+			if !ok {
+				appendRemaining(r)
+				continue
+			}
+
+			switch pvr.rule {
+			case ValidNotEmpty:
+				appendRemaining("Required.")
+			case ValidMaxLen:
+				appendRemaining(fmt.Sprintf("Max length: %v.", pvr.param))
+			case ValidMember:
+				enums := strings.Split(pvr.param, "|")
+				if len(enums) < 1 {
+					continue
+				}
+				enumDesc := strings.Join(util.QuoteStrSlice(enums), ",")
+				appendComment(fmt.Sprintf("Enums: [%v].", enumDesc))
+			default:
+				continue
+			}
+		}
+		if remaining != "" {
+			appendComment(remaining)
 		}
 	}
 	return comment
@@ -617,7 +661,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 func appendJsonPayloadDoc(b *strings.Builder, jds []FieldDesc, indent int) {
 	for _, jd := range jds {
-		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", util.Spaces(indent+2), jd.Name, jd.TypeName, jd.Desc))
+		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", util.Spaces(indent+2), jd.Name, jd.TypeName, jd.comment(false)))
 
 		if len(jd.Fields) > 0 {
 			appendJsonPayloadDoc(b, jd.Fields, indent+2)
@@ -1107,7 +1151,7 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 				continue
 			}
 			fieldTypeName := f.goFieldTypeName()
-			var comment string = f.comment()
+			var comment string = f.comment(true)
 			if comment != "" {
 				fieldDec := fmt.Sprintf("%s %s%s", f.FieldName, fieldTypeName, jsonTag)
 				writef(indentc, "%-30s%s", fieldDec, comment)
@@ -1162,7 +1206,7 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 
 		} else {
 			var tname string = guessTsPrimiTypeName(d.TypeName)
-			var comment string = d.comment()
+			var comment string = d.comment(true)
 			if comment != "" {
 				fieldDec := fmt.Sprintf("%s?: %s", d.Name, tname)
 				writef(indentc, "%-30s%s", fieldDec+";", comment)

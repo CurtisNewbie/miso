@@ -661,3 +661,7 @@ func (r *StrRWMap[V]) Keys() []string {
 	}
 	return keys
 }
+
+func QuoteStrSlice(sl []string) []string {
+	return MapTo(sl, func(s string) string { return QuoteStr(s) })
+}

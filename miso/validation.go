@@ -120,35 +120,67 @@ func Validate(target any) error {
 		taggedRules := strings.Split(vtag, ",")
 		fval := targetVal.Field(i)
 
-		// for each rule
 		for _, rul := range taggedRules {
-			rul = strings.TrimSpace(rul)
-
-			// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
-			splited := strings.Split(rul, ":")
-			for i := range splited {
-				splited[i] = strings.TrimSpace(splited[i])
+			ok, pvr := parseValidRule(rul)
+			if !ok {
+				continue
 			}
-
-			rul = splited[0] // rule is the one before ':'
-			param := ""      // param is those joined after the first ':'
-
-			if len(splited) > 1 { // contains extra parameters
-				param = strings.Join(splited[1:], ":")
-			}
-
-			if rules.Has(rul) { // is a valid rule
-				if e := ValidateRule(field, fval, rul, param); e != nil {
-					verr = e
-					return true
-				}
+			if e := ValidateRule(field, fval, pvr.rule, pvr.param); e != nil {
+				verr = e
+				return true
 			}
 		}
+
 		return false
 	}
 
 	introspector.IterFields(forEach)
 	return verr
+}
+
+type parsedValidRule struct {
+	rule  string
+	param string
+}
+
+func parseValidRules(rules string) []parsedValidRule {
+	if rules == "" {
+		return nil
+	}
+
+	spl := strings.Split(rules, ",")
+	pvr := make([]parsedValidRule, 0, len(rules))
+	for _, r := range spl {
+		if ok, parsed := parseValidRule(r); ok {
+			pvr = append(pvr, parsed)
+		}
+	}
+	return pvr
+}
+
+func parseValidRule(rule string) (bool, parsedValidRule) {
+	rule = strings.TrimSpace(rule)
+
+	// the tagged rule may contain extra parameters, e.g., 'maxLen:10'
+	splited := strings.Split(rule, ":")
+	for i := range splited {
+		splited[i] = strings.TrimSpace(splited[i])
+	}
+
+	rule = splited[0] // rule is the one before ':'
+	param := ""       // param is those joined after the first ':'
+
+	if len(splited) > 1 { // contains extra parameters
+		param = strings.Join(splited[1:], ":")
+	}
+
+	if rules.Has(rule) { // is a valid rule
+		return true, parsedValidRule{
+			rule:  rule,
+			param: param,
+		}
+	}
+	return false, parsedValidRule{}
 }
 
 func ValidateRule(field reflect.StructField, value reflect.Value, rule string, ruleParam string) error {

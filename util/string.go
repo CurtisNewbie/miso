@@ -393,6 +393,24 @@ func EqualAnyStr(s string, canditates ...string) bool {
 	return false
 }
 
+func HasAnySuffix(s string, suf ...string) bool {
+	for _, c := range suf {
+		if strings.HasSuffix(s, c) {
+			return true
+		}
+	}
+	return false
+}
+
+func HasAnyPrefix(s string, suf ...string) bool {
+	for _, c := range suf {
+		if strings.HasPrefix(s, c) {
+			return true
+		}
+	}
+	return false
+}
+
 func TrimStrSlice(s []string) {
 	for i, v := range s {
 		s[i] = strings.TrimSpace(v)
