@@ -70,7 +70,7 @@ func init() {
 	miso.SetDefProp(PropNacosServerScheme, "http")
 	miso.SetDefProp(PropNacosConfigDataId, "${app.name}")
 	miso.SetDefProp(PropNacosConfigGroup, "DEFAULT_GROUP")
-	miso.SetDefProp(PropNacosDiscoveryEnabled, false)
+	miso.SetDefProp(PropNacosDiscoveryEnabled, true)
 	miso.SetDefProp(PropNacosDiscoveryRegisterInstance, true)
 	miso.SetDefProp(PropNacosDiscoveryRegisterAddress, "${server.host}")
 	miso.SetDefProp(PropNacosDiscoveryRegisterName, "${app.name}")

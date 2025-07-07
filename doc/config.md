@@ -154,7 +154,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | nacos.server.config.data-id           | nacos config data-id                                                                      | ${app.name}        |
 | nacos.server.config.group             | nacos config group                                                                        | DEFAULT_GROUP      |
 | nacos.server.config.watch             | extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`) |                    |
-| nacos.discovery.enabled               | enable nacos client for service discovery                                                 | false              |
+| nacos.discovery.enabled               | enable nacos client for service discovery                                                 | true               |
 | nacos.discovery.register-instance     | register current instance on nacos for service discovery                                  | true               |
 | nacos.discovery.register-address      | register service address                                                                  | `"${server.host}"` |
 | nacos.discovery.register-name         | register service name                                                                     | `"${app.name}"`    |
