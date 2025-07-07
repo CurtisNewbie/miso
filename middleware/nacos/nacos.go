@@ -147,29 +147,6 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 		return false, nil
 	}
 
-	// preserve content of the already loaded config files
-	loadedConfigFiles := miso.App().Config().GetDefaultConfigFileLoaded()
-	for _, f := range util.Distinct(loadedConfigFiles) {
-		if f == "" {
-			continue
-		}
-		contentByte, err := util.ReadFileAll(f)
-		if err != nil {
-			return false, miso.WrapErr(err)
-		}
-		content := strings.TrimSpace(string(contentByte))
-		if content != "" {
-			m.configContent.Put("file:"+f, content)
-
-			if miso.IsTraceLevel() {
-				rail.Tracef("Preserved the already loaded config file: %v\n%v", f, content)
-			} else {
-				rail.Debugf("Preserved the already loaded config file: %v", f)
-			}
-			m.preloadedFiles = append(m.preloadedFiles, f)
-		}
-	}
-
 	clientConfig, serverConfigs, err := m.buildConfig(rail)
 	if err != nil {
 		return false, err
