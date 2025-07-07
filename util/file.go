@@ -31,6 +31,17 @@ func FileExists(path string) (bool, error) {
 	return false, e
 }
 
+// Check if file exists without returning error.
+//
+// This is mainly a lazy version of FileExists(), it's not recommended for most cases.
+func TryFileExists(path string) bool {
+	ok, err := FileExists(path)
+	if err != nil {
+		return false
+	}
+	return ok
+}
+
 // Read all content from file.
 func ReadFileAll(path string) ([]byte, error) {
 	f, err := ReadWriteFile(path)

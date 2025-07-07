@@ -134,15 +134,9 @@ func (a *MisoApp) Bootstrap(args []string) {
 		rail.Fatalf("Property '%s' is required", PropAppName)
 	}
 
-	if len(a.configLoader) > 0 {
-		rail.Infof("Running ConfigLoader")
-		start := time.Now()
-		if e := a.callConfigLoaders(rail); e != nil {
-			rail.Errorf("Error occurred while running ConfigLoader, %v", e)
-			return
-		}
-		a.changeLogLevel()
-		rail.Infof("ConfigLoader finished, took: %v", time.Since(start))
+	if e := a.callConfigLoaders(rail); e != nil {
+		rail.Errorf("Error occurred while running ConfigLoader, %v", e)
+		return
 	}
 
 	if err := a.configureLogging(); err != nil {
@@ -160,57 +154,24 @@ func (a *MisoApp) Bootstrap(args []string) {
 	a.addBootstrapHealthIndicator()
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	{
-		rail.Infof("Triggering PreServerBootstrap")
-		start := time.Now()
-		if e := a.callPreServerBootstrapListeners(rail); e != nil {
-			rail.Errorf("Error occurred while trigger PreServerBootstrap callbacks, %v", e)
-			return
-		}
-		rail.Infof("PreServerBootstrap finished, took: %v", time.Since(start))
+	if e := a.callPreServerBootstrapListeners(rail); e != nil {
+		rail.Errorf("Error occurred while trigger PreServerBootstrap callbacks, %v", e)
+		return
 	}
 
 	// bootstrap components, these are sorted by their orders
-	sort.Slice(a.serverBootrapCallbacks, func(i, j int) bool { return a.serverBootrapCallbacks[i].Order < a.serverBootrapCallbacks[j].Order })
-	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
-	slowBootstrapThreshold := GetPropDuration(PropAppSlowBoostrapThresohold)
-	for _, sbc := range a.serverBootrapCallbacks {
-		if sbc.Condition != nil {
-			ok, ce := sbc.Condition(rail)
-			if ce != nil {
-				rail.Errorf("Failed to bootstrap server component: %v, failed on condition check, %v", sbc.Name, ce)
-				return
-			}
-			if !ok {
-				continue
-			}
-		}
-
-		rail.Debugf("Starting to bootstrap component %-30s", sbc.Name)
-		start := time.Now()
-		if e := sbc.Bootstrap(rail); e != nil {
-			rail.Errorf("Failed to bootstrap server component: %v, %v", sbc.Name, e)
-			return
-		}
-		took := time.Since(start)
-		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)
-		if took >= slowBootstrapThreshold {
-			rail.Warnf("Component '%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
-		}
+	if err := a.callBoostrapComponents(rail); err != nil {
+		rail.Errorf("Boostrap server components failed, %v", err)
+		return
 	}
-	a.serverBootrapCallbacks = nil
 
 	// invoke listener for serverBootstraped event
-	{
-		rail.Infof("Triggering PostServerBootstrap")
-		start := time.Now()
-		if e := a.callPostServerBootstrapListeners(rail); e != nil {
-			rail.Errorf("Error occurred while triggering PostServerBootstrap callbacks, %v", e)
-			return
-		}
-		rail.Infof("PostServerBootstrap finished, took: %v", time.Since(start))
+	if e := a.callPostServerBootstrapListeners(rail); e != nil {
+		rail.Errorf("Error occurred while triggering PostServerBootstrap callbacks, %v", e)
+		return
 	}
 
+	// marked as fully bootstrapped
 	a.fullyBoostrapped.Store(true)
 
 	// invoke listener for appReady event
@@ -385,6 +346,9 @@ func (a *MisoApp) callAppReadyListeners(rail Rail) error {
 }
 
 func (a *MisoApp) callPostServerBootstrapListeners(rail Rail) error {
+	rail.Infof("Triggering PostServerBootstrap")
+	start := time.Now()
+
 	i := 0
 	for i < len(a.postServerBootstrapListener) {
 		if e := a.postServerBootstrapListener[i](rail); e != nil {
@@ -393,10 +357,17 @@ func (a *MisoApp) callPostServerBootstrapListeners(rail Rail) error {
 		i++
 	}
 	a.postServerBootstrapListener = nil
+	rail.Infof("PostServerBootstrap finished, took: %v", time.Since(start))
 	return nil
 }
 
 func (a *MisoApp) callConfigLoaders(rail Rail) error {
+	if len(a.configLoader) < 1 {
+		return nil
+	}
+	rail.Infof("Running ConfigLoader")
+	start := time.Now()
+
 	i := 0
 	for i < len(a.configLoader) {
 		if e := a.configLoader[i](rail); e != nil {
@@ -405,10 +376,15 @@ func (a *MisoApp) callConfigLoaders(rail Rail) error {
 		i++
 	}
 	a.configLoader = nil
+	a.changeLogLevel()
+	rail.Infof("ConfigLoader finished, took: %v", time.Since(start))
 	return nil
 }
 
 func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
+	rail.Infof("Triggering PreServerBootstrap")
+	start := time.Now()
+
 	i := 0
 	for i < len(a.preServerBootstrapListener) {
 		if e := a.preServerBootstrapListener[i](rail); e != nil {
@@ -417,6 +393,37 @@ func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
 		i++
 	}
 	a.preServerBootstrapListener = nil
+	rail.Infof("PreServerBootstrap finished, took: %v", time.Since(start))
+	return nil
+}
+
+func (a *MisoApp) callBoostrapComponents(rail Rail) error {
+	sort.Slice(a.serverBootrapCallbacks, func(i, j int) bool { return a.serverBootrapCallbacks[i].Order < a.serverBootrapCallbacks[j].Order })
+	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
+	slowBootstrapThreshold := GetPropDuration(PropAppSlowBoostrapThresohold)
+	for _, sbc := range a.serverBootrapCallbacks {
+		if sbc.Condition != nil {
+			ok, ce := sbc.Condition(rail)
+			if ce != nil {
+				return WrapErrf(ce, "failed to bootstrap server component: %v, failed on condition check", sbc.Name)
+			}
+			if !ok {
+				continue
+			}
+		}
+
+		rail.Debugf("Starting to bootstrap component %-30s", sbc.Name)
+		start := time.Now()
+		if e := sbc.Bootstrap(rail); e != nil {
+			return WrapErrf(e, "failed to bootstrap server component: %v", sbc.Name)
+		}
+		took := time.Since(start)
+		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)
+		if took >= slowBootstrapThreshold {
+			rail.Warnf("Component '%s' might be too slow to bootstrap, took: %v", sbc.Name, took)
+		}
+	}
+	a.serverBootrapCallbacks = nil
 	return nil
 }
 
