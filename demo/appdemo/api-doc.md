@@ -32,9 +32,11 @@
 - [PATCH /api/v28](#patch-apiv28)
 - [CONNECT /api/v29](#connect-apiv29)
 - [TRACE /api/v30](#trace-apiv30)
+- [POST /api/v31](#post-apiv31)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 - [POST /open/api/demo/grouped/subgroup/post1](#post-openapidemogroupedsubgrouppost1)
 - [GET /metrics](#get-metrics)
+- [GET /health](#get-health)
 
 ## POST /api/v1
 
@@ -83,15 +85,12 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostReq {
     requestId?: string;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -181,15 +180,12 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostReq {
     requestId?: string;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -279,15 +275,12 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostReq {
     requestId?: string;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -384,7 +377,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -394,10 +387,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -494,7 +484,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -504,10 +494,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -604,7 +591,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -614,10 +601,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -707,7 +691,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -717,10 +701,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -805,7 +786,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -815,10 +796,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -903,7 +881,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -913,10 +891,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1001,7 +976,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1011,10 +986,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1106,7 +1078,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1116,10 +1088,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1216,7 +1185,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1226,10 +1195,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1317,7 +1283,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1327,10 +1293,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1420,7 +1383,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1430,10 +1393,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -1515,7 +1475,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface Resp {
     errorCode?: string;            // error code
@@ -1603,7 +1563,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface Resp {
     errorCode?: string;            // error code
@@ -1696,7 +1656,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface Resp {
     errorCode?: string;            // error code
@@ -1769,7 +1729,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface Resp {
     errorCode?: string;            // error code
@@ -1835,7 +1795,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface Resp {
     errorCode?: string;            // error code
@@ -1916,7 +1876,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -1926,10 +1886,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -2006,7 +1963,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -2092,7 +2049,7 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface ApiReq {
     name?: string;
@@ -2102,10 +2059,7 @@
   export interface ApiReqExtra {
     special?: boolean;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface PostRes {
     resultId?: string;
     time?: number;
@@ -2171,7 +2125,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostRes {
     resultId?: string;
@@ -2286,7 +2240,7 @@
   }
   ```
 
-- JSON Response Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostRes {
     resultId?: string;
@@ -2562,6 +2516,76 @@
   }
   ```
 
+## POST /api/v31
+
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/api/v31'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func api31(rail miso.Rail, req EmptyReq) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/api/v31", "demo").
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface EmptyReq {
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  31() {
+    let req: EmptyReq | null = null;
+    this.http.post<any>(`/demo/api/v31`, req)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
 ## POST /open/api/demo/grouped/open/api/demo/post
 
 - Description: Post demo stuff
@@ -2614,15 +2638,12 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostReq {
     requestId?: string;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -2718,15 +2739,12 @@
   }
   ```
 
-- JSON Request Object In TypeScript:
+- JSON Request / Response Object In TypeScript:
   ```ts
   export interface PostReq {
     requestId?: string;
   }
-  ```
 
-- JSON Response Object In TypeScript:
-  ```ts
   export interface Resp {
     errorCode?: string;            // error code
     msg?: string;                  // message
@@ -2818,6 +2836,55 @@
           "Authorization": authorization
         }
       })
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## GET /health
+
+- cURL:
+  ```sh
+  curl -X GET 'http://localhost:8080/health'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  func SendRequest(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynTClient(rail, "/health", "demo").
+  		Get().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendRequest() {
+    this.http.get<any>(`/demo/health`)
       .subscribe({
         next: () => {
         },

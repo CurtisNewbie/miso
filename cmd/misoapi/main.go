@@ -165,7 +165,13 @@ func parseFiles(files []FsFile) error {
 	}
 
 	for _, df := range dstFiles {
-		pkgPath := modName + "/" + path.Dir(path.Dir(path.Clean(df.Path))) + "/" + df.Dst.Name.Name
+		dir := path.Dir(path.Dir(path.Clean(df.Path)))
+		var pkgPath string
+		if dir == "." {
+			pkgPath = modName + "/" + df.Dst.Name.Name
+		} else {
+			pkgPath = modName + "/" + dir + "/" + df.Dst.Name.Name
+		}
 		importSepc := map[string]string{}
 		dstutil.Apply(df.Dst,
 			func(c *dstutil.Cursor) bool {

@@ -1104,7 +1104,7 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 // generate one or more typescript interface definitions based on a set of jsonDesc.
 func genJsonTsDef(payload JsonPayloadDesc) string {
 	var typeName string = payload.TypeName
-	if len(payload.Fields) < 1 {
+	if len(payload.Fields) < 1 && typeName == "" {
 		return ""
 	}
 	sb, writef := util.NewIndWritef("  ")

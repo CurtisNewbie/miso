@@ -174,3 +174,11 @@ func api29(inb *miso.Inbound) {
 // misoapi-raw
 func api30(inb *miso.Inbound) {
 }
+
+type EmptyReq struct {
+}
+
+// misoapi-http: POST /api/v31
+func api31(inb *miso.Inbound, req EmptyReq) error {
+	return nil
+}
