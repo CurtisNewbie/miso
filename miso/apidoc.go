@@ -134,6 +134,7 @@ type FieldDesc struct {
 	OriginTypeNameWithPkg string      // type name in golang with import pkg
 	Desc                  string      // `desc` tag value
 	JsonTag               string      // `json` tag value
+	Valid                 string      // `validate` tag value
 	Fields                []FieldDesc // struct fields
 	isSliceOrArray        bool
 	isMap                 bool
@@ -695,6 +696,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			OriginTypeName:        originTypeName,
 			OriginTypeNameWithPkg: f.Type.String(),
 			Desc:                  getTagDesc(f.Tag),
+			Valid:                 getTagValid(f.Tag),
 			JsonTag:               jsonTag,
 			Fields:                []FieldDesc{},
 		}
@@ -1090,8 +1092,18 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 			}
 			fieldTypeName := f.goFieldTypeName()
 			var desc string = f.Desc
+			var comment string
 			if desc != "" {
-				comment := " // " + desc
+				comment = " // " + desc
+			}
+			if f.Valid != "" {
+				if comment != "" {
+					comment = strings.TrimSpace(comment) + ", " + f.Valid
+				} else {
+					comment = " // " + f.Valid
+				}
+			}
+			if comment != "" {
 				fieldDec := fmt.Sprintf("%s %s%s", f.FieldName, fieldTypeName, jsonTag)
 				writef(indentc, "%-30s%s", fieldDec, comment)
 			} else {
@@ -1609,6 +1621,17 @@ func getTagDesc(tag reflect.StructTag) string {
 		if v, ok := xdescs[xt]; ok {
 			return v
 		}
+	}
+	return ""
+}
+
+// Get tag valid.
+func getTagValid(tag reflect.StructTag) string {
+	if v, ok := tag.Lookup(TagValidationV2); ok {
+		return v
+	}
+	if v, ok := tag.Lookup(TagValidationV1); ok {
+		return v
 	}
 	return ""
 }
