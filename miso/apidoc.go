@@ -153,6 +153,22 @@ func (f FieldDesc) pureGoTypeName() string {
 	return pureGoTypeName(n)
 }
 
+func (f FieldDesc) comment() string {
+	var desc string = f.Desc
+	var comment string
+	if desc != "" {
+		comment = " // " + desc
+	}
+	if f.Valid != "" {
+		if comment != "" {
+			comment = strings.TrimSpace(comment) + ", " + f.Valid
+		} else {
+			comment = " // " + f.Valid
+		}
+	}
+	return comment
+}
+
 func (f FieldDesc) goFieldTypeName() string {
 	if f.isMisoPkg() {
 		return f.OriginTypeNameWithPkg
@@ -1091,18 +1107,7 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 				continue
 			}
 			fieldTypeName := f.goFieldTypeName()
-			var desc string = f.Desc
-			var comment string
-			if desc != "" {
-				comment = " // " + desc
-			}
-			if f.Valid != "" {
-				if comment != "" {
-					comment = strings.TrimSpace(comment) + ", " + f.Valid
-				} else {
-					comment = " // " + f.Valid
-				}
-			}
+			var comment string = f.comment()
 			if comment != "" {
 				fieldDec := fmt.Sprintf("%s %s%s", f.FieldName, fieldTypeName, jsonTag)
 				writef(indentc, "%-30s%s", fieldDec, comment)
@@ -1157,9 +1162,8 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 
 		} else {
 			var tname string = guessTsPrimiTypeName(d.TypeName)
-			var comment string
-			if d.Desc != "" {
-				comment = " // " + d.Desc
+			var comment string = d.comment()
+			if comment != "" {
 				fieldDec := fmt.Sprintf("%s?: %s", d.Name, tname)
 				writef(indentc, "%-30s%s", fieldDec+";", comment)
 			} else {
