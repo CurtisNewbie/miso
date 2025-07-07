@@ -23,9 +23,8 @@ func TestTaskScheduling(t *testing.T) {
 
 	var count int32 = 0
 	j := miso.Job{
-		Name:            "AddInt32 Task",
-		Cron:            "0/1 * * * * ?",
-		CronWithSeconds: true,
+		Name: "AddInt32 Task",
+		Cron: "0/1 * * * * ?",
 		Run: func(rail miso.Rail) error {
 			atomic.AddInt32(&count, 1)
 			rail.Infof("%v", count)

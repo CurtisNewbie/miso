@@ -7,6 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/go-co-op/gocron"
+	"github.com/robfig/cron"
 )
 
 var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
@@ -14,6 +15,9 @@ var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
 		scheduler: gocron.NewScheduler(time.Local),
 	}
 })
+var (
+	cronWithSecParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+)
 
 func init() {
 	RegisterBootstrapCallback(ComponentBootstrap{
@@ -26,7 +30,7 @@ func init() {
 type Job struct {
 	Name                   string                // name of the job.
 	Cron                   string                // cron expr.
-	CronWithSeconds        bool                  // whether cron expr contains the second field.
+	CronWithSeconds        bool                  // Deprecated: since v0.2.2, this is set by miso. This field is left for backward compatibility only.
 	Run                    func(rail Rail) error // actual job execution logic.
 	LogJobExec             bool                  // should job execution be logged, error msg is always logged regardless.
 	TriggeredOnBoostrapped bool                  // should job be triggered when server is fully bootstrapped
@@ -75,9 +79,8 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 		rail := EmptyRail()
 
 		inf := JobInf{
-			Name:            job.Name,
-			Cron:            job.Cron,
-			CronWithSeconds: job.CronWithSeconds,
+			Name: job.Name,
+			Cron: job.Cron,
 		}
 
 		for _, hook := range m.preJobHooks {
@@ -113,17 +116,23 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 	})
 }
 
+func (m *scheduleMdoule) guessCronWithSceond(cronExpr string) bool {
+	_, err := cronWithSecParser.Parse(cronExpr)
+	return err == nil
+}
+
 func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	var err error
 	s := m.scheduler
 	wrappedJob := m.wrapJob(job)
+	job.CronWithSeconds = m.guessCronWithSceond(job.Cron)
 	if job.CronWithSeconds {
 		_, err = s.CronWithSeconds(job.Cron).Tag(job.Name).Do(wrappedJob)
 	} else {
 		_, err = s.Cron(job.Cron).Tag(job.Name).Do(wrappedJob)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to schedule cron job, cron: %v, withSeconds: %v, %w", job.Cron, job.CronWithSeconds, err)
+		return fmt.Errorf("failed to schedule cron job, cron: %v, %w", job.Cron, err)
 	}
 
 	OnAppReady(func(rail Rail) error {
@@ -282,26 +291,26 @@ func (t *TickRunner) Stop() {
 	t.ticker = nil
 }
 
+// Deprecated: since v0.2.2, please migrate to [CronExprEveryXSec] instead.
 func CronEveryXSec(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            CronExprEveryXSec(n),
-		CronWithSeconds: true,
+		Cron: CronExprEveryXSec(n),
 	}
 	return buildCronJob(j, options...)
 }
 
+// Deprecated: since v0.2.2, please migrate to [CronExprEveryXMin] instead.
 func CronEveryXMin(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            CronExprEveryXMin(n),
-		CronWithSeconds: true,
+		Cron: CronExprEveryXMin(n),
 	}
 	return buildCronJob(j, options...)
 }
 
+// Deprecated: since v0.2.2, please migrate to [CronExprEveryXHour] instead.
 func CronEveryXHour(n int, options ...func(j Job) Job) Job {
 	j := Job{
-		Cron:            CronExprEveryXHour(n),
-		CronWithSeconds: true,
+		Cron: CronExprEveryXHour(n),
 	}
 	return buildCronJob(j, options...)
 }

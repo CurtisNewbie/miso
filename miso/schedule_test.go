@@ -14,9 +14,8 @@ func TestScheduleCron(t *testing.T) {
 	t.Log("Yo")
 
 	err := ScheduleCron(Job{
-		Name:            "myjob",
-		Cron:            "*/1 * * * * *",
-		CronWithSeconds: true,
+		Name: "myjob",
+		Cron: "*/1 * * * * *",
 		Run: func(rail Rail) error {
 			time.Sleep(1 * time.Second)
 			atomic.AddInt32(&yoc, 1)
@@ -30,9 +29,8 @@ func TestScheduleCron(t *testing.T) {
 	}
 
 	err = ScheduleCron(Job{
-		Name:            "myjob",
-		Cron:            "*/1 * * * * *",
-		CronWithSeconds: true,
+		Name: "myjob",
+		Cron: "*/1 * * * * *",
 		Run: func(rail Rail) error {
 			time.Sleep(1 * time.Second)
 			atomic.AddInt32(&noc, 1)
@@ -78,9 +76,8 @@ func TestJobListener(t *testing.T) {
 	})
 
 	err := ScheduleCron(Job{
-		Name:            "myjob",
-		Cron:            "*/1 * * * * *",
-		CronWithSeconds: true,
+		Name: "myjob",
+		Cron: "*/1 * * * * *",
 		Run: func(rail Rail) error {
 			time.Sleep(500 * time.Millisecond)
 			t.Log("Yo")

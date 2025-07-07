@@ -51,9 +51,8 @@ func init() {
 			collector := NewMetricsCollector(DefaultMetricDesc(nil))
 			memStatsCollector = &collector
 			return ScheduleCron(Job{
-				Name:            "MetricsStatLogJob",
-				CronWithSeconds: true,
-				Cron:            GetPropStr(PropMetricsMemStatsLogJobCron),
+				Name: "MetricsStatLogJob",
+				Cron: GetPropStr(PropMetricsMemStatsLogJobCron),
 				Run: func(r Rail) error {
 					memStatsCollector.Read()
 					cs, _ := CollectCpuStats()

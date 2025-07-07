@@ -489,10 +489,9 @@ func (a *MisoApp) configureLogging() error {
 
 			// schedule a job to rotate the log at 00:00:00
 			if err := ScheduleCron(Job{
-				Name:            "RotateLogJob",
-				Cron:            "0 0 0 * * ?",
-				CronWithSeconds: true,
-				Run:             func(r Rail) error { return log.Rotate() },
+				Name: "RotateLogJob",
+				Cron: "0 0 0 * * ?",
+				Run:  func(r Rail) error { return log.Rotate() },
 			}); err != nil {
 				return fmt.Errorf("failed to register RotateLogJob, %v", err)
 			}
