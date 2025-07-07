@@ -14,6 +14,8 @@ const (
 
 	// misoconfig-prop: extra config files that should be loaded
 	PropConfigExtraFiles = "config.extra.files"
+
+	PropAppTestEnv = "app.test-env"
 )
 
 // misoconfig-section: Web Server Configuration

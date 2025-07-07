@@ -13,6 +13,7 @@ import (
 // Before calling this method, you should make sure related modules are imported in go test file, or else the dependencies may not be bootstrapped properly.
 func PrepareTestEnv(t *testing.T) Rail {
 	rail := EmptyRail()
+	SetProp(PropAppTestEnv, true)
 	cf := tryFindConfFile(rail, t)
 	if cf != "" {
 		err := LoadConfigFromFile(cf, rail)

@@ -52,7 +52,7 @@ var (
 
 func init() {
 	PostServerBootstrap(func(rail Rail) error {
-		if IsProdMode() || !GetPropBool(PropServerGenerateEndpointDocEnabled) {
+		if IsProdMode() || !GetPropBool(PropServerGenerateEndpointDocEnabled) || GetPropBool(PropAppTestEnv) {
 			return nil
 		}
 		outf := GetPropStr(PropServerGenerateEndpointDocFile)

@@ -494,7 +494,7 @@ func dispatchJson(c *gin.Context, body interface{}) {
 }
 
 func webServerBootstrapCondition(rail Rail) (bool, error) {
-	return GetPropBool(PropServerEnabled), nil
+	return GetPropBool(PropServerEnabled) && !GetPropBool(PropAppTestEnv), nil
 }
 
 func webServerBootstrap(rail Rail) error {
