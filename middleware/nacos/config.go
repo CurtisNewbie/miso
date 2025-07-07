@@ -38,7 +38,7 @@ const (
 	// misoconfig-prop: extra watched nacos config, (slice of strings, format: `"${data-id}" + ":" + "${group}"`)
 	PropNacosConfigWatch = "nacos.server.config.watch"
 
-	// misoconfig-prop: enable nacos client for service discovery | false
+	// misoconfig-prop: enable nacos client for service discovery | true
 	PropNacosDiscoveryEnabled = "nacos.discovery.enabled"
 
 	// misoconfig-prop: register current instance on nacos for service discovery | true

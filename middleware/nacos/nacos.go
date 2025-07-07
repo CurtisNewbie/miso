@@ -52,7 +52,7 @@ func init() {
 		Name:      "Boostrap Nacos Service Discovery",
 		Bootstrap: BootstrapServiceDiscovery,
 		Condition: func(rail miso.Rail) (bool, error) {
-			return miso.GetPropBool(PropNacosDiscoveryEnabled), nil
+			return miso.GetPropBool(PropNacosEnabled) && miso.GetPropBool(PropNacosDiscoveryEnabled), nil
 		},
 		Order: miso.BootstrapOrderL4,
 	})
@@ -63,7 +63,6 @@ func init() {
 // In most cases, this should be called by miso itself when server bootstraps.
 func BootstrapConfigCenter(rail miso.Rail) error {
 	if !miso.GetPropBool(PropNacosEnabled) {
-		miso.Debug("nacos disabled")
 		return nil
 	}
 
@@ -83,10 +82,6 @@ func BootstrapConfigCenter(rail miso.Rail) error {
 //
 // In most cases, this should be called by miso itself when server bootstraps.
 func BootstrapServiceDiscovery(rail miso.Rail) error {
-	if !miso.GetPropBool(PropNacosEnabled) {
-		miso.Debug("nacos disabled")
-		return nil
-	}
 
 	ok, err := module().initDiscovery(rail)
 	if err != nil {
@@ -152,42 +147,39 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 		return false, err
 	}
 
-	if miso.GetPropBool(PropNacosDiscoveryEnabled) {
+	// setup api
+	miso.ChangeGetServerList(func() miso.ServerList { return m.serverList })
+	rail.Debug("Using Nacos based GetServerList")
 
-		// setup api
-		miso.ChangeGetServerList(func() miso.ServerList { return m.serverList })
-		rail.Debug("Using Nacos based GetServerList")
-
-		nc, err := clients.NewNamingClient(
-			vo.NacosClientParam{
-				ClientConfig:  &clientConfig,
-				ServerConfigs: serverConfigs,
-			},
-		)
-		if err != nil {
-			return false, miso.WrapErrf(err, "failed to create nacos naming client")
-		}
-		m.serverList.client = nc
-		rail.Infof("Created nacos naming client")
-
-		// deregister on shutdown, we specify the order explicitly to make sure the service
-		// is deregistered before shutting down the web server
-		miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() {
-			rail := miso.EmptyRail()
-			rail.Infof("Deregistering Nacos service")
-			if e := deregisterNacosService(m.serverList.client); e != nil {
-				rail.Errorf("Failed to deregister on Nacos, %v", e)
-			}
-		})
-
-		// register current instance
-		miso.OnAppReady(func(rail miso.Rail) error {
-			if err := registerNacosService(nc); err != nil {
-				return miso.WrapErrf(err, "failed to register on nacos")
-			}
-			return nil
-		})
+	nc, err := clients.NewNamingClient(
+		vo.NacosClientParam{
+			ClientConfig:  &clientConfig,
+			ServerConfigs: serverConfigs,
+		},
+	)
+	if err != nil {
+		return false, miso.WrapErrf(err, "failed to create nacos naming client")
 	}
+	m.serverList.client = nc
+	rail.Infof("Created nacos naming client")
+
+	// deregister on shutdown, we specify the order explicitly to make sure the service
+	// is deregistered before shutting down the web server
+	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() {
+		rail := miso.EmptyRail()
+		rail.Infof("Deregistering Nacos service")
+		if e := deregisterNacosService(m.serverList.client); e != nil {
+			rail.Errorf("Failed to deregister on Nacos, %v", e)
+		}
+	})
+
+	// register current instance
+	miso.OnAppReady(func(rail miso.Rail) error {
+		if err := registerNacosService(nc); err != nil {
+			return miso.WrapErrf(err, "failed to register on nacos")
+		}
+		return nil
+	})
 
 	m.discoveryInitialized = true
 	return true, nil
