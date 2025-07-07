@@ -177,7 +177,7 @@ func (f FieldDesc) comment(withSlash bool) string {
 		var remaining string
 		rules := strings.Split(f.Valid, ",")
 		appendRemaining := func(r string) {
-			if remaining != "" {
+			if remaining != "" && !util.HasAnySuffix(remaining, ".", ",") {
 				remaining += ". "
 			}
 			remaining += r
