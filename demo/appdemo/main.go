@@ -26,7 +26,7 @@ const (
 
 func init() {
 	miso.SetProp("app.name", "demo")
-	miso.SetProp("redis.enabled", true) // for distributed task
+	miso.SetProp("redis.enabled", false) // for distributed task
 	miso.SetProp("mode.production", false)
 	miso.SetProp("server.generate-endpoint-doc.file", "api-doc.md")
 }

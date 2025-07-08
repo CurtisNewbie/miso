@@ -35,8 +35,6 @@
 - [POST /api/v31](#post-apiv31)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 - [POST /open/api/demo/grouped/subgroup/post1](#post-openapidemogroupedsubgrouppost1)
-- [GET /metrics](#get-metrics)
-- [GET /health](#get-health)
 
 ## POST /api/v1
 
@@ -162,7 +160,7 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api2(rail miso.Rail, req PostReq) (PostRes, error) {
+  func api2(rail miso.Rail, req *PostReq) (PostRes, error) {
   	var res miso.GnResp[PostRes]
   	err := miso.NewDynTClient(rail, "/api/v2", "demo").
   		PostJson(req).
@@ -257,15 +255,14 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api3(rail miso.Rail, req PostReq) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
+  func api3(rail miso.Rail, req *PostReq) (*PostRes, error) {
+  	var res miso.GnResp[*PostRes]
   	err := miso.NewDynTClient(rail, "/api/v3", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat PostRes
-  		return dat, err
+  		return nil, err
   	}
   	dat, err := res.Res()
   	if err != nil {
@@ -359,15 +356,14 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api4(rail miso.Rail, req ApiReq) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
+  func api4(rail miso.Rail, req ApiReq) (*PostRes, error) {
+  	var res miso.GnResp[*PostRes]
   	err := miso.NewDynTClient(rail, "/api/v4", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat PostRes
-  		return dat, err
+  		return nil, err
   	}
   	dat, err := res.Res()
   	if err != nil {
@@ -466,15 +462,14 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api5(rail miso.Rail, req ApiReq) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
+  func api5(rail miso.Rail, req *ApiReq) (*PostRes, error) {
+  	var res miso.GnResp[*PostRes]
   	err := miso.NewDynTClient(rail, "/api/v5", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat PostRes
-  		return dat, err
+  		return nil, err
   	}
   	dat, err := res.Res()
   	if err != nil {
@@ -573,15 +568,14 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api6(rail miso.Rail, req ApiReq) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
+  func api6(rail miso.Rail, req *ApiReq) (*PostRes, error) {
+  	var res miso.GnResp[*PostRes]
   	err := miso.NewDynTClient(rail, "/api/v6", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat PostRes
-  		return dat, err
+  		return nil, err
   	}
   	dat, err := res.Res()
   	if err != nil {
@@ -673,7 +667,7 @@
   	Special bool `json:"special"`
   }
 
-  func api7(rail miso.Rail, req ApiReq) (ApiRes, error) {
+  func api7(rail miso.Rail, req *ApiReq) (ApiRes, error) {
   	var res miso.GnResp[ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v7", "demo").
   		PostJson(req).
@@ -768,15 +762,14 @@
   	Special bool `json:"special"`
   }
 
-  func api8(rail miso.Rail, req ApiReq) (ApiRes, error) {
-  	var res miso.GnResp[ApiRes]
+  func api8(rail miso.Rail, req *ApiReq) (*ApiRes, error) {
+  	var res miso.GnResp[*ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v8", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat ApiRes
-  		return dat, err
+  		return nil, err
   	}
   	dat, err := res.Res()
   	if err != nil {
@@ -844,7 +837,7 @@
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
-    - "data": (*[]api.ApiRes) response data
+    - "data": ([]*api.ApiRes) response data
 - cURL:
   ```sh
   curl -X POST 'http://localhost:8080/api/v9' \
@@ -863,14 +856,14 @@
   	Special bool `json:"special"`
   }
 
-  func api9(rail miso.Rail, req ApiReq) (ApiRes, error) {
-  	var res miso.GnResp[ApiRes]
+  func api9(rail miso.Rail, req *ApiReq) ([]*ApiRes, error) {
+  	var res miso.GnResp[[]*ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v9", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat ApiRes
+  		var dat []*ApiRes
   		return dat, err
   	}
   	dat, err := res.Res()
@@ -896,7 +889,7 @@
     errorCode?: string;            // error code
     msg?: string;                  // message
     error?: boolean;               // whether the request was successful
-    data?: ApiRes;                 // response data
+    data?: ApiRes[];               // response data
   }
   ```
 
@@ -919,7 +912,7 @@
             this.snackBar.open(resp.msg, "ok", { duration: 6000 })
             return;
           }
-          let dat: ApiRes = resp.data;
+          let dat: ApiRes[] = resp.data;
         },
         error: (err) => {
           console.log(err)
@@ -958,7 +951,7 @@
   	Special bool `json:"special"`
   }
 
-  func api10(rail miso.Rail, req ApiReq) ([]ApiRes, error) {
+  func api10(rail miso.Rail, req *ApiReq) ([]ApiRes, error) {
   	var res miso.GnResp[[]ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v10", "demo").
   		PostJson(req).
@@ -1060,7 +1053,7 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api11(rail miso.Rail, req ApiReq) ([]PostRes, error) {
+  func api11(rail miso.Rail, req *ApiReq) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
   	err := miso.NewDynTClient(rail, "/api/v11", "demo").
   		PostJson(req).
@@ -2529,6 +2522,9 @@
 
 - Miso HTTP Client (experimental, demo may not work):
   ```go
+  type EmptyReq struct {
+  }
+
   func api31(rail miso.Rail, req EmptyReq) error {
   	var res miso.GnResp[any]
   	err := miso.NewDynTClient(rail, "/api/v31", "demo").
@@ -2778,115 +2774,6 @@
             return;
           }
           let dat: PostRes = resp.data;
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## GET /metrics
-
-- Description: Collect prometheus metrics information
-- Header Parameter:
-  - "Authorization": Basic authorization if enabled
-- cURL:
-  ```sh
-  curl -X GET 'http://localhost:8080/metrics' \
-    -H 'Authorization: '
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  func SendRequest(rail miso.Rail, authorization string) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/metrics", "demo").
-  		AddHeader("authorization", authorization).
-  		Get().
-  		Json(&res)
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  		return err
-  	}
-  	err = res.Err()
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  	}
-  	return err
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendRequest() {
-    let authorization: any | null = null;
-    this.http.get<any>(`/demo/metrics`,
-      {
-        headers: {
-          "Authorization": authorization
-        }
-      })
-      .subscribe({
-        next: () => {
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## GET /health
-
-- cURL:
-  ```sh
-  curl -X GET 'http://localhost:8080/health'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  func SendRequest(rail miso.Rail) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/health", "demo").
-  		Get().
-  		Json(&res)
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  		return err
-  	}
-  	err = res.Err()
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  	}
-  	return err
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendRequest() {
-    this.http.get<any>(`/demo/health`)
-      .subscribe({
-        next: () => {
         },
         error: (err) => {
           console.log(err)

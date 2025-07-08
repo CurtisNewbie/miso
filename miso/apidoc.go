@@ -128,6 +128,7 @@ type FieldDesc struct {
 	Valid                 string      // `validate` tag value
 	Fields                []FieldDesc // struct fields
 	isSliceOrArray        bool
+	isSliceOfPointer      bool
 	isMap                 bool
 	isPointer             bool
 }
@@ -209,6 +210,9 @@ func (f FieldDesc) goFieldTypeName() string {
 		return f.OriginTypeNameWithPkg
 	}
 	ptn := f.pureGoTypeName()
+	if f.isSliceOfPointer {
+		return "[]*" + ptn
+	}
 	if f.isSliceOrArray {
 		return "[]" + ptn
 	}
@@ -222,6 +226,7 @@ type JsonPayloadDesc struct {
 	TypeName string
 	TypePkg  string
 	IsSlice  bool
+	IsPtr    bool
 	Fields   []FieldDesc
 }
 
@@ -669,14 +674,20 @@ func BuildJsonPayloadDesc(v reflect.Value) JsonPayloadDesc {
 	switch v.Kind() {
 	case reflect.Pointer:
 		v = reflect.New(v.Type().Elem()).Elem()
-		return BuildJsonPayloadDesc(v)
+		jpd := BuildJsonPayloadDesc(v)
+		jpd.IsPtr = true
+		return jpd
 	case reflect.Struct:
 		return JsonPayloadDesc{Fields: buildJsonDesc(v, nil), TypeName: v.Type().Name(), TypePkg: v.Type().PkgPath()}
 	case reflect.Slice:
 		et := v.Type().Elem()
-		if et.Kind() == reflect.Struct {
+		switch et.Kind() {
+		case reflect.Struct:
 			ev := reflect.New(et).Elem()
 			return JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
+		case reflect.Pointer:
+			ev := reflect.New(et).Elem()
+			return JsonPayloadDesc{IsSlice: true, IsPtr: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
 		}
 	}
 	return JsonPayloadDesc{TypeName: v.Type().Name(), TypePkg: v.Type().PkgPath()}
@@ -771,6 +782,9 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 					switch et.Kind() {
 					case reflect.Slice, reflect.Array:
 						jd.isSliceOrArray = true
+						if et.Elem().Kind() == reflect.Pointer {
+							jd.isSliceOfPointer = true
+						}
 					case reflect.Map:
 						jd.isMap = true
 					case reflect.Pointer:
@@ -788,6 +802,9 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			switch fv.Kind() {
 			case reflect.Slice, reflect.Array:
 				jd.isSliceOrArray = true
+				if fv.Type().Elem().Kind() == reflect.Pointer {
+					jd.isSliceOfPointer = true
+				}
 			case reflect.Map:
 				jd.isMap = true
 			case reflect.Pointer:
@@ -1265,9 +1282,9 @@ func guessTsItfName(n string) string {
 
 func guessGoTypName(n string) string {
 	tsTypeName := guessTsItfName(n)
-	if strings.HasPrefix(n, "[]") {
-		return "[]" + tsTypeName
-	}
+	// if strings.HasPrefix(n, "[]") {
+	// 	return "[]" + tsTypeName
+	// }
 	return tsTypeName
 }
 
@@ -1469,6 +1486,20 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
 	sl := new(util.SLPinter)
 
+	buildTypeName := func(s string, isPtr bool, isSlice bool) string {
+		// TODO: pointer of slice?
+		if isSlice {
+			if isPtr {
+				s = "[]*" + s
+			} else {
+				s = "[]" + s
+			}
+		} else if isPtr {
+			s = "*" + s
+		}
+		return s
+	}
+
 	respGeneName := respTypeName
 	if respGeneName == "" {
 		respGeneName = "any"
@@ -1478,12 +1509,22 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 			for _, n := range d.JsonResponseDesc.Fields {
 				if n.FieldName == "Data" {
 					respGeneName = guessGoTypName(n.TypeName)
+					isPtr := n.isPointer
+					isSlice := n.isSliceOrArray
+					if n.isSliceOfPointer {
+						isPtr = true
+						isSlice = true
+					}
+					respGeneName = buildTypeName(respGeneName, isPtr, isSlice)
 					break
 				}
 			}
-		}
-		if respGeneName == "Resp" {
-			respGeneName = "any"
+			if respGeneName == "Resp" {
+				respGeneName = "any"
+				respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtr, d.JsonResponseDesc.IsSlice)
+			}
+		} else {
+			respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtr, d.JsonResponseDesc.IsSlice)
 		}
 	}
 
@@ -1510,30 +1551,17 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	}
 
 	if reqTypeName != "" {
-		reqn := reqTypeName
-		if d.JsonRequestDesc.IsSlice {
-			reqn = "[]" + reqn
-		}
+		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtr, d.JsonRequestDesc.IsSlice)
 		if respGeneName == "any" {
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) error {", mn, reqn, qh)
 		} else {
-			respn := respGeneName
-			if d.JsonResponseDesc.IsSlice {
-				respn = "[]" + respn
-			}
-			respGeneName = respn
-			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respn)
+			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respGeneName)
 		}
 	} else {
 		if respGeneName == "any" {
 			sl.Printlnf("func %s(rail miso.Rail%s) error {", mn, qh)
 		} else {
-			respn := respGeneName
-			if d.JsonResponseDesc.IsSlice {
-				respn = "[]" + respn
-			}
-			respGeneName = respn
-			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respn)
+			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respGeneName)
 		}
 	}
 

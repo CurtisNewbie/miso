@@ -64,7 +64,7 @@ func api8(inb *miso.Inbound, req *ApiReq, db *gorm.DB) (*ApiRes, error) {
 }
 
 // misoapi-http: POST /api/v9
-func api9(inb *miso.Inbound, req *ApiReq, db *gorm.DB) (*[]ApiRes, error) {
+func api9(inb *miso.Inbound, req *ApiReq, db *gorm.DB) ([]*ApiRes, error) {
 	return nil, nil
 }
 
