@@ -370,6 +370,8 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	filteredPathPatterns := []string{
 		"/debug/pprof/**",
 		"/doc/api/**",
+		"/health",
+		"/metrics",
 	}
 
 	rootSpec := &openapi3.T{
