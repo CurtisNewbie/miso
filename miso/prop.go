@@ -110,6 +110,12 @@ const (
 	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.path-patterns | v0.2.0
 	PropServerGenerateEndpointDocOpenApiSpecPathPatterns = "server.api-doc.openapi-spec.path-patterns"
 
+	// misoconfig-prop: file that contains the generated api doc golang demo
+	PropServerApiDocGoFile = "server.api-doc.go.file"
+
+	// misoconfig-prop: path patterns for endpoints that are written to api doc golang demo file
+	PropServerApiDocGoPathPatterns = "server.api-doc.go.path-patterns"
+
 	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
 

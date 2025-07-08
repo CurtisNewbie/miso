@@ -235,6 +235,8 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.api-doc.openapi-spec.server        | server address specified in openapi json doc                                                                              |               |
 | server.api-doc.openapi-spec.file          | path to generated openapi json for all endpoints                                                                          |               |
 | server.api-doc.openapi-spec.path-patterns | path patterns for endpoints in openapi json (`slice of string`)                                                           |               |
+| server.api-doc.go.file                    | file that contains the generated api doc golang demo                                                                      |               |
+| server.api-doc.go.path-patterns           | path patterns for endpoints that are written to api doc golang demo file                                                  |               |
 | server.request.mapping.header             | automatically map header values to request struct                                                                         | true          |
 | server.gin.validation.disabled            | disable gin's builtin validation                                                                                          | true          |
 
