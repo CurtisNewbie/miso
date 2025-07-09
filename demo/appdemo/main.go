@@ -26,8 +26,9 @@ const (
 
 func init() {
 	miso.SetProp("app.name", "demo")
-	miso.SetProp("redis.enabled", false) // for distributed task
+	miso.SetProp("redis.enabled", false) // for distributed task, set to true
 	miso.SetProp("mode.production", false)
+	// miso.SetProp("server.api-doc.go.file", "goclient/client.go")
 	miso.SetProp("server.generate-endpoint-doc.file", "api-doc.md")
 }
 
@@ -87,12 +88,6 @@ func PrepareServer(rail miso.Rail) error {
 			})).
 			Desc("Post demo stuff").                            // describe endpoint in api-doc
 			DocHeader("Authorization", "Bearer Authorization"), // document request header
-
-		miso.BaseRoute("/subgroup").Group(
-
-			// /open/api/demo/grouped/subgroup/post
-			miso.HttpPost("/post1", miso.AutoHandler(doSomethingEndpoint)),
-		),
 	)
 	return nil
 }

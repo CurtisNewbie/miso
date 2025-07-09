@@ -34,7 +34,6 @@
 - [TRACE /api/v30](#trace-apiv30)
 - [POST /api/v31](#post-apiv31)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
-- [POST /open/api/demo/grouped/subgroup/post1](#post-openapidemogroupedsubgrouppost1)
 
 ## POST /api/v1
 
@@ -667,6 +666,9 @@
   	Special bool `json:"special"`
   }
 
+  type ApiRes struct {
+  }
+
   func api7(rail miso.Rail, req *ApiReq) (ApiRes, error) {
   	var res miso.GnResp[ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v7", "demo").
@@ -760,6 +762,9 @@
 
   type ApiReqExtra struct {
   	Special bool `json:"special"`
+  }
+
+  type ApiRes struct {
   }
 
   func api8(rail miso.Rail, req *ApiReq) (*ApiRes, error) {
@@ -856,6 +861,9 @@
   	Special bool `json:"special"`
   }
 
+  type ApiRes struct {
+  }
+
   func api9(rail miso.Rail, req *ApiReq) ([]*ApiRes, error) {
   	var res miso.GnResp[[]*ApiRes]
   	err := miso.NewDynTClient(rail, "/api/v9", "demo").
@@ -949,6 +957,9 @@
 
   type ApiReqExtra struct {
   	Special bool `json:"special"`
+  }
+
+  type ApiRes struct {
   }
 
   func api10(rail miso.Rail, req *ApiReq) ([]ApiRes, error) {
@@ -1538,14 +1549,14 @@
   	Time util.ETime `json:"time"`
   }
 
-  func api16(rail miso.Rail) (PageRes, error) {
-  	var res miso.GnResp[PageRes]
+  func api16(rail miso.Rail) (miso.PageRes[PostRes], error) {
+  	var res miso.GnResp[miso.PageRes[PostRes]]
   	err := miso.NewDynTClient(rail, "/api/v16", "demo").
   		Get().
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat PageRes
+  		var dat miso.PageRes[PostRes]
   		return dat, err
   	}
   	dat, err := res.Res()
@@ -2672,101 +2683,6 @@
           "Authorization": authorization
         }
       })
-      .subscribe({
-        next: (resp) => {
-          if (resp.error) {
-            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
-            return;
-          }
-          let dat: PostRes = resp.data;
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## POST /open/api/demo/grouped/subgroup/post1
-
-- JSON Request:
-    - "requestId": (string) 
-- JSON Response:
-    - "errorCode": (string) error code
-    - "msg": (string) message
-    - "error": (bool) whether the request was successful
-    - "data": (PostRes) response data
-      - "resultId": (string) 
-      - "time": (int64) 
-- cURL:
-  ```sh
-  curl -X POST 'http://localhost:8080/open/api/demo/grouped/subgroup/post1' \
-    -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  type PostReq struct {
-  	RequestId string `json:"requestId"`
-  }
-
-  type PostRes struct {
-  	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
-  }
-
-  func SendPostReq(rail miso.Rail, req PostReq) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/open/api/demo/grouped/subgroup/post1", "demo").
-  		PostJson(req).
-  		Json(&res)
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  		var dat PostRes
-  		return dat, err
-  	}
-  	dat, err := res.Res()
-  	if err != nil {
-  		rail.Errorf("Request failed, %v", err)
-  	}
-  	return dat, err
-  }
-  ```
-
-- JSON Request / Response Object In TypeScript:
-  ```ts
-  export interface PostReq {
-    requestId?: string;
-  }
-
-  export interface Resp {
-    errorCode?: string;            // error code
-    msg?: string;                  // message
-    error?: boolean;               // whether the request was successful
-    data?: PostRes;
-  }
-
-  export interface PostRes {
-    resultId?: string;
-    time?: number;
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendPostReq() {
-    let req: PostReq | null = null;
-    this.http.post<any>(`/demo/open/api/demo/grouped/subgroup/post1`, req)
       .subscribe({
         next: (resp) => {
           if (resp.error) {

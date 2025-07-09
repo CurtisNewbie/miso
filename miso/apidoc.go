@@ -76,7 +76,7 @@ func init() {
 			return err
 		}
 
-		err = writeApiDocGoFile(rail, docs.routeDocs)
+		err = writeApiDocGoFile(rail, docs.globalDoc.GoTypeDef, docs.routeDocs)
 		if err != nil {
 			rail.Errorf("Failed to write api-doc golang file: %v", err)
 			return err
@@ -88,32 +88,37 @@ func init() {
 
 type GetPipelineDocFunc func() []PipelineDoc
 
+type globalHttpRouteDoc struct {
+	GoTypeDef []string
+}
+
 type httpRouteDoc struct {
-	Name                  string           // api func name
-	Url                   string           // http request url
-	Method                string           // http method
-	Extra                 map[string][]any // extra metadata
-	Desc                  string           // description of the route (metadata).
-	Scope                 string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
-	Resource              string           // the documented resource that the route should be bound to (metadata).
-	Headers               []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
-	QueryParams           []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
-	JsonRequestValue      *reflect.Value   // reflect.Value of json request object
-	JsonRequestDesc       JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
-	JsonResponseValue     *reflect.Value   // reflect.Value of json response object
-	JsonResponseDesc      JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
-	Curl                  string           // curl demo
-	JsonReqTsDef          string           // json request type def in ts
-	JsonRespTsDef         string           // json response type def in ts
-	JsonTsDef             string           // json requests & response type def in ts
-	JsonReqGoDef          string           // json request type def in go
-	JsonReqGoDefTypeName  string           // json request type name in go
-	JsonRespGoDef         string           // json response type def in go
-	JsonRespGoDefTypeName string           // json response type name in go
-	NgHttpClientDemo      string           // angular http client demo
-	NgTableDemo           string           // angular table demo
-	MisoTClientDemo       string           // miso TClient demo
-	OpenApiDoc            string
+	Name                    string           // api func name
+	Url                     string           // http request url
+	Method                  string           // http method
+	Extra                   map[string][]any // extra metadata
+	Desc                    string           // description of the route (metadata).
+	Scope                   string           // the documented access scope of the route, it maybe "PUBLIC" or something else (metadata).
+	Resource                string           // the documented resource that the route should be bound to (metadata).
+	Headers                 []ParamDoc       // the documented header parameters that will be used by the endpoint (metadata).
+	QueryParams             []ParamDoc       // the documented query parameters that will used by the endpoint (metadata).
+	JsonRequestValue        *reflect.Value   // reflect.Value of json request object
+	JsonRequestDesc         JsonPayloadDesc  // the documented json request type that is expected by the endpoint (metadata).
+	JsonResponseValue       *reflect.Value   // reflect.Value of json response object
+	JsonResponseDesc        JsonPayloadDesc  // the documented json response type that will be returned by the endpoint (metadata).
+	Curl                    string           // curl demo
+	JsonReqTsDef            string           // json request type def in ts
+	JsonRespTsDef           string           // json response type def in ts
+	JsonTsDef               string           // json requests & response type def in ts
+	JsonReqGoDef            string           // json request type def in go
+	JsonReqGoDefTypeName    string           // json request type name in go
+	JsonRespGoDef           string           // json response type def in go
+	JsonRespGoDefTypeName   string           // json response type name in go
+	NgHttpClientDemo        string           // angular http client demo
+	NgTableDemo             string           // angular table demo
+	MisoTClientDemo         string           // miso TClient demo
+	MisoTClientWithoutTypes string           // miso TClient demo without golang type definitions
+	OpenApiDoc              string
 }
 
 type FieldDesc struct {
@@ -358,6 +363,7 @@ func pureGoTypeName(n string) string {
 
 type httpRouteDocs struct {
 	routeDocs []httpRouteDoc
+	globalDoc globalHttpRouteDoc
 	openapi   *openapi3.T
 }
 
@@ -380,7 +386,17 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	if v := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecServer); v != "" {
 		rootSpec.AddServer(&openapi3.Server{URL: v})
 	}
-	patterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
+	openApiSpecPatterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
+
+	goFilePathPatterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
+	matchGlobalGoTypeDefPattern := func(u string) bool {
+		if len(goFilePathPatterns) < 1 {
+			return true
+		}
+		return util.MatchPathAny(goFilePathPatterns, u)
+	}
+	seenGlobalGoTypeDef := util.NewSet[string]()
+	globalGoTypeDef := []string{}
 
 	for _, r := range hr {
 		excl := false
@@ -427,18 +443,38 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 			}
 		}
 
+		addGlobalGoTypeDef := matchGlobalGoTypeDefPattern(r.Url)
+
 		// json stuff
 		if d.JsonRequestValue != nil {
 			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
 			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
-			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc)
+			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc, util.NewSet[string]())
+
+			if addGlobalGoTypeDef {
+				td, _ := genJsonGoDef(d.JsonRequestDesc, seenGlobalGoTypeDef)
+				td = strings.TrimSpace(td)
+				if td != "" {
+					globalGoTypeDef = append(globalGoTypeDef, td)
+				}
+			}
+
 			d.JsonTsDef = d.JsonReqTsDef
 		}
 
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
 			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
-			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc)
+			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc, util.NewSet[string]())
+
+			if addGlobalGoTypeDef {
+				td, _ := genJsonGoDef(d.JsonResponseDesc, seenGlobalGoTypeDef)
+				td = strings.TrimSpace(td)
+				if td != "" {
+					globalGoTypeDef = append(globalGoTypeDef, td)
+				}
+			}
+
 			if d.JsonTsDef != "" {
 				d.JsonTsDef += "\n"
 			}
@@ -458,6 +494,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 
 		// miso http TClient
 		d.MisoTClientDemo = genTClientDemo(d)
+		d.MisoTClientWithoutTypes = d.MisoTClientDemo
 		if d.JsonRespGoDef != "" {
 			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
 		}
@@ -467,8 +504,8 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 
 		// openapi 3.0.0
 		var matchSpecPattern bool = true
-		if len(patterns) > 0 {
-			matchSpecPattern = util.MatchPathAny(patterns, d.Url)
+		if len(openApiSpecPatterns) > 0 {
+			matchSpecPattern = util.MatchPathAny(openApiSpecPatterns, d.Url)
 		}
 
 		if matchSpecPattern {
@@ -481,7 +518,10 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	}
 	return httpRouteDocs{
 		routeDocs: docs,
-		openapi:   rootSpec,
+		globalDoc: globalHttpRouteDoc{
+			GoTypeDef: globalGoTypeDef,
+		},
+		openapi: rootSpec,
 	}
 }
 
@@ -684,10 +724,12 @@ func BuildJsonPayloadDesc(v reflect.Value) JsonPayloadDesc {
 		switch et.Kind() {
 		case reflect.Struct:
 			ev := reflect.New(et).Elem()
-			return JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
+			d := JsonPayloadDesc{IsSlice: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
+			return d
 		case reflect.Pointer:
 			ev := reflect.New(et).Elem()
-			return JsonPayloadDesc{IsSlice: true, IsPtr: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
+			d := JsonPayloadDesc{IsSlice: true, IsPtr: true, Fields: buildJsonDesc(ev, nil), TypeName: et.Name(), TypePkg: et.PkgPath()}
+			return d
 		}
 	}
 	return JsonPayloadDesc{TypeName: v.Type().Name(), TypePkg: v.Type().PkgPath()}
@@ -1063,16 +1105,15 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 */
 
 // generate one or more golang type definitions.
-func genJsonGoDef(rv JsonPayloadDesc) (string, string) {
+func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef util.Set[string]) (string, string) {
 	if rv.TypeName == "any" {
 		return "", ""
 	}
-	seenTypeDef := util.NewSet[string]()
 
 	if rv.TypeName == "Resp" || rv.TypeName == "GnResp" {
 		for _, f := range rv.Fields {
 			if f.FieldName == "Data" {
-				if f.OriginTypeName == "any" || len(f.Fields) < 1 {
+				if f.OriginTypeName == "any" {
 					return "", ""
 				}
 				inclTypeDef := inclGoTypeDef(f, seenTypeDef)
@@ -1117,15 +1158,23 @@ func inclGoTypeDef(f interface {
 	isMisoPkg() bool
 	pureGoTypeName() string
 }, seenTypeDef util.Set[string]) bool {
-	if !seenTypeDef.Add(f.pureGoTypeName()) {
+	pgn := f.pureGoTypeName()
+
+	// TODO: temp fix
+	switch pgn {
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
+		"float32", "float64", "string", "bool", "byte":
 		return false
 	}
-	if !f.isMisoPkg() {
-		return true
-	}
-	switch f.pureGoTypeName() {
-	case "PageRes", "Paging":
+
+	if !seenTypeDef.Add(pgn) {
 		return false
+	}
+	if f.isMisoPkg() {
+		switch pgn {
+		case "PageRes", "Paging", "User":
+			return false
+		}
 	}
 	return true
 }
@@ -1280,11 +1329,23 @@ func guessTsItfName(n string) string {
 	return n
 }
 
+func guessGoGenericEleName(n string) string {
+	if len(n) < 3 {
+		return ""
+	}
+	if n[len(n)-1] != ']' {
+		return ""
+	}
+	i := strings.IndexByte(n, '[')
+	if i < 0 {
+		return ""
+	}
+	v := n[i+1 : len(n)-1]
+	return guessGoTypName(v)
+}
+
 func guessGoTypName(n string) string {
 	tsTypeName := guessTsItfName(n)
-	// if strings.HasPrefix(n, "[]") {
-	// 	return "[]" + tsTypeName
-	// }
 	return tsTypeName
 }
 
@@ -1509,6 +1570,12 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 			for _, n := range d.JsonResponseDesc.Fields {
 				if n.FieldName == "Data" {
 					respGeneName = guessGoTypName(n.TypeName)
+					if n.isMisoPkg() && !strings.Contains(n.TypePkg, "demo") { // hack for demo
+						respGeneName = "miso." + respGeneName
+						if v := guessGoGenericEleName(n.TypeName); v != "" {
+							respGeneName += "[" + v + "]"
+						}
+					}
 					isPtr := n.isPointer
 					isSlice := n.isSliceOrArray
 					if n.isSliceOfPointer {
@@ -1828,11 +1895,12 @@ func writeApiDocFile(rail Rail, routes []httpRouteDoc, pipelineDoc []PipelineDoc
 	return nil
 }
 
-func writeApiDocGoFile(rail Rail, routes []httpRouteDoc) error {
+func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) error {
 	fp := GetPropStrTrimmed(PropServerApiDocGoFile)
 	if fp == "" {
 		return nil
 	}
+	_ = util.MkdirParentAll(fp)
 	f, err := util.OpenRWFile(fp, true)
 	if err != nil {
 		return err
@@ -1851,14 +1919,19 @@ func writeApiDocGoFile(rail Rail, routes []httpRouteDoc) error {
 	b.WriteString("\npackage " + path.Base(path.Dir(fp)))
 	b.WriteString("\nimport (")
 	b.WriteString("\n\t\"github.com/curtisnewbie/miso/miso\"")
+	b.WriteString("\n\t\"github.com/curtisnewbie/miso/util\"")
 	b.WriteString("\n)")
+
+	for _, td := range goTypeDefs {
+		b.WriteString("\n" + td + "\n")
+	}
+
 	for _, r := range routes {
 		if !matchPatterns(r.Url) {
 			continue
 		}
-		if r.MisoTClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
-			b.WriteRune('\n')
-			b.WriteString(r.MisoTClientDemo + "\n")
+		if r.MisoTClientWithoutTypes != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
+			b.WriteString("\n" + r.MisoTClientWithoutTypes + "\n")
 		}
 	}
 

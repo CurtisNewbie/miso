@@ -361,6 +361,45 @@ func (t *TClient) Get() *TResponse {
 	return t.send(req)
 }
 
+func (t *TClient) Trace() *TResponse {
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return t.errorResponse(e)
+	}
+
+	req, e := NewTraceRequest(u)
+	if e != nil {
+		return t.errorResponse(e)
+	}
+	return t.send(req)
+}
+
+func (t *TClient) Connect() *TResponse {
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return t.errorResponse(e)
+	}
+
+	req, e := NewConnectRequest(u)
+	if e != nil {
+		return t.errorResponse(e)
+	}
+	return t.send(req)
+}
+
+func (t *TClient) Patch() *TResponse {
+	u, e := t.prepReqUrl()
+	if e != nil {
+		return t.errorResponse(e)
+	}
+
+	req, e := NewPatchRequest(u)
+	if e != nil {
+		return t.errorResponse(e)
+	}
+	return t.send(req)
+}
+
 // Send POST request with urlencoded form data
 func (t *TClient) PostForm(data url.Values) *TResponse {
 	t.SetContentType(formEncoded)
@@ -735,6 +774,33 @@ func NewPostRequest(url string, body io.Reader) (*http.Request, error) {
 // Create GET request
 func NewGetRequest(url string) (*http.Request, error) {
 	req, e := http.NewRequest(http.MethodGet, url, nil)
+	if e != nil {
+		return nil, e
+	}
+	return req, e
+}
+
+// Create TRACE request
+func NewTraceRequest(url string) (*http.Request, error) {
+	req, e := http.NewRequest(http.MethodTrace, url, nil)
+	if e != nil {
+		return nil, e
+	}
+	return req, e
+}
+
+// Create CONNECT request
+func NewConnectRequest(url string) (*http.Request, error) {
+	req, e := http.NewRequest(http.MethodConnect, url, nil)
+	if e != nil {
+		return nil, e
+	}
+	return req, e
+}
+
+// Create PATCH request
+func NewPatchRequest(url string) (*http.Request, error) {
+	req, e := http.NewRequest(http.MethodPatch, url, nil)
 	if e != nil {
 		return nil, e
 	}
