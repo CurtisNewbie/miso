@@ -285,7 +285,7 @@ func (r Rail) WithCtxVal(key string, val any) Rail {
 	return NewRail(ctx)
 }
 
-// Create a new Rail with a new SpanId
+// Create a new Rail with a new SpanId and a new Context
 func (r Rail) NextSpan() Rail {
 	prev := r.ctx
 	r.ctx = context.Background() // avoid using the cancelled context in a new goroutine
@@ -295,6 +295,18 @@ func (r Rail) NextSpan() Rail {
 		r = r.WithCtxVal(k, prev.Value(k))
 	}
 	return r.WithCtxVal(XSpanId, util.RandLowerAlphaNumeric16())
+}
+
+// Create a new Rail with a new Context
+func (r Rail) NewCtx() Rail {
+	prev := r.ctx
+	r.ctx = context.Background() // avoid using the cancelled context in a new goroutine
+
+	// copy values from previous context
+	for _, k := range GetPropagationKeys() {
+		r = r.WithCtxVal(k, prev.Value(k))
+	}
+	return r
 }
 
 // Create new Rail with context's CancelFunc
