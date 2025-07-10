@@ -1943,5 +1943,11 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 	}
 
 	_, _ = util.ExecCmd("go", []string{"fmt", fp})
+
+	//  go install golang.org/x/tools/cmd/goimports@latest
+	out, err := util.ExecCmd("goimports", []string{"-w", fp})
+	if err != nil {
+		rail.Debugf("Failed to format imports, %s, %v", out, err)
+	}
 	return nil
 }
