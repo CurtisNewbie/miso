@@ -33,7 +33,7 @@ type AppConfig struct {
 
 	// aliases of keys
 	// alias -> key
-	aliases map[string]string
+	// aliases map[string]string
 }
 
 func (a *AppConfig) WriteConfigAs(filename string) (err error) {
@@ -45,13 +45,14 @@ func (a *AppConfig) WriteConfigAs(filename string) (err error) {
 }
 
 func (a *AppConfig) aliasLookup(k string) string {
-	newkey, exists := a.aliases[k]
-	if exists {
-		return a.aliasLookup(newkey)
-	}
+	// newkey, exists := a.aliases[k]
+	// if exists {
+	// 	return a.aliasLookup(newkey)
+	// }
 	return k
 }
 
+/*
 func (a *AppConfig) RegisterAlias(alias, key string) {
 	alias = strings.ToLower(alias)
 	key = strings.ToLower(key)
@@ -66,6 +67,7 @@ func (a *AppConfig) RegisterAlias(alias, key string) {
 		a.aliases[alias] = key
 	})
 }
+*/
 
 func (a *AppConfig) _appConfigDoWithWLock(f func()) {
 	a.rwmu.Lock()
@@ -444,7 +446,7 @@ func newAppConfig() *AppConfig {
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
 		fastBoolCache: util.NewStrRWMap[bool](),
-		aliases:       map[string]string{},
+		// aliases:       map[string]string{},
 	}
 	ac.vp.SetConfigType("yml")
 	return ac
@@ -459,9 +461,14 @@ func newAppConfig() *AppConfig {
 //	miso.RegisterAlias(newKey, oldkey)
 //
 // It may not work as expected if you are trying to call GetPropAny() on root node of a subtree.
-func RegisterAlias(alias, key string) {
-	globalConfig().RegisterAlias(alias, key)
-}
+//
+// It doesn't work when your are loading new keys from yaml content, because viper doesn't support alias well.
+// Try your best not to use it.
+/*
+	func RegisterAlias(alias, key string) {
+		globalConfig().RegisterAlias(alias, key)
+	}
+*/
 
 // Set value for the prop
 func SetProp(prop string, val any) {

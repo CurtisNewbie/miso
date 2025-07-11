@@ -469,18 +469,21 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		b.WriteString("func init() {")
 
 		// register alias before SetDefProp()
-		for _, c := range src {
-			if skipConfig(c) {
-				continue
+		// TODO: viper's alias doesn't really work when we load yaml content, we have to give up the alias feature.
+		/*
+			for _, c := range src {
+				if skipConfig(c) {
+					continue
+				}
+				var pkgPrefix = ""
+				if pkg != "miso" {
+					pkgPrefix = "miso."
+				}
+				if c.Alias != "" {
+					b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
+				}
 			}
-			var pkgPrefix = ""
-			if pkg != "miso" {
-				pkgPrefix = "miso."
-			}
-			if c.Alias != "" {
-				b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
-			}
-		}
+		*/
 
 		// SetDefProp(...)
 		for _, c := range src {
