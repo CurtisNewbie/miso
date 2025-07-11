@@ -468,22 +468,51 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		b := strings.Builder{}
 		b.WriteString("func init() {")
 
-		// register alias before SetDefProp()
-		// TODO: viper's alias doesn't really work when we load yaml content, we have to give up the alias feature.
-		/*
-			for _, c := range src {
-				if skipConfig(c) {
-					continue
-				}
-				var pkgPrefix = ""
-				if pkg != "miso" {
-					pkgPrefix = "miso."
-				}
-				if c.Alias != "" {
-					b.WriteString("\n\t" + fmt.Sprintf("%vRegisterAlias(%v, %v)", pkgPrefix, c.ConstName, util.QuoteStr(c.Alias)))
-				}
+		anyAlias := false
+		for _, c := range src {
+			if skipConfig(c) {
+				continue
 			}
-		*/
+			if c.Alias != "" {
+				anyAlias = true
+				break
+			}
+		}
+
+		// viper's alias doesn't really work when we load yaml content, we have to give up the alias feature.
+		if anyAlias {
+			var pkgPrefix = ""
+			if pkg != "miso" {
+				pkgPrefix = "miso."
+			}
+			iw := util.NewIndentWriter("\t")
+			iw.SetIndent(1)
+			iw.Writef("%vPostServerBootstrap(func(rail %vRail) error {", pkgPrefix, pkgPrefix)
+			iw.StepIn(func(iw *util.IndentWriter) {
+				iw.Writef("deprecatedProps := [][]string{}")
+				for _, c := range src {
+					if skipConfig(c) {
+						continue
+					}
+					if c.Alias != "" {
+						iw.Writef("deprecatedProps = append(deprecatedProps, []string{\"%v\", \"%v\", %v})", c.Alias, c.AliasSince, c.ConstName)
+					}
+				}
+
+				iw.Writef("for _, p := range deprecatedProps {")
+				iw.StepIn(func(iw *util.IndentWriter) {
+					iw.Writef("if %vHasProp(p[0]) {", pkgPrefix)
+					iw.StepIn(func(iw *util.IndentWriter) {
+						iw.Writef("%vErrorf(\"Config prop: '%%v' has been deprecated since '%%v', please change to '%%v'\", p[0], p[1], p[2])", pkgPrefix)
+					})
+					iw.Writef("}")
+				})
+				iw.Writef("}")
+				iw.Writef("return nil")
+			})
+			iw.Writef("})")
+			b.WriteString("\n" + iw.String())
+		}
 
 		// SetDefProp(...)
 		for _, c := range src {

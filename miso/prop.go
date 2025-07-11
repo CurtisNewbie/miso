@@ -226,6 +226,37 @@ const (
 
 // misoconfig-default-start
 func init() {
+	PostServerBootstrap(func(rail Rail) error {
+		deprecatedProps := [][]string{}
+		deprecatedProps = append(deprecatedProps, []string{"consul.registerName", "v0.2.0", PropConsuleRegisterName})
+		deprecatedProps = append(deprecatedProps, []string{"consul.registerAddress", "v0.2.0", PropConsulRegisterAddress})
+		deprecatedProps = append(deprecatedProps, []string{"consul.consulAddress", "v0.2.0", PropConsulAddress})
+		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckFailedDeregisterAfter", "v0.2.0", PropConsulHealthCheckFailedDeregAfter})
+		deprecatedProps = append(deprecatedProps, []string{"consul.fetchServerInterval", "v0.2.0", PropConsulFetchServerInterval})
+		deprecatedProps = append(deprecatedProps, []string{"consul.enableDeregisterUrl", "v0.2.0", PropConsulEnableDeregisterUrl})
+		deprecatedProps = append(deprecatedProps, []string{"consul.deregisterUrl", "v0.2.0", PropConsulDeregisterUrl})
+		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckUrl", "v0.2.0", PropHealthCheckUrl})
+		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckInterval", "v0.2.0", PropHealthCheckInterval})
+		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckTimeout", "v0.2.0", PropHealthcheckTimeout})
+		deprecatedProps = append(deprecatedProps, []string{"server.gracefulShutdownTimeSec", "v0.2.0", PropServerGracefulShutdownTimeSec})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.enabled", "v0.2.0", PropServerGenerateEndpointDocEnabled})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.web.enabled", "v0.2.0", PropServerGenerateEndpointDocApiEnabled})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file", "v0.2.0", PropServerGenerateEndpointDocFile})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-tclient-demo", "v0.2.0", PropServerGenerateEndpointDocFileExclTClientDemo})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-ng-client-demo", "v0.2.0", PropServerGenerateEndpointDocFileExclNgClientDemo})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-openapi-spec", "v0.2.0", PropServerGenerateEndpointDocFileExclOpenApi})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.path-prefix-app", "v0.2.0", PropServerGenerateEndpointDocInclPrefix})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.server", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecServer})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.file", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecFile})
+		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.path-patterns", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecPathPatterns})
+		for _, p := range deprecatedProps {
+			if HasProp(p[0]) {
+				Errorf("Config prop: '%v' has been deprecated since '%v', please update prop name to '%v'", p[0], p[1], p[2])
+			}
+		}
+		return nil
+	})
+
 	SetDefProp(PropAppSlowBoostrapThresohold, "5s")
 	SetDefProp(PropProdMode, true)
 	SetDefProp(PropConsulEnabled, false)
