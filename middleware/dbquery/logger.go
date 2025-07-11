@@ -36,7 +36,7 @@ func (l *gormLogger) UpdateConfig(config lg.Config) {
 		infoStr = lg.Green + "[info] " + lg.Reset
 		warnStr = lg.Magenta + "[warn] " + lg.Reset
 		errStr = lg.Red + "[error] " + lg.Reset
-		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Green + " %s" + lg.Reset
+		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s" + lg.Reset
 		traceWarnStr = lg.Yellow + "%s " + lg.RedBold + "[%.3fms] " + lg.Yellow + "[rows:%v]" + lg.Magenta + " %s" + lg.Reset
 		traceErrStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s\n\t" + lg.RedBold + "%s" + lg.Reset
 	}
