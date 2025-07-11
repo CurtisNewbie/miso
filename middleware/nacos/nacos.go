@@ -230,44 +230,28 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 	}
 	m.configClient = cc
 
-	mergeConfig := func(w watchingConfig) error {
-		// fetch config on bootstrap
+	mergeConfig := func(w watchingConfig) (string, error) {
 		p := vo.ConfigParam{DataId: w.DataId, Group: w.Group}
 		configStr, err := m.configClient.GetConfig(p)
 		if err != nil {
-			return miso.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
+			return "", miso.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
 		}
 		rail.Tracef("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
 		m.configContent.Put(w.Key(), configStr)
-		return nil
+		return configStr, nil
 	}
 
-	appDataId := miso.GetPropStr(PropNacosConfigDataId)
-	appGroup := miso.GetPropStr(PropNacosConfigGroup)
-	if util.IsBlankStr(appDataId) {
-		return false, miso.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
-	}
-	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
-
-	// merge app's nacos config first before we read `PropNacosConfigWatch`
-	if err := mergeConfig(appConfig); err != nil {
-		return false, err
-	}
-
-	watched := miso.GetPropStrSlice(PropNacosConfigWatch)
-	if len(watched) > 0 {
-		rail.Debugf("watched: %#v", watched)
-	}
-
-	for _, w := range watched {
+	watchedKeys := util.NewSet[string]()
+	addWatchConfig := func(w string) error {
+		rail.Debugf("Parsing nacos watch config value: %v", w)
 		tok := strings.SplitN(w, ":", 2)
 		if len(tok) > 0 {
 			dataId := strings.TrimSpace(tok[0])
 			if dataId == "" {
-				continue
+				return nil
 			}
 			group := ""
 			if len(tok) > 1 {
@@ -277,15 +261,60 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 				group = "DEFAULT_GROUP"
 			}
 			w := watchingConfig{DataId: dataId, Group: group}
+			if !watchedKeys.Add(w.Key()) {
+				return nil
+			}
 			m.watchedConfigs = append(m.watchedConfigs, w)
-			if err := mergeConfig(w); err != nil {
-				return false, err
+			if _, err := mergeConfig(w); err != nil {
+				return err
 			}
 		}
+		return nil
+	}
+	loadWatchConfigsFromProp := func() error {
+		v := miso.GetPropStrSlice(PropNacosConfigWatch)
+		if len(v) < 1 {
+			return nil
+		}
+		rail.Debug("Loading NacosConfigWatch Prop")
+		for _, w := range v {
+			if err := addWatchConfig(w); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// load watched configs before app's config
+	if err := loadWatchConfigsFromProp(); err != nil {
+		return false, err
+	}
+
+	// merge app's nacos config
+	appDataId := miso.GetPropStr(PropNacosConfigDataId)
+	appGroup := miso.GetPropStr(PropNacosConfigGroup)
+	if util.IsBlankStr(appDataId) {
+		return false, miso.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
+	}
+	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
+	appConfigStr, err := mergeConfig(appConfig)
+	if err != nil {
+		return false, err
+	}
+
+	// load watched configs after app's config
+	if err := loadWatchConfigsFromProp(); err != nil {
+		return false, err
+	}
+
+	// place app's configs on the top
+	if err := miso.LoadConfigFromStr(appConfigStr, rail); err != nil {
+		rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", appConfig.Group, appConfig.DataId, appConfigStr)
 	}
 
 	// subscribe changes
-	m.watchedConfigs = append(m.watchedConfigs, appConfig) // app's config
+	// app's config is always placed at the end (it can override other configs)
+	m.watchedConfigs = append(m.watchedConfigs, appConfig)
 	for _, w := range m.watchedConfigs {
 		rail.Infof("Listening nacos config: %#v", w)
 		m.configClient.ListenConfig(vo.ConfigParam{
