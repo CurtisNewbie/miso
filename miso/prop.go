@@ -251,7 +251,7 @@ func init() {
 		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.path-patterns", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecPathPatterns})
 		for _, p := range deprecatedProps {
 			if HasProp(p[0]) {
-				Errorf("Config prop: '%v' has been deprecated since '%v', please update prop name to '%v'", p[0], p[1], p[2])
+				Errorf("Config prop: '%v' has been deprecated since '%v', please change to '%v'", p[0], p[1], p[2])
 			}
 		}
 		return nil
