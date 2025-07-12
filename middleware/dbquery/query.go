@@ -66,10 +66,8 @@ func (q *Query) SelectCols(v any) *Query {
 	colSet := util.NewSet[string]()
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
-		for _, v := range strings.Split(ft.Tag.Get("gorm"), ":") {
-			if v == "-" {
-				continue
-			}
+		if q.ignoreGormField(ft) {
+			continue
 		}
 		fname := q.ColumnName(ft.Name)
 		colSet.Add(fname)
@@ -373,6 +371,15 @@ func (q *Query) Count() (int64, error) {
 	return n, miso.WrapErr(tx.Error)
 }
 
+func (q *Query) ignoreGormField(ft reflect.StructField) bool {
+	for _, v := range strings.Split(ft.Tag.Get("gorm"), ":") {
+		if v == "-" {
+			return true
+		}
+	}
+	return false
+}
+
 func (q *Query) SetCols(arg any, cols ...string) *Query {
 	if arg == nil {
 		return q
@@ -396,6 +403,10 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 		ft := rt.Field(i)
 		fname := q.ColumnName(ft.Name)
 		if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
+			continue
+		}
+
+		if q.ignoreGormField(ft) {
 			continue
 		}
 
