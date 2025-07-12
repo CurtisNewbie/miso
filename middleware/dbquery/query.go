@@ -25,6 +25,8 @@ func (q *Query) CopyNew() *Query {
 // Same as *Query.Table().
 //
 // It was a mistake to call it From(), since we also use *Query to update tables :(
+//
+// Deprecated: Use [Query.Table] instead.
 func (q *Query) From(table string) *Query {
 	return q.Table(table)
 }
