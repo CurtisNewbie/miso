@@ -113,6 +113,9 @@ const (
 	// misoconfig-prop: file that contains the generated api doc golang demo
 	PropServerApiDocGoFile = "server.api-doc.go.file"
 
+	// misoconfig-prop: whether the generated api-doc golang demo file should compile | false
+	PropServerApiDocGoCompileFile = "server.api-doc.go.compile-file"
+
 	// misoconfig-prop: path patterns for endpoints that are written to api doc golang demo file
 	PropServerApiDocGoPathPatterns = "server.api-doc.go.path-patterns"
 
@@ -297,6 +300,7 @@ func init() {
 	SetDefProp(PropServerGenerateEndpointDocFileExclNgClientDemo, false)
 	SetDefProp(PropServerGenerateEndpointDocFileExclOpenApi, true)
 	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
+	SetDefProp(PropServerApiDocGoCompileFile, false)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
 	SetDefProp(PropServerGinValidationDisabled, true)
 }
