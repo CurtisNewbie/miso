@@ -432,8 +432,11 @@ func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
 
-func (q *Query) Transaction(onTransaction func(db *gorm.DB) error) error {
-	return q.tx.Transaction(onTransaction)
+func (q *Query) Transaction(callback func(qry func() *Query) error) error {
+	return q.tx.Transaction(func(db *gorm.DB) error {
+		nq := func() *Query { return NewQuery(db) }
+		return callback(nq)
+	})
 }
 
 func NewQuery(db *gorm.DB) *Query {
