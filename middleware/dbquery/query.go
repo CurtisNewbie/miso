@@ -66,6 +66,11 @@ func (q *Query) SelectCols(v any) *Query {
 	colSet := util.NewSet[string]()
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
+		for _, v := range strings.Split(ft.Tag.Get("gorm"), ":") {
+			if v == "-" {
+				continue
+			}
+		}
 		fname := q.ColumnName(ft.Name)
 		colSet.Add(fname)
 	}
