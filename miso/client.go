@@ -643,6 +643,16 @@ func (t *TClient) AddHeader(k string, v string) *TClient {
 	return t
 }
 
+// Add Authorization: Bearer *** header.
+func (t *TClient) AddAuthBearer(v string) *TClient {
+	return t.AddAuthHeader("Bearer " + strings.TrimSpace(v))
+}
+
+// Add Authorization: *** header.
+func (t *TClient) AddAuthHeader(v string) *TClient {
+	return t.AddHeader("Authorization", v)
+}
+
 // Overwrite header
 func (t *TClient) SetHeaders(k string, v ...string) *TClient {
 	t.Headers[k] = v
