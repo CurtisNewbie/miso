@@ -32,6 +32,7 @@ require (
 	go.uber.org/automaxprocs v1.6.0
 	golang.design/x/clipboard v0.7.0
 	golang.org/x/text v0.26.0
+	golang.org/x/tools v0.33.0
 	gopkg.in/inf.v0 v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.3.6
@@ -113,7 +114,6 @@ require (
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

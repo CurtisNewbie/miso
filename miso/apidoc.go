@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/miso/internal/tools"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/getkin/kin-openapi/openapi3"
 	jsoniter "github.com/json-iterator/go"
@@ -1947,12 +1948,7 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 		return err
 	}
 
-	_, _ = util.ExecCmd("go", []string{"fmt", fp})
-
 	//  go install golang.org/x/tools/cmd/goimports@latest
-	out, err := util.ExecCmd("goimports", []string{"-w", fp})
-	if err != nil {
-		rail.Debugf("Failed to format imports, %s, %v", out, err)
-	}
+	util.PanicSafeRun(func() { tools.RunGoImports(fp) })
 	return nil
 }

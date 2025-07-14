@@ -439,6 +439,10 @@ func PanicSafeFunc(op func()) func() {
 	}
 }
 
+func PanicSafeRun(op func()) {
+	PanicSafeFunc(op)()
+}
+
 func recoverPanic() {
 	if v := recover(); v != nil {
 		ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
