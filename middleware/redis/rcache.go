@@ -88,10 +88,17 @@ func (r *RCache[T]) lockKey(key string) string {
 	return "lock:" + r.cacheKey(key)
 }
 
+// Get from cache
+//
+// Return miso.NoneErr if none is found
+func (r *RCache[T]) Get(rail miso.Rail, key string) (T, bool, error) {
+	return r.GetElse(rail, key, nil)
+}
+
 // Get from cache else run supplier
 //
 // Return miso.NoneErr if none is found
-func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) (T, error) {
+func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Opt[T], error)) (T, bool, error) {
 
 	// the actual operation
 	op := func() (T, error) {
@@ -118,6 +125,9 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 		if err != nil {
 			return t, miso.WrapErr(err)
 		}
+		if !supplied.IsPresent {
+			return t, miso.NoneErr
+		}
 
 		// serialize supplied value
 		v, err := r.ValueSerializer.Serialize(supplied)
@@ -130,14 +140,23 @@ func (r *RCache[T]) Get(rail miso.Rail, key string, supplier func() (T, error)) 
 		if scmd.Err() != nil {
 			return t, miso.WrapErr(scmd.Err())
 		}
-		return supplied, nil
+		return supplied.Val, nil
 	}
 
+	handleResult := func(t T, err error) (T, bool, error) {
+		if err != nil {
+			if miso.IsNoneErr(err) {
+				return t, false, nil
+			}
+			return t, false, err
+		}
+		return t, true, nil
+	}
 	if r.sync {
-		return RLockRun(rail, r.lockKey(key), op)
+		return handleResult(RLockRun(rail, r.lockKey(key), op))
 	}
 
-	return op()
+	return handleResult(op())
 }
 
 func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 )
 
 type RCacheDummy struct {
@@ -27,22 +28,25 @@ func TestRcacheWithObject(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
 	invokeCount := 0
-	supplier := func() (RCacheDummy, error) {
+	supplier := func() (util.Opt[RCacheDummy], error) {
 		invokeCount++
 		rail.Infof("Called supplier, %v", invokeCount)
-		return RCacheDummy{
+		return util.OptWith(RCacheDummy{
 			Name: "Banana",
 			Age:  12,
-		}, nil
+		}), nil
 	}
 
 	cache := NewRCache[RCacheDummy]("test0", RCacheConfig{Exp: exp})
 	cache.Del(rail, "1")
 
-	dummy, err := cache.Get(rail, "1", supplier)
+	dummy, ok, err := cache.GetElse(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
+	}
+	if !ok {
+		t.Fatal()
 	}
 	rail.Infof("1. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
 	if invokeCount != 1 {
@@ -50,10 +54,13 @@ func TestRcacheWithObject(t *testing.T) {
 		t.FailNow()
 	}
 
-	dummy, err = cache.Get(rail, "1", supplier)
+	dummy, ok, err = cache.GetElse(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
+	}
+	if !ok {
+		t.Fatal()
 	}
 	rail.Infof("2. got from cache %+v, invokeCount: %v", dummy, invokeCount)
 
@@ -64,10 +71,13 @@ func TestRcacheWithObject(t *testing.T) {
 
 	cache.Del(rail, "1")
 
-	dummy, err = cache.Get(rail, "1", supplier)
+	dummy, ok, err = cache.GetElse(rail, "1", supplier)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
+	}
+	if !ok {
+		t.Fatal()
 	}
 	if invokeCount != 2 {
 		t.Logf("invokeCount: %v", invokeCount)
@@ -75,6 +85,17 @@ func TestRcacheWithObject(t *testing.T) {
 	}
 
 	rail.Infof("3. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
+
+	_, ok, err = cache.GetElse(rail, "3", func() (util.Opt[RCacheDummy], error) {
+		rail.Infof("returning emptyOpt")
+		return util.EmptyOpt[RCacheDummy](), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatalf("should not be ok, but ok")
+	}
 }
 
 func TestRCache(t *testing.T) {
@@ -82,8 +103,8 @@ func TestRCache(t *testing.T) {
 	exp := 10 * time.Second
 	rcache := NewRCache[string]("test2", RCacheConfig{Exp: exp})
 
-	_, e := rcache.Get(rail, "absent key", nil)
-	if e == nil || !miso.IsNoneErr(e) {
+	_, ok, e := rcache.GetElse(rail, "absent key", nil)
+	if e != nil || ok {
 		t.Fatal(e)
 	}
 
@@ -93,9 +114,12 @@ func TestRCache(t *testing.T) {
 	}
 
 	var val string
-	val, e = rcache.Get(rail, "1", nil)
+	val, ok, e = rcache.Get(rail, "1")
 	if e != nil {
 		t.Fatal(e)
+	}
+	if !ok {
+		t.Fatal("not ok")
 	}
 	if val != "3" {
 		t.Fatalf("val '%v' != \"3\"", val)
@@ -106,8 +130,8 @@ func TestRCache2(t *testing.T) {
 	rail := preRCacheTest(t)
 
 	exp := 10 * time.Second
-	supplier := func() (string, error) {
-		return "", miso.NoneErr
+	supplier := func() (util.Opt[string], error) {
+		return util.EmptyOpt[string](), nil
 	}
 
 	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp, NoSync: true})
@@ -117,9 +141,12 @@ func TestRCache2(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	val, e := rcache.Get(rail, "1", supplier)
+	val, ok, e := rcache.GetElse(rail, "1", supplier)
 	if e != nil {
 		t.Fatal(e)
+	}
+	if !ok {
+		t.Fatal("not ok")
 	}
 	if val != "2" {
 		t.Fatalf("val '%v' != \"2\"", val)
