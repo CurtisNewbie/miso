@@ -130,7 +130,7 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Op
 		}
 
 		// serialize supplied value
-		v, err := r.ValueSerializer.Serialize(supplied)
+		v, err := r.ValueSerializer.Serialize(supplied.Val)
 		if err != nil {
 			return t, miso.WrapErrf(err, "failed to serialize the supplied value")
 		}
