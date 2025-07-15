@@ -2,7 +2,6 @@ package miso
 
 import (
 	"fmt"
-	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -240,20 +239,33 @@ func BenchmarkTTLCache(b *testing.B) {
 	type ttlDummy struct {
 		name string
 	}
-	cache := NewTTLCache[ttlDummy](5*time.Second, 101)
+	cache := NewTTLCache[ttlDummy](5*time.Second, 2)
 	elseGet := func() (ttlDummy, bool) {
 		return ttlDummy{
 			name: "myDummy",
 		}, true
 	}
-
-	for i := 0; i < b.N; i++ {
-		n := rand.Intn(100)
-		_, ok := cache.Get(fmt.Sprintf("dummy-%v", n), elseGet)
-		if !ok {
-			b.Fatal("not ok")
-		}
+	_, ok := cache.Get("1", elseGet)
+	if !ok {
+		b.Fatal("not ok")
 	}
+
+	b.Run("cache", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = cache.TryGet("1")
+		}
+	})
+
+	m := map[string]ttlDummy{
+		"1": ttlDummy{
+			name: "myDummy",
+		},
+	}
+	b.Run("map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = m["1"]
+		}
+	})
 }
 
 func TestTTLCacheDel(t *testing.T) {
