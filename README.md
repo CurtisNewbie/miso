@@ -13,7 +13,7 @@ The overall target is to make it as small and simple as possible, backward compa
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.2.3
+go get github.com/curtisnewbie/miso@v0.2.4
 ```
 
 You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
@@ -38,7 +38,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 
 ## Updates
 
-- Since v0.2.3, 21 configuration properties are renamed, these property names are not backward compatible. If you specify values for these configuration, make sure you update the property name before you upgrade miso.
+- Since v0.2.4, 21 configuration properties are renamed, these property names are not backward compatible. If you specify values for these configuration, make sure you update the property name before you upgrade miso.
 
 ## Projects that use miso
 
