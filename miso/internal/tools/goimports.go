@@ -10,7 +10,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	"go/scanner"
 	"io"
@@ -22,45 +21,35 @@ import (
 	"runtime/pprof"
 	"strings"
 
+	"github.com/curtisnewbie/miso/util/ptr"
 	"golang.org/x/tools/imports"
 )
 
 var (
 	// main operation modes
-	list   = flag.Bool("l", false, "list files whose formatting differs from goimport's")
-	write  = flag.Bool("w", false, "write result to (source) file instead of stdout")
-	doDiff = flag.Bool("d", false, "display diffs instead of rewriting files")
-	srcdir = flag.String("srcdir", "", "choose imports as if source code is from `dir`. When operating on a single file, dir may instead be the complete file name.")
+	list   = ptr.BoolPtr(false)
+	write  = ptr.BoolPtr(false)
+	doDiff = ptr.BoolPtr(false)
+	srcdir = ptr.StrPtr("")
 
-	verbose bool // verbose logging
-
-	cpuProfile     = flag.String("cpuprofile", "", "CPU profile output")
-	memProfile     = flag.String("memprofile", "", "memory profile output")
-	memProfileRate = flag.Int("memrate", 0, "if > 0, sets runtime.MemProfileRate")
+	cpuProfile     = ptr.StrPtr("")
+	memProfile     = ptr.StrPtr("")
+	memProfileRate = ptr.IntPtr(0)
 
 	options = &imports.Options{
-		TabWidth:  8,
-		TabIndent: true,
-		Comments:  true,
-		Fragment:  true,
+		TabWidth:   8,
+		TabIndent:  true,
+		Comments:   true,
+		Fragment:   true,
+		AllErrors:  false,
+		FormatOnly: false,
 	}
 	exitCode = 0
 )
 
-func init() {
-	flag.BoolVar(&options.AllErrors, "e", false, "report all errors (not just the first 10 on different lines)")
-	flag.BoolVar(&options.FormatOnly, "format-only", false, "if true, don't fix imports and only format. In this mode, goimports is effectively gofmt, with the addition that imports are grouped into sections.")
-}
-
 func report(err error) {
 	scanner.PrintError(os.Stderr, err)
 	exitCode = 2
-}
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: goimports [flags] [path ...]\n")
-	flag.PrintDefaults()
-	os.Exit(2)
 }
 
 func isGoFile(f os.FileInfo) bool {
@@ -194,15 +183,6 @@ func walkDir(path string) {
 	filepath.Walk(path, visitFile)
 }
 
-// parseFlags parses command line flags and returns the paths to process.
-// It's a var so that custom implementations can replace it in other files.
-var parseFlags = func() []string {
-	flag.BoolVar(&verbose, "v", false, "verbose logging")
-
-	flag.Parse()
-	return flag.Args()
-}
-
 func bufferedFileWriter(dest string) (w io.Writer, close func()) {
 	f, err := os.Create(dest)
 	if err != nil {
@@ -220,7 +200,6 @@ func bufferedFileWriter(dest string) (w io.Writer, close func()) {
 }
 
 func RunGoImports(args ...string) {
-	flag.Usage = usage
 	*write = true
 	paths := args
 
