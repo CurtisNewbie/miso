@@ -11,12 +11,7 @@ import (
 // This should not be a long-live object.
 type LocalCache[T any] map[string]T
 
-// create new LocalCache with key of type string and value of type T.
-func NewLocalCache[T any]() LocalCache[T] {
-	return map[string]T{}
-}
-
-// get cached value identified by the key, if absent, call the supplier func instead, and cache and return the supplied value.
+// Get cached value identified by the key, if absent, call the supplier func instead, and cache and return the supplied value.
 func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, error) {
 	if v, ok := lc[key]; ok {
 		return v, nil
@@ -26,6 +21,39 @@ func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, er
 		lc[key] = v
 	}
 	return v, err
+}
+
+// Simple local map-based cache.
+//
+// This should not be a long-live object.
+type LocalCacheV2[K comparable, T any] map[K]T
+
+// Get cached value identified by the key, if absent, call the supplier func instead, and cache and return the supplied value.
+func (lc LocalCacheV2[K, T]) Get(key K, supplier func() (T, error)) (T, error) {
+	if v, ok := lc[key]; ok {
+		return v, nil
+	}
+	v, err := supplier()
+	if err == nil {
+		lc[key] = v
+	}
+	return v, err
+}
+
+func (lc LocalCacheV2[K, T]) Set(key K, t T) {
+	lc[key] = t
+}
+
+// Create new LocalCache with key of type string and value of type T.
+//
+// Migrate to [NewLocalCacheV2] if possible.
+func NewLocalCache[T any]() LocalCache[T] {
+	return map[string]T{}
+}
+
+// Create new LocalCache with key of type K and value of type T.
+func NewLocalCacheV2[K comparable, T any]() LocalCacheV2[K, T] {
+	return map[K]T{}
 }
 
 type evictedItem[T any] struct {
