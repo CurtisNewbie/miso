@@ -44,6 +44,10 @@ func (lc LocalCacheV2[K, T]) Set(key K, t T) {
 	lc[key] = t
 }
 
+func (lc LocalCacheV2[K, T]) ToMap() map[K]T {
+	return lc
+}
+
 // Create new LocalCache with key of type string and value of type T.
 //
 // Migrate to [NewLocalCacheV2] if possible.
