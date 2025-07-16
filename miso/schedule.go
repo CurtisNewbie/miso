@@ -188,6 +188,10 @@ func (m *scheduleMdoule) hasScheduledJobs() bool {
 	return m.scheduler.Len() > 0
 }
 
+func LogJobNextRun(rail Rail, jobName string) {
+	scheduleModule().logNextRun(rail, jobName, false)
+}
+
 // Whether scheduler is initialized
 func HasScheduledJobs() bool {
 	return scheduleModule().hasScheduledJobs()

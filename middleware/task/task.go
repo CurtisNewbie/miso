@@ -145,6 +145,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 
 		if logJobExec {
 			rail.Infof("Running task '%s'", t.Name)
+			miso.LogJobNextRun(rail, t.Name)
 		}
 
 		start := time.Now()
