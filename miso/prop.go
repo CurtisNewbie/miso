@@ -120,7 +120,7 @@ const (
 	PropServerApiDocGoPathPatterns = "server.api-doc.go.path-patterns"
 
 	// misoconfig-prop: path patterns excluding for endpoints that should not be written to api doc golang demo file
-	PropServerApiDocGoExclPathPatterns = "server.api-doc.go.exclu-path-patterns"
+	PropServerApiDocGoExclPathPatterns = "server.api-doc.go.excl-path-patterns"
 
 	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
