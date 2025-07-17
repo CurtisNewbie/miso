@@ -238,6 +238,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.api-doc.go.file                    | file that contains the generated api doc golang demo                                                                      |               |
 | server.api-doc.go.compile-file            | whether the generated api-doc golang demo file should compile                                                             | false         |
 | server.api-doc.go.path-patterns           | path patterns for endpoints that are written to api doc golang demo file                                                  |               |
+| server.api-doc.go.exclu-path-patterns     | path patterns excluding for endpoints that should not be written to api doc golang demo file                              |               |
 | server.request.mapping.header             | automatically map header values to request struct                                                                         | true          |
 | server.gin.validation.disabled            | disable gin's builtin validation                                                                                          | true          |
 

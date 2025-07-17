@@ -390,9 +390,14 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	openApiSpecPatterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
 
 	goFilePathPatterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
+	goFileExclPathPatterns := GetPropStrSlice(PropServerApiDocGoExclPathPatterns)
+
 	matchGlobalGoTypeDefPattern := func(u string) bool {
 		if len(goFilePathPatterns) < 1 {
 			return true
+		}
+		if len(goFileExclPathPatterns) > 0 && util.MatchPathAny(goFileExclPathPatterns, u) {
+			return false
 		}
 		return util.MatchPathAny(goFilePathPatterns, u)
 	}
