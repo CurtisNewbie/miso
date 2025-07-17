@@ -26,6 +26,18 @@ func ParseJson(body []byte, ptr any) error {
 	return e
 }
 
+// Parse json bytes.
+func ParseJsonAs[T any](body []byte) (T, error) {
+	var t T
+	return t, ParseJson(body, &t)
+}
+
+// Parse json bytes.
+func SParseJsonAs[T any](body string) (T, error) {
+	var t T
+	return t, SParseJson(body, &t)
+}
+
 // Parse json string.
 func SParseJson(body string, ptr any) error {
 	return ParseJson(util.UnsafeStr2Byt(body), ptr)

@@ -25,3 +25,25 @@ func TestSWriteIndent(t *testing.T) {
 	}
 	t.Log(s)
 }
+
+func TestSParseJsonAs(t *testing.T) {
+	type dummy struct {
+		Name string
+	}
+	d, err := SParseJsonAs[dummy](`{ "name": "yes" }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%#v", d)
+}
+
+func TestParseJsonAs(t *testing.T) {
+	type dummy struct {
+		Name string
+	}
+	d, err := ParseJsonAs[dummy]([]byte(`{ "name": "yes" }`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%#v", d)
+}
