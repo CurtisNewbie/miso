@@ -389,18 +389,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	}
 	openApiSpecPatterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
 
-	goFilePathPatterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
-	goFileExclPathPatterns := GetPropStrSlice(PropServerApiDocGoExclPathPatterns)
-
-	matchGlobalGoTypeDefPattern := func(u string) bool {
-		if len(goFileExclPathPatterns) > 0 && util.MatchPathAny(goFileExclPathPatterns, u) {
-			return false
-		}
-		if len(goFilePathPatterns) < 1 {
-			return true
-		}
-		return util.MatchPathAny(goFilePathPatterns, u)
-	}
+	matchGoFilePathPatterns := matchGoFilePathPatternFunc()
 	seenGlobalGoTypeDef := util.NewSet[string]()
 	globalGoTypeDef := []string{}
 
@@ -449,7 +438,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 			}
 		}
 
-		addGlobalGoTypeDef := matchGlobalGoTypeDefPattern(r.Url)
+		addGlobalGoTypeDef := matchGoFilePathPatterns(r.Url)
 
 		// json stuff
 		if d.JsonRequestValue != nil {
@@ -1901,6 +1890,21 @@ func writeApiDocFile(rail Rail, routes []httpRouteDoc, pipelineDoc []PipelineDoc
 	return nil
 }
 
+func matchGoFilePathPatternFunc() func(u string) bool {
+	goFilePathPatterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
+	goFileExclPathPatterns := GetPropStrSlice(PropServerApiDocGoExclPathPatterns)
+	matchPatterns := func(u string) bool {
+		if len(goFileExclPathPatterns) > 0 && util.MatchPathAny(goFileExclPathPatterns, u) {
+			return false
+		}
+		if len(goFilePathPatterns) < 1 {
+			return true
+		}
+		return util.MatchPathAny(goFilePathPatterns, u)
+	}
+	return matchPatterns
+}
+
 func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) error {
 	fp := GetPropStrTrimmed(PropServerApiDocGoFile)
 	if fp == "" {
@@ -1913,14 +1917,7 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 	}
 	defer f.Close()
 
-	patterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
-	pl := len(patterns)
-	matchPatterns := func(u string) bool {
-		if pl < 1 {
-			return true
-		}
-		return util.MatchPathAny(patterns, u)
-	}
+	matchPatterns := matchGoFilePathPatternFunc()
 	b := strings.Builder{}
 	b.WriteString("\npackage " + path.Base(path.Dir(fp)))
 	b.WriteString("\nimport (")
