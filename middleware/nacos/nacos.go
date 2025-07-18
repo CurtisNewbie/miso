@@ -119,15 +119,11 @@ func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
 					_, r := inb.Unwrap()
 					rail.Infof("Deregistering nacos service registration, remote_addr: %v", r.RemoteAddr)
 					if err := deregisterNacosService(m.serverList.client); err != nil {
-						rail.Errorf("failed to deregistered nacos service, %v", err)
+						rail.Errorf("failed to deregister nacos service, %v", err)
 						return nil, err
 					} else {
 						rail.Info("Nacos service deregistered")
 					}
-
-					// wait for a few extra seconds to make sure the instances change events are propagated to other apps before we shutdown
-					time.Sleep(time.Second * 3)
-
 					return nil, nil
 				})).
 				Desc("Endpoint used to trigger Nacos service deregistration")
@@ -629,4 +625,15 @@ func deregisterNacosService(nc naming_client.INamingClient) error {
 
 	miso.Infof("Deregistered on nacos, %v %v:%v", registerName, registerAddress, serverPort)
 	return nil
+}
+
+func DeregisterNacosService(rail miso.Rail) error {
+	m := module()
+	if err := deregisterNacosService(m.serverList.client); err != nil {
+		rail.Errorf("failed to deregister nacos service, %v", err)
+		return err
+	} else {
+		rail.Info("Nacos service deregistered")
+		return nil
+	}
 }
