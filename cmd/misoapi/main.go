@@ -222,6 +222,9 @@ func parseFiles(files []FsFile) error {
 			util.Printlnf("[ERROR] generate code failed, %v", err)
 			continue
 		}
+		if code == "" {
+			continue
+		}
 
 		importSb := strings.Builder{}
 		importStrs := imports.CopyKeys()
