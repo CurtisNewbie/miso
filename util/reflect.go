@@ -247,3 +247,31 @@ func IsAnyNil(v any) bool {
 	}
 	return false
 }
+
+func FindEmbedStruct[T any](v any) (T, bool) {
+	var t T
+	if IsAnyNil(v) {
+		return t, false
+	}
+
+	found := false
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	rt := rv.Type()
+	if rv.Kind() == reflect.Struct {
+		for i := range rv.NumField() {
+			fv := rv.Field(i)
+			ft := rt.Field(i)
+			if (ft.Type.Kind() == reflect.Struct || ft.Type.Kind() == reflect.Pointer) && ft.Anonymous {
+				if it, ok := fv.Interface().(T); ok {
+					found = true
+					t = it
+					break
+				}
+			}
+		}
+	}
+	return t, found
+}
