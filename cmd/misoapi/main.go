@@ -767,13 +767,14 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 				continue
 			}
 		} else { // not related to misoapi.
-			if s == "" {
-				currIsDesc = false
-				continue
-			}
 
 			if len(t) < 1 {
-				descTmp += s
+				if descTmp != "" && s == "" {
+					descTmp += "\n"
+				} else {
+					descTmp += " " + s
+				}
+				util.Printlnf("s: %v", s)
 				continue
 			}
 

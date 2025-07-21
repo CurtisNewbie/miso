@@ -1612,6 +1612,12 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 		}
 	}
 
+	{
+		desc := strings.TrimSpace(d.Desc)
+		if desc != "" {
+			sl.Println(util.SAddLineIndent(desc, "// "))
+		}
+	}
 	if reqTypeName != "" {
 		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtr, d.JsonRequestDesc.IsSlice)
 		if respGeneName == "any" {
