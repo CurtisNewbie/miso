@@ -178,3 +178,45 @@ func TestRCache2(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRCacheV2(t *testing.T) {
+	rail := preRCacheTest(t)
+	c := NewRCacheV2[testCacheKey, RCacheDummy]("abc", RCacheConfig{Exp: 1 * time.Second})
+	k := testCacheKey{"AAA", "BBB"}
+	err := c.Put(rail, k, RCacheDummy{
+		Name: "hay",
+		Age:  10,
+	})
+	util.Must(err)
+	v, ok, err := c.Get(rail, k)
+	util.Must(err)
+	if !ok {
+		t.Fatal("not ok")
+	}
+	t.Logf("%#v", v)
+}
+
+type testCacheKey struct {
+	A string
+	B string
+}
+
+func (t testCacheKey) String() string {
+	return t.A + ":" + t.B
+}
+
+func TestRCacheV2Two(t *testing.T) {
+	rail := preRCacheTest(t)
+	c := NewRCacheV2[string, RCacheDummy]("abc", RCacheConfig{Exp: 1 * time.Second})
+	err := c.Put(rail, "aaa", RCacheDummy{
+		Name: "hay",
+		Age:  10,
+	})
+	util.Must(err)
+	v, ok, err := c.Get(rail, "aaa")
+	util.Must(err)
+	if !ok {
+		t.Fatal("not ok")
+	}
+	t.Logf("%#v", v)
+}

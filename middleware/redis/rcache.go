@@ -89,15 +89,11 @@ func (r *RCache[T]) lockKey(key string) string {
 }
 
 // Get from cache
-//
-// Return miso.NoneErr if none is found
 func (r *RCache[T]) Get(rail miso.Rail, key string) (T, bool, error) {
 	return r.GetElse(rail, key, nil)
 }
 
 // Get from cache else run supplier
-//
-// Return miso.NoneErr if none is found
 func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Opt[T], error)) (T, bool, error) {
 
 	// the actual operation
@@ -224,6 +220,8 @@ func (r *RCache[T]) doBatchDel(rail miso.Rail, keys []string) error {
 }
 
 // Create new RCache
+//
+// Use [NewRCacheV2] for complex key type.
 func NewRCache[T any](name string, conf RCacheConfig) RCache[T] {
 	return RCache[T]{
 		getClient:       func() *redis.Client { return GetRedis() },
