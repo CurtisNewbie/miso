@@ -774,7 +774,6 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 				} else {
 					descTmp += " " + s
 				}
-				util.Printlnf("s: %v", s)
 				continue
 			}
 
