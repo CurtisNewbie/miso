@@ -622,9 +622,10 @@ func (g *LazyRouteDecl) Prepend(baseUrl string) {
 
 // Add endpoint description (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) Desc(desc string) *LazyRouteDecl {
-	v := strings.TrimSpace(regexp.MustCompile(`[\n]+`).ReplaceAllString(desc, "\n"))
-	v = strings.TrimSpace(regexp.MustCompile(`[\t ]+`).ReplaceAllString(v, " "))
-	return g.Extra(ExtraDesc, v)
+	// v := strings.TrimSpace(regexp.MustCompile(`[\n]+`).ReplaceAllString(desc, "\n"))
+	// v = strings.TrimSpace(regexp.MustCompile(`[\t ]+`).ReplaceAllString(v, " "))
+	// return g.Extra(ExtraDesc, v)
+	return g.Extra(ExtraDesc, strings.TrimSpace(regexp.MustCompile(`[\n\t ]+`).ReplaceAllString(desc, " ")))
 }
 
 // Mark endpoint publicly accessible (only serves as metadata that maybe used by some plugins).
