@@ -162,3 +162,20 @@ func TempFile() (*os.File, error) {
 	}
 	return tmpFile, nil
 }
+
+func TempFilePathSuffix(suffix string) (string, error) {
+	tmpFile, err := os.CreateTemp("/tmp", "temp_*."+suffix)
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+	return tmpFile.Name(), nil
+}
+
+func TempFileSuffix(suffix string) (*os.File, error) {
+	tmpFile, err := os.CreateTemp("/tmp", "temp_*."+suffix)
+	if err != nil {
+		return nil, err
+	}
+	return tmpFile, nil
+}
