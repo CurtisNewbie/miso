@@ -665,3 +665,19 @@ func (r *StrRWMap[V]) Keys() []string {
 func QuoteStrSlice(sl []string) []string {
 	return MapTo(sl, func(s string) string { return QuoteStr(s) })
 }
+
+func SplitSubSlices[T any](sl []T, limit int, f func(sub []T) error) error {
+	j := 0
+	for i := 0; i < len(sl); i += limit {
+		j += limit
+		if j > len(sl) {
+			j = len(sl)
+		}
+
+		err := f(sl[i:j])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
