@@ -28,6 +28,12 @@ func (lc LocalCache[T]) Get(key string, supplier func(string) (T, error)) (T, er
 // This should not be a long-live object.
 type LocalCacheV2[K comparable, T any] map[K]T
 
+// Get cached value identified by the key
+func (lc LocalCacheV2[K, T]) TryGet(key K) (T, bool) {
+	v, ok := lc[key]
+	return v, ok
+}
+
 // Get cached value identified by the key, if absent, call the supplier func instead, and cache and return the supplied value.
 func (lc LocalCacheV2[K, T]) Get(key K, supplier func() (T, error)) (T, error) {
 	if v, ok := lc[key]; ok {
