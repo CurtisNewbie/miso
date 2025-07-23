@@ -84,7 +84,7 @@ func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
 	defer tr.Close()
 	n, err := io.Copy(writer, tr.Resp.Body)
 	if err != nil {
-		return 0, UnknownErr(err)
+		return 0, WrapErr(err)
 	}
 	return n, nil
 }
