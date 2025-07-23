@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -195,7 +196,7 @@ func WalkDir(n string, suffix ...string) ([]WalkFsFile, error) {
 	files := make([]WalkFsFile, 0, len(entries))
 	for _, et := range entries {
 		fi, err := et.Info()
-		if err != nil {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return files, err
 		}
 		p := path.Join(n, fi.Name())
