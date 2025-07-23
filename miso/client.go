@@ -80,9 +80,36 @@ func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
 	if tr.Resp.Body == nil {
 		return 0, NoneErr
 	}
-
 	defer tr.Close()
+
 	n, err := io.Copy(writer, tr.Resp.Body)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	return n, nil
+}
+
+// Write the response data to the file.
+//
+// Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
+func (tr *TResponse) WriteToFile(path string) (int64, error) {
+	if tr.Err != nil {
+		return 0, tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return 0, NoneErr
+	}
+	defer tr.Close()
+
+	f, err := util.OpenRWFile(path, true)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	n, err := io.Copy(f, tr.Resp.Body)
 	if err != nil {
 		return 0, WrapErr(err)
 	}
