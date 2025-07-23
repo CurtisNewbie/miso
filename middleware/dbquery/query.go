@@ -554,7 +554,50 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 		if len(l.Payload) < p.Limit {
 			return nil
 		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown
+		}
+
 		p.NextPage()
+	}
+}
+
+type IterateByOffsetParam[V, T any] struct {
+	Limit         int
+	InitialOffset T
+	FetchPage     func(rail miso.Rail, db *gorm.DB, offset T) ([]V, error)
+	GetOffset     func(v V) T
+	ForEach       func(v V) (stop bool, err error)
+}
+
+func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOffsetParam[V, T]) error {
+	caller := miso.GetCallerFn()
+	rail.Debugf("IterateAllByOffset '%v' start", caller)
+	defer rail.Debugf("IterateAllByOffset '%v' finished", caller)
+	if p.Limit < 1 {
+		p.Limit = 1
+	}
+	offset := p.InitialOffset
+	for {
+		rail.Debugf("IterateAllByOffset '%v', offset: %v", caller, offset)
+		l, err := p.FetchPage(rail, db, offset)
+		if err != nil {
+			return miso.WrapErr(err)
+		}
+		for _, l := range l {
+			stop, err := p.ForEach(l)
+			if err != nil || stop {
+				return err
+			}
+		}
+		if len(l) < 1 {
+			return nil
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown
+		}
+
+		offset = p.GetOffset(l[len(l)-1])
 	}
 }
 
