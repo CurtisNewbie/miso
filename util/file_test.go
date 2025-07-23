@@ -80,3 +80,13 @@ func TestFileAddSuffix(t *testing.T) {
 		t.Fatal(v)
 	}
 }
+
+func TestWalkDir(t *testing.T) {
+	f, err := WalkDir("../cmd/misoapi", "json", "go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ff := range f {
+		t.Logf("%v", ff.Path)
+	}
+}

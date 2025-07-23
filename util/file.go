@@ -3,7 +3,9 @@ package util
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -178,4 +180,39 @@ func TempFileSuffix(suffix string) (*os.File, error) {
 		return nil, err
 	}
 	return tmpFile, nil
+}
+
+type walkFsFile struct {
+	Path string
+	File fs.FileInfo
+}
+
+func WalkDir(n string, suffix ...string) ([]walkFsFile, error) {
+	entries, err := os.ReadDir(n)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]walkFsFile, 0, len(entries))
+	for _, et := range entries {
+		fi, err := et.Info()
+		if err != nil {
+			return files, err
+		}
+		p := path.Join(n, fi.Name())
+		if et.IsDir() {
+			ff, err := WalkDir(p, suffix...)
+			if err == nil {
+				files = append(files, ff...)
+			}
+		} else {
+			if len(suffix) < 1 {
+				files = append(files, walkFsFile{File: fi, Path: p})
+			} else {
+				if FileHasAnySuffix(fi.Name(), suffix...) {
+					files = append(files, walkFsFile{File: fi, Path: p})
+				}
+			}
+		}
+	}
+	return files, nil
 }
