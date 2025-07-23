@@ -339,6 +339,10 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		})
 	}
 
+	OnConfigChanged(func() {
+		miso.SetLogLevel(miso.GetPropStr(miso.PropLoggingLevel))
+	})
+
 	m.configInitialized = true
 	return true, nil
 }
