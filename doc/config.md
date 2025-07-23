@@ -56,12 +56,13 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Common Configuration
 
-| property                     | description                                   | default value |
-| ---------------------------- | --------------------------------------------- | ------------- |
-| app.name                     | name of the application                       |               |
-| app.slow-bootstrap-threshold | warning threshold for slow ComponentBootstrap | 5s            |
-| mode.production              | whether production mode is turned on          | true          |
-| config.extra.files           | extra config files that should be loaded      |               |
+| property                     | description                                                                 | default value |
+| ---------------------------- | --------------------------------------------------------------------------- | ------------- |
+| app.name                     | name of the application                                                     |               |
+| app.profile                  | profile name, it's only a flag used to identify which environment we are in |               |
+| app.slow-bootstrap-threshold | warning threshold for slow ComponentBootstrap                               | 5s            |
+| mode.production              | whether production mode is turned on                                        | true          |
+| config.extra.files           | extra config files that should be loaded                                    |               |
 
 ## Consul Configuration
 

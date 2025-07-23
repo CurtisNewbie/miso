@@ -6,6 +6,9 @@ const (
 	// misoconfig-prop: name of the application
 	PropAppName = "app.name"
 
+	// misoconfig-prop: profile name, it's only a flag used to identify which environment we are in
+	PropAppProfile = "app.profile"
+
 	// misoconfig-prop: warning threshold for slow ComponentBootstrap | 5s
 	PropAppSlowBoostrapThresohold = "app.slow-bootstrap-threshold"
 
