@@ -330,6 +330,7 @@ func (q *Query) Like(col string, val string) *Query {
 }
 
 func (q *Query) Raw(sql string, args ...any) *Query {
+	sql = strings.TrimSpace(sql)
 	q.tx = q.tx.Raw(sql, args...)
 	return q
 }
@@ -362,6 +363,7 @@ func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 }
 
 func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
+	sql = strings.TrimSpace(sql)
 	tx := q.tx.Exec(sql, args...)
 	rowsAffected = tx.RowsAffected
 	err = miso.WrapErr(tx.Error)
