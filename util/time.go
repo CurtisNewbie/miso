@@ -64,12 +64,14 @@ func (t ETime) GoString() string {
 	return t.String()
 }
 
+// At 23:59:59.999999.
 func (t ETime) EndOfDay() ETime {
 	yyyy, mm, dd := t.Date()
-	tt := time.Date(yyyy, mm, dd, 23, 59, 59, 999_999999, t.Location())
+	tt := time.Date(yyyy, mm, dd, 23, 59, 59, 999_999000, t.Location())
 	return ETime{tt}
 }
 
+// At 00:00:00.000000.
 func (t ETime) StartOfDay() ETime {
 	yyyy, mm, dd := t.Date()
 	tt := time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
