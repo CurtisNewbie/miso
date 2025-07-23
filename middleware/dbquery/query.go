@@ -85,6 +85,24 @@ func (q *Query) Where(query string, args ...any) *Query {
 	return q
 }
 
+func (q *Query) In(col string, args ...any) *Query {
+	q.tx = q.tx.Where(col+" IN ?", args...)
+	return q
+}
+
+func (q *Query) NotIn(col string, args ...any) *Query {
+	q.tx = q.tx.Where(col+" NOT IN ?", args...)
+	return q
+}
+
+func (q *Query) HasAny() (bool, error) {
+	var v int
+	n, err := q.Select("1").
+		Limit(1).
+		Scan(&v)
+	return n > 0, err
+}
+
 // =
 func (q *Query) Eq(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" = ?", args...)
