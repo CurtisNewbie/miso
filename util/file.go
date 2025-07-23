@@ -182,17 +182,17 @@ func TempFileSuffix(suffix string) (*os.File, error) {
 	return tmpFile, nil
 }
 
-type walkFsFile struct {
+type WalkFsFile struct {
 	Path string
 	File fs.FileInfo
 }
 
-func WalkDir(n string, suffix ...string) ([]walkFsFile, error) {
+func WalkDir(n string, suffix ...string) ([]WalkFsFile, error) {
 	entries, err := os.ReadDir(n)
 	if err != nil {
 		return nil, err
 	}
-	files := make([]walkFsFile, 0, len(entries))
+	files := make([]WalkFsFile, 0, len(entries))
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil {
@@ -206,10 +206,10 @@ func WalkDir(n string, suffix ...string) ([]walkFsFile, error) {
 			}
 		} else {
 			if len(suffix) < 1 {
-				files = append(files, walkFsFile{File: fi, Path: p})
+				files = append(files, WalkFsFile{File: fi, Path: p})
 			} else {
 				if FileHasAnySuffix(fi.Name(), suffix...) {
-					files = append(files, walkFsFile{File: fi, Path: p})
+					files = append(files, WalkFsFile{File: fi, Path: p})
 				}
 			}
 		}
