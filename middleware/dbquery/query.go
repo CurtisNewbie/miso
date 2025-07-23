@@ -555,7 +555,7 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 			return nil
 		}
 		if miso.IsShuttingDown() {
-			return miso.ErrServerShuttingDown
+			return miso.ErrServerShuttingDown.New()
 		}
 
 		p.NextPage()
@@ -594,7 +594,7 @@ func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOf
 			return nil
 		}
 		if miso.IsShuttingDown() {
-			return miso.ErrServerShuttingDown
+			return miso.ErrServerShuttingDown.New()
 		}
 
 		offset = p.GetOffset(l[len(l)-1])
