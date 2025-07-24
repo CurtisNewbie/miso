@@ -45,7 +45,7 @@ const (
 	// misoconfig-alias: consul.healthCheckTimeout | v0.2.0
 	PropHealthcheckTimeout = "server.health-check-timeout"
 
-	// misoconfig-prop: log all http server routes in INFO level | false
+	// misoconfig-prop: log all http server routes in INFO level | true
 	PropServerLogRoutes = "server.log-routes"
 
 	// misoconfig-prop: http server bearer authorization token for all endpoints |
@@ -293,7 +293,7 @@ func init() {
 	SetDefProp(PropHealthCheckUrl, "/health")
 	SetDefProp(PropHealthCheckInterval, "5s")
 	SetDefProp(PropHealthcheckTimeout, "3s")
-	SetDefProp(PropServerLogRoutes, false)
+	SetDefProp(PropServerLogRoutes, true)
 	SetDefProp(PropServerGracefulShutdownTimeSec, 30)
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)

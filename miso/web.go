@@ -230,13 +230,14 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 
 	logRoutes := GetPropBool(PropServerLogRoutes)
 	if IsDebugLevel() || logRoutes {
-		for _, r := range GetHttpRoutes() {
+		// for _, r := range GetHttpRoutes() {
+		// }
+		for _, r := range engine.Routes() {
 			if logRoutes {
-				c.Infof("%-6s %s", r.Method, r.Url)
+				c.Infof("%-6s %s", r.Method, r.Path)
 			} else {
-				c.Debugf("%-6s %s", r.Method, r.Url)
+				c.Debugf("%-6s %s", r.Method, r.Path)
 			}
-
 		}
 	}
 }

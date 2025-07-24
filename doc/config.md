@@ -217,7 +217,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.health-check-url                   | health check url                                                                                                          | /health       |
 | server.health-check-interval              | health check interval, it's only used for service discovery, e.g., Consul                                                 | 5s            |
 | server.health-check-timeout               | health check timeout, it's only used for service discovery, e.g., Consul                                                  | 3s            |
-| server.log-routes                         | log all http server routes in INFO level                                                                                  | false         |
+| server.log-routes                         | log all http server routes in INFO level                                                                                  | true          |
 | server.auth.bearer                        | http server bearer authorization token for all endpoints                                                                  |               |
 | server.graceful-shutdown-time-sec         | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30            |
 | server.perf.enabled                       | logs time duration for each inbound http request                                                                          | false         |
