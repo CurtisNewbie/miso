@@ -624,14 +624,18 @@ func (t *TClient) send(req *http.Request) *TResponse {
 
 	start := time.Now()
 	r, e := t.client.Do(req) // send HTTP requests
-	t.Rail.Infof("Request '%v %v' took: %v", req.Method, req.URL, time.Since(start))
 
 	var statusCode int
 	var respHeaders http.Header
+	var contentType string
 	if e == nil && r != nil {
 		statusCode = r.StatusCode
 		respHeaders = r.Header
+		if respHeaders != nil {
+			contentType = respHeaders.Get("Content-Type")
+		}
 	}
+	t.Rail.Infof("Request '%v %v' (%v) took: %v", req.Method, req.URL, contentType, time.Since(start))
 
 	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders, logBody: t.logBody}
 
