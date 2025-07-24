@@ -609,7 +609,7 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 
 func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) (miso.PageRes[V], error) {
 	newQuery := func() *Query {
-		return pq.baseQuery(NewQuery(pq.db))
+		return pq.baseQuery(NewQueryRail(rail, pq.db))
 	}
 
 	var countFuture util.Future[int]
