@@ -681,3 +681,9 @@ func SplitSubSlices[T any](sl []T, limit int, f func(sub []T) error) error {
 	}
 	return nil
 }
+
+func UpdateSliceValue[T any](s []T, upd func(t T) T) {
+	for i, v := range s {
+		s[i] = upd(v)
+	}
+}

@@ -412,7 +412,7 @@ func HasAnyPrefix(s string, suf ...string) bool {
 }
 
 func TrimStrSlice(s []string) {
-	for i, v := range s {
-		s[i] = strings.TrimSpace(v)
-	}
+	UpdateSliceValue(s, func(v string) string {
+		return strings.TrimSpace(v)
+	})
 }
