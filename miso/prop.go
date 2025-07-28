@@ -229,7 +229,7 @@ const (
 	// misoconfig-prop: max size of each log file (in mb) | 50
 	PropLoggingRollingFileMaxSize = "logging.file.max-size"
 
-	// misoconfig-prop: max number of backup log files | 10
+	// misoconfig-prop: max number of backup log files, 0 means INF | 0
 	PropLoggingRollingFileMaxBackups = "logging.file.max-backups"
 
 	// misoconfig-prop: rotate log file at every day 00:00 (local) | true
@@ -284,7 +284,7 @@ func init() {
 	SetDefProp(PropLoggingRollingFileOnly, false)
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)
-	SetDefProp(PropLoggingRollingFileMaxBackups, 10)
+	SetDefProp(PropLoggingRollingFileMaxBackups, 0)
 	SetDefProp(PropLoggingRollingFileRotateDaily, true)
 	SetDefProp(PropMetricsEnabled, true)
 	SetDefProp(PropMetricsRoute, "/metrics")
