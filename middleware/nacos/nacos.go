@@ -2,6 +2,7 @@ package nacos
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,7 +33,8 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 })
 
 var (
-	completeReload = &atomic.Bool{}
+	desensitizeContentRegex = regexp.MustCompile(`((accessToken|password|secret|token|app-id)[ "]*[=:] *)("?[^\n]+)"?`)
+	completeReload          = &atomic.Bool{}
 
 	_ miso.ServerList = (*NacosServerList)(nil)
 )
@@ -233,7 +235,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 			return "", miso.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
-			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, configStr)
+			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, desensitizeConfigContent(configStr))
 		}
 		rail.Tracef("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
 		m.configContent.Put(w.Key(), configStr)
@@ -305,7 +307,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 
 	// place app's configs on the top
 	if err := miso.LoadConfigFromStr(appConfigStr, rail); err != nil {
-		rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", appConfig.Group, appConfig.DataId, appConfigStr)
+		rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", appConfig.Group, appConfig.DataId, desensitizeConfigContent(appConfigStr))
 	}
 
 	// subscribe changes
@@ -326,7 +328,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 				} else {
 					rail.Tracef("Loading nacos config:\n%v", data)
 					if err := miso.LoadConfigFromStr(data, rail); err != nil {
-						rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, data)
+						rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", group, dataId, desensitizeConfigContent(data))
 					}
 				}
 
@@ -472,13 +474,27 @@ func ReloadConfigsOnChange(v bool) {
 type nacosLogger struct {
 }
 
-func (n *nacosLogger) Info(args ...interface{})               {}
-func (n *nacosLogger) Warn(args ...interface{})               { miso.Warn(args...) }
-func (n *nacosLogger) Error(args ...interface{})              { miso.Error(args...) }
-func (n *nacosLogger) Debug(args ...interface{})              {}
-func (n *nacosLogger) Infof(fmt string, args ...interface{})  {}
-func (n *nacosLogger) Warnf(fmt string, args ...interface{})  { miso.Warnf(fmt, args...) }
-func (n *nacosLogger) Errorf(fmt string, args ...interface{}) { miso.Errorf(fmt, args...) }
+func (n *nacosLogger) Info(args ...interface{}) {}
+func (n *nacosLogger) Warn(args ...interface{}) { miso.Warn(args...) }
+func (n *nacosLogger) Error(args ...interface{}) {
+	for i, v := range args {
+		if v, ok := v.(string); ok {
+			args[i] = desensitizeConfigContent(v)
+		}
+	}
+	miso.Error(args...)
+}
+func (n *nacosLogger) Debug(args ...interface{})             {}
+func (n *nacosLogger) Infof(fmt string, args ...interface{}) {}
+func (n *nacosLogger) Warnf(fmt string, args ...interface{}) { miso.Warnf(fmt, args...) }
+func (n *nacosLogger) Errorf(fmt string, args ...interface{}) {
+	for i, v := range args {
+		if v, ok := v.(string); ok {
+			args[i] = desensitizeConfigContent(v)
+		}
+	}
+	miso.Errorf(desensitizeConfigContent(fmt), args...)
+}
 func (n *nacosLogger) Debugf(fmt string, args ...interface{}) {}
 
 type watchingConfig struct {
@@ -640,4 +656,8 @@ func DeregisterNacosService(rail miso.Rail) error {
 		rail.Info("Nacos service deregistered")
 		return nil
 	}
+}
+
+func desensitizeConfigContent(s string) string {
+	return desensitizeContentRegex.ReplaceAllString(s, `$1***`)
 }
