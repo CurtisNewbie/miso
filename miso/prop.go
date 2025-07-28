@@ -217,6 +217,9 @@ const (
 	// misoconfig-prop: path to rolling log file
 	PropLoggingRollingFile = "logging.rolling.file"
 
+	// misoconfig-prop: append ip suffix to log file, e.g., myapp-192.168.1.1.log | false
+	PropLoggingRollingFileAppendIpSuffix = "logging.file.append-ip-suffix"
+
 	// misoconfig-prop: logs are written to log file only | false
 	PropLoggingRollingFileOnly = "logging.file.log-file-only"
 
@@ -277,6 +280,7 @@ func init() {
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
 	SetDefProp(PropLoggingLevel, "info")
+	SetDefProp(PropLoggingRollingFileAppendIpSuffix, false)
 	SetDefProp(PropLoggingRollingFileOnly, false)
 	SetDefProp(PropLoggingRollingFileMaxAge, 0)
 	SetDefProp(PropLoggingRollingFileMaxSize, 50)

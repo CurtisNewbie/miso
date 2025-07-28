@@ -467,6 +467,14 @@ func (a *MisoApp) configureLogging() error {
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
 	if c.HasProp(PropLoggingRollingFile) {
 		logFile := c.GetPropStr(PropLoggingRollingFile)
+
+		if logFile != "" && c.GetPropBool(PropLoggingRollingFileAppendIpSuffix) {
+			n, ok := util.FileCutSuffix(logFile, "log")
+			if ok {
+				logFile = n + "-" + util.GetLocalIPV4() + ".log"
+			}
+		}
+
 		log := BuildRollingLogFileWriter(NewRollingLogFileParam{
 			Filename:   logFile,
 			MaxSize:    c.GetPropInt(PropLoggingRollingFileMaxSize), // megabytes
