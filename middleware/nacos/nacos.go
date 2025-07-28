@@ -33,7 +33,7 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 })
 
 var (
-	desensitizeContentRegex = regexp.MustCompile(`((accessToken|password|secret|token|app-id)[ "]*[=:] *)("?[^\n]+)"?`)
+	desensitizeContentRegex = regexp.MustCompile(`((accessToken|password|secret|token|app-id)[ "]*[=:] *)("?[^\n"]+"?)`)
 	completeReload          = &atomic.Bool{}
 
 	_ miso.ServerList = (*NacosServerList)(nil)
