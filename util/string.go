@@ -416,3 +416,16 @@ func TrimStrSlice(s []string) {
 		return strings.TrimSpace(v)
 	})
 }
+
+func SplitStr(s, sep string) []string {
+	tok := strings.Split(s, sep)
+	cp := make([]string, 0, len(tok))
+	for _, v := range tok {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		cp = append(cp, v)
+	}
+	return cp
+}

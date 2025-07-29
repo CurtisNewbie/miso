@@ -380,3 +380,7 @@ func TestTrimStrSlice(t *testing.T) {
 	TrimStrSlice(s)
 	t.Logf("%#v", s)
 }
+
+func TestSplitStr(t *testing.T) {
+	t.Logf("%#v", SplitStr("1 ,2 , 3", ","))
+}

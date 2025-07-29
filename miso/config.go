@@ -117,9 +117,7 @@ func (a *AppConfig) GetPropStrSlice(prop string) []string {
 	return returnWithReadLock(a, func() []string {
 		v := a.vp.Get(prop)
 		if s, ok := v.(string); ok {
-			sp := strings.Split(s, ",")
-			util.TrimStrSlice(sp)
-			return sp
+			return util.SplitStr(s, ",")
 		}
 		return cast.ToStringSlice(v)
 	})
