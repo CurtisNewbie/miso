@@ -21,3 +21,28 @@ func CsvReadAll(reader io.Reader) ([][]string, error) {
 	}
 	return records, nil
 }
+
+func CsvReadAllIgnoreEmpty(reader io.Reader) ([][]string, error) {
+	records := [][]string{}
+	r := CsvReader(reader)
+	validRow := func(row []string) bool {
+		for _, c := range row {
+			if c != "" {
+				return true
+			}
+		}
+		return false
+	}
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			return records, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if validRow(record) {
+			records = append(records, record)
+		}
+	}
+}
