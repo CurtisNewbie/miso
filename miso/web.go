@@ -921,6 +921,14 @@ func (i *Inbound) Query(k string) string {
 	return i.queries.Get(k)
 }
 
+func (i *Inbound) Queries(k string) url.Values {
+	if i.queries != nil {
+		return i.queries
+	}
+	i.queries = i.r.URL.Query()
+	return i.queries
+}
+
 func (i *Inbound) Header(k string) string {
 	return i.r.Header.Get(k)
 }
