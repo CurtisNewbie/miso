@@ -1045,28 +1045,28 @@ func genRouteCurl(d httpRouteDoc) string {
 
 func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 	for _, d := range descs {
-		if len(d.Fields) > 0 {
-			t := map[string]any{}
-			genJsonReqMap(t, d.Fields)
-			jm[d.Name] = t
+		if d.isSliceOrArray {
+			jm[d.Name] = make([]any, 0)
 		} else {
-			var v any
-			switch d.TypeName {
-			case "string", "*string":
-				v = ""
-			case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
-				"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
-				v = 0
-			case "float32", "float64", "*float32", "*float64":
-				v = 0.0
-			case "bool", "*bool":
-				v = false
-			default:
-				if strings.HasPrefix(d.TypeName, "[]") {
-					v = make([]any, 0)
+			if len(d.Fields) > 0 {
+				t := map[string]any{}
+				genJsonReqMap(t, d.Fields)
+				jm[d.Name] = t
+			} else {
+				var v any
+				switch d.TypeName {
+				case "string", "*string":
+					v = ""
+				case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
+					"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
+					v = 0
+				case "float32", "float64", "*float32", "*float64":
+					v = 0.0
+				case "bool", "*bool":
+					v = false
 				}
+				jm[d.Name] = v
 			}
-			jm[d.Name] = v
 		}
 	}
 }
