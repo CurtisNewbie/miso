@@ -933,6 +933,10 @@ func (i *Inbound) Header(k string) string {
 	return i.r.Header.Get(k)
 }
 
+func (i *Inbound) Headers() http.Header {
+	return i.r.Header
+}
+
 func (i *Inbound) SetHeader(k string, v string) {
 	i.r.Header.Set(k, v)
 }
