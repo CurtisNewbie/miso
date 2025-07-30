@@ -61,10 +61,25 @@ type TResponse struct {
 	StatusCode int
 	Err        error
 	logBody    bool
+
+	closed    bool
+	reqStart  time.Time
+	reqMethod string
+	reqURL    string
 }
 
 // Close Response
 func (tr *TResponse) Close() error {
+	if tr.closed {
+		return nil
+	}
+	tr.closed = true
+	if !tr.reqStart.IsZero() {
+		tr.Rail.Infof("Request '%v %v' took: %v", tr.reqMethod, tr.reqURL, time.Since(tr.reqStart))
+	}
+	if tr.Resp == nil || tr.Resp.Body == nil {
+		return nil
+	}
 	return tr.Resp.Body.Close()
 }
 
@@ -74,13 +89,13 @@ func (tr *TResponse) Close() error {
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
+	defer tr.Close()
 	if tr.Err != nil {
 		return 0, tr.Err
 	}
 	if tr.Resp.Body == nil {
 		return 0, NoneErr
 	}
-	defer tr.Close()
 
 	n, err := io.Copy(writer, tr.Resp.Body)
 	if err != nil {
@@ -95,13 +110,13 @@ func (tr *TResponse) WriteTo(writer io.Writer) (int64, error) {
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) WriteToFile(path string) (int64, error) {
+	defer tr.Close()
 	if tr.Err != nil {
 		return 0, tr.Err
 	}
 	if tr.Resp.Body == nil {
 		return 0, NoneErr
 	}
-	defer tr.Close()
 
 	f, err := util.OpenRWFile(path, true)
 	if err != nil {
@@ -122,6 +137,7 @@ func (tr *TResponse) WriteToFile(path string) (int64, error) {
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Bytes() ([]byte, error) {
+	defer tr.Close()
 	if tr.Err != nil {
 		return nil, tr.Err
 	}
@@ -129,7 +145,6 @@ func (tr *TResponse) Bytes() ([]byte, error) {
 		return nil, NoneErr
 	}
 
-	defer tr.Close()
 	return io.ReadAll(tr.Resp.Body)
 }
 
@@ -139,6 +154,8 @@ func (tr *TResponse) Bytes() ([]byte, error) {
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Str() (string, error) {
+	defer tr.Close()
+
 	if tr.Err != nil {
 		return "", tr.Err
 	}
@@ -146,7 +163,6 @@ func (tr *TResponse) Str() (string, error) {
 		return "", NoneErr
 	}
 
-	defer tr.Close()
 	b, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
 		return "", WrapErr(e)
@@ -173,6 +189,7 @@ func (tr *TResponse) logRespBody(body any) {
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
 func (tr *TResponse) Json(ptr any) error {
+	defer tr.Close()
 	if tr.Err != nil {
 		return tr.Err
 	}
@@ -180,7 +197,6 @@ func (tr *TResponse) Json(ptr any) error {
 		return NoneErr
 	}
 
-	defer tr.Close()
 	body, e := io.ReadAll(tr.Resp.Body)
 	if e != nil {
 		return WrapErr(e)
@@ -202,13 +218,13 @@ func (tr *TResponse) Json(ptr any) error {
 }
 
 func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options ...func(c *SseReadConfig)) error {
+	defer tr.Close()
 	if tr.Err != nil {
 		return tr.Err
 	}
 	if tr.Resp.Body == nil {
 		return NoneErr
 	}
-	defer tr.Close()
 
 	conf := &SseReadConfig{}
 	for _, op := range options {
@@ -285,6 +301,10 @@ type TClient struct {
 	discoverService bool
 	require2xx      bool
 	logBody         bool
+
+	reqStart  time.Time
+	reqMethod string
+	reqURL    string
 }
 
 func (t *TClient) LogBody() *TClient {
@@ -503,7 +523,7 @@ func (t *TClient) PostJson(body any) *TResponse {
 }
 
 func (t *TClient) errorResponse(e error) *TResponse {
-	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody}
+	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody, reqStart: t.reqStart, reqMethod: t.reqMethod, reqURL: t.reqURL}
 }
 
 // Send POST request with reader to request body.
@@ -622,22 +642,28 @@ func (t *TClient) send(req *http.Request) *TResponse {
 		}
 	}
 
-	start := time.Now()
+	t.reqMethod = req.Method
+	t.reqURL = req.URL.String()
+	t.reqStart = time.Now()
+
 	r, e := t.client.Do(req) // send HTTP requests
 
 	var statusCode int
 	var respHeaders http.Header
-	var contentType string
 	if e == nil && r != nil {
 		statusCode = r.StatusCode
 		respHeaders = r.Header
-		if respHeaders != nil {
-			contentType = respHeaders.Get("Content-Type")
-		}
 	}
-	t.Rail.Infof("Request '%v %v' (%v) took: %v", req.Method, req.URL, contentType, time.Since(start))
 
-	tr := &TResponse{Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail, StatusCode: statusCode, RespHeader: respHeaders, logBody: t.logBody}
+	tr := &TResponse{
+		Resp: r, Err: e, Ctx: t.Ctx, Rail: t.Rail,
+		StatusCode: statusCode,
+		RespHeader: respHeaders,
+		logBody:    t.logBody,
+		reqStart:   t.reqStart,
+		reqMethod:  t.reqMethod,
+		reqURL:     t.reqURL,
+	}
 
 	// check http status code
 	if tr.Err == nil && t.require2xx {
