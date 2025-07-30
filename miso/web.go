@@ -921,7 +921,7 @@ func (i *Inbound) Query(k string) string {
 	return i.queries.Get(k)
 }
 
-func (i *Inbound) Queries(k string) url.Values {
+func (i *Inbound) Queries() url.Values {
 	if i.queries != nil {
 		return i.queries
 	}
