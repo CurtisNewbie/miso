@@ -90,3 +90,20 @@ func TestWalkDir(t *testing.T) {
 		t.Logf("%v", ff.Path)
 	}
 }
+
+func TestFileCutDotSuffix(t *testing.T) {
+	v, ok := FileCutDotSuffix("abc")
+	t.Logf("%v, %v", v, ok)
+
+	v, ok = FileCutDotSuffix("abc.")
+	t.Logf("%v, %v", v, ok)
+
+	v, ok = FileCutDotSuffix("abc.txt")
+	t.Logf("%v, %v", v, ok)
+
+	v, ok = FileCutDotSuffix("")
+	t.Logf("%v, %v", v, ok)
+
+	v, ok = FileCutDotSuffix(".")
+	t.Logf("%v, %v", v, ok)
+}

@@ -149,6 +149,17 @@ func FileCutSuffix(name string, ext string) (string, bool) {
 	return name, false
 }
 
+func FileCutDotSuffix(name string) (string, bool) {
+	if name == "" {
+		return name, false
+	}
+	i := strings.LastIndexByte(name, '.')
+	if i < 0 {
+		return name, false
+	}
+	return name[:i], true
+}
+
 func TempFilePath() (string, error) {
 	tmpFile, err := os.CreateTemp("/tmp", "temp_*")
 	if err != nil {
