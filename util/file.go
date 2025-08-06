@@ -149,15 +149,16 @@ func FileCutSuffix(name string, ext string) (string, bool) {
 	return name, false
 }
 
-func FileCutDotSuffix(name string) (string, bool) {
+func FileCutDotSuffix(name string) (s string, suffix string, ok bool) {
+	name = strings.TrimSpace(name)
 	if name == "" {
-		return name, false
+		return name, "", false
 	}
 	i := strings.LastIndexByte(name, '.')
 	if i < 0 {
-		return name, false
+		return name, "", false
 	}
-	return name[:i], true
+	return name[:i], name[i+1:], true
 }
 
 func TempFilePath() (string, error) {
