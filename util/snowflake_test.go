@@ -3,17 +3,18 @@ package util
 import (
 	"sync"
 	"testing"
-	"time"
 )
 
-func TestGetIdPerf(t *testing.T) {
-	total := 10_000_000
-	start := time.Now().UnixMilli()
-	for i := 0; i < total; i++ {
-		GenId()
+func BenchmarkGetIdPerf(b *testing.B) {
+	// SnowflakeId
+	// BenchmarkGetIdPerf-8    16170626                73.32 ns/op           40 B/op          2 allocs/op
+	//
+	// ulid
+	// BenchmarkGetIdPerf-8    12000014                99.03 ns/op           48 B/op          2 allocs/op
+	b.SetBytes(int64(len(GenId())))
+	for range b.N {
+		_ = GenId()
 	}
-	end := time.Now().UnixMilli()
-	t.Logf("time: %dms, total: %d id, perf: %.5fms each", end-start, total, float64(end-start)/float64(total))
 }
 
 func TestGetId(t *testing.T) {
@@ -29,7 +30,7 @@ func TestGetId(t *testing.T) {
 		go func(idSet *Set[string], threadId int) {
 			defer wg.Done()
 			for i := 0; i < loopCnt; i++ {
-				id := GenId()
+				id := SnowflakeId()
 
 				mu.Lock()
 				if idSet.Has(id) {

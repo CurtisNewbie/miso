@@ -11,6 +11,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/idutil"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/cast"
 )
@@ -216,7 +217,7 @@ func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, ro
 		DeliveryMode: amqp.Persistent,
 		Body:         msg,
 		Headers:      headers,
-		MessageId:    util.GenIdP("mq_"),
+		MessageId:    idutil.Id("mq_"),
 	}
 	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
 		false, false, publishing)

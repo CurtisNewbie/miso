@@ -35,22 +35,8 @@ func SetMachineCode(code int) error {
 	return nil
 }
 
-// Generate Id with prefix.
-//
-// The id consists of [64 bits long] + [6 digits machine_code].
-//
-// The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~ 1487.583 years)] + [sequenceNo (14 bits, 0~16383)].
-//
-// The max value of Long is 9223372036854775807, which is a string with 19 characters, so the generated id will be of at most 25 characters.
-//
-// This func is thread-safe
-func GenIdP(prefix string) (id string) {
-	id = prefix + GenId()
-	return id
-}
-
 /*
-Generate Id
+Generate Snowflake Id
 
 The id consists of [64 bits long] + [6 digits machine_code]
 The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.583 years)] + [sequenceNo (14 bits, 0~16383)]
@@ -59,7 +45,7 @@ The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.58
 
 This func is thread-safe
 */
-func GenId() (id string) {
+func SnowflakeId() (id string) {
 	_idMu.Lock()
 	defer _idMu.Unlock()
 
