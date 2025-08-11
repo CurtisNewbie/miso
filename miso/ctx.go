@@ -3,7 +3,6 @@ package miso
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
@@ -357,13 +356,6 @@ func GetCtxInt(ctx context.Context, key string) (int, bool) {
 	if v == nil {
 		return 0, false
 	}
-	switch tv := v.(type) {
-	case int:
-		return tv, true
-	case string:
-		i, e := strconv.Atoi(tv)
-		return i, e == nil
-	default:
-		return 0, false
-	}
+	n, err := cast.ToIntE(v)
+	return n, err == nil
 }
