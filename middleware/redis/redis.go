@@ -219,18 +219,18 @@ func (p *rtopic[T]) Subscribe() error {
 			rail := miso.EmptyRail()
 			pm, err := json.SParseJsonAs[rtopicMessage[T]](m.Payload)
 			if err != nil {
-				rail.Errorf("Failed to handle redis channle message, %v", err)
+				rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
 				continue
 			}
 			rail = miso.LoadPropagationKeysFromHeaders(rail, pm.Headers)
-			rail.Debugf("Receive redis channel message")
+			rail.Debugf("Receive redis channel message, topic: %v", p.topic)
 
 			// redis subscription cannot be blocked for more than 30s, have to handle these asynchronously
 			util.SubmitAsync(p.pool, func() (any, error) {
 				return nil, p.handler(rail, pm.Payload)
 			}).Then(func(a any, err error) {
 				if err != nil {
-					rail.Warnf("Failed to handle redis channle message, %v", err)
+					rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
 				}
 			})
 		}
