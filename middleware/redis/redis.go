@@ -205,10 +205,13 @@ type rtopic[T any] struct {
 func (p *rtopic[T]) initPubsub() {
 	p.pubsubOnce.Do(func() {
 		p.pubsub = GetRedis().Subscribe(context.Background(), p.topic)
+		miso.AddShutdownHook(func() {
+			p.pubsub.Close()
+		})
 	})
 }
 
-func (p *rtopic[T]) Subscribe() {
+func (p *rtopic[T]) Subscribe() error {
 	p.initPubsub()
 	ch := p.pubsub.Channel()
 	go func() {
@@ -232,6 +235,7 @@ func (p *rtopic[T]) Subscribe() {
 			})
 		}
 	}()
+	return nil
 }
 
 func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
