@@ -8,6 +8,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 )
 
 // Rail, an object that carries trace infromation along with the execution.
@@ -345,14 +346,7 @@ func GetCtxStr(ctx context.Context, key string) (string, bool) {
 	if v == nil {
 		return "", false
 	}
-	switch tv := v.(type) {
-	case string:
-		return tv, true
-	case int, uint, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64:
-		return fmt.Sprintf("%v", v), true
-	default:
-		return "", false
-	}
+	return cast.ToString(v), true
 }
 
 // Get value from context as an int.
