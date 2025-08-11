@@ -213,7 +213,7 @@ func (p *rtopic[T]) Subscribe(pool *util.AsyncPool, handler func(rail miso.Rail,
 				continue
 			}
 			rail = miso.LoadPropagationKeysFromHeaders(rail, pm.Headers)
-			rail.Debugf("Receive redis channel message, topic: %v", p.topic)
+			rail.Infof("Receive redis channel message, topic: %v, payload: %#v", p.topic, pm.Payload)
 
 			// redis subscription cannot be blocked for more than 30s, have to handle these asynchronously
 			util.SubmitAsync(pool, func() (any, error) {
