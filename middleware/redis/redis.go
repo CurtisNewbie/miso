@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -185,4 +187,70 @@ type redisLogger struct {
 
 func (r redisLogger) Printf(ctx context.Context, format string, v ...interface{}) {
 	miso.NewRail(ctx).Infof(format, v...)
+}
+
+type rtopicMessage[T any] struct {
+	Headers map[string]string
+	Payload T
+}
+
+type rtopic[T any] struct {
+	topic      string
+	pubsub     *redis.PubSub
+	pubsubOnce *sync.Once
+	pool       *util.AsyncPool
+	handler    func(rail miso.Rail, t T) error
+}
+
+func (p *rtopic[T]) initPubsub() {
+	p.pubsubOnce.Do(func() {
+		p.pubsub = GetRedis().Subscribe(context.Background(), p.topic)
+	})
+}
+
+func (p *rtopic[T]) Subscribe() {
+	p.initPubsub()
+	ch := p.pubsub.Channel()
+	go func() {
+		for m := range ch {
+			rail := miso.EmptyRail()
+			pm, err := json.SParseJsonAs[rtopicMessage[T]](m.Payload)
+			if err != nil {
+				rail.Errorf("Failed to handle redis channle message, %v", err)
+				continue
+			}
+			rail = miso.LoadPropagationKeysFromHeaders(rail, pm.Headers)
+			rail.Debugf("Receive redis channel message")
+
+			// redis subscription cannot be blocked for more than 30s, have to handle these asynchronously
+			util.SubmitAsync(p.pool, func() (any, error) {
+				return nil, p.handler(rail, pm.Payload)
+			}).Then(func(a any, err error) {
+				if err != nil {
+					rail.Warnf("Failed to handle redis channle message, %v", err)
+				}
+			})
+		}
+	}()
+}
+
+func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
+	m := rtopicMessage[T]{
+		Headers: miso.BuildTraceHeadersStr((rail)),
+		Payload: t,
+	}
+	ms, err := json.SWriteJson(m)
+	if err != nil {
+		return err
+	}
+	return miso.WrapErr(GetRedis().Publish(rail.Context(), p.topic, ms).Err())
+}
+
+func NewTopic[T any](topic string, pool *util.AsyncPool, handler func(rail miso.Rail, evt T) error) *rtopic[T] {
+	return &rtopic[T]{
+		topic:      topic,
+		pubsubOnce: &sync.Once{},
+		pool:       pool,
+		handler:    handler,
+	}
 }
