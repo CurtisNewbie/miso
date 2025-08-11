@@ -138,15 +138,15 @@ func (r *RLock) Lock() error {
 	if err != nil {
 		return miso.WrapErrf(err, "failed to obtain lock, key: %v", r.key)
 	}
+	lockStart := time.Now()
 	r.lock = lock
 	r.rail.Debugf("Obtained lock for key '%s'", r.key)
 
-	srcSpan := r.rail.SpanId()
 	refreshCtx, cancel := context.WithCancel(context.Background())
 	r.cancelRefresher = cancel
 
 	go func(ctx context.Context) {
-		rail := r.rail.NextSpan()
+		rail := r.rail.NewCtx()
 		ticker := time.NewTicker(lockRefreshTime)
 		defer ticker.Stop()
 
@@ -159,10 +159,10 @@ func (r *RLock) Lock() error {
 					}
 					rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
 				} else {
-					rail.Infof("Refreshed rlock for '%v', source span_id: %v", r.key, srcSpan)
+					rail.Infof("Refreshed rlock for '%v', held_lock_for: %v", r.key, time.Since(lockStart))
 				}
 			case <-ctx.Done():
-				rail.Debugf("RLock Refresher cancelled for '%v', source span_id: %v", r.key, srcSpan)
+				rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
