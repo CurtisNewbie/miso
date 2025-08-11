@@ -2,14 +2,14 @@ package idutil
 
 import "github.com/oklog/ulid/v2"
 
-// Generate random id with 28 characters with extra prefix.
+// Generate random id with 27 characters with extra prefix.
 //
 // Thread safe. Can be used in distributed environment.
 func Id(prefix string) (id string) {
 	return prefix + New()
 }
 
-// Generate random id with 28 characters
+// Generate random id with 27 characters
 //
 // Thread safe. Can be used in distributed environment.
 func New() (id string) {
