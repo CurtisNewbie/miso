@@ -63,17 +63,27 @@ func (q *Query) SelectCols(v any) *Query {
 	}
 
 	rt := rv.Type()
-	colSet := util.NewSet[string]()
-	for i := range rv.NumField() {
-		ft := rt.Field(i)
-		if q.ignoreGormField(ft) {
-			continue
-		}
-		fname := q.ColumnName(ft.Name)
-		colSet.Add(fname)
+	colSet := util.NewSetPtr[string]()
+	for i := range rt.NumField() {
+		q.selectFields(colSet, rt.Field(i))
+	}
+	return q.Select(strings.Join(colSet.CopyKeys(), ","))
+}
+
+func (q *Query) selectFields(colSet *util.Set[string], ft reflect.StructField) {
+	if q.ignoreGormField(ft) {
+		return
 	}
 
-	return q.Select(strings.Join(colSet.CopyKeys(), ","))
+	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
+		for j := range ft.Type.NumField() {
+			q.selectFields(colSet, ft.Type.Field(j))
+		}
+		return
+	}
+
+	fname := q.ColumnName(ft.Name)
+	colSet.Add(fname)
 }
 
 func (q *Query) ColumnName(s string) string {
@@ -413,31 +423,43 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 		return q
 	}
 
-	colSet := util.NewSet[string]()
+	colSet := util.NewSetPtr[string]()
 	for _, c := range cols {
-		colSet.AddAll(strings.Split(c, ","))
+		colSet.AddAll(util.SplitStr(c, ","))
 	}
 
 	rt := rv.Type()
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
-		fname := q.ColumnName(ft.Name)
-		if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
-			continue
-		}
-
-		if q.ignoreGormField(ft) {
-			continue
-		}
-
 		fv := rv.Field(i)
-		val, ok := reflectValue(fv)
-		if ok {
-			q.Set(fname, val)
-		}
+		q.setField(colSet, ft, fv)
 	}
 
 	return q
+}
+
+func (q *Query) setField(colSet *util.Set[string], ft reflect.StructField, fv reflect.Value) {
+	fname := q.ColumnName(ft.Name)
+	if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
+		return // specified column names explicitly, check if it's in the name set
+	}
+
+	if q.ignoreGormField(ft) {
+		return
+	}
+
+	// embedded struct
+	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
+		for i := range ft.Type.NumField() {
+			q.setField(colSet, ft.Type.Field(i), fv.Field(i))
+		}
+		return
+	}
+
+	val, ok := reflectValue(fv)
+	if ok {
+		q.Set(fname, val)
+	}
 }
 
 func (q *Query) SetIf(cond bool, col string, arg any) *Query {
