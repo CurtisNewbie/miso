@@ -17,16 +17,19 @@ var (
 	NoneErr *MisoErr = NewErrf("none")
 )
 
-var (
-	ErrCodeGeneric         string = "XXXX"
-	ErrCodeUnknownError    string = "UNKNOWN_ERROR"
-	ErrCodeNotPermitted    string = "NOT_PERMITTED"
-	ErrCodeIllegalArgument string = "ILLEGAL_ARGUMENT"
+const (
+	ErrCodeGeneric            string = "XXXX"
+	ErrCodeUnknownError       string = "UNKNOWN_ERROR"
+	ErrCodeNotPermitted       string = "NOT_PERMITTED"
+	ErrCodeIllegalArgument    string = "ILLEGAL_ARGUMENT"
+	ErrCodeServerShuttingDown string = "SERVER_SHUTTING_DOWN"
+)
 
-	ErrUnknownError       *MisoErr = NewErrf("Unknown Error").WithCode(ErrCodeUnknownError)
-	ErrNotPermitted       *MisoErr = NewErrf("Not Permitted").WithCode(ErrCodeNotPermitted)
-	ErrIllegalArgument    *MisoErr = NewErrf("Illegal Argument").WithCode(ErrCodeIllegalArgument)
-	ErrServerShuttingDown *MisoErr = NewErrf("Server shutting down")
+var (
+	ErrUnknownError       *MisoErr = NewErrfCode(ErrCodeUnknownError, "Unknown Error")
+	ErrNotPermitted       *MisoErr = NewErrfCode(ErrCodeNotPermitted, "Not Permitted")
+	ErrIllegalArgument    *MisoErr = NewErrfCode(ErrCodeIllegalArgument, "Illegal Argument")
+	ErrServerShuttingDown *MisoErr = NewErrfCode(ErrCodeServerShuttingDown, "Server Shutting Down")
 )
 
 var (
