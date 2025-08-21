@@ -63,6 +63,16 @@ func CutPrefixIgnoreCase(s string, prefix string) (string, bool) {
 	return s, false
 }
 
+// Cut any prefix from s in a case-insensitive way.
+func CutPrefixIgnoreCaseAny(s string, prefix ...string) (string, bool) {
+	for _, p := range prefix {
+		if v, ok := CutPrefixIgnoreCase(s, p); ok {
+			return v, true
+		}
+	}
+	return s, false
+}
+
 // Check if s has the suffix in a case-insensitive way.
 func HasSuffixIgnoreCase(s string, suffix string) bool {
 	suffix = strings.ToLower(suffix)
@@ -77,6 +87,16 @@ func CutSuffixIgnoreCase(s string, suffix string) (string, bool) {
 	ok := len(sl) >= len(suffix) && sl[len(sl)-len(suffix):] == suffix
 	if ok {
 		return s[:len(sl)-len(suffix)], true
+	}
+	return s, false
+}
+
+// Cut any suffix from s in a case-insensitive way.
+func CutSuffixIgnoreCaseAny(s string, suffix ...string) (string, bool) {
+	for _, p := range suffix {
+		if v, ok := CutSuffixIgnoreCase(s, p); ok {
+			return v, true
+		}
 	}
 	return s, false
 }
