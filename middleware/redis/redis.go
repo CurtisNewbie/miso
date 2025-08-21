@@ -198,7 +198,7 @@ type rtopic[T any] struct {
 	topic string
 }
 
-func (p *rtopic[T]) Subscribe(pool *util.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
+func (p *rtopic[T]) Subscribe(pool util.AsyncPoolItf, handler func(rail miso.Rail, evt T) error) error {
 
 	pubsub := GetRedis().Subscribe(context.Background(), p.topic)
 	miso.AddShutdownHook(func() { pubsub.Close() })

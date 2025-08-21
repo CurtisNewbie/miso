@@ -246,7 +246,7 @@ func (r hardcodedServiceRegistry) serverPortFromProp(name string) int {
 
 type ServerChangeListenerMap struct {
 	Listeners map[string][]func()
-	Pool      *util.AsyncPool
+	Pool      util.AsyncPoolItf
 	sync.RWMutex
 }
 

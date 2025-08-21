@@ -9,11 +9,15 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/panjf2000/ants"
 )
 
 var (
-	_ Future[any] = (*future[any])(nil)
-	_ Future[any] = (*completedFuture[any])(nil)
+	_ Future[any]  = (*future[any])(nil)
+	_ Future[any]  = (*completedFuture[any])(nil)
+	_ AsyncPoolItf = (*AsyncPool)(nil)
+	_ AsyncPoolItf = (*AntsAsyncPool)(nil)
 )
 
 var (
@@ -156,7 +160,7 @@ func RunAsync[T any](task func() (T, error)) Future[T] {
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
-func SubmitAsync[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
+func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	pool.Go(wrp)
 	return fut
@@ -168,7 +172,7 @@ func SubmitAsync[T any](pool *AsyncPool, task func() (T, error)) Future[T] {
 //
 // Use miso.NewAwaitFutures() to create one.
 type AwaitFutures[T any] struct {
-	pool    *AsyncPool
+	pool    AsyncPoolItf
 	wg      sync.WaitGroup
 	futures []Future[T]
 }
@@ -222,7 +226,7 @@ func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
 // Create new AwaitFutures for a group of tasks.
 //
 // *AsyncPool is optional, provide nil if not needed.
-func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
+func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
 	return &AwaitFutures[T]{
 		pool:    pool,
 		futures: make([]Future[T], 0, 2),
@@ -230,10 +234,16 @@ func NewAwaitFutures[T any](pool *AsyncPool) *AwaitFutures[T] {
 }
 
 // Create func that calls SubmitAsync(...) with the given pool.
-func NewSubmitAsyncFunc[T any](pool *AsyncPool) func(task func() (T, error)) Future[T] {
+func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) Future[T] {
 	return func(task func() (T, error)) Future[T] {
 		return SubmitAsync[T](pool, task)
 	}
+}
+
+type AsyncPoolItf interface {
+	Go(f func()) error
+	Stop()
+	StopAndWait()
 }
 
 // A long live, bounded pool of goroutines.
@@ -245,24 +255,35 @@ func NewSubmitAsyncFunc[T any](pool *AsyncPool) func(task func() (T, error)) Fut
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
 // You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
 type AsyncPool struct {
-	stopped           int32
-	stopOnce          *sync.Once
-	drainTasksWg      *sync.WaitGroup
-	tasks             chan func()
-	workers           chan struct{}
-	idleDur           time.Duration
+	*asyncPoolCommon
+	stopped      int32
+	stopOnce     *sync.Once
+	drainTasksWg *sync.WaitGroup
+	tasks        chan func()
+	workers      chan struct{}
+	idleDur      time.Duration
+}
+
+type asyncPoolCommon struct {
 	doWhenPoolFull    func(task func())
 	blockWhenPoolFull bool
 }
 
-type asyncPoolOption func(a *AsyncPool)
+func (a *asyncPoolCommon) unwrapPoolCommon() *asyncPoolCommon {
+	DebugLog("Unwrapped *asyncPoolCommon")
+	return a
+}
+
+type asyncPoolOption func(a AsyncPoolItf)
 
 // Create a bounded pool of goroutines.
 //
-// The maxTasks determines the capacity of the task queues. If the task queue is full,
-// the caller of *AsyncPool.Go is blocked.
+// The maxTasks determines the capacity of the task queues.
 //
 // The maxWorkers determines the max number of workers.
+//
+// By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
+// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
 func NewAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *AsyncPool {
 	if maxTasks < 0 {
 		maxTasks = 0
@@ -271,55 +292,65 @@ func NewAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *AsyncP
 		maxWorkers = 0
 	}
 	ap := &AsyncPool{
-		tasks:        make(chan func(), maxTasks),
-		workers:      make(chan struct{}, maxWorkers),
-		stopped:      0,
-		stopOnce:     &sync.Once{},
-		drainTasksWg: &sync.WaitGroup{},
-		idleDur:      5 * time.Minute,
-		doWhenPoolFull: func(task func()) {
-			// this doesn't do anything, blockWhenPoolFull is true
-		},
-		blockWhenPoolFull: true,
+		tasks:           make(chan func(), maxTasks),
+		workers:         make(chan struct{}, maxWorkers),
+		stopped:         0,
+		stopOnce:        &sync.Once{},
+		drainTasksWg:    &sync.WaitGroup{},
+		idleDur:         5 * time.Minute,
+		asyncPoolCommon: &asyncPoolCommon{},
 	}
+	ap.doWhenPoolFull = func(task func()) {
+		// this doesn't do anything, blockWhenPoolFull is true
+	}
+	ap.blockWhenPoolFull = true
+
 	for _, op := range opts {
 		op(ap)
 	}
 	return ap
 }
 
+func unwrapAsyncPoolCommon(a AsyncPoolItf, f func(ap *asyncPoolCommon)) {
+	if v, ok := a.(interface {
+		unwrapPoolCommon() *asyncPoolCommon
+	}); ok {
+		f(v.unwrapPoolCommon())
+	}
+}
+
 func DropTaskWhenPoolFull() asyncPoolOption {
-	return func(a *AsyncPool) {
-		DebugLog("AsyncPool is full, task dropped")
-		a.doWhenPoolFull = func(task func()) {
-			// drop task
-		}
-		a.blockWhenPoolFull = false
+	return func(a AsyncPoolItf) {
+		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
+			ap.doWhenPoolFull = func(task func()) {
+				DebugLog("Pool is full, task dropped")
+				// drop task
+			}
+			ap.blockWhenPoolFull = false
+		})
 	}
 }
 
 func CallerRunTaskWhenPoolFull() asyncPoolOption {
-	return func(a *AsyncPool) {
-		a.doWhenPoolFull = func(task func()) {
-			DebugLog("AsyncPool is full, caller runs task")
-			task()
-		}
-		a.blockWhenPoolFull = false
+	return func(a AsyncPoolItf) {
+		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
+			ap.doWhenPoolFull = func(task func()) {
+				DebugLog("Pool is full, caller runs task")
+				task()
+			}
+			ap.blockWhenPoolFull = false
+		})
 	}
 }
 
-// Create AsyncPool with number of workers equals to number of cpu cores and a task queue of size 500.
-func NewCpuAsyncPool() *AsyncPool {
-	c := runtime.NumCPU()
-	if c < 2 {
-		c = 2 // at least 2
-	}
-	return NewAsyncPool(500, c)
+// Create AsyncPool with number of workers equals to 4 * num_cpu.
+func NewCpuAsyncPool() AsyncPoolItf {
+	return NewAntsAsyncPool(runtime.NumCPU() * 4)
 }
 
-// Create AsyncPool with number of workers equals to two times of the number of cpu cores and a task queue of size 500.
-func NewIOAsyncPool() *AsyncPool {
-	return NewAsyncPool(500, runtime.NumCPU()*2)
+// Create AsyncPool with number of workers equals to 8 * num_cpu and a task queue of size 500.
+func NewIOAsyncPool() AsyncPoolItf {
+	return NewAsyncPool(500, runtime.NumCPU()*8)
 }
 
 // Stop the pool.
@@ -346,7 +377,7 @@ func (p *AsyncPool) isStopped() bool {
 // Submit task to the pool.
 //
 // If the pool is closed, caller will execute the submitted task directly.
-func (p *AsyncPool) Go(f func()) {
+func (p *AsyncPool) Go(f func()) error {
 
 	if p.isStopped() {
 		if p.blockWhenPoolFull {
@@ -354,7 +385,7 @@ func (p *AsyncPool) Go(f func()) {
 		} else {
 			p.doWhenPoolFull(f)
 		}
-		return
+		return nil
 	}
 
 	p.drainTasksWg.Add(1)
@@ -377,7 +408,7 @@ func (p *AsyncPool) Go(f func()) {
 				go p.spawn(nil)
 			default:
 			}
-			return
+			return nil
 		}
 	} else {
 		select {
@@ -393,13 +424,14 @@ func (p *AsyncPool) Go(f func()) {
 				go p.spawn(nil)
 			default:
 			}
-			return
+			return nil
 		default:
 			// when workers are all busy and queue is full
 			defer p.drainTasksWg.Done()
 			p.doWhenPoolFull(PanicSafeFunc(f))
 		}
 	}
+	return nil
 }
 
 // spawn a new worker.
@@ -554,4 +586,67 @@ func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (
 
 func NewCompletedFuture[T any](t T, err error) Future[T] {
 	return &completedFuture[T]{res: t, err: err}
+}
+
+type AntsAsyncPool struct {
+	*asyncPoolCommon
+	p  *ants.Pool
+	wg *sync.WaitGroup
+}
+
+func (a *AntsAsyncPool) Go(f func()) error {
+	a.wg.Add(1)
+	wrp := func() {
+		defer a.wg.Done()
+		PanicSafeRun(f)
+	}
+	err := a.p.Submit(wrp)
+	if err != nil {
+		if errors.Is(err, ants.ErrPoolOverload) {
+			DebugLog("AntsAsyncPool full, calling fallback, %v", err)
+			a.doWhenPoolFull(wrp)
+			return nil
+		} else {
+			a.wg.Done()
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *AntsAsyncPool) Stop() {
+	a.p.Release()
+}
+
+func (a *AntsAsyncPool) StopAndWait() {
+	a.p.Release()
+	a.wg.Wait()
+}
+
+// Create a bounded pool of goroutines.
+//
+// The maxTasks determines the capacity of the task queues.
+//
+// The maxWorkers determines the max number of workers.
+//
+// By default, if the task queue is full and all workers are busy, the caller of [AsyncPoolItf].Go() is blocked indefinitively until the task can be processed.
+// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPoolItf {
+	ap := &AntsAsyncPool{
+		asyncPoolCommon: &asyncPoolCommon{},
+	}
+	ap.doWhenPoolFull = func(task func()) {
+		// this doesn't do anything, blockWhenPoolFull is true
+	}
+	ap.blockWhenPoolFull = true
+	ap.wg = &sync.WaitGroup{}
+
+	for _, op := range opts {
+		op(ap)
+	}
+	ap.p, _ = ants.NewPool(maxWorkers,
+		ants.WithExpiryDuration(5*time.Minute),
+		ants.WithNonblocking(!ap.blockWhenPoolFull))
+
+	return ap
 }

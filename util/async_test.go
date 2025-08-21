@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -39,8 +38,9 @@ func TestRunAsync(t *testing.T) {
 }
 
 func TestRunAsyncPool(t *testing.T) {
-	cnt := 1000
-	pool := NewAsyncPool(cnt+1, 100)
+	cnt := 10000
+	pool := NewAsyncPool(300, 150)
+	// pool := NewAntsAsyncPool(150)
 	start := time.Now()
 	var futures []Future[int]
 
@@ -48,19 +48,17 @@ func TestRunAsyncPool(t *testing.T) {
 		j := i
 		futures = append(futures, SubmitAsync(pool, func() (int, error) {
 			time.Sleep(5 * time.Millisecond)
-			fmt.Printf("%v is done\n", j)
 			return j, nil
 		}))
 	}
 
 	var sum int
-	for i, fut := range futures {
+	for _, fut := range futures {
 		res, err := fut.Get()
 		if err != nil {
 			t.Fatal(err)
 		}
 		sum += res
-		t.Logf("Get future %d", i)
 	}
 	expected := (cnt * (cnt + 1)) / 2
 	if sum != expected {
@@ -418,6 +416,25 @@ func TestAyncPoolFull(t *testing.T) {
 
 	if v.Load() == 2 {
 		t.Fatal("either task 1 or task 2 should be dropped")
+	}
+	ap.StopAndWait()
+}
+
+func TestAntsAyncPoolFull(t *testing.T) {
+	DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
+	ap := NewAntsAsyncPool(1, CallerRunTaskWhenPoolFull())
+	v := &atomic.Int32{}
+	var cnt int32 = 10
+	for i := range cnt {
+		j := i
+		ap.Go(func() {
+			t.Logf("task %v", j)
+			time.Sleep(time.Second)
+			v.Add(1)
+		})
+	}
+	if av := v.Load(); av != cnt {
+		t.Fatalf("task 1 and task 2 should be run, %v", av)
 	}
 	ap.StopAndWait()
 }
