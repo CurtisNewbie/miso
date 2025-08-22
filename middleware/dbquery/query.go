@@ -18,8 +18,13 @@ type Query struct {
 	updateColumns map[string]any
 }
 
-func (q *Query) CopyNew() *Query {
+func (q *Query) copyNew() *Query {
 	return NewQuery(q._db)
+}
+
+func (q *Query) WithRail(r miso.Rail) *Query {
+	q.tx = q.tx.WithContext(r.Context())
+	return q
 }
 
 // Same as *Query.Table().
@@ -229,7 +234,7 @@ func (q *Query) Between(col string, args ...any) *Query {
 }
 
 func (q *Query) WhereFunc(f func(*Query) *Query) *Query {
-	q.tx = q.tx.Where(f(q.CopyNew()).tx)
+	q.tx = q.tx.Where(f(q.copyNew()).tx)
 	return q
 }
 
@@ -358,7 +363,7 @@ func (q *Query) Or(query string, args ...any) *Query {
 }
 
 func (q *Query) OrFunc(f func(*Query) *Query) *Query {
-	q.tx = q.tx.Or(f(q.CopyNew()).tx)
+	q.tx = q.tx.Or(f(q.copyNew()).tx)
 	return q
 }
 
@@ -490,20 +495,20 @@ func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
 
-func (q *Query) Transaction(callback func(qry func() *Query) error) error {
-	return q.tx.Transaction(func(db *gorm.DB) error {
+func RunTransaction(db *gorm.DB, callback func(qry func() *Query) error) error {
+	return db.Transaction(func(db *gorm.DB) error {
 		nq := func() *Query { return NewQuery(db) }
 		return callback(nq)
 	})
 }
 
 func NewQuery(db *gorm.DB) *Query {
-	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
+	q := &Query{tx: db, _db: db, updateColumns: map[string]any{}}
+	return q
 }
 
 func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
-	db = db.WithContext(r.Context())
-	return &Query{tx: db, _db: db, updateColumns: map[string]any{}}
+	return NewQuery(db).WithRail(r)
 }
 
 func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(r miso.Rail, db *gorm.DB) *Query {
