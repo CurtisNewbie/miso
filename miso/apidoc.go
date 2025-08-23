@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso/internal/tools"
@@ -914,8 +913,6 @@ func serveApiDocTmpl(rail Rail) error {
 
 	HttpGet("/doc/api", RawHandler(
 		func(inb *Inbound) {
-			defer DebugTimeOp(rail, time.Now(), "gen api doc")
-
 			docs := buildHttpRouteDoc(GetHttpRoutes())
 			var pipelineDoc []PipelineDoc
 			for _, f := range getPipelineDocFuncs {

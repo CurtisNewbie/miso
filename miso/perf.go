@@ -1,25 +1,19 @@
 package miso
 
 import (
-	"log"
+	"fmt"
 	"time"
 )
-
-// Run timer for named operation and print result
-//
-// e.g.,
-//
-//	defer LTimeOp(ec, time.Now(), "someOperation")
-func LTimeOp(start time.Time, name string) {
-	Infof("%s took %s", name, time.Since(start))
-}
 
 // Run timer for named operation and print result in log
 //
 // e.g.,
 //
-//	defer TimeOp(ec, time.Now(), "someOperation")
-func TimeOp(r Rail, start time.Time, name string) {
+//	defer TimeOp(rail, time.Now(), "someOperation")
+func TimeOp(r Rail, start time.Time, name string, args ...any) {
+	if len(args) > 0 {
+		name = fmt.Sprintf(name, args...)
+	}
 	r.Infof("%s took %s", name, time.Since(start))
 }
 
@@ -28,15 +22,9 @@ func TimeOp(r Rail, start time.Time, name string) {
 // e.g.,
 //
 //	defer DebugTimeOp(ec, time.Now(), "someOperation")
-func DebugTimeOp(r Rail, start time.Time, name string) {
+func DebugTimeOp(r Rail, start time.Time, name string, args ...any) {
+	if len(args) > 0 {
+		name = fmt.Sprintf(name, args...)
+	}
 	r.Debugf("%s took %s", name, time.Since(start))
-}
-
-// Run timer for named operation and print result in log
-//
-// e.g.,
-//
-//	defer PTimeOp(time.Now(), "someOperation")
-func PTimeOp(start time.Time, name string) {
-	log.Printf("%s took %s", name, time.Since(start))
 }

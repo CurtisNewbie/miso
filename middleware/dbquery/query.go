@@ -22,11 +22,6 @@ func (q *Query) copyNew() *Query {
 	return NewQuery(q._db)
 }
 
-func (q *Query) WithRail(r miso.Rail) *Query {
-	q.tx = q.tx.WithContext(r.Context())
-	return q
-}
-
 // Same as *Query.Table().
 //
 // It was a mistake to call it From(), since we also use *Query to update tables :(
@@ -508,7 +503,7 @@ func NewQuery(db *gorm.DB) *Query {
 }
 
 func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
-	return NewQuery(db).WithRail(r)
+	return NewQuery(db.WithContext(r.Context()))
 }
 
 func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(r miso.Rail, db *gorm.DB) *Query {

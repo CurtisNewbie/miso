@@ -350,8 +350,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 }
 
 func (m *nacosModule) reloadConfigs(rail miso.Rail) {
-	start := time.Now()
-	defer miso.TimeOp(rail, start, "nacos configs reload")
+	defer miso.TimeOp(rail, time.Now(), "Nacos configs reload")
 
 	m.reloadMut.Lock()
 	defer m.reloadMut.Unlock()
