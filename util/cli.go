@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os/exec"
@@ -122,9 +123,10 @@ func ExecCmd(executable string, args []string, opts ...func(*exec.Cmd)) (out []b
 // If err is not nil, out may still contain output from the command.
 func CliRun(rail interface {
 	Infof(format string, args ...interface{})
+	Context() context.Context
 }, executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
 
-	cmd := exec.Command(executable, args...)
+	cmd := exec.CommandContext(rail.Context(), executable, args...)
 	for _, op := range opts {
 		op(cmd)
 	}
