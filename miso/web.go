@@ -881,6 +881,14 @@ func (i *Inbound) Unwrap() (http.ResponseWriter, *http.Request) {
 	return i.w, i.r
 }
 
+func (i *Inbound) Writer() http.ResponseWriter {
+	return i.w
+}
+
+func (i *Inbound) Request() *http.Request {
+	return i.r
+}
+
 func (i *Inbound) Rail() Rail {
 	return i.erail
 }
