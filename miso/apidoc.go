@@ -24,6 +24,8 @@ const (
 )
 
 var (
+	golangMapGenericRexp = regexp.MustCompile(`map\[(.*)\](.*)`)
+
 	ApiDocTypeAlias = map[string]string{
 		"ETime":       "int64",
 		"*ETime":      "int64",
@@ -122,15 +124,15 @@ type httpRouteDoc struct {
 }
 
 type FieldDesc struct {
-	FieldName             string      // field name in golang
-	Name                  string      // field name in json
-	TypeName              string      // type name in golang or type name alias translated
+	GoFieldName           string      // field name in golang
+	JsonName              string      // field name in json
+	TypeNameAlias         string      // type name in golang or type name alias translated
 	TypePkg               string      // pkg path of the type in golang
 	OriginTypeName        string      // type name in golang (reflect.Type.Name()) without import path
 	OriginTypeNameWithPkg string      // type name in golang with import pkg
-	Desc                  string      // `desc` tag value
+	DescTag               string      // `desc` tag value
 	JsonTag               string      // `json` tag value
-	Valid                 string      // `validate` tag value
+	ValidTag              string      // `validate` tag value
 	Fields                []FieldDesc // struct fields
 	isSliceOrArray        bool
 	isSliceOfPointer      bool
@@ -138,8 +140,26 @@ type FieldDesc struct {
 	isPointer             bool
 }
 
+func (f FieldDesc) guessTsPrimiTypeName() string {
+	var tname string
+	if f.isMap {
+		re := golangMapGenericRexp
+		tname = "Map<any, any>"
+		if sm := re.FindStringSubmatch(f.goFieldTypeName()); len(sm) > 2 {
+			tname = fmt.Sprintf("Map<%v,%v>", guessTsPrimiTypeName(sm[1]), guessTsPrimiTypeName(sm[2]))
+		}
+	} else {
+		tname = guessTsPrimiTypeName(f.TypeNameAlias)
+	}
+	return tname
+}
+
 func (f FieldDesc) isMisoPkg() bool {
 	return strings.HasPrefix(f.TypePkg, "github.com/curtisnewbie/miso")
+}
+
+func (f FieldDesc) isBuiltInType() bool {
+	return f.isMap
 }
 
 func (f FieldDesc) pureGoTypeName() string {
@@ -151,7 +171,7 @@ func (f FieldDesc) pureGoTypeName() string {
 }
 
 func (f FieldDesc) comment(withSlash bool) string {
-	var desc string = f.Desc
+	var desc string = f.DescTag
 	var comment string
 	appendComment := func(r string) {
 		r = strings.TrimSpace(r)
@@ -170,9 +190,9 @@ func (f FieldDesc) comment(withSlash bool) string {
 	if desc != "" {
 		appendComment(desc)
 	}
-	if f.Valid != "" {
+	if f.ValidTag != "" {
 		var remaining string
-		rules := strings.Split(f.Valid, ",")
+		rules := strings.Split(f.ValidTag, ",")
 		appendRemaining := func(r string) {
 			if remaining != "" && !util.HasAnySuffix(remaining, ".", ",") {
 				remaining += "."
@@ -254,7 +274,7 @@ func (j JsonPayloadDesc) buildSchema(fields []FieldDesc, sec *openapi3.Schema) {
 	}
 	for _, f := range fields {
 		var ref *openapi3.SchemaRef = j.buildSchemaRef(f)
-		sec.WithPropertyRef(f.Name, ref)
+		sec.WithPropertyRef(f.JsonName, ref)
 	}
 }
 
@@ -262,7 +282,7 @@ func (j JsonPayloadDesc) buildSchemaRef(f FieldDesc) *openapi3.SchemaRef {
 	// simple types
 	if len(f.Fields) < 1 {
 		str := j.simpleTypeRef(f.OriginTypeName)
-		str.Value.Description = f.Desc
+		str.Value.Description = f.DescTag
 		return str
 	}
 	var sec *openapi3.Schema
@@ -275,7 +295,7 @@ func (j JsonPayloadDesc) buildSchemaRef(f FieldDesc) *openapi3.SchemaRef {
 		sec = openapi3.NewObjectSchema()
 		j.buildSchema(f.Fields, sec)
 	}
-	sec.Description = f.Desc
+	sec.Description = f.DescTag
 
 	ref := &openapi3.SchemaRef{Value: sec}
 	return ref
@@ -320,6 +340,10 @@ func (j JsonPayloadDesc) toOpenApiResp(respName string) *openapi3.Response {
 func (j JsonPayloadDesc) pureGoTypeName() string {
 	n := j.TypeName
 	return pureGoTypeName(n)
+}
+
+func (f JsonPayloadDesc) isBuiltInType() bool {
+	return false
 }
 
 func (j JsonPayloadDesc) isMisoPkg() bool {
@@ -693,7 +717,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 func appendJsonPayloadDoc(b *strings.Builder, jds []FieldDesc, indent int) {
 	for _, jd := range jds {
-		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", util.Spaces(indent+2), jd.Name, jd.TypeName, jd.comment(false)))
+		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", util.Spaces(indent+2), jd.JsonName, jd.TypeNameAlias, jd.comment(false)))
 
 		if len(jd.Fields) > 0 {
 			appendJsonPayloadDoc(b, jd.Fields, indent+2)
@@ -776,27 +800,21 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 		}
 
 		originTypeName := util.TypeName(f.Type)
-		typeAlias, typeAliasMatched := ApiDocTypeAlias[originTypeName]
-		var typeName string
-		if typeAliasMatched {
-			typeName = typeAlias
-		} else {
-			typeName = originTypeName
-		}
+		typeName, typeAliasMatched := translateTypeAlias(originTypeName)
 
 		jsonTag := f.Tag.Get("json")
 		if jsonTag == "" {
 			jsonTag = jsonName
 		}
 		jd := FieldDesc{
-			FieldName:             f.Name,
-			Name:                  jsonName,
-			TypeName:              typeName,
+			GoFieldName:           f.Name,
+			JsonName:              jsonName,
+			TypeNameAlias:         typeName,
 			TypePkg:               f.Type.PkgPath(),
 			OriginTypeName:        originTypeName,
 			OriginTypeNameWithPkg: f.Type.String(),
-			Desc:                  getTagDesc(f.Tag),
-			Valid:                 getTagValid(f.Tag),
+			DescTag:               getTagDesc(f.Tag),
+			ValidTag:              getTagValid(f.Tag),
 			JsonTag:               jsonTag,
 			Fields:                []FieldDesc{},
 		}
@@ -812,9 +830,9 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 			if !fv.IsZero() && !fv.IsNil() {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
-					jd.TypeName = util.TypeName(et)
+					jd.OriginTypeName = util.TypeName(et)
 					jd.TypePkg = et.PkgPath()
-					jd.OriginTypeName = jd.TypeName
+					jd.TypeNameAlias, _ = translateTypeAlias(jd.OriginTypeName)
 					switch et.Kind() {
 					case reflect.Slice, reflect.Array:
 						jd.isSliceOrArray = true
@@ -832,7 +850,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 				}
 			} else {
 				appendable = false // e.g., the any field in GnResp[any]{}
-				Tracef("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.Name)
+				Tracef("reflect.Value is zero or nil, not displayed in api doc, type: %v, field: %v", t.Name(), jd.JsonName)
 			}
 		} else {
 			switch fv.Kind() {
@@ -1043,15 +1061,15 @@ func genRouteCurl(d httpRouteDoc) string {
 func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 	for _, d := range descs {
 		if d.isSliceOrArray {
-			jm[d.Name] = make([]any, 0)
+			jm[d.JsonName] = make([]any, 0)
 		} else {
 			if len(d.Fields) > 0 {
 				t := map[string]any{}
 				genJsonReqMap(t, d.Fields)
-				jm[d.Name] = t
+				jm[d.JsonName] = t
 			} else {
 				var v any
-				switch d.TypeName {
+				switch d.TypeNameAlias {
 				case "string", "*string":
 					v = ""
 				case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
@@ -1062,7 +1080,7 @@ func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 				case "bool", "*bool":
 					v = false
 				}
-				jm[d.Name] = v
+				jm[d.JsonName] = v
 			}
 		}
 	}
@@ -1104,7 +1122,7 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef util.Set[string]) (string, str
 
 	if rv.TypeName == "Resp" || rv.TypeName == "GnResp" {
 		for _, f := range rv.Fields {
-			if f.FieldName == "Data" {
+			if f.GoFieldName == "Data" {
 				if f.OriginTypeName == "any" {
 					return "", ""
 				}
@@ -1147,9 +1165,15 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef util.Set[string]) (string, str
 }
 
 func inclGoTypeDef(f interface {
+	isBuiltInType() bool
 	isMisoPkg() bool
 	pureGoTypeName() string
 }, seenTypeDef util.Set[string]) bool {
+
+	if f.isBuiltInType() { // e.g., map
+		return false
+	}
+
 	pgn := f.pureGoTypeName()
 
 	// TODO: temp fix
@@ -1183,7 +1207,7 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 
 			if writeField {
 				fieldTypeName := f.goFieldTypeName()
-				writef(indentc, "%s %s%s", f.FieldName, fieldTypeName, jsonTag)
+				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 			}
 
 			*deferred = append(*deferred, func() {
@@ -1204,10 +1228,10 @@ func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), f
 			fieldTypeName := f.goFieldTypeName()
 			var comment string = f.comment(true)
 			if comment != "" {
-				fieldDec := fmt.Sprintf("%s %s%s", f.FieldName, fieldTypeName, jsonTag)
+				fieldDec := fmt.Sprintf("%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 				writef(indentc, "%-30s%s", fieldDec, comment)
 			} else {
-				writef(indentc, "%s %s%s", f.FieldName, fieldTypeName, jsonTag)
+				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 			}
 		}
 	}
@@ -1240,12 +1264,12 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 		d := descs[i]
 
 		if len(d.Fields) > 0 {
-			tsTypeName := guessTsItfName(d.TypeName)
+			tsTypeName := guessTsItfName(d.TypeNameAlias)
 			n := tsTypeName
-			if strings.HasPrefix(d.TypeName, "[]") {
+			if strings.HasPrefix(d.TypeNameAlias, "[]") {
 				n += "[]"
 			}
-			writef(indentc, "%s?: %s;", d.Name, n)
+			writef(indentc, "%s?: %s;", d.JsonName, n)
 
 			if seenType.Add(tsTypeName) {
 				*deferred = append(*deferred, func() {
@@ -1256,13 +1280,13 @@ func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), d
 			}
 
 		} else {
-			var tname string = guessTsPrimiTypeName(d.TypeName)
+			var tname string = d.guessTsPrimiTypeName()
 			var comment string = d.comment(true)
 			if comment != "" {
-				fieldDec := fmt.Sprintf("%s?: %s", d.Name, tname)
+				fieldDec := fmt.Sprintf("%s?: %s", d.JsonName, tname)
 				writef(indentc, "%-30s%s", fieldDec+";", comment)
 			} else {
-				writef(indentc, "%s?: %s;", d.Name, tname)
+				writef(indentc, "%s?: %s;", d.JsonName, tname)
 			}
 		}
 	}
@@ -1354,23 +1378,23 @@ func genNgTableDemo(d httpRouteDoc) string {
 		// Resp.Data -> PageRes -> PageRes.Payload
 		if respTypeName == "Resp" {
 			pl, hasData := util.SliceFilterFirst(d.JsonResponseDesc.Fields, func(j FieldDesc) bool {
-				return j.FieldName == "Data"
+				return j.GoFieldName == "Data"
 			})
 			if hasData {
 				pl, hasPayload := util.SliceFilterFirst(pl.Fields, func(j FieldDesc) bool {
-					return j.FieldName == "Payload"
+					return j.GoFieldName == "Payload"
 				})
 				if hasPayload {
 					for _, f := range pl.Fields {
-						sl.Printlnf(util.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.Name)
-						sl.Printlnf(util.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.FieldName)
+						sl.Printlnf(util.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.JsonName)
+						sl.Printlnf(util.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.GoFieldName)
 						if f.OriginTypeName == "ETime" || f.OriginTypeName == "*ETime" || f.OriginTypeName == "util.ETime" || f.OriginTypeName == "*util.ETime" {
-							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.Name)
+							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.JsonName)
 						} else {
-							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.Name)
+							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
 						}
 						sl.Printlnf(util.Tabs(1) + "</ng-container>")
-						cols = append(cols, "'"+f.Name+"'")
+						cols = append(cols, "'"+f.JsonName+"'")
 					}
 				}
 			}
@@ -1453,11 +1477,11 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 			hasErrorCode := false
 			hasError := false
 			for _, d := range d.JsonResponseDesc.Fields {
-				if d.FieldName == "Data" {
+				if d.GoFieldName == "Data" {
 					hasData = true
-				} else if d.FieldName == "Error" {
+				} else if d.GoFieldName == "Error" {
 					hasError = true
-				} else if d.FieldName == "ErrorCode" {
+				} else if d.GoFieldName == "ErrorCode" {
 					hasErrorCode = true
 				}
 			}
@@ -1512,7 +1536,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 			sl.Printlnf(util.Spaces(6) + "}")
 			if hasData {
 				if dataField, ok := util.SliceFilterFirst(d.JsonResponseDesc.Fields,
-					func(d FieldDesc) bool { return d.FieldName == "Data" }); ok {
+					func(d FieldDesc) bool { return d.GoFieldName == "Data" }); ok {
 					sl.Printlnf(util.Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
 				}
 			}
@@ -1560,11 +1584,11 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 		respGeneName = guessGoTypName(respTypeName)
 		if respGeneName == "Resp" {
 			for _, n := range d.JsonResponseDesc.Fields {
-				if n.FieldName == "Data" {
-					respGeneName = guessGoTypName(n.TypeName)
+				if n.GoFieldName == "Data" {
+					respGeneName = guessGoTypName(n.TypeNameAlias)
 					if n.isMisoPkg() && !strings.Contains(n.TypePkg, "demo") { // hack for demo
 						respGeneName = "miso." + respGeneName
-						if v := guessGoGenericEleName(n.TypeName); v != "" {
+						if v := guessGoGenericEleName(n.TypeNameAlias); v != "" {
 							respGeneName += "[" + v + "]"
 						}
 					}
@@ -1725,13 +1749,13 @@ func AddGetPipelineDocFunc(f GetPipelineDocFunc) {
 
 func guessTsTypeName(d FieldDesc) string {
 	if len(d.Fields) > 0 {
-		tsTypeName := guessTsItfName(d.TypeName)
-		if strings.HasPrefix(d.TypeName, "[]") {
+		tsTypeName := guessTsItfName(d.TypeNameAlias)
+		if strings.HasPrefix(d.TypeNameAlias, "[]") {
 			return tsTypeName + "[]"
 		}
 		return tsTypeName
 	} else {
-		return guessTsPrimiTypeName(d.TypeName)
+		return d.guessTsPrimiTypeName()
 	}
 }
 
@@ -1956,4 +1980,12 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 	//  go install golang.org/x/tools/cmd/goimports@latest
 	util.PanicSafeRun(func() { tools.RunGoImports(fp) })
 	return nil
+}
+
+func translateTypeAlias(tname string) (string, bool) {
+	typeAlias, typeAliasMatched := ApiDocTypeAlias[tname]
+	if typeAliasMatched {
+		return typeAlias, true
+	}
+	return tname, false
 }

@@ -33,6 +33,7 @@
 - [CONNECT /api/v29](#connect-apiv29)
 - [TRACE /api/v30](#trace-apiv30)
 - [POST /api/v31](#post-apiv31)
+- [POST /api/v32](#post-apiv32)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 
 ## POST /api/v1
@@ -336,7 +337,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v4' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -442,7 +443,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v5' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -548,7 +549,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v6' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -652,7 +653,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v7' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -750,7 +751,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v8' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -847,7 +848,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v9' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -945,7 +946,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v10' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1045,7 +1046,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v11' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1152,7 +1153,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v12' \
     -H 'Content-Type: application/json' \
-    -d '[ {"extras":{"special":false},"name":""} ]'
+    -d '[ {"extras":[],"name":""} ]'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1256,7 +1257,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v13' \
     -H 'Content-Type: application/json' \
-    -d '[ {"extras":{"special":false},"name":""} ]'
+    -d '[ {"extras":[],"name":""} ]'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1350,7 +1351,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v14' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1849,7 +1850,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v20' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1936,7 +1937,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v21' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2016,7 +2017,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v22' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":{"special":false},"name":""}'
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2593,6 +2594,83 @@
   }
   ```
 
+## POST /api/v32
+
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+    - "data": (map[string]string) response data
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/api/v32'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  type EmptyReq struct {
+  }
+
+  func api32(rail miso.Rail, req EmptyReq) (map[string]string, error) {
+  	var res miso.GnResp[map[string]string]
+  	err := miso.NewDynTClient(rail, "/api/v32", "demo").
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		var dat map[string]string
+  		return dat, err
+  	}
+  	dat, err := res.Res()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return dat, err
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface EmptyReq {
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+    data?: Map<string,string>;     // response data
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  32() {
+    let req: EmptyReq | null = null;
+    this.http.post<any>(`/demo/api/v32`, req)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+          let dat: Map<string,string> = resp.data;
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
 ## POST /open/api/demo/grouped/open/api/demo/post
 
 - Description: Post demo stuff
@@ -2626,6 +2704,7 @@
   	Time util.ETime `json:"time"`
   }
 
+  // Post demo stuff
   func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
   	var res miso.GnResp[PostRes]
   	err := miso.NewDynTClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").

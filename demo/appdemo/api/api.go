@@ -182,3 +182,8 @@ type EmptyReq struct {
 func api31(inb *miso.Inbound, req EmptyReq) error {
 	return nil
 }
+
+// misoapi-http: POST /api/v32
+func api32(inb *miso.Inbound, req EmptyReq) (map[string]int32, error) {
+	return nil, nil
+}

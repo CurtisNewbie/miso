@@ -16,9 +16,9 @@ func TestBuildJsonPayloadDesc(t *testing.T) {
 	d = BuildJsonPayloadDesc(reflect.ValueOf(Resp{Data: body{}}))
 	t.Logf("%#v", d)
 	for _, f := range d.Fields {
-		t.Logf("%v -> %v", f.FieldName, f.pureGoTypeName())
+		t.Logf("%v -> %v", f.GoFieldName, f.pureGoTypeName())
 		for _, ff := range f.Fields {
-			t.Logf("\t%v -> %v,%v", ff.FieldName, ff.pureGoTypeName(), ff.TypeName)
+			t.Logf("\t%v -> %v,%v", ff.GoFieldName, ff.pureGoTypeName(), ff.TypeNameAlias)
 		}
 	}
 }

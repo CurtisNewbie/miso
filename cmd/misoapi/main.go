@@ -882,7 +882,18 @@ func parseParamName(t dst.Expr, importSpec map[string]string, imports util.Set[s
 	case *dst.IndexExpr:
 		n := parseParamName(v.X, importSpec, imports)
 		return n + "[" + parseParamName(v.Index, importSpec, imports) + "]"
+	case *dst.MapType:
+		var kType string = parseParamName(v.Key, importSpec, imports)
+		if kType == "" {
+			return ""
+		}
+		var vType string = parseParamName(v.Value, importSpec, imports)
+		if vType == "" {
+			return ""
+		}
+		return fmt.Sprintf("map[%v]%v", kType, vType)
 	default:
+		miso.Warnf("dst.Expr: %#v", t)
 		return ""
 	}
 }

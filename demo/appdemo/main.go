@@ -26,10 +26,11 @@ const (
 
 func init() {
 	miso.SetProp("app.name", "demo")
-	miso.SetProp("redis.enabled", false) // for distributed task, set to true
+	miso.SetProp("redis.enabled", false)           // for distributed task, set to true
+	miso.SetProp("task.scheduling.enabled", false) // for distributed task, set to true
 	miso.SetProp("mode.production", false)
 	// miso.SetProp("server.api-doc.go.file", "goclient/client.go")
-	miso.SetProp("server.generate-endpoint-doc.file", "api-doc.md")
+	miso.SetProp("server.api-doc.file", "api-doc.md")
 }
 
 func main() {
@@ -37,7 +38,9 @@ func main() {
 	miso.PreServerBootstrap(PrepareServer)
 
 	// register callbacks that are invoked after server fully bootstrapped
-	miso.PostServerBootstrap(TriggerWorkflowOnBootstrapped)
+	miso.PostServerBootstrap()
+	// e.g.,
+	// 	miso.PostServerBootstrap(TriggerWorkflowOnBootstrapped)
 
 	// start the bootstrap process
 	miso.BootstrapServer(os.Args)

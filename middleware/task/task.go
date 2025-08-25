@@ -365,6 +365,7 @@ func distriTaskBootstrapCondition(rail miso.Rail) (bool, error) {
 
 func distriTaskBootstrap(rail miso.Rail) error {
 	m := module()
+	_ = redis.GetRedis() // check if redis is initialized
 	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
 	return m.bootstrapAsComponent(rail)
 }
