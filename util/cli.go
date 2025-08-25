@@ -42,27 +42,6 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 	return p
 }
 
-// CLI runs command.
-//
-// If err is not nil, out may still contain output from the command.
-//
-// If possible, use ExecCmd() instead.
-func CliRun(executable string, args ...string) (out []byte, err error) {
-	return ExecCmd(executable, args)
-}
-
-// CLI runs command with env.
-//
-// If err is not nil, out may still contain output from the command.
-//
-// If possible, use ExecCmd() instead.
-func CliRunWithEnv(dir string, env []string, executable string, args ...string) (out []byte, err error) {
-	return ExecCmd(executable, args, func(c *exec.Cmd) {
-		c.Dir = dir
-		c.Env = append(c.Env, env...)
-	})
-}
-
 func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }
@@ -135,5 +114,27 @@ func ExecCmd(executable string, args []string, opts ...func(*exec.Cmd)) (out []b
 	if err != nil {
 		return out, err
 	}
+	return out, nil
+}
+
+// CLI runs command.
+//
+// If err is not nil, out may still contain output from the command.
+func CliRun(rail interface {
+	Infof(format string, args ...interface{})
+}, executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
+
+	cmd := exec.Command(executable, args...)
+	for _, op := range opts {
+		op(cmd)
+	}
+	rail.Infof("Executing Command: %v", cmd)
+
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		rail.Infof("Failed to execute command, %s", out)
+		return out, err
+	}
+
 	return out, nil
 }
