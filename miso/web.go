@@ -889,6 +889,10 @@ func (i *Inbound) Request() *http.Request {
 	return i.r
 }
 
+func (i *Inbound) WriteSSE(name string, message any) {
+	i.Engine().(*gin.Context).SSEvent(name, message)
+}
+
 func (i *Inbound) Rail() Rail {
 	return i.erail
 }
