@@ -149,6 +149,14 @@ func FileCutSuffix(name string, ext string) (string, bool) {
 	return name, false
 }
 
+func FileChangeSuffix(name string, newSuffix string) (s string) {
+	n, _, _ := FileCutDotSuffix(name)
+	if !strings.HasPrefix(newSuffix, ".") {
+		newSuffix = "." + newSuffix
+	}
+	return n + newSuffix
+}
+
 func FileCutDotSuffix(name string) (s string, suffix string, ok bool) {
 	name = strings.TrimSpace(name)
 	if name == "" {

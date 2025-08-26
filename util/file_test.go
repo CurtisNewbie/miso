@@ -107,3 +107,19 @@ func TestFileCutDotSuffix(t *testing.T) {
 	v, ex, ok = FileCutDotSuffix(".")
 	t.Logf("%v, %v, %v", v, ex, ok)
 }
+
+func TestFileChangeSuffix(t *testing.T) {
+	n := "abc.csv"
+	v := FileChangeSuffix(n, "txt")
+	if v != "abc.txt" {
+		t.Fatal(v)
+	}
+	t.Log(v)
+
+	n = "abc"
+	v = FileChangeSuffix(n, "txt")
+	if v != "abc.txt" {
+		t.Fatal(v)
+	}
+	t.Log(v)
+}
