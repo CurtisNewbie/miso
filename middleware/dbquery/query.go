@@ -490,9 +490,9 @@ func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
 
-func RunTransaction(db *gorm.DB, callback func(qry func() *Query) error) error {
+func RunTransaction(rail miso.Rail, db *gorm.DB, callback func(qry func() *Query) error) error {
 	return db.Transaction(func(db *gorm.DB) error {
-		nq := func() *Query { return NewQuery(db) }
+		nq := func() *Query { return NewQueryRail(rail, db) }
 		return callback(nq)
 	})
 }
