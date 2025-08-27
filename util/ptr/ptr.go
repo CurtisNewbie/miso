@@ -11,3 +11,7 @@ func StrPtr(v string) *string {
 func IntPtr(v int) *int {
 	return &v
 }
+
+func ValPtr[T any](v T) *T {
+	return &v
+}
