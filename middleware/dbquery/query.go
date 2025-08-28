@@ -5,10 +5,12 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
 )
 
 type Query struct {
@@ -411,6 +413,16 @@ func (q *Query) ignoreGormField(ft reflect.StructField) bool {
 }
 
 func (q *Query) SetCols(arg any, cols ...string) *Query {
+	q.doSetCols(arg, true, cols...)
+	return q
+}
+
+func (q *Query) SetColsIgnoreEmpty(arg any, cols ...string) *Query {
+	q.doSetCols(arg, false, cols...)
+	return q
+}
+
+func (q *Query) doSetCols(arg any, inclEmpty bool, cols ...string) *Query {
 	if arg == nil {
 		return q
 	}
@@ -432,13 +444,13 @@ func (q *Query) SetCols(arg any, cols ...string) *Query {
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
 		fv := rv.Field(i)
-		q.setField(colSet, ft, fv)
+		q.setField(colSet, ft, fv, inclEmpty)
 	}
 
 	return q
 }
 
-func (q *Query) setField(colSet *util.Set[string], ft reflect.StructField, fv reflect.Value) {
+func (q *Query) setField(colSet *util.Set[string], ft reflect.StructField, fv reflect.Value, inclEmpty bool) {
 	fname := q.ColumnName(ft.Name)
 	if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
 		return // specified column names explicitly, check if it's in the name set
@@ -451,15 +463,63 @@ func (q *Query) setField(colSet *util.Set[string], ft reflect.StructField, fv re
 	// embedded struct
 	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
 		for i := range ft.Type.NumField() {
-			q.setField(colSet, ft.Type.Field(i), fv.Field(i))
+			q.setField(colSet, ft.Type.Field(i), fv.Field(i), inclEmpty)
 		}
 		return
 	}
 
-	val, ok := reflectValue(fv)
-	if ok {
-		q.Set(fname, val)
+	// val, ok := reflectValue(fv)
+	// if ok {
+	// 	q.Set(fname, val)
+	// }
+
+	if !inclEmpty {
+		switch fv.Kind() {
+		case reflect.Pointer:
+			if fv.IsNil() {
+				return
+			}
+			ele := fv.Elem()
+			if ele.Kind() == reflect.String && ele.Interface().(string) == "" {
+				return
+			}
+		case reflect.String:
+			if fv.Interface().(string) == "" {
+				return
+			}
+		}
 	}
+
+	var val any
+	switch fv.Kind() {
+	case reflect.Pointer:
+		if fv.IsNil() {
+			val = nil
+		} else {
+			val = fv.Elem().Interface()
+		}
+	default:
+		val = fv.Interface()
+	}
+
+	if val != nil {
+		// TODO: we only support our json serializer for now
+		ts := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
+		if ts != nil {
+			var serializerName = ts["JSON"]
+			if serializerName == "" {
+				serializerName = ts["SERIALIZER"]
+			}
+			if serializerName == "json" {
+				vs, err := json.WriteJson(val)
+				if err == nil {
+					val = vs
+				}
+			}
+		}
+	}
+
+	q.Set(fname, val)
 }
 
 func (q *Query) SetIf(cond bool, col string, arg any) *Query {
