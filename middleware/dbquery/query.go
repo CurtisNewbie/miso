@@ -646,6 +646,35 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 	}
 }
 
+func (pq *PageQuery[V]) IterateAllPages(rail miso.Rail, param IteratePageParam, forEachPage func(v []V) (stop bool, err error)) error {
+	caller := miso.GetCallerFn()
+	rail.Debugf("IterateAllPages '%v' start", caller)
+	defer rail.Debugf("IterateAllPages '%v' finished", caller)
+	if param.Limit < 1 {
+		param.Limit = 1
+	}
+	p := miso.Paging{Page: 1, Limit: param.Limit}
+	for {
+		rail.Debugf("IterateAllPages '%v', page: %v", caller, p.Page)
+		l, err := pq.scan(rail, p, false)
+		if err != nil {
+			return miso.WrapErr(err)
+		}
+		stop, err := forEachPage(l.Payload)
+		if err != nil || stop {
+			return err
+		}
+		if len(l.Payload) < p.Limit {
+			return nil
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown.New()
+		}
+
+		p.NextPage()
+	}
+}
+
 type IterateByOffsetParam[V, T any] struct {
 	Limit         int
 	InitialOffset T
