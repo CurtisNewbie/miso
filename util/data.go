@@ -396,6 +396,21 @@ func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
 	return m
 }
 
+// Merge slice of items to a map.
+func MergeSliceMap[K comparable, V any](vs []V, keyFunc func(v V) K) map[K]V {
+	if len(vs) < 1 {
+		return make(map[K]V)
+	}
+
+	m := make(map[K]V, len(vs))
+	for i := range vs {
+		v := vs[i]
+		k := keyFunc(v)
+		m[k] = v
+	}
+	return m
+}
+
 func NewStack[T any](cap int) *Stack[T] {
 	if cap < 0 {
 		cap = 0
