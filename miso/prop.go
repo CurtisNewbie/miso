@@ -236,6 +236,12 @@ const (
 	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
 )
 
+// misoconfig-section: Job Scheduler Configuration
+const (
+	// misoconfig-prop: enable API to manually trigger jobs (and tasks on current node) | false
+	PropSchedApiTriggerJobEnabled = "scheduler.api.trigger-job.enabled"
+)
+
 // misoconfig-default-start
 func init() {
 	PostServerBootstrap(func(rail Rail) error {
@@ -279,6 +285,7 @@ func init() {
 	SetDefProp(PropConsulFetchServerInterval, 30)
 	SetDefProp(PropConsulEnableDeregisterUrl, false)
 	SetDefProp(PropConsulDeregisterUrl, "/consul/deregister")
+	SetDefProp(PropSchedApiTriggerJobEnabled, false)
 	SetDefProp(PropLoggingLevel, "info")
 	SetDefProp(PropLoggingRollingFileAppendIpSuffix, false)
 	SetDefProp(PropLoggingRollingFileOnly, false)

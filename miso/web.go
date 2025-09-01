@@ -176,7 +176,7 @@ func addRoutesRegistar(reg routesRegistar) {
 }
 
 // Register GIN route for consul healthcheck
-func registerRouteForConsulHealthcheck() {
+func registerRouteForHealthcheck() {
 	url := GetPropStr(PropHealthCheckUrl)
 	if !util.IsBlankStr(url) {
 		HttpGet(url, RawHandler(DefaultHealthCheckInbound))
@@ -579,8 +579,10 @@ func webServerBootstrap(rail Rail) error {
 
 	// register consul health check
 	if !defaultHealthCheckHandlerDisabled {
-		registerRouteForConsulHealthcheck()
+		registerRouteForHealthcheck()
 	}
+
+	registerRouteForJobTriggers()
 
 	if err := serveApiDocTmpl(rail); err != nil {
 		rail.Errorf("failed to server apidoc, %v", err)
@@ -1275,4 +1277,18 @@ func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
 		handleFunc: newTRouteHandler(handler),
 		resVar:     res,
 	}
+}
+
+// enable api to manually trigger jobs
+func registerRouteForJobTriggers() {
+	if !GetPropBool(PropSchedApiTriggerJobEnabled) {
+		return
+	}
+
+	HttpGet("/debug/job/trigger", RawHandler(func(inb *Inbound) {
+		rail := inb.Rail()
+		name := inb.Query("name")
+		err := TriggerJob(rail, name)
+		inb.HandleResult(nil, err)
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Job By Name")
 }

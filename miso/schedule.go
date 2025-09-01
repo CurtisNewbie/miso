@@ -340,3 +340,19 @@ func CronExprEveryXMin(n int) string {
 func CronExprEveryXHour(n int) string {
 	return fmt.Sprintf("0 0 */%d * * *", n)
 }
+
+// Trigger Named Job.
+func TriggerJob(rail Rail, name string) error {
+	if util.IsBlankStr(name) {
+		return NewErrf("Job name is empty")
+	}
+
+	m := scheduleModule()
+	if err := m.scheduler.RunByTag(name); err != nil {
+		rail.Errorf("Failed to triggered job, jobName: %v, %v", name, err)
+		return err
+	} else {
+		rail.Debugf("Job '%v' triggered", name)
+		return nil
+	}
+}

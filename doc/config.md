@@ -94,6 +94,12 @@ The tables shown below list all configuration that you can tune. You can also re
 | jwt.key.private | private key for signing the JWT token  |               |
 | jwt.key.issuer  | issuer of the token                    |               |
 
+## Job Scheduler Configuration
+
+| property                          | description                                                     | default value |
+| --------------------------------- | --------------------------------------------------------------- | ------------- |
+| scheduler.api.trigger-job.enabled | enable API to manually trigger jobs (and tasks on current node) | false         |
+
 ## Kafka Configuration
 
 | property          | description                    | default value  |
