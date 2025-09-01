@@ -130,6 +130,17 @@ func (t ETime) Before(u ETime) bool {
 	return t.Time.Before(u.Time)
 }
 
+func (t ETime) In(z *time.Location) ETime {
+	return ToETime(t.ToTime().In(z))
+}
+
+func (t ETime) InZone(diffInHours int) ETime {
+	if diffInHours == 0 {
+		return t.In(time.UTC)
+	}
+	return t.In(time.FixedZone("", diffInHours*60*60))
+}
+
 func (t ETime) FormatDate() string {
 	return t.ToTime().Format(time.DateOnly)
 }
