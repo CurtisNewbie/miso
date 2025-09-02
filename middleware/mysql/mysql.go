@@ -169,6 +169,7 @@ type MySQLConnParam struct {
 	MaxConnLifetime time.Duration
 	MaxOpenConns    int
 	MaxIdleConns    int
+	NotPrepareStmt  bool
 }
 
 // Create new MySQL connection
@@ -182,7 +183,7 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s'", p.Host, p.Port, p.Schema, p.ConnParam)
 
 	cfg := &gorm.Config{
-		PrepareStmt: true, CreateBatchSize: 100,
+		PrepareStmt: !p.NotPrepareStmt, CreateBatchSize: 100,
 		Logger: dbLogger,
 	}
 	conn, err := gorm.Open(mysql.Open(dsn), cfg)
