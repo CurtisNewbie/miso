@@ -170,7 +170,8 @@ func (t ETime) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
-	return t.ToTime(), nil
+	// some db (e.g., Aliyun ADB) only supports .999999, we have to manully trim the precision
+	return t.Format(SQLDateTimeFormat), nil
 }
 
 func (t ETime) String() string {
