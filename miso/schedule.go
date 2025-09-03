@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -102,7 +103,11 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 				m.logNextRun(rail, job.Name, false)
 			}
 		} else {
-			rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
+			if errors.Is(errRun, ErrServerShuttingDown) {
+				rail.Warnf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
+			} else {
+				rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
+			}
 		}
 
 		if len(m.postJobHooks) > 0 {
