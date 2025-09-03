@@ -89,6 +89,20 @@ func (r *RCache[T]) lockKey(key string) string {
 }
 
 // Get from cache
+func (r *RCache[T]) GetVal(rail miso.Rail, key string) (T, error) {
+	return r.GetValElse(rail, key, nil)
+}
+
+// Get from cache else run supplier
+func (r *RCache[T]) GetValElse(rail miso.Rail, key string, supplier func() (T, error)) (T, error) {
+	v, _, err := r.GetElse(rail, key, func() (util.Opt[T], error) {
+		v, err := supplier()
+		return util.OptWith(v), err
+	})
+	return v, err
+}
+
+// Get from cache
 func (r *RCache[T]) Get(rail miso.Rail, key string) (T, bool, error) {
 	return r.GetElse(rail, key, nil)
 }

@@ -34,6 +34,14 @@ func (r *rcacheV2[K, T]) Del(rail miso.Rail, k K) error {
 	return r.c.Del(rail, r.key(k))
 }
 
+func (r *rcacheV2[K, T]) GetVal(rail miso.Rail, k K) (T, error) {
+	return r.GetValElse(rail, k, nil)
+}
+
+func (r *rcacheV2[K, T]) GetValElse(rail miso.Rail, k K, supplier func() (T, error)) (T, error) {
+	return r.c.GetValElse(rail, r.key(k), supplier)
+}
+
 func (r *rcacheV2[K, T]) Get(rail miso.Rail, k K) (T, bool, error) {
 	return r.c.Get(rail, r.key(k))
 }
