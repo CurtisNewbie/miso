@@ -30,9 +30,9 @@ var (
 )
 
 var (
-	ErrMissingServiceName      = Errf("service name is required")
-	ErrServiceInstanceNotFound = Errf("unable to find any available service instance")
-	ErrServerListNotFound      = Errf("fail to find ServerList implemnetation")
+	ErrMissingServiceName      = NewErrf("service name is required")
+	ErrServiceInstanceNotFound = NewErrf("unable to find any available service instance")
+	ErrServerListNotFound      = NewErrf("fail to find ServerList implemnetation")
 )
 
 var discModule = InitAppModuleFunc(newModule)

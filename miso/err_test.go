@@ -64,11 +64,6 @@ func testUnwrapErrStack1() error {
 	return fmt.Errorf("wrapping oh no, %w", st)
 }
 
-func TestStack(t *testing.T) {
-	s := stack(1)
-	t.Log(s)
-}
-
 func TestUnknownErr(t *testing.T) {
 	ne := errors.New("something is wrong")
 	err := NewErrf("operation failed").Wrap(ne)
