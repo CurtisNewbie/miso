@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 )
 
 // Redis Cache implementation.
@@ -46,7 +45,7 @@ func (r *rcacheV2[K, T]) Get(rail miso.Rail, k K) (T, bool, error) {
 	return r.c.Get(rail, r.key(k))
 }
 
-func (r *rcacheV2[K, T]) GetElse(rail miso.Rail, k K, supplier func() (util.Opt[T], error)) (T, bool, error) {
+func (r *rcacheV2[K, T]) GetElse(rail miso.Rail, k K, supplier func() (T, bool, error)) (T, bool, error) {
 	return r.c.GetElse(rail, r.key(k), supplier)
 }
 

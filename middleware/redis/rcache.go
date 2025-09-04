@@ -95,9 +95,9 @@ func (r *RCache[T]) GetVal(rail miso.Rail, key string) (T, error) {
 
 // Get from cache else run supplier
 func (r *RCache[T]) GetValElse(rail miso.Rail, key string, supplier func() (T, error)) (T, error) {
-	v, _, err := r.GetElse(rail, key, func() (util.Opt[T], error) {
+	v, _, err := r.GetElse(rail, key, func() (T, bool, error) {
 		v, err := supplier()
-		return util.OptWith(v), err
+		return v, true, err
 	})
 	return v, err
 }
@@ -108,7 +108,7 @@ func (r *RCache[T]) Get(rail miso.Rail, key string) (T, bool, error) {
 }
 
 // Get from cache else run supplier
-func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Opt[T], error)) (T, bool, error) {
+func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (T, bool, error)) (T, bool, error) {
 
 	// the actual operation
 	op := func() (T, error) {
@@ -131,16 +131,16 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Op
 		}
 
 		// call supplier and cache the supplied value
-		supplied, err := supplier()
+		supplied, ok, err := supplier()
 		if err != nil {
 			return t, miso.WrapErr(err)
 		}
-		if !supplied.IsPresent {
+		if !ok {
 			return t, miso.NoneErr
 		}
 
 		// serialize supplied value
-		v, err := r.ValueSerializer.Serialize(supplied.Val)
+		v, err := r.ValueSerializer.Serialize(supplied)
 		if err != nil {
 			return t, miso.WrapErrf(err, "failed to serialize the supplied value")
 		}
@@ -150,7 +150,7 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (util.Op
 		if scmd.Err() != nil {
 			return t, miso.WrapErr(scmd.Err())
 		}
-		return supplied.Val, nil
+		return supplied, nil
 	}
 
 	handleResult := func(t T, err error) (T, bool, error) {

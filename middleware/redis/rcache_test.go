@@ -28,13 +28,13 @@ func TestRcacheWithObject(t *testing.T) {
 	rail := preRCacheTest(t)
 	exp := 10 * time.Second
 	invokeCount := 0
-	supplier := func() (util.Opt[RCacheDummy], error) {
+	supplier := func() (RCacheDummy, bool, error) {
 		invokeCount++
 		rail.Infof("Called supplier, %v", invokeCount)
-		return util.OptWith(RCacheDummy{
+		return RCacheDummy{
 			Name: "Banana",
 			Age:  12,
-		}), nil
+		}, true, nil
 	}
 
 	cache := NewRCache[RCacheDummy]("test0", RCacheConfig{Exp: exp})
@@ -86,9 +86,9 @@ func TestRcacheWithObject(t *testing.T) {
 
 	rail.Infof("3. got from supplier %+v, invokeCount: %v", dummy, invokeCount)
 
-	_, ok, err = cache.GetElse(rail, "3", func() (util.Opt[RCacheDummy], error) {
+	_, ok, err = cache.GetElse(rail, "3", func() (RCacheDummy, bool, error) {
 		rail.Infof("returning emptyOpt")
-		return util.EmptyOpt[RCacheDummy](), nil
+		return RCacheDummy{}, false, nil
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -130,8 +130,8 @@ func TestRCache2(t *testing.T) {
 	rail := preRCacheTest(t)
 
 	exp := 10 * time.Second
-	supplier := func() (util.Opt[string], error) {
-		return util.EmptyOpt[string](), nil
+	supplier := func() (string, bool, error) {
+		return "", false, nil
 	}
 
 	rcache := NewRCache[string]("test", RCacheConfig{Exp: exp, NoSync: true})
