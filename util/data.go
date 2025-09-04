@@ -29,10 +29,35 @@ type Pair struct {
 	Right any
 }
 
+// Generic pair data structure
+type GnPair[T any, V any] struct {
+	Left  T
+	Right V
+}
+
+// String-based Pair data structure
+type StrGnPair[T any] struct {
+	Left  string
+	Right T
+}
+
 // String-based Pair data structure
 type StrPair struct {
 	Left  string
 	Right any
+}
+
+// Merge StrPair into a map
+func MergeStrGnPairs[T any](p ...StrGnPair[T]) map[string][]T {
+	merged := map[string][]T{}
+	for _, v := range p {
+		if s, ok := merged[v.Left]; ok {
+			merged[v.Left] = append(s, v.Right)
+		} else {
+			merged[v.Left] = []T{v.Right}
+		}
+	}
+	return merged
 }
 
 // Merge StrPair into a map
@@ -152,7 +177,7 @@ func NewSetFromSlice[T comparable](ts []T) Set[T] {
 	return s
 }
 
-// Select one from the slice that matches the condition.
+// Deprecated: use [slutil.SliceFilterFirst] instead.
 func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
 	for i := range items {
 		t := items[i]
@@ -163,7 +188,7 @@ func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
 	return NewVar[T](), false
 }
 
-// Select random one from the slice
+// Deprecated: use [slutil.SliceGetOne] instead.
 func SliceGetOne[T any](items []*T) *T {
 	l := len(items)
 	if l < 1 {
@@ -207,7 +232,7 @@ func MapFirst[K comparable, V any](m map[K]V) V {
 	return v
 }
 
-// Filter duplicate values
+// Deprecated: use [slutil.Distinct] instead.
 func Distinct(l []string) []string {
 	s := NewSet[string]()
 	for _, v := range l {
@@ -216,7 +241,7 @@ func Distinct(l []string) []string {
 	return SetToSlice(s)
 }
 
-// Filter duplicate values, faster but values are sorted, and the slice values are filtered in place.
+// Deprecated: use [slutil.FastDistinct] instead.
 func FastDistinct(l []string) []string {
 	sort.Strings(l)
 	j := 0
@@ -336,6 +361,8 @@ func (r *RWMap[K, V]) GetElse(k K, elseFunc func(k K) V) (V, bool) {
 // Filter slice values in place.
 //
 // Be cautious that both slices are backed by the same array.
+//
+// Deprecated: use [lsutil.Filter] instead.
 func Filter[T any](l []T, f func(T) bool) []T {
 	cp := l[:0]
 	for i := range l {
@@ -353,6 +380,8 @@ func Filter[T any](l []T, f func(T) bool) []T {
 // Filter slice value.
 //
 // The original slice is not modified only copied.
+//
+// Deprecated: use [lsutil.CopyFilter] instead.
 func CopyFilter[T any](l []T, f func(T) bool) []T {
 	cp := make([]T, 0, len(l))
 	for i := range l {
@@ -365,6 +394,8 @@ func CopyFilter[T any](l []T, f func(T) bool) []T {
 }
 
 // Map slice item to another.
+//
+// Deprecated: use [lsutil.MapTo] instead.
 func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
 	if len(ts) < 1 {
 		return []V{}
@@ -378,6 +409,8 @@ func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
 }
 
 // Merge slice of items to a map.
+//
+// Deprecated: Use [lsutil.MergeMapSlice] instead.
 func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
 	if len(vs) < 1 {
 		return make(map[K][]V)
@@ -397,6 +430,8 @@ func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
 }
 
 // Merge slice of items to a map.
+//
+// Deprecated: Use [lsutil.MergeMap] instead.
 func MergeSliceMap[K comparable, V any](vs []V, keyFunc func(v V) K) map[K]V {
 	if len(vs) < 1 {
 		return make(map[K]V)
@@ -412,6 +447,8 @@ func MergeSliceMap[K comparable, V any](vs []V, keyFunc func(v V) K) map[K]V {
 }
 
 // Merge slice of items to a map.
+//
+// Deprecated: Use [lsutil.MergeMapAs] instead.
 func MergeSliceMapAs[T any, K comparable, V any](ts []T, keyFunc func(t T) K, valueFunc func(t T) V) map[K]V {
 	if len(ts) < 1 {
 		return make(map[K]V)
@@ -495,6 +532,7 @@ func (s *Stack[T]) Slice() []T {
 	return slices.Clone(s.st)
 }
 
+// Deprecated: use [lsutil.SliceFirst] instead.
 func SliceFirst[T any](v []T) (t T, ok bool) {
 	if len(v) > 0 {
 		t = v[0]
@@ -506,6 +544,7 @@ func SliceFirst[T any](v []T) (t T, ok bool) {
 	return
 }
 
+// Deprecated: use [lsutil.SliceCopy] instead.
 func SliceCopy[T any](v []T) []T {
 	cp := make([]T, len(v))
 	copy(cp, v)
@@ -520,6 +559,7 @@ func MapCopy[T comparable, V any](v map[T]V) map[T]V {
 	return cp
 }
 
+// Deprecated: use [lsutil.SliceRemove] instead.
 func SliceRemove[T any](v []T, idx ...int) []T {
 	cp := make([]T, 0, len(v)-len(idx))
 	idSet := NewSet[int]()
@@ -692,10 +732,12 @@ func (r *StrRWMap[V]) Keys() []string {
 	return keys
 }
 
+// Deprecated: use [lsutil.QuoteStrSlice] instead.
 func QuoteStrSlice(sl []string) []string {
 	return MapTo(sl, func(s string) string { return QuoteStr(s) })
 }
 
+// Deprecated: use [lsutil.SplitSubSlices] instead.
 func SplitSubSlices[T any](sl []T, limit int, f func(sub []T) error) error {
 	j := 0
 	for i := 0; i < len(sl); i += limit {
@@ -712,6 +754,7 @@ func SplitSubSlices[T any](sl []T, limit int, f func(sub []T) error) error {
 	return nil
 }
 
+// Deprecated: use [lsutil.UpdateSliceValue] instead.
 func UpdateSliceValue[T any](s []T, upd func(t T) T) {
 	for i, v := range s {
 		s[i] = upd(v)
@@ -754,6 +797,7 @@ func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
 	}
 }
 
+// Deprecated: use [lsutil.NewSyncSlice] instead.
 func NewSyncSlice[T any](cap int) *syncSlice[T] {
 	sl := make([]T, cap)
 	v := &syncSlice[T]{
