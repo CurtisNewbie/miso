@@ -5,7 +5,7 @@
 Install latest `misogen` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misogen@v0.2.13
+go install github.com/curtisnewbie/miso/cmd/misogen@v0.2.14
 ```
 
 Use `misogen` to generate new projects, e.g.,
@@ -27,10 +27,10 @@ $ misogen -h
 
 $ mkdir myapp && cd myapp && misogen -name "myapp"
 
-# misogen, current miso version: v0.2.13
+# misogen, current miso version: v0.2.14
 #
 # Initialized module 'myapp'
-# Installing dependency: github.com/curtisnewbie/miso/miso@v0.2.13
+# Installing dependency: github.com/curtisnewbie/miso/miso@v0.2.14
 # Initializing conf.yml
 # Initializing main.go
 ```
@@ -40,7 +40,7 @@ $ mkdir myapp && cd myapp && misogen -name "myapp"
 Install latest `misoapi` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misoapi@v0.2.13
+go install github.com/curtisnewbie/miso/cmd/misoapi@v0.2.14
 ```
 
 ```sh
@@ -48,7 +48,7 @@ $ misoapi -h
 
 # misoapi - automatically generate web endpoint in go based on misoapi-* comments
 #
-#   Supported miso version: v0.2.13
+#   Supported miso version: v0.2.14
 #
 # Usage of misoapi:
 #   -debug
@@ -72,7 +72,7 @@ $ misoapi -h
 Install latest `misocurl` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misocurl@v0.2.13
+go install github.com/curtisnewbie/miso/cmd/misocurl@v0.2.14
 ```
 
 ```sh
@@ -80,7 +80,7 @@ $ misocurl -h
 
 # misocurl - automatically miso.TClient code based on curl in clipboard
 #
-#   Supported miso version: v0.2.13
+#   Supported miso version: v0.2.14
 #
 # Usage of misocurl:
 #   -debug
@@ -92,7 +92,7 @@ $ misocurl -h
 Install latest `misoconfig` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misoconfig@v0.2.13
+go install github.com/curtisnewbie/miso/cmd/misoconfig@v0.2.14
 ```
 
 ```sh
@@ -100,7 +100,7 @@ $ misoconfig -h
 
 # misoconfig - automatically generate configuration tables based on misoconfig-* comments
 #
-#   Supported miso version: v0.2.13
+#   Supported miso version: v0.2.14
 #
 # Usage of misoconfig:
 #   -debug
