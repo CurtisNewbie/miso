@@ -374,6 +374,19 @@ func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	return
 }
 
+func (q *Query) ScanAny(ptr any) (ok bool, err error) {
+	n, err := q.Scan(ptr)
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+func (q *Query) ScanVal(ptr any) (err error) {
+	_, err = q.Scan(ptr)
+	return err
+}
+
 func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	sql = strings.TrimSpace(sql)
 	tx := q.tx.Exec(sql, args...)
