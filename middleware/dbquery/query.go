@@ -405,6 +405,11 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 	return
 }
 
+func (q *Query) UpdateAny() error {
+	_, err := q.Update()
+	return err
+}
+
 func (q *Query) Set(col string, arg any) *Query {
 	q.updateColumns[col] = arg
 	return q
@@ -542,6 +547,16 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 	return q
 }
 
+func (q *Query) CreateIgnoreAny(v any) error {
+	_, err := q.CreateIgnore(v)
+	return err
+}
+
+func (q *Query) CreateAny(v any) error {
+	_, err := q.Create(v)
+	return err
+}
+
 func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 	q.tx = q.tx.Clauses(clause.Insert{Modifier: "IGNORE"})
 	return q.Create(v)
@@ -552,6 +567,18 @@ func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	rowsAffected = tx.RowsAffected
 	err = miso.WrapErr(tx.Error)
 	return
+}
+
+func (q *Query) Delete() (rowsAffected int64, err error) {
+	tx := q.tx.Delete(nil)
+	rowsAffected = tx.RowsAffected
+	err = miso.WrapErr(tx.Error)
+	return
+}
+
+func (q *Query) DeleteAny() error {
+	_, err := q.Delete()
+	return err
 }
 
 func (q *Query) Omit(col ...string) *Query {
