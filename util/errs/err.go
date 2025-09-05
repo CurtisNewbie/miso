@@ -152,6 +152,7 @@ func (e *MisoErr) WithCode(code string) *MisoErr {
 func (e *MisoErr) WithMsg(msg string) *MisoErr {
 	n := e.copyNew()
 	n.msg = msg
+	n.withStack()
 	return n
 }
 
@@ -178,6 +179,7 @@ func (e *MisoErr) Is(target error) bool {
 
 func (e *MisoErr) WithInternalMsg(msg string, args ...any) *MisoErr {
 	ne := e.copyNew()
+	ne.withStack()
 	if len(args) > 0 {
 		ne.internalMsg = fmt.Sprintf(msg, args...)
 	} else {
