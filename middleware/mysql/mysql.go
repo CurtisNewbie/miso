@@ -72,6 +72,14 @@ func (m *mysqlModule) initManaged(rail miso.Rail) error {
 		pm := map[string]any{
 			"name": n,
 		}
+		prepareStmt := true
+		{
+			k := util.NamedSprintf(PropMySQLManagedPrepareStmt, pm)
+			if miso.HasProp(k) {
+				prepareStmt = miso.GetPropBool(k)
+			}
+		}
+
 		p := MySQLConnParam{
 			User:            miso.GetPropStr(util.NamedSprintf(PropMySQLManagedUser, pm)),
 			Password:        miso.GetPropStr(util.NamedSprintf(PropMySQLManagedPassword, pm)),
@@ -82,6 +90,7 @@ func (m *mysqlModule) initManaged(rail miso.Rail) error {
 			MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
 			MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
 			MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
+			NotPrepareStmt:  !prepareStmt,
 		}
 		if p.ConnParam == "" {
 			p.ConnParam = minimumConnParam
@@ -163,6 +172,7 @@ func (m *mysqlModule) initFromProp(rail miso.Rail) error {
 		MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
 		MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
 		MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
+		NotPrepareStmt:  !miso.GetPropBool(PropMySQLPrepareStmt),
 	}
 	return m.initPrimary(rail, p)
 }
@@ -246,7 +256,7 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s%s", p.User, p.Password, p.Host, p.Port, p.Schema, p.ConnParam)
-	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s'", p.Host, p.Port, p.Schema, p.ConnParam)
+	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s' (MaxLifetime: %v, MaxOpen: %v, MaxIdle: %v, PrepareStmt: %v)", p.Host, p.Port, p.Schema, p.ConnParam, p.MaxConnLifetime, p.MaxOpenConns, p.MaxIdleConns, !p.NotPrepareStmt)
 
 	cfg := &gorm.Config{
 		PrepareStmt: !p.NotPrepareStmt, CreateBatchSize: 100,
