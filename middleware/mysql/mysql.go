@@ -358,3 +358,28 @@ func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 func logSql() bool {
 	return miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropMySQLLogSQL)
 }
+
+func ShowGrants(rail miso.Rail, db *gorm.DB) ([]string, error) {
+	var grants []string
+	_, err := dbquery.NewQueryRail(rail, db).Raw(`SHOW GRANTS`).Scan(&grants)
+	if err != nil {
+		return nil, err
+	}
+	return grants, nil
+}
+
+func LogShowGrants(rail miso.Rail, db *gorm.DB) {
+	grants, err := ShowGrants(rail, db)
+	if err != nil {
+		rail.Warnf("SHOW GRANTS failed, %v", err)
+		return
+	}
+	sb := strings.Builder{}
+	for _, g := range grants {
+		if sb.Len() > 0 {
+			sb.WriteRune('\n')
+		}
+		sb.WriteString("- " + g)
+	}
+	rail.Infof("SHOW GRANTS:\n%v", sb.String())
+}
