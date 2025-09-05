@@ -387,6 +387,11 @@ func (q *Query) ScanVal(ptr any) (err error) {
 	return err
 }
 
+func (q *Query) ExecAny(sql string, args ...any) error {
+	_, err := q.Exec(sql, args...)
+	return err
+}
+
 func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	sql = strings.TrimSpace(sql)
 	tx := q.tx.Exec(sql, args...)
