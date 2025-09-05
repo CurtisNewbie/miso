@@ -120,7 +120,7 @@ func (m *mysqlModule) initManaged(rail miso.Rail) error {
 
 		conn, err := NewMySQLConn(rail, p)
 		if err != nil {
-			return miso.WrapErrf(err, "failed to create mysql connection, %v:***/%v", p.User, p.Schema)
+			return miso.WrapErrf(err, "failed to create mysql connection for '%v', %v:***/%v", n, p.User, p.Schema)
 		}
 		m.managed[n] = conn
 		rail.Infof("Initialized managed MySQL connection '%v'", n)

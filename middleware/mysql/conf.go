@@ -62,6 +62,7 @@ const (
 	PropMySQLManagedPort = "mysql.managed.${name}.port"
 
 	// misoconfig-prop: managed connection enable prepared statement | true
+	// misoconfig-doc-only
 	PropMySQLManagedPrepareStmt = "mysql.managed.${name}.prepare-statement"
 )
 
@@ -77,7 +78,6 @@ func init() {
 	miso.SetDefProp(PropMySQLConnLifetime, 30)
 	miso.SetDefProp(PropMySQLMaxOpenConns, 10)
 	miso.SetDefProp(PropMySQLMaxIdleConns, 10)
-	miso.SetDefProp(PropMySQLManagedPrepareStmt, true)
 }
 
 // misoconfig-default-end
