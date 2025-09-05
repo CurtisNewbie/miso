@@ -3,6 +3,8 @@ package miso
 import (
 	"bytes"
 	"testing"
+
+	"github.com/curtisnewbie/miso/util"
 )
 
 func TestResolveArg(t *testing.T) {
@@ -268,3 +270,20 @@ func TestAlias(t *testing.T) {
 	t.Logf("level.v5: %v, v6: %v", GetPropStr("level.v5"), GetPropStr("v6"))
 }
 */
+
+func TestGetParentNodeAsAsSlice(t *testing.T) {
+	err := LoadConfigFromStr(`
+test:
+  node-a:
+    name: "a"
+  node-b:
+    name: "b"
+  node-c:
+    name: "c"
+`, EmptyRail())
+	util.Must(err)
+	t.Logf("%+v", GetPropAny("test"))
+	for i, v := range GetPropChild("test") {
+		t.Logf("%v, %v", i, v)
+	}
+}

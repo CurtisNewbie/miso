@@ -37,6 +37,26 @@ const (
 
 	// misoconfig-prop: max number of idle connections | 10
 	PropMySQLMaxIdleConns = "mysql.connection.idle.max"
+
+	// misoconfig-prop: managed connection username | root
+	// misoconfig-doc-only
+	PropMySQLManagedUser = "mysql.managed.${name}.user"
+
+	// misoconfig-prop: managed connection password
+	// misoconfig-doc-only
+	PropMySQLManagedPassword = "mysql.managed.${name}.password"
+
+	// misoconfig-prop: managed connection database
+	// misoconfig-doc-only
+	PropMySQLManagedSchema = "mysql.managed.${name}.database"
+
+	// misoconfig-prop: managed connection host | localhost
+	// misoconfig-doc-only
+	PropMySQLManagedHost = "mysql.managed.${name}.host"
+
+	// misoconfig-prop: managed connection port | 3306
+	// misoconfig-doc-only
+	PropMySQLManagedPort = "mysql.managed.${name}.port"
 )
 
 // misoconfig-default-start

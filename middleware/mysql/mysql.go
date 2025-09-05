@@ -8,6 +8,8 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -42,9 +44,64 @@ type mysqlModule struct {
 	mu                 *sync.RWMutex
 	conn               *gorm.DB
 	bootstrapCallbacks []MySQLBootstrapCallback
+	managed            map[string]*gorm.DB
 }
 
-func (m *mysqlModule) init(rail miso.Rail, p MySQLConnParam) error {
+func (m *mysqlModule) getManaged(name string) *gorm.DB {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	v, ok := m.managed[name]
+	if !ok {
+		return nil
+	}
+
+	if miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropMySQLLogSQL) {
+		return v.Debug()
+	}
+
+	return v
+}
+
+func (m *mysqlModule) initManaged(rail miso.Rail) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.managed = map[string]*gorm.DB{}
+	for _, n := range miso.GetPropChild("mysql.managed") {
+		n = strings.ToLower(n)
+		pm := map[string]any{
+			"name": n,
+		}
+		p := MySQLConnParam{
+			User:            miso.GetPropStr(util.NamedSprintf(PropMySQLManagedUser, pm)),
+			Password:        miso.GetPropStr(util.NamedSprintf(PropMySQLManagedPassword, pm)),
+			Schema:          miso.GetPropStr(util.NamedSprintf(PropMySQLManagedSchema, pm)),
+			Host:            miso.GetPropStr(util.NamedSprintf(PropMySQLManagedHost, pm)),
+			Port:            miso.GetPropInt(util.NamedSprintf(PropMySQLManagedPort, pm)),
+			ConnParam:       strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
+			MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
+			MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
+			MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
+		}
+		if p.ConnParam == "" {
+			p.ConnParam = minimumConnParam
+		}
+		if p.Host == "" {
+			p.ConnParam = "localhost"
+		}
+
+		conn, err := NewMySQLConn(rail, p)
+		if err != nil {
+			return miso.WrapErrf(err, "failed to create mysql connection, %v:***/%v", p.User, p.Schema)
+		}
+		m.managed[n] = conn
+		rail.Infof("Initialized managed MySQL connection '%v'", n)
+	}
+
+	return nil
+}
+
+func (m *mysqlModule) initPrimary(rail miso.Rail, p MySQLConnParam) error {
 	if p.ConnParam == "" {
 		p.ConnParam = minimumConnParam
 	}
@@ -107,7 +164,7 @@ func (m *mysqlModule) initFromProp(rail miso.Rail) error {
 		MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
 		MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
 	}
-	return m.init(rail, p)
+	return m.initPrimary(rail, p)
 }
 
 func (m *mysqlModule) runBootstrapCallbacks(rail miso.Rail) error {
@@ -126,16 +183,25 @@ func (m *mysqlModule) registerHealthIndicator() {
 	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "MySQL Component",
 		CheckHealth: func(rail miso.Rail) bool {
-			db, err := m.mysql().DB()
-			if err != nil {
-				rail.Errorf("Failed to get MySQL DB, %v", err)
-				return false
+			dbs := []util.GnPair[string, *gorm.DB]{}
+			dbs = append(dbs, util.GnPair[string, *gorm.DB]{Left: "Primary", Right: m.mysql()})
+			dbs = append(dbs, slutil.MapTo(util.MapValues(m.managed), func(d *gorm.DB) util.GnPair[string, *gorm.DB] {
+				return util.GnPair[string, *gorm.DB]{Left: "Managed", Right: d}
+			})...)
+
+			for _, d := range dbs {
+				db, err := d.Right.DB()
+				if err != nil {
+					rail.Errorf("Failed to get MySQL DB (%v), %v", d.Left, err)
+					return false
+				}
+				err = db.Ping()
+				if err != nil {
+					rail.Errorf("Failed to ping MySQL (%v), %v", d.Left, err)
+					return false
+				}
 			}
-			err = db.Ping()
-			if err != nil {
-				rail.Errorf("Failed to ping MySQL, %v", err)
-				return false
-			}
+
 			return true
 		},
 	})
@@ -224,12 +290,17 @@ Init Handle to the database
 If mysql client has been initialized, current func call will be ignored.
 */
 func InitMySQL(rail miso.Rail, p MySQLConnParam) error {
-	return module().init(rail, p)
+	return module().initPrimary(rail, p)
 }
 
 // Get MySQL Connection.
 func GetMySQL() *gorm.DB {
 	return module().mysql()
+}
+
+// Get Managed MySQL Connection.
+func GetManaged(name string) *gorm.DB {
+	return module().getManaged(strings.ToLower(name))
 }
 
 // Check whether mysql client is initialized
@@ -241,6 +312,9 @@ func mysqlBootstrap(rail miso.Rail) error {
 	m := module()
 
 	if e := InitMySQLFromProp(rail); e != nil {
+		return miso.WrapErrf(e, "failed to establish connection to MySQL")
+	}
+	if e := m.initManaged(rail); e != nil {
 		return miso.WrapErrf(e, "failed to establish connection to MySQL")
 	}
 

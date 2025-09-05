@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -110,6 +111,26 @@ func (a *AppConfig) HasProp(prop string) bool {
 // Get prop as int slice
 func (a *AppConfig) GetPropIntSlice(prop string) []int {
 	return returnWithReadLock(a, func() []int { return a.vp.GetIntSlice(prop) })
+}
+
+// Get prop immediate child names
+func GetPropChild(prop string) []string {
+	m := GetPropAny(prop)
+	if m == nil {
+		return []string{}
+	}
+	rv := reflect.ValueOf(m)
+	if rv.Kind() != reflect.Map {
+		return []string{}
+	}
+	mk := rv.MapKeys()
+	c := []string{}
+	for _, k := range mk {
+		if k.Kind() == reflect.String {
+			c = append(c, k.String())
+		}
+	}
+	return c
 }
 
 // Get prop as string slice
