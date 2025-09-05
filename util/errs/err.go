@@ -371,3 +371,12 @@ func stack(n int) string {
 	}
 	return b.String()
 }
+
+func IsAny(curr error, others ...error) bool {
+	for _, tgt := range others {
+		if errors.Is(curr, tgt) {
+			return true
+		}
+	}
+	return false
+}
