@@ -9,7 +9,6 @@ import (
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
-	"github.com/curtisnewbie/miso/util/slutil"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -45,6 +44,26 @@ type mysqlModule struct {
 	conn               *gorm.DB
 	bootstrapCallbacks []MySQLBootstrapCallback
 	managed            map[string]*gorm.DB
+}
+
+func (m *mysqlModule) getAllManaged() []util.StrGnPair[*gorm.DB] {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	clt := []util.StrGnPair[*gorm.DB]{}
+	if len(m.managed) < 1 {
+		return clt
+	}
+
+	debug := miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropMySQLLogSQL)
+	for k, v := range m.managed {
+		cp := v
+		if debug {
+			cp = v.Debug()
+		}
+		clt = append(clt, util.StrGnPair[*gorm.DB]{Left: k, Right: cp})
+	}
+	return clt
 }
 
 func (m *mysqlModule) getManaged(name string) *gorm.DB {
@@ -193,11 +212,9 @@ func (m *mysqlModule) registerHealthIndicator() {
 	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "MySQL Component",
 		CheckHealth: func(rail miso.Rail) bool {
-			dbs := []util.GnPair[string, *gorm.DB]{}
-			dbs = append(dbs, util.GnPair[string, *gorm.DB]{Left: "Primary", Right: m.mysql()})
-			dbs = append(dbs, slutil.MapTo(util.MapValues(m.managed), func(d *gorm.DB) util.GnPair[string, *gorm.DB] {
-				return util.GnPair[string, *gorm.DB]{Left: "Managed", Right: d}
-			})...)
+			dbs := []util.StrGnPair[*gorm.DB]{}
+			dbs = append(dbs, util.StrGnPair[*gorm.DB]{Left: "primary", Right: m.mysql()})
+			dbs = append(dbs, m.getAllManaged()...)
 
 			for _, d := range dbs {
 				db, err := d.Right.DB()
@@ -210,6 +227,7 @@ func (m *mysqlModule) registerHealthIndicator() {
 					rail.Errorf("Failed to ping MySQL (%v), %v", d.Left, err)
 					return false
 				}
+				rail.Debugf("MySQL %v Healthcheck passed", d.Left)
 			}
 
 			return true
