@@ -1,47 +1,47 @@
 package miso
 
 import (
-	"github.com/curtisnewbie/miso/util/err"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 var (
 	// Error that represents None or Nil.
 	//
 	// Use miso.IsNoneErr(err) to check if an error represents None.
-	NoneErr = err.NoneErr
+	NoneErr = errs.NoneErr
 )
 
 const (
-	ErrCodeGeneric            string = err.ErrCodeGeneric
-	ErrCodeUnknownError       string = err.ErrCodeUnknownError
-	ErrCodeNotPermitted       string = err.ErrCodeNotPermitted
-	ErrCodeIllegalArgument    string = err.ErrCodeIllegalArgument
-	ErrCodeServerShuttingDown string = err.ErrCodeServerShuttingDown
+	ErrCodeGeneric            string = errs.ErrCodeGeneric
+	ErrCodeUnknownError       string = errs.ErrCodeUnknownError
+	ErrCodeNotPermitted       string = errs.ErrCodeNotPermitted
+	ErrCodeIllegalArgument    string = errs.ErrCodeIllegalArgument
+	ErrCodeServerShuttingDown string = errs.ErrCodeServerShuttingDown
 )
 
 var (
-	ErrUnknownError       = err.ErrUnknownError
-	ErrNotPermitted       = err.ErrNotPermitted
-	ErrIllegalArgument    = err.ErrIllegalArgument
-	ErrServerShuttingDown = err.ErrServerShuttingDown
+	ErrUnknownError       = errs.ErrUnknownError
+	ErrNotPermitted       = errs.ErrNotPermitted
+	ErrIllegalArgument    = errs.ErrIllegalArgument
+	ErrServerShuttingDown = errs.ErrServerShuttingDown
 )
 
 var (
-	// Deprecated: use [err.NewErrf] instead.
-	Errf            = err.NewErrf
-	NewErrf         = err.NewErrf
-	IsNoneErr       = err.IsNoneErr
-	NewErrfCode     = err.NewErrfCode
-	ErrfCode        = err.ErrfCode
-	UnknownErr      = err.UnknownErr
-	WrapErr         = err.WrapErr
-	WrapErrMulti    = err.WrapErrMulti
-	UnknownErrf     = err.UnknownErrf
-	UnknownErrMsgf  = err.UnknownErrMsgf
-	WrapErrf        = err.WrapErrf
-	WrapErrfCode    = err.WrapErrfCode
-	UnwrapErrStack  = err.UnwrapErrStack
-	ErrorStackTrace = err.ErrorStackTrace
+	// Deprecated: use [errs.NewErrf] instead.
+	Errf            = errs.NewErrf
+	NewErrf         = errs.NewErrf
+	IsNoneErr       = errs.IsNoneErr
+	NewErrfCode     = errs.NewErrfCode
+	ErrfCode        = errs.ErrfCode
+	UnknownErr      = errs.UnknownErr
+	WrapErr         = errs.WrapErr
+	WrapErrMulti    = errs.WrapErrMulti
+	UnknownErrf     = errs.UnknownErrf
+	UnknownErrMsgf  = errs.UnknownErrMsgf
+	WrapErrf        = errs.WrapErrf
+	WrapErrfCode    = errs.WrapErrfCode
+	UnwrapErrStack  = errs.UnwrapErrStack
+	ErrorStackTrace = errs.ErrorStackTrace
 )
 
-type MisoErr = err.MisoErr
+type MisoErr = errs.MisoErr
