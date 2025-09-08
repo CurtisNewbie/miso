@@ -926,3 +926,7 @@ func reflectValue(rv reflect.Value) (any, bool) {
 	}
 	return nil, false
 }
+
+func ExecSQL(rail miso.Rail, db *gorm.DB, sql string, args ...any) error {
+	return NewQuery(rail, db).ExecAny(sql, args...)
+}
