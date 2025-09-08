@@ -123,7 +123,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	logJobExec := t.LogJobExec
 	t.LogJobExec = false
 
-	miso.Infof("Schedule distributed task '%s' cron: '%s'", t.Name, t.Cron)
+	miso.Infof("Schedule task '%s' cron: '%s'", t.Name, t.Cron)
 	actualRun := t.Run
 	t.Run = func(rail miso.Rail) error {
 		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
