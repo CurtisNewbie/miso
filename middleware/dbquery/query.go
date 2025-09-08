@@ -1,6 +1,7 @@
 package dbquery
 
 import (
+	"context"
 	"database/sql/driver"
 	"reflect"
 	"strings"
@@ -602,7 +603,42 @@ func RunTransaction(rail miso.Rail, db *gorm.DB, callback func(qry func() *Query
 	})
 }
 
-func NewQuery(db *gorm.DB) *Query {
+// Create New *Query.
+//
+// opts can be [*gorm.DB], [miso.Rail] or [context.Context].
+//
+// If *gorm.DB is missing, [GetDB] is called to obtain the primary one.
+func NewQuery(opts ...any) *Query {
+	var (
+		db *gorm.DB
+		r  *miso.Rail
+		c  context.Context
+	)
+	for _, o := range opts {
+		cp := o
+		switch v := cp.(type) {
+		case *gorm.DB:
+			if db == nil {
+				db = v
+			}
+		case miso.Rail:
+			if r == nil {
+				r = &v
+			}
+		case context.Context:
+			if c == nil {
+				c = v
+			}
+		}
+	}
+	if db == nil {
+		db = GetDB()
+	}
+	if r != nil {
+		db = db.WithContext(r.Context())
+	} else if c != nil {
+		db = db.WithContext(c)
+	}
 	q := &Query{tx: db, _db: db, updateColumns: map[string]any{}}
 	return q
 }
