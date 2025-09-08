@@ -36,10 +36,6 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [Using pprof](./doc/pprof.md)
 - [List of Supported Middlewares](./doc/middlewares.md)
 
-## Updates
-
-- Since v0.2.15, 21 configuration properties are renamed, these property names are not backward compatible. If you specify values for these configuration, make sure you update the property name before you upgrade miso.
-
 ## Projects that use miso
 
 The following are projects that use miso (mine tho), see also [moon-monorepo](https://github.com/curtisnewbie/moon-monorepo).
