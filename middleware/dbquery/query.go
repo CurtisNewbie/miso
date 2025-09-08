@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
@@ -12,6 +13,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
+)
+
+var (
+	typeColCache = sync.Map{}
 )
 
 type Query struct {
@@ -66,11 +71,18 @@ func (q *Query) SelectCols(v any) *Query {
 	}
 
 	rt := rv.Type()
+	selected, ok := typeColCache.Load(rt)
+	if ok {
+		return q.Select(strings.Join(selected.([]string), ","))
+	}
+
 	colSet := util.NewSetPtr[string]()
 	for i := range rt.NumField() {
 		q.selectFields(colSet, rt.Field(i))
 	}
-	return q.Select(strings.Join(colSet.CopyKeys(), ","))
+	ks := colSet.CopyKeys()
+	typeColCache.Store(rt, ks)
+	return q.Select(strings.Join(ks, ","))
 }
 
 func (q *Query) selectFields(colSet *util.Set[string], ft reflect.StructField) {
