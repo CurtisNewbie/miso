@@ -648,7 +648,7 @@ func NewQuery(opts ...any) *Query {
 }
 
 func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
-	return NewQuery(db.WithContext(r.Context()))
+	return NewQuery(r, db)
 }
 
 func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(r miso.Rail, db *gorm.DB) *Query {
