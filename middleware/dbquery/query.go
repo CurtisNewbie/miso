@@ -625,6 +625,10 @@ func NewQuery(opts ...any) *Query {
 			if r == nil {
 				r = &v
 			}
+		case *miso.Rail:
+			if r == nil {
+				r = v
+			}
 		case context.Context:
 			if c == nil {
 				c = v
