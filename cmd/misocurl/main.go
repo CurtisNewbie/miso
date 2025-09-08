@@ -175,6 +175,14 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 		inst.Method = "POST"
 	}
 
+	for k, v := range inst.Headers {
+		if strings.ToLower(k) == "authorization" {
+			if strings.HasPrefix(strings.TrimSpace(v), "Bearer") {
+				inst.Headers[k] = "Bearer {token}"
+			}
+		}
+	}
+
 	util.DebugPrintlnf(Debug, "inst: %+v", inst)
 	ok = true
 	return
