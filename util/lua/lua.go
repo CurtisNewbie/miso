@@ -94,34 +94,24 @@ func unpackLuaRetType[T LuaRetTypes](v glua.LValue) T {
 
 // Run Lua Script via Reader.
 //
-// Use With***() funcs to set global variables.
-//
-// If [WithLogger] is provided, infof(...) and errorf(...) are builtin funcs that can be called inside the lua scripts for logging.
-//
-// E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
-//
-// The returned value is not unwrapped and thus remains in lua type.
-func RunReader[T LuaRetTypes](f io.Reader, ops ...func(*glua.LState)) (any, error) {
+// See [Run]
+func RunReader[T LuaRetTypes](f io.Reader, ops ...func(*glua.LState)) (T, error) {
 	byt, err := io.ReadAll(f)
 	if err != nil {
-		return nil, err
+		var t T
+		return t, err
 	}
 	return Run[T](string(byt), ops...)
 }
 
 // Run Lua Script File.
 //
-// Use With***() funcs to set global variables.
-//
-// If [WithLogger] is provided, infof(...) and errorf(...) are builtin funcs that can be called inside the lua scripts for logging.
-//
-// E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
-//
-// The returned value is not unwrapped and thus remains in lua type.
-func RunFile[T LuaRetTypes](path string, ops ...func(*glua.LState)) (any, error) {
+// See [Run]
+func RunFile[T LuaRetTypes](path string, ops ...func(*glua.LState)) (T, error) {
 	byt, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		var t T
+		return t, err
 	}
 	return Run[T](string(byt), ops...)
 }
