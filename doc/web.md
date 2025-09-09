@@ -177,6 +177,6 @@ miso.HttpGet("/file/stream", miso.RawHandler(ApiTempKeyStreamFile)).
     DocQueryParam("key", "temporary file key")
 ```
 
-Use misoapi can also help upgrade to latest miso version. To migrate to later version, you simply run `misoapi` again. The generated code will still work.
+Using misoapi can also help upgrade to latest miso version. To migrate to later version, you simply run `misoapi` again. The generated code will still work.
 
 For more on misoapi, have a look at [Tools](./tools.md).

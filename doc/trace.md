@@ -34,10 +34,10 @@ In `fstore` service, we use miso's api to declare HTTP endpoint, in which, miso 
 
 ```go
 // declare endpoint
-miso.IGet("/file/info", GetFileInfoEp).Desc("Fetch file info")
+miso.HttpGet("/file/info", miso.AutoHandler(ApiGetFileInfo)).Desc("Fetch file info")
 
 // the handler
-func GetFileInfoEp(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
+func ApiGetFileInfo(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
 	rail := inb.Rail()
 	rail.Info("Got the trace!")
     // ...
