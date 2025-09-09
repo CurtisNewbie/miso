@@ -147,6 +147,9 @@ func WithGlobalNil(name string) func(*glua.LState) {
 	}
 }
 
+// Set table to global field.
+//
+// Values in map must be one of the types: string, int, int8, int16, int32, int64, float32, float64, and bool; if not, the value is ignored.
 func WithGlobalStrTable(name string, m map[string]any) func(*glua.LState) {
 	return func(l *glua.LState) {
 		tb := l.NewTable()
