@@ -31,6 +31,9 @@ func Run[T LuaRetTypes](script string, ops ...func(*glua.LState)) (T, error) {
 	defer st.Close()
 
 	// default implementation for logging
+	st.SetGlobal("printf", loggerFunc(func(s string, a ...any) {
+		fmt.Printf(s+"\n", a...)
+	}, st))
 	st.SetGlobal("infof", loggerFunc(func(s string, a ...any) {
 		fmt.Printf("[INFO] "+s+"\n", a...)
 	}, st))

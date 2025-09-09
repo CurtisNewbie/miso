@@ -8,13 +8,13 @@ import (
 
 func TestRunLua(t *testing.T) {
 	script := `
-infof("one two three: %v", "four")
-errorf("no no no: %v", "four")
-infof("got, %v", myarg)
-infof("table, %v", mytable)
-infof("table name, %v", mytable["name"])
-infof("table age, %v", mytable["age"])
-infof("table age, %v", mytable["age"])
+printf("one two three: %v", "four")
+printf("no no no: %v", "four")
+printf("got, %v", myarg)
+printf("table, %v", mytable)
+printf("table name, %v", mytable["name"])
+printf("table age, %v", mytable["age"])
+printf("table age, %v", mytable["age"])
 return 123.22
 `
 	res, err := Run[float64](script,
