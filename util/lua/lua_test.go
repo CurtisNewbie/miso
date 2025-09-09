@@ -15,7 +15,7 @@ printf("table, %v", mytable)
 printf("table name, %v", mytable["name"])
 printf("table age, %v", mytable["age"])
 printf("table age, %v", mytable["age"])
-return 123.22
+return "1234.11"
 `
 	res, err := Run[float64](script,
 		WithGlobalStrTable("mytable", map[string]any{

@@ -83,8 +83,16 @@ func unpackLuaRetType[T LuaRetTypes](v glua.LValue) T {
 		}
 		return t
 	case glua.LTString:
-		if tt.Kind() == reflect.String {
-			tv.SetString(glua.LVAsString(v))
+		vs := glua.LVAsString(v)
+		switch tt.Kind() {
+		case reflect.String:
+			tv.SetString(vs)
+			return tv.Interface().(T)
+		case reflect.Float64, reflect.Float32:
+			tv.SetFloat(cast.ToFloat64(vs))
+			return tv.Interface().(T)
+		case reflect.Int, reflect.Int32, reflect.Int64:
+			tv.SetInt(int64(cast.ToFloat64(vs)))
 			return tv.Interface().(T)
 		}
 		return t
