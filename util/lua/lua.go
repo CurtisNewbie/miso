@@ -25,6 +25,8 @@ type LuaRetTypes interface {
 //
 // If [WithLogger] is provided, infof(...) and errorf(...) are builtin funcs that can be called inside the lua scripts for logging.
 //
+// If [WithLogger] is not provided, you can still use infof(...), errorf(...) and printf(...), logs are written directly to stdout.
+//
 // E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
 func Run[T LuaRetTypes](script string, ops ...func(*glua.LState)) (T, error) {
 	st := glua.NewState()
