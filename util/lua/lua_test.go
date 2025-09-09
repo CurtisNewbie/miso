@@ -15,9 +15,9 @@ infof("table, %v", mytable)
 infof("table name, %v", mytable["name"])
 infof("table age, %v", mytable["age"])
 infof("table age, %v", mytable["age"])
-return true, false
+return 123.22
 `
-	res, err := Run(script,
+	res, err := Run[float64](script,
 		WithGlobalStrTable("mytable", map[string]any{
 			"name": "yongjie",
 			"age":  100,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
 	"github.com/spf13/cast"
 	glua "github.com/yuin/gopher-lua"
@@ -14,6 +15,10 @@ type Log interface {
 	Errorf(format string, args ...interface{})
 }
 
+type LuaRetTypes interface {
+	~int | ~int32 | ~int64 | ~float32 | ~float64 | ~string | ~bool
+}
+
 // Run Lua Script.
 //
 // Use With***() funcs to set global variables.
@@ -21,9 +26,7 @@ type Log interface {
 // If [WithLogger] is provided, infof(...) and errorf(...) are builtin funcs that can be called inside the lua scripts for logging.
 //
 // E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
-//
-// The returned value is not unwrapped and thus remains in lua type.
-func Run(script string, ops ...func(*glua.LState)) (any, error) {
+func Run[T LuaRetTypes](script string, ops ...func(*glua.LState)) (T, error) {
 	st := glua.NewState()
 	defer st.Close()
 
@@ -39,14 +42,49 @@ func Run(script string, ops ...func(*glua.LState)) (any, error) {
 		op(st)
 	}
 	if err := st.DoString(script); err != nil {
-		return nil, err
+		var t T
+		return t, err
 	}
 
-	var res any = nil
+	var res glua.LValue
 	if st.GetTop() > 0 {
 		res = st.Get(1)
 	}
-	return res, nil
+	return unpackLuaRetType[T](res), nil
+}
+
+func unpackLuaRetType[T LuaRetTypes](v glua.LValue) T {
+	var t T
+	if v == nil {
+		return t
+	}
+	tt := reflect.TypeOf(t)
+	tv := reflect.New(tt).Elem()
+	switch v.Type() {
+	case glua.LTBool:
+		if tt.Kind() == reflect.Bool {
+			tv.SetBool(glua.LVAsBool(v))
+			return tv.Interface().(T)
+		}
+		return t
+	case glua.LTNumber:
+		switch tt.Kind() {
+		case reflect.Float64, reflect.Float32:
+			tv.SetFloat(float64(glua.LVAsNumber(v)))
+			return tv.Interface().(T)
+		case reflect.Int, reflect.Int32, reflect.Int64:
+			tv.SetInt(int64(glua.LVAsNumber(v)))
+			return tv.Interface().(T)
+		}
+		return t
+	case glua.LTString:
+		if tt.Kind() == reflect.String {
+			tv.SetString(glua.LVAsString(v))
+			return tv.Interface().(T)
+		}
+		return t
+	}
+	return t
 }
 
 // Run Lua Script via Reader.
@@ -58,12 +96,12 @@ func Run(script string, ops ...func(*glua.LState)) (any, error) {
 // E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
 //
 // The returned value is not unwrapped and thus remains in lua type.
-func RunReader(f io.Reader, ops ...func(*glua.LState)) (any, error) {
+func RunReader[T LuaRetTypes](f io.Reader, ops ...func(*glua.LState)) (any, error) {
 	byt, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
-	return Run(string(byt), ops...)
+	return Run[T](string(byt), ops...)
 }
 
 // Run Lua Script File.
@@ -75,12 +113,12 @@ func RunReader(f io.Reader, ops ...func(*glua.LState)) (any, error) {
 // E.g., [WithGlobalStr], [WithGlobalNum], [WithGlobalBool]
 //
 // The returned value is not unwrapped and thus remains in lua type.
-func RunFile(path string, ops ...func(*glua.LState)) (any, error) {
+func RunFile[T LuaRetTypes](path string, ops ...func(*glua.LState)) (any, error) {
 	byt, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return Run(string(byt), ops...)
+	return Run[T](string(byt), ops...)
 }
 
 func WithLogger(rail Log) func(l *glua.LState) {
