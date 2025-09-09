@@ -137,7 +137,7 @@ func WithGlobalStr(name string, v string) func(*glua.LState) {
 	}
 }
 
-func WithGlobalNum(name string, v int64) func(*glua.LState) {
+func WithGlobalNum(name string, v float64) func(*glua.LState) {
 	return func(l *glua.LState) {
 		l.SetGlobal(name, glua.LNumber(v))
 	}
