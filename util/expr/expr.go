@@ -18,6 +18,8 @@ func (e *Expr[T]) Eval(env T) (any, error) {
 
 // Compile Expr expression.
 //
+// If T is map, use [CompileEnv] instead.
+//
 // The compiled *Expr can be reused concurrently.
 //
 // See https://expr-lang.org/docs/language-definition.
@@ -34,10 +36,40 @@ func Compile[T any](s string) (*Expr[T], error) {
 
 // Compile Expr expression.
 //
+// If T is map, use [MustCompileEnv] instead.
+//
 // The compiled *Expr can be reused concurrently.
 //
 // See https://expr-lang.org/docs/language-definition.
 func MustCompile[T any](s string) *Expr[T] {
+	x, err := Compile[T](s)
+	if err != nil {
+		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
+	}
+	return x
+}
+
+// Compile Expr expression.
+//
+// The compiled *Expr can be reused concurrently.
+//
+// See https://expr-lang.org/docs/language-definition.
+func CompileEnv[T any](s string, env T) (*Expr[T], error) {
+	program, err := expr.Compile(s, expr.Env(env))
+	if err != nil {
+		return nil, errs.WrapErr(err)
+	}
+	return &Expr[T]{
+		p: program,
+	}, nil
+}
+
+// Compile Expr expression.
+//
+// The compiled *Expr can be reused concurrently.
+//
+// See https://expr-lang.org/docs/language-definition.
+func MustCompileEnv[T any](s string, env T) *Expr[T] {
 	x, err := Compile[T](s)
 	if err != nil {
 		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
