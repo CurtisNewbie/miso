@@ -8,6 +8,7 @@ require (
 	github.com/bsm/redislock v0.9.4
 	github.com/curtisnewbie/svc v0.0.8
 	github.com/dave/dst v0.27.3
+	github.com/expr-lang/expr v1.17.6
 	github.com/getkin/kin-openapi v0.131.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.17.0
