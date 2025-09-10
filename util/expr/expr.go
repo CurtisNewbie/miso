@@ -114,8 +114,6 @@ func (e *PooledExpr[T]) Eval(s string, env T) (any, error) {
 // T can be struct or map, but the overall structure must be the same (e.g., map with same kinds of keys).
 //
 // cacheSize: max number of *Expr in cache.
-//
-// scriptByteLimit: max number of bytes of script to be cached in PooledExpr.
 func NewPooledExpr[T any](cacheSize int) *PooledExpr[T] {
 	m, _ := lru.New[string, *Expr[T]](cacheSize)
 	return &PooledExpr[T]{
