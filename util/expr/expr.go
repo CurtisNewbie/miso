@@ -70,7 +70,7 @@ func CompileEnv[T any](s string, env T) (*Expr[T], error) {
 //
 // See https://expr-lang.org/docs/language-definition.
 func MustCompileEnv[T any](s string, env T) *Expr[T] {
-	x, err := Compile[T](s)
+	x, err := CompileEnv[T](s, env)
 	if err != nil {
 		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
 	}
