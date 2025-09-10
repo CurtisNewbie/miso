@@ -49,7 +49,7 @@ func MustCompile[T any](s string) *Expr[T] {
 	return x
 }
 
-// Compile Expr expression.
+// Compile Expr expression with Env example.
 //
 // The compiled *Expr can be reused concurrently.
 //
@@ -64,7 +64,7 @@ func CompileEnv[T any](s string, env T) (*Expr[T], error) {
 	}, nil
 }
 
-// Compile Expr expression.
+// Compile Expr expression with Env example.
 //
 // The compiled *Expr can be reused concurrently.
 //
