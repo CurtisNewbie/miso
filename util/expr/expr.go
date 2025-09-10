@@ -11,7 +11,8 @@ type Expr[T any] struct {
 }
 
 func (e *Expr[T]) Eval(env T) (any, error) {
-	return expr.Run(e.p, env)
+	r, err := expr.Run(e.p, env)
+	return r, errs.WrapErr(err)
 }
 
 // Compile Expr expression.
@@ -41,4 +42,12 @@ func MustCompile[T any](s string) *Expr[T] {
 		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
 	}
 	return x
+}
+
+// Compile and Run Expr expression.
+//
+// See https://expr-lang.org/docs/language-definition.
+func Eval(s string, t any) (any, error) {
+	r, err := expr.Eval(s, expr.Env(t))
+	return r, errs.WrapErr(err)
 }
