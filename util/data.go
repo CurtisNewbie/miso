@@ -358,6 +358,34 @@ func (r *RWMap[K, V]) GetElse(k K, elseFunc func(k K) V) (V, bool) {
 	return newItem, true
 }
 
+func (r *RWMap[K, V]) GetElseErr(k K, elseFunc func(k K) (V, error)) (V, error) {
+	r.mu.RLock()
+	if v, ok := r.storage[k]; ok {
+		defer r.mu.RUnlock()
+		return v, nil
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if v, ok := r.storage[k]; ok {
+		return v, nil
+	}
+
+	if elseFunc == nil {
+		var v V
+		return v, nil
+	}
+
+	newItem, err := elseFunc(k)
+	if err != nil {
+		return newItem, err
+	}
+	r.storage[k] = newItem
+	return newItem, nil
+}
+
 // Filter slice values in place.
 //
 // Be cautious that both slices are backed by the same array.
@@ -722,6 +750,10 @@ func (r *StrRWMap[V]) Del(k string) {
 
 func (r *StrRWMap[V]) GetElse(k string, elseFunc func(k string) V) (V, bool) {
 	return r.shard(k).GetElse(k, elseFunc)
+}
+
+func (r *StrRWMap[V]) GetElseErr(k string, elseFunc func(k string) (V, error)) (V, error) {
+	return r.shard(k).GetElseErr(k, elseFunc)
 }
 
 func (r *StrRWMap[V]) Keys() []string {
