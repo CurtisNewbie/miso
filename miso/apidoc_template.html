@@ -1,7 +1,7 @@
 {{define "unpackJsonDesc"}}
 <ul>
 {{range . }}
-    <li>'{{.Name}}': <i>({{.TypeName}})</i> {{.Desc}}
+    <li>'{{.JsonName}}': <i>({{.TypeNameAlias}})</i> {{.DescTag}}
         {{if .Fields}}
             {{template "unpackJsonDesc" .Fields}}
         {{end}}
