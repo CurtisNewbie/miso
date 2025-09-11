@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,8 +21,19 @@ type FlagInfo struct {
 	Set      bool
 }
 
+func updateUsage(usage string, required bool) string {
+	if required {
+		usage = strings.TrimSpace(usage)
+		if usage != "" {
+			usage = usage + ". "
+		}
+		usage = usage + "Required."
+	}
+	return usage
+}
+
 func Float64(name string, value float64, usage string, required bool) *float64 {
-	p := flag.Float64(name, value, usage)
+	p := flag.Float64(name, value, updateUsage(usage, required))
 	if required {
 		requiredFlags[name] = struct{}{}
 	}
@@ -29,7 +41,7 @@ func Float64(name string, value float64, usage string, required bool) *float64 {
 }
 
 func Int(name string, value int, usage string, required bool) *int {
-	p := flag.Int(name, value, usage)
+	p := flag.Int(name, value, updateUsage(usage, required))
 	if required {
 		requiredFlags[name] = struct{}{}
 	}
@@ -37,7 +49,7 @@ func Int(name string, value int, usage string, required bool) *int {
 }
 
 func Duration(name string, value time.Duration, usage string, required bool) *time.Duration {
-	p := flag.Duration(name, value, usage)
+	p := flag.Duration(name, value, updateUsage(usage, required))
 	if required {
 		requiredFlags[name] = struct{}{}
 	}
@@ -45,7 +57,7 @@ func Duration(name string, value time.Duration, usage string, required bool) *ti
 }
 
 func Bool(name string, value bool, usage string, required bool) *bool {
-	p := flag.Bool(name, value, usage)
+	p := flag.Bool(name, value, updateUsage(usage, required))
 	if required {
 		requiredFlags[name] = struct{}{}
 	}
@@ -53,7 +65,7 @@ func Bool(name string, value bool, usage string, required bool) *bool {
 }
 
 func String(name string, value string, usage string, required bool) *string {
-	p := flag.String(name, value, usage)
+	p := flag.String(name, value, updateUsage(usage, required))
 	if required {
 		requiredFlags[name] = struct{}{}
 	}
