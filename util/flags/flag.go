@@ -114,7 +114,7 @@ func Parse() {
 	m := visited()
 	for name := range requiredFlags {
 		if _, ok := m[name]; !ok {
-			fmt.Printf("Arg '%v' is required \n", name)
+			fmt.Printf("Arg '%v' is required \n\n", name)
 			flag.Usage()
 			os.Exit(2)
 		}
