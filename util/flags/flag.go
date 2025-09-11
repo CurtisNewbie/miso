@@ -10,6 +10,7 @@ import (
 var (
 	requiredFlags = map[string]struct{}{}
 	description   string
+	extra         string
 )
 
 type FlagInfo struct {
@@ -91,12 +92,21 @@ func WithDescription(s string) {
 	description = s
 }
 
+func WithExtra(s string) {
+	extra = s
+}
+
 func Parse() {
-	if description != "" {
+	if description != "" || extra != "" {
 		flag.Usage = func() {
-			fmt.Printf("\n%s\n", description)
+			if description != "" {
+				fmt.Printf("\n%s\n", description)
+			}
 			fmt.Printf("Usage of %s:\n", os.Args[0])
 			flag.PrintDefaults()
+			if extra != "" {
+				fmt.Printf("\n%s\n", extra)
+			}
 		}
 	}
 
