@@ -57,6 +57,10 @@ func (r *rcacheV2[K, T]) DelAll(rail miso.Rail) error {
 	return r.c.DelAll(rail)
 }
 
+func (r *rcacheV2[K, T]) ScanAll(rail miso.Rail, f func(keys []string) error) error {
+	return r.c.ScanAll(rail, f)
+}
+
 // Create new RCache.
 //
 // K type must either be string or implements [fmt.Stringer], if not, it panics.

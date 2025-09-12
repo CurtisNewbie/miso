@@ -190,6 +190,12 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 }
 
 func (r *RCache[T]) DelAll(rail miso.Rail) error {
+	return r.ScanAll(rail, func(keys []string) error {
+		return r.doBatchDel(rail, keys)
+	})
+}
+
+func (r *RCache[T]) ScanAll(rail miso.Rail, f func(keys []string) error) error {
 	pat := r.cacheKeyPattern()
 	cmd := r.getClient().Scan(rail.Context(), 0, pat, rcacheScanLimit)
 	if cmd.Err() != nil {
@@ -206,7 +212,7 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 		key := iter.Val()
 		buk = append(buk, key)
 		if len(buk) == batchSize {
-			err := r.doBatchDel(rail, buk)
+			err := f(buk)
 			if err != nil {
 				return err
 			}
@@ -214,7 +220,7 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 		}
 	}
 	if len(buk) > 0 {
-		return r.doBatchDel(rail, buk)
+		return f(buk)
 	}
 	return nil
 }
