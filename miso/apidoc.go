@@ -634,20 +634,30 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(util.Spaces(2) + "```\n")
 		}
 
-		if r.NgHttpClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
-			if r.JsonTsDef != "" {
+		if !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
+			if r.NgHttpClientDemo != "" {
+				if r.JsonTsDef != "" {
+					b.WriteRune('\n')
+					b.WriteString("- JSON Request / Response Object In TypeScript:\n")
+					b.WriteString(util.Spaces(2) + "```ts\n")
+					b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
+					b.WriteString(util.Spaces(2) + "```\n")
+				}
+
 				b.WriteRune('\n')
-				b.WriteString("- JSON Request / Response Object In TypeScript:\n")
+				b.WriteString("- Angular HttpClient Demo:\n")
 				b.WriteString(util.Spaces(2) + "```ts\n")
-				b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
+				b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
 				b.WriteString(util.Spaces(2) + "```\n")
 			}
 
-			b.WriteRune('\n')
-			b.WriteString("- Angular HttpClient Demo:\n")
-			b.WriteString(util.Spaces(2) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
+			if r.NgTableDemo != "" {
+				b.WriteRune('\n')
+				b.WriteString("- Angular NgTable Demo:\n")
+				b.WriteString(util.Spaces(2) + "```html\n")
+				b.WriteString(util.SAddLineIndent(r.NgTableDemo, util.Spaces(2)))
+				b.WriteString(util.Spaces(2) + "```\n")
+			}
 		}
 
 		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApi) {

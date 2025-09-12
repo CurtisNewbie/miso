@@ -1622,6 +1622,21 @@
   }
   ```
 
+- Angular NgTable Demo:
+  ```html
+  <table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">
+  	<ng-container matColumnDef="resultId">
+  		<th mat-header-cell *matHeaderCellDef> ResultId </th>
+  		<td mat-cell *matCellDef="let u"> {{u.resultId}} </td>
+  	</ng-container>
+  	<ng-container matColumnDef="time">
+  		<th mat-header-cell *matHeaderCellDef> Time </th>
+  		<td mat-cell *matCellDef="let u"> {{u.time | date: 'yyyy-MM-dd HH:mm:ss'}} </td>
+  	</ng-container>
+  	<tr mat-row *matRowDef="let row; columns: ['resultId','time'];"></tr>
+  	<tr mat-header-row *matHeaderRowDef="['resultId','time']"></tr>
+  </table>  ```
+
 ## GET /api/v17
 
 - JSON Response:
@@ -2600,7 +2615,7 @@
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
-    - "data": (map[string]string) response data
+    - "data": (map[string]int32) response data
 - cURL:
   ```sh
   curl -X POST 'http://localhost:8080/api/v32'
@@ -2611,14 +2626,14 @@
   type EmptyReq struct {
   }
 
-  func api32(rail miso.Rail, req EmptyReq) (map[string]string, error) {
-  	var res miso.GnResp[map[string]string]
+  func api32(rail miso.Rail, req EmptyReq) (map[string]int32, error) {
+  	var res miso.GnResp[map[string]int32]
   	err := miso.NewDynTClient(rail, "/api/v32", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
   		rail.Errorf("Request failed, %v", err)
-  		var dat map[string]string
+  		var dat map[string]int32
   		return dat, err
   	}
   	dat, err := res.Res()
@@ -2638,7 +2653,7 @@
     errorCode?: string;            // error code
     msg?: string;                  // message
     error?: boolean;               // whether the request was successful
-    data?: Map<string,string>;     // response data
+    data?: Map<string,number>;     // response data
   }
   ```
 
@@ -2661,7 +2676,7 @@
             this.snackBar.open(resp.msg, "ok", { duration: 6000 })
             return;
           }
-          let dat: Map<string,string> = resp.data;
+          let dat: Map<string,number> = resp.data;
         },
         error: (err) => {
           console.log(err)
