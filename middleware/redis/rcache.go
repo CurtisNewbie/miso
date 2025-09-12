@@ -2,10 +2,12 @@ package redis
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -82,6 +84,10 @@ func (r *RCache[T]) cacheKey(key string) string {
 
 func (r *RCache[T]) cacheKeyPattern() string {
 	return "rcache:" + r.name + ":*"
+}
+
+func (r *RCache[T]) cacheKeyPrefix() string {
+	return "rcache:" + r.name + ":"
 }
 
 func (r *RCache[T]) lockKey(key string) string {
@@ -190,12 +196,24 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 }
 
 func (r *RCache[T]) DelAll(rail miso.Rail) error {
-	return r.ScanAll(rail, func(keys []string) error {
+	return r.doScanAll(rail, func(keys []string) error {
 		return r.doBatchDel(rail, keys)
 	})
 }
 
 func (r *RCache[T]) ScanAll(rail miso.Rail, f func(keys []string) error) error {
+	prefix := r.cacheKeyPrefix()
+	return r.doScanAll(rail, func(keys []string) error {
+		slutil.UpdateSliceValue[string](keys, func(t string) string {
+			t, _ = strings.CutPrefix(t, prefix)
+			return t
+		})
+		return f(keys)
+	})
+}
+
+func (r *RCache[T]) doScanAll(rail miso.Rail, f func(keys []string) error) error {
+
 	pat := r.cacheKeyPattern()
 	cmd := r.getClient().Scan(rail.Context(), 0, pat, rcacheScanLimit)
 	if cmd.Err() != nil {
