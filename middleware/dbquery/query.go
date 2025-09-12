@@ -71,18 +71,17 @@ func (q *Query) SelectCols(v any) *Query {
 	}
 
 	rt := rv.Type()
-	selected, ok := typeColCache.Load(rt)
-	if ok {
-		return q.Select(strings.Join(selected.([]string), ","))
+	if selected, ok := typeColCache.Load(rt); ok {
+		return q.Select(selected.(string))
 	}
 
 	colSet := util.NewSetPtr[string]()
 	for i := range rt.NumField() {
 		q.selectFields(colSet, rt.Field(i))
 	}
-	ks := colSet.CopyKeys()
-	typeColCache.Store(rt, ks)
-	return q.Select(strings.Join(ks, ","))
+	selected := strings.Join(colSet.CopyKeys(), ",")
+	typeColCache.Store(rt, selected)
+	return q.Select(selected)
 }
 
 func (q *Query) selectFields(colSet *util.Set[string], ft reflect.StructField) {
