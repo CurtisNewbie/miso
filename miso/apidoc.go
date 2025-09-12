@@ -647,7 +647,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 				b.WriteRune('\n')
 				b.WriteString("- Angular HttpClient Demo:\n")
 				b.WriteString(util.Spaces(2) + "```ts\n")
-				b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo+"\n", util.Spaces(2)))
+				b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
 				b.WriteString(util.Spaces(2) + "```\n")
 			}
 
@@ -655,7 +655,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 				b.WriteRune('\n')
 				b.WriteString("- Angular NgTable Demo:\n")
 				b.WriteString(util.Spaces(2) + "```html\n")
-				b.WriteString(util.SAddLineIndent(r.NgTableDemo, util.Spaces(2)))
+				b.WriteString(util.SAddLineIndent(r.NgTableDemo+"\n", util.Spaces(2)))
 				b.WriteString(util.Spaces(2) + "```\n")
 			}
 		}
