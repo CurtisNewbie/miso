@@ -1,6 +1,6 @@
 module github.com/curtisnewbie/miso
 
-go 1.24.7
+go 1.24.4
 
 require (
 	github.com/ChimeraCoder/gojson v1.1.0
