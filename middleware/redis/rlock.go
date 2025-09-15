@@ -39,11 +39,11 @@ The maximum time wait for the lock is 1s, retry every 5ms.
 
 May return 'redislock:ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockRun[T any](rail miso.Rail, key string, runnable LRunnable[T]) (T, error) {
+func RLockRun[T any](rail miso.Rail, key string, runnable LRunnable[T], op ...rLockOption) (T, error) {
 	var t T
 
 	lock := NewRLock(rail, key)
-	if err := lock.Lock(); err != nil {
+	if err := lock.Lock(op...); err != nil {
 		return t, miso.WrapErrf(err, "failed to obtain lock, key: %v", key)
 	}
 	defer lock.Unlock()
@@ -58,10 +58,10 @@ The maximum time wait for the lock is 1s, retry every 5ms.
 
 May return 'redislock.ErrNotObtained' when it fails to obtain the lock.
 */
-func RLockExec(ec miso.Rail, key string, runnable Runnable) error {
+func RLockExec(ec miso.Rail, key string, runnable Runnable, op ...rLockOption) error {
 	_, e := RLockRun(ec, key, func() (any, error) {
 		return nil, runnable()
-	})
+	}, op...)
 	return e
 }
 
