@@ -389,6 +389,16 @@ func ContainsAnyStr(s string, substrings ...string) bool {
 	return false
 }
 
+func ContainsAnyStrIgnoreCase(s string, substrings ...string) bool {
+	s = strings.ToLower(s)
+	for _, sub := range substrings {
+		if strings.Contains(s, strings.ToLower(sub)) {
+			return true
+		}
+	}
+	return false
+}
+
 func QuoteStr(s string) string {
 	return "\"" + s + "\""
 }
