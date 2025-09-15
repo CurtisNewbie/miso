@@ -109,17 +109,19 @@ func NewCustomRLock(rail miso.Rail, key string, config RLockConfig) *RLock {
 
 	if config.BackoffDuration > r.backoffWindow {
 		// this is merely an approximate
-		nsteps := int64(config.BackoffDuration) / int64(r.backoffWindow)
-		r.backoffSteps = int(nsteps)
-		rail.Tracef("Update backoff steps to %v", nsteps)
+		r.backoffSteps = int(int64(config.BackoffDuration) / int64(r.backoffWindow))
+	} else if config.BackoffDuration > 0 {
+		r.backoffSteps = 1
+		r.backoffWindow = config.BackoffDuration
 	}
-
-	rail.Tracef("Created RLock for key: '%v', with backoffWindow: %v, backoffSteps: %v", r.key, r.backoffWindow, r.backoffSteps)
 	return &r
 }
 
-func (r *RLock) TryLock() (locked bool, err error) {
-	err = r.Lock()
+// Try Lock.
+//
+// Use [WithBackoff] to modify default configuration.
+func (r *RLock) TryLock(op ...rLockOption) (locked bool, err error) {
+	err = r.Lock(op...)
 	if err != nil {
 		if errors.Is(err, redislock.ErrNotObtained) {
 			return false, nil
@@ -129,8 +131,38 @@ func (r *RLock) TryLock() (locked bool, err error) {
 	return true, nil
 }
 
+type rLockOption func(r *RLock)
+
+func WithBackoff(backoff time.Duration) rLockOption {
+	return func(r *RLock) {
+
+		if backoff > r.backoffWindow {
+			// this is merely an approximate
+			r.backoffSteps = int(int64(backoff) / int64(r.backoffWindow))
+		} else if backoff > 0 {
+			r.backoffSteps = 1
+			r.backoffWindow = backoff
+		} else {
+			r.backoffSteps = defaultBackoffSteps // default backoff steps
+		}
+
+		r.rail.Tracef("Updated RLock for key: '%v' to using backoff: %v", r.key, backoff)
+	}
+}
+
 // Acquire lock.
-func (r *RLock) Lock() error {
+//
+// Use [WithBackoff] to modify default configuration.
+func (r *RLock) Lock(op ...rLockOption) error {
+	for _, fn := range op {
+		fn(r)
+	}
+
+	if miso.IsTraceLevel() {
+		r.rail.Tracef("RLock locking for key: '%v', with backoffWindow: %v, backoffSteps: %v (around: %v)", r.key, r.backoffWindow, r.backoffSteps,
+			time.Duration(r.backoffSteps*int(r.backoffWindow)))
+	}
+
 	rlocker := ObtainRLocker()
 	lock, err := rlocker.Obtain(context.Background(), r.key, lockLeaseTime, &redislock.Options{
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),

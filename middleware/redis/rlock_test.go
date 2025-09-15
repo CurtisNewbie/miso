@@ -66,11 +66,11 @@ func TestRLock(t *testing.T) {
 	go func() {
 		wg.Wait()
 
-		lock := NewCustomRLock(rail, "test:rlock", RLockConfig{BackoffDuration: 1 * time.Second})
+		lock := NewCustomRLock(rail, "test:rlock", RLockConfig{BackoffDuration: time.Second * 3})
 		rail.Infof("routine - routine attempts to get lock")
 		start := time.Now()
 
-		err := lock.Lock()
+		err := lock.Lock(WithBackoff(1 * time.Second))
 		if err == nil {
 			rail.Infof("routine - test failed, condition violated, err == nil")
 			atomic.StoreInt32(&violated, 1)
