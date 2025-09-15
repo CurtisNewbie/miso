@@ -35,7 +35,7 @@ func ShuffleStr(letters string, times int) string {
 }
 
 func ShuffleRunes(letters []rune, times int) []rune {
-	if letters == nil || len(letters) < 1 {
+	if len(letters) < 1 {
 		return letters
 	}
 
