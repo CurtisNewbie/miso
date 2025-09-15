@@ -178,7 +178,6 @@ func (r *RLock) Lock(op ...rLockOption) error {
 	r.cancelRefresher = cancel
 
 	go func(ctx context.Context) {
-		rail := r.rail.NewCtx()
 		ticker := time.NewTicker(lockRefreshTime)
 		defer ticker.Stop()
 
@@ -189,12 +188,12 @@ func (r *RLock) Lock(op ...rLockOption) error {
 					if errors.Is(err, redislock.ErrNotObtained) {
 						return
 					}
-					rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
+					r.rail.Warnf("Failed to refresh RLock for '%v', %v", r.key, err)
 				} else {
-					rail.Infof("Refreshed rlock for '%v', held_lock_for: %v", r.key, time.Since(lockStart))
+					r.rail.Infof("Refreshed rlock for '%v', held_lock_for: %v", r.key, time.Since(lockStart))
 				}
 			case <-ctx.Done():
-				rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
+				r.rail.Debugf("RLock Refresher cancelled for '%v'", r.key)
 				return
 			}
 		}
