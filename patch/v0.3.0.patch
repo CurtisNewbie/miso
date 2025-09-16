@@ -224,3 +224,21 @@
 
 -miso.GetLocalIPV4
 +util.GetLocalIPV4
+
+@@
+@@
+
+miso.Job{
+    ...,
+-   CronWithSeconds: true,
+    ...,
+}
+
+@@
+@@
+
+miso.Job{
+    ...,
+-   CronWithSeconds: false,
+    ...,
+}

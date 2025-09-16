@@ -32,6 +32,10 @@ func (q *Query) copyNew() *Query {
 	return NewQuery(q._db)
 }
 
+func (q *Query) From(table string) *Query {
+	return q.Table(table)
+}
+
 func (q *Query) Table(table string) *Query {
 	q.tx = q.tx.Table(table)
 	return q
