@@ -11,6 +11,14 @@
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
+-util.Set
++hash.Set
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
 -util.NewRWMap
 +hash.NewRWMap
 
@@ -191,4 +199,28 @@
 @@
 @@
 -miso.PostServerBootstrapped
-+miso.PostServerBootstrapp
++miso.PostServerBootstrap
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.MapTo
++slutil.MapTo
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.SliceRemove
++slutil.SliceRemove
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/miso"
++import "github.com/curtisnewbie/miso/util"
+
+-miso.GetLocalIPV4
++util.GetLocalIPV4
