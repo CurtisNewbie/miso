@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 	"golang.org/x/text/width"
 )
@@ -442,7 +443,7 @@ func HasAnyPrefix(s string, suf ...string) bool {
 }
 
 func TrimStrSlice(s []string) {
-	UpdateSliceValue(s, func(v string) string {
+	slutil.UpdateSliceValue(s, func(v string) string {
 		return strings.TrimSpace(v)
 	})
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -258,7 +259,7 @@ func (it *proxyFilters) next() {
 }
 
 func newProxyFilters(c *ProxyContext, pi []ProxyFilter, handler func(pc *ProxyContext)) *proxyFilters {
-	copy := util.SliceCopy(pi)
+	copy := slutil.SliceCopy(pi)
 	return &proxyFilters{
 		idx:     -1,
 		c:       c,

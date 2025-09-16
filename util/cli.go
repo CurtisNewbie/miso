@@ -7,7 +7,7 @@ import (
 	"github.com/curtisnewbie/miso/util/flags"
 )
 
-// Deprecated: Migrate to cli pkg. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to cli pkg.
 var (
 	TermOpenUrl   = cli.TermOpenUrl
 	Printlnf      = cli.Printlnf
@@ -17,10 +17,10 @@ var (
 	Must          = cli.Must
 )
 
-// Deprecated: Use [flags.StrSliceFlag] instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to [flags.StrSliceFlag].
 type StrSliceFlag = flags.StrSliceFlag
 
-// Deprecated: Use [flags.StrSlice] instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to [flags.StrSlice].
 func FlagStrSlice(name string, usage string) *StrSliceFlag {
 	return flags.StrSlice(name, usage, false)
 }
@@ -29,7 +29,7 @@ func FlagStrSlice(name string, usage string) *StrSliceFlag {
 //
 // Python executable must be available beforehand.
 //
-// Deprecated: Use [cli.RunPy] instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to [cli.RunPy].
 func RunPyScript(pyExec string, pyContent string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
 	return cli.RunPy(nil, pyExec, pyContent, args, opts...)
 }
@@ -38,12 +38,12 @@ func RunPyScript(pyExec string, pyContent string, args []string, opts ...func(*e
 //
 // If err is not nil, out may still contain output from the command.
 //
-// Deprecated: Use [cli.Run] instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to [cli.Run].
 func ExecCmd(executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
 	return cli.Run(nil, executable, args, opts...)
 }
 
-// Deprecated: Use [cli.MustGet] instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to [cli.MustGet].
 func MustGet[V any](v V, err error) V {
 	if err != nil {
 		panic(err)

@@ -2,7 +2,7 @@ package util
 
 import "github.com/curtisnewbie/miso/util/cli"
 
-// Deprecated: Use cli pkg instead. Will be removed in v0.2.19.
+// Deprecated: Since v0.2.17, migrate to util/cli pkg.
 //
 //lint:ignore U1000 ansi color code, keep it for future use
 const (

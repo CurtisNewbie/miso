@@ -5,10 +5,8 @@ import (
 	"container/list"
 	"fmt"
 	"hash/maphash"
-	"math/rand"
 	"reflect"
 	"slices"
-	"sort"
 	"sync"
 )
 
@@ -73,13 +71,13 @@ func MergeStrPairs(p ...StrPair) map[string][]any {
 	return merged
 }
 
-/*
-Set data structure
-
-It's internally backed by a Map.
-
-To create a new Set, use NewSet() func.
-*/
+// Set data structure
+//
+// It's internally backed by a Map.
+//
+// To create a new Set, use #NewSet func.
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 type Set[T comparable] struct {
 	// Keys in Set
 	Keys map[T]Void
@@ -156,12 +154,16 @@ func (s *Set[T]) CopyKeys() []T {
 }
 
 // Create ptr to a new Set
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func NewSetPtr[T comparable](keys ...T) *Set[T] {
 	s := NewSet[T](keys...)
 	return &s
 }
 
 // Create new Set
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func NewSet[T comparable](keys ...T) Set[T] {
 	s := Set[T]{Keys: map[T]Void{}}
 	for _, k := range keys {
@@ -171,33 +173,17 @@ func NewSet[T comparable](keys ...T) Set[T] {
 }
 
 // Create new Set from slice
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func NewSetFromSlice[T comparable](ts []T) Set[T] {
 	s := Set[T]{Keys: map[T]Void{}}
 	s.AddAll(ts)
 	return s
 }
 
-// Deprecated: use [slutil.SliceFilterFirst] instead.
-func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
-	for i := range items {
-		t := items[i]
-		if f(t) {
-			return t, true
-		}
-	}
-	return NewVar[T](), false
-}
-
-// Deprecated: use [slutil.SliceGetOne] instead.
-func SliceGetOne[T any](items []*T) *T {
-	l := len(items)
-	if l < 1 {
-		return nil
-	}
-	return items[rand.Intn(l)]
-}
-
 // Copy values of map
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func MapValues[K comparable, V any](m map[K]V) []V {
 	var values []V = []V{}
 	if m == nil {
@@ -210,11 +196,15 @@ func MapValues[K comparable, V any](m map[K]V) []V {
 }
 
 // Copy keys of set
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func SetToSlice[T comparable](s Set[T]) []T {
 	return s.CopyKeys()
 }
 
 // Get keys from map
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func MapKeys[T comparable, V any](m map[T]V) []T {
 	var keys []T = []T{}
 	for k := range m {
@@ -224,6 +214,8 @@ func MapKeys[T comparable, V any](m map[T]V) []T {
 }
 
 // Get first from map
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func MapFirst[K comparable, V any](m map[K]V) V {
 	for k := range m {
 		return (m)[k]
@@ -232,30 +224,9 @@ func MapFirst[K comparable, V any](m map[K]V) V {
 	return v
 }
 
-// Deprecated: use [slutil.Distinct] instead.
-func Distinct(l []string) []string {
-	s := NewSet[string]()
-	for _, v := range l {
-		s.Add(v)
-	}
-	return SetToSlice(s)
-}
-
-// Deprecated: use [slutil.FastDistinct] instead.
-func FastDistinct(l []string) []string {
-	sort.Strings(l)
-	j := 0
-	for i := 1; i < len(l); i++ {
-		if l[j] == l[i] {
-			continue
-		}
-		j++
-		l[j] = l[i]
-	}
-	return l[:j+1]
-}
-
 // Build a map with string type key and any type of value
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V) map[string]V {
 	m := map[string]V{}
 	if l == nil {
@@ -269,6 +240,8 @@ func StrMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V
 }
 
 // Build a map with string type key and slice value of any type
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func StrSliceMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func(T) V) map[string][]V {
 	m := map[string][]V{}
 	if l == nil {
@@ -282,12 +255,16 @@ func StrSliceMap[T any, V any](l []T, keyMapper func(T) string, valueMapper func
 }
 
 // Map with sync.RWMutex embeded.
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 type RWMap[K comparable, V any] struct {
 	mu      sync.RWMutex
 	storage map[K]V
 }
 
 // Create new RWMap
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func NewRWMap[K comparable, V any]() *RWMap[K, V] {
 	return &RWMap[K, V]{
 		storage: make(map[K]V),
@@ -386,111 +363,6 @@ func (r *RWMap[K, V]) GetElseErr(k K, elseFunc func(k K) (V, error)) (V, error) 
 	return newItem, nil
 }
 
-// Filter slice values in place.
-//
-// Be cautious that both slices are backed by the same array.
-//
-// Deprecated: use [lsutil.Filter] instead.
-func Filter[T any](l []T, f func(T) bool) []T {
-	cp := l[:0]
-	for i := range l {
-		x := l[i]
-		if f(x) {
-			cp = append(cp, x)
-		}
-	}
-	for i := len(cp); i < len(l); i++ {
-		l[i] = NewVar[T]()
-	}
-	return cp
-}
-
-// Filter slice value.
-//
-// The original slice is not modified only copied.
-//
-// Deprecated: use [lsutil.CopyFilter] instead.
-func CopyFilter[T any](l []T, f func(T) bool) []T {
-	cp := make([]T, 0, len(l))
-	for i := range l {
-		x := l[i]
-		if f(x) {
-			cp = append(cp, x)
-		}
-	}
-	return cp
-}
-
-// Map slice item to another.
-//
-// Deprecated: use [lsutil.MapTo] instead.
-func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
-	if len(ts) < 1 {
-		return []V{}
-	}
-
-	vs := make([]V, 0, len(ts))
-	for i := range ts {
-		vs = append(vs, mapFunc(ts[i]))
-	}
-	return vs
-}
-
-// Merge slice of items to a map.
-//
-// Deprecated: Use [lsutil.MergeMapSlice] instead.
-func MergeSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
-	if len(vs) < 1 {
-		return make(map[K][]V)
-	}
-
-	m := make(map[K][]V, len(vs))
-	for i := range vs {
-		v := vs[i]
-		k := keyFunc(v)
-		if prev, ok := m[k]; ok {
-			m[k] = append(prev, v)
-		} else {
-			m[k] = []V{v}
-		}
-	}
-	return m
-}
-
-// Merge slice of items to a map.
-//
-// Deprecated: Use [lsutil.MergeMap] instead.
-func MergeSliceMap[K comparable, V any](vs []V, keyFunc func(v V) K) map[K]V {
-	if len(vs) < 1 {
-		return make(map[K]V)
-	}
-
-	m := make(map[K]V, len(vs))
-	for i := range vs {
-		v := vs[i]
-		k := keyFunc(v)
-		m[k] = v
-	}
-	return m
-}
-
-// Merge slice of items to a map.
-//
-// Deprecated: Use [lsutil.MergeMapAs] instead.
-func MergeSliceMapAs[T any, K comparable, V any](ts []T, keyFunc func(t T) K, valueFunc func(t T) V) map[K]V {
-	if len(ts) < 1 {
-		return make(map[K]V)
-	}
-
-	m := make(map[K]V, len(ts))
-	for i := range ts {
-		t := ts[i]
-		k := keyFunc(t)
-		m[k] = valueFunc(t)
-	}
-	return m
-}
-
 func NewStack[T any](cap int) *Stack[T] {
 	if cap < 0 {
 		cap = 0
@@ -560,43 +432,11 @@ func (s *Stack[T]) Slice() []T {
 	return slices.Clone(s.st)
 }
 
-// Deprecated: use [lsutil.SliceFirst] instead.
-func SliceFirst[T any](v []T) (t T, ok bool) {
-	if len(v) > 0 {
-		t = v[0]
-		ok = true
-		return
-	}
-
-	ok = false
-	return
-}
-
-// Deprecated: use [lsutil.SliceCopy] instead.
-func SliceCopy[T any](v []T) []T {
-	cp := make([]T, len(v))
-	copy(cp, v)
-	return cp
-}
-
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func MapCopy[T comparable, V any](v map[T]V) map[T]V {
 	cp := make(map[T]V, len(v))
 	for k, v := range v {
 		cp[k] = v
-	}
-	return cp
-}
-
-// Deprecated: use [lsutil.SliceRemove] instead.
-func SliceRemove[T any](v []T, idx ...int) []T {
-	cp := make([]T, 0, len(v)-len(idx))
-	idSet := NewSet[int]()
-	idSet.AddAll(idx)
-	for i := 0; i < len(v); i++ {
-		if idSet.Has(i) {
-			continue
-		}
-		cp = append(cp, v[i])
 	}
 	return cp
 }
@@ -709,12 +549,15 @@ func NewHeap[T any](cap int, lessFunc func(iv T, jv T) bool) *Heap[T] {
 
 const strRWMapShards = 32
 
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 type StrRWMap[V any] struct {
 	seed    maphash.Seed
 	storage []*RWMap[string, V]
 }
 
 // Create new sharded, concurrent access StrRWMap.
+//
+// Deprecated: Since v0.2.17, migrate to hash pkg.
 func NewStrRWMap[V any]() *StrRWMap[V] {
 	st := make([]*RWMap[string, V], strRWMapShards)
 	for i := range st {
@@ -762,80 +605,4 @@ func (r *StrRWMap[V]) Keys() []string {
 		keys = append(keys, st.Keys()...)
 	}
 	return keys
-}
-
-// Deprecated: use [lsutil.QuoteStrSlice] instead.
-func QuoteStrSlice(sl []string) []string {
-	return MapTo(sl, func(s string) string { return QuoteStr(s) })
-}
-
-// Deprecated: use [lsutil.SplitSubSlices] instead.
-func SplitSubSlices[T any](sl []T, limit int, f func(sub []T) error) error {
-	j := 0
-	for i := 0; i < len(sl); i += limit {
-		j += limit
-		if j > len(sl) {
-			j = len(sl)
-		}
-
-		err := f(sl[i:j])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Deprecated: use [lsutil.UpdateSliceValue] instead.
-func UpdateSliceValue[T any](s []T, upd func(t T) T) {
-	for i, v := range s {
-		s[i] = upd(v)
-	}
-}
-
-type syncSlice[T any] struct {
-	sl *[]T
-	mu *sync.RWMutex
-}
-
-func (s *syncSlice[T]) Append(t T) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	*s.sl = append(*s.sl, t)
-}
-
-func (s *syncSlice[T]) ForEachErr(f func(t T) (stop bool, err error)) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, v := range *s.sl {
-		st, er := f(v)
-		if er != nil {
-			return er
-		}
-		if st {
-			return nil
-		}
-	}
-	return nil
-}
-
-func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, v := range *s.sl {
-		if f(v) {
-			return
-		}
-	}
-}
-
-// Deprecated: use [lsutil.NewSyncSlice] instead.
-func NewSyncSlice[T any](cap int) *syncSlice[T] {
-	sl := make([]T, cap)
-	v := &syncSlice[T]{
-		sl: &sl,
-		mu: &sync.RWMutex{},
-	}
-
-	return v
 }

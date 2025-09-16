@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
@@ -192,7 +193,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 
 	// preserve content of the already loaded config files
 	loadedConfigFiles := miso.App().Config().GetDefaultConfigFileLoaded()
-	for _, f := range util.Distinct(loadedConfigFiles) {
+	for _, f := range slutil.Distinct(loadedConfigFiles) {
 		if f == "" {
 			continue
 		}
@@ -541,14 +542,18 @@ func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server
 		return nil
 	}
 	rail.Debugf("ListServers: %v, instances: %#v", name, inst)
-	inst = util.CopyFilter(inst, func(i model.Instance) bool { return i.Enable && i.Weight > 0 && i.Healthy })
-	return util.MapTo(inst, func(v model.Instance) miso.Server {
-		return miso.Server{
-			Address: v.Ip,
-			Port:    int(v.Port),
-			Meta:    util.MapCopy(v.Metadata),
-		}
-	})
+
+	return slutil.UpdateTransform(inst,
+		slutil.MapFunc(func(v model.Instance) miso.Server {
+			return miso.Server{
+				Address: v.Ip,
+				Port:    int(v.Port),
+				Meta:    util.MapCopy(v.Metadata),
+			}
+		}),
+		slutil.FilterFunc(func(i model.Instance) bool {
+			return i.Enable && i.Weight > 0 && i.Healthy
+		}))
 }
 
 func (s *NacosServerList) IsSubscribed(rail miso.Rail, service string) bool {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 
 	"github.com/curtisnewbie/miso/util"
@@ -1038,7 +1039,7 @@ func (it *interceptor) next() {
 }
 
 func newInterceptor(c *gin.Context, handler func(c *gin.Context)) *interceptor {
-	copy := util.SliceCopy(interceptors)
+	copy := slutil.SliceCopy(interceptors)
 	return &interceptor{
 		idx:          -1,
 		c:            c,

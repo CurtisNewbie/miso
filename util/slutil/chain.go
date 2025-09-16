@@ -1,5 +1,12 @@
 package slutil
 
+var (
+	FilterEmptyStr = FilterEmptyStrFunc
+)
+
+// Update slice values.
+//
+// See [FilterFunc], [FilterEmptyStrFunc], [DistinctFunc].
 func Update[T any](sl []T, fs ...func([]T) []T) []T {
 	for _, f := range fs {
 		sl = f(sl)
@@ -7,11 +14,25 @@ func Update[T any](sl []T, fs ...func([]T) []T) []T {
 	return sl
 }
 
+// Transform value to another type then perform optional value updates.
+//
+// See [FilterFunc], [MapFunc], [FilterEmptyStrFunc], [DistinctFunc].
 func Transform[T any, V any](sl []T, f func([]T) []V, fs ...func([]V) []V) []V {
 	v := f(sl)
 	for _, f := range fs {
 		v = f(v)
 	}
+	return v
+}
+
+// Update slice values then transform value to another type.
+//
+// See [FilterFunc], [MapFunc], [FilterEmptyStrFunc], [DistinctFunc].
+func UpdateTransform[T any, V any](sl []T, f func([]T) []V, fs ...func([]T) []T) []V {
+	for _, f := range fs {
+		sl = f(sl)
+	}
+	v := f(sl)
 	return v
 }
 
@@ -38,7 +59,7 @@ func MapFunc[T any, V any](mapFunc func(t T) V) func([]T) []V {
 	}
 }
 
-func FilterEmptyStr() func([]string) []string {
+func FilterEmptyStrFunc() func([]string) []string {
 	return func(s []string) []string {
 		return Filter(s, func(s string) bool {
 			return s != ""

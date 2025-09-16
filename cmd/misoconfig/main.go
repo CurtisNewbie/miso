@@ -16,6 +16,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -371,7 +372,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		maxNameLen := wlen("property")
 		maxDescLen := wlen("description")
 		maxValLen := wlen("default value")
-		configs := util.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
+		configs := slutil.CopyFilter(sec.Configs, func(c ConfigDecl) bool { return c.Description != "" })
 		for _, c := range configs {
 			nameLen := wlen(c.Name)
 			descLen := wlen(c.Description)

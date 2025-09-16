@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -297,7 +298,7 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 }
 
 func (a *AppConfig) GetDefaultConfigFileLoaded() []string {
-	return util.SliceCopy(a.defaultConfigFileLoaded)
+	return slutil.SliceCopy(a.defaultConfigFileLoaded)
 }
 
 // Load config from io Reader.

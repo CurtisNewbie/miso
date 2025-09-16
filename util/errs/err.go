@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
 )
 
 var (
@@ -262,7 +263,7 @@ func WrapErrMulti(errs ...error) error {
 	if len(errs) < 1 {
 		return nil
 	}
-	errs = util.Filter(errs, func(err error) bool { return err != nil })
+	errs = slutil.Filter(errs, func(err error) bool { return err != nil })
 	if len(errs) < 1 {
 		return nil
 	}

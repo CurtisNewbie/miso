@@ -65,82 +65,6 @@ func TestSet2(t *testing.T) {
 	t.Logf("set: %v", s)
 }
 
-func TestDistinct(t *testing.T) {
-	l := Distinct([]string{"a", "b", "c", "c", "d", "c"})
-	t.Log(l)
-	if len(l) != 4 {
-		t.Fatal("len should be 4")
-	}
-}
-
-func TestFilter(t *testing.T) {
-	l := Filter([]string{"a", "b", "c", "c", "d", "c"}, func(v string) bool { return v != "c" })
-	t.Log(l)
-	if len(l) != 3 {
-		t.Fatal("len should be 3")
-	}
-}
-
-func TestCopyFilter(t *testing.T) {
-	l := CopyFilter([]string{"a", "b", "c", "c", "d", "c"}, func(v string) bool { return v != "c" })
-	t.Log(l)
-	if len(l) != 3 {
-		t.Fatal("len should be 3")
-	}
-}
-
-func TestFastDistinct(t *testing.T) {
-	l := FastDistinct([]string{"a", "b", "c", "c", "d", "c"})
-	t.Log(l)
-	if len(l) != 4 {
-		t.Fatal("len should be 4")
-	}
-}
-
-func BenchmarkDistinct(b *testing.B) {
-	sample := []string{"a", "b", "c", "c", "d", "c"}
-	b.Run("old", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cp := make([]string, len(sample))
-			copy(cp, sample)
-
-			cp = Distinct(cp)
-			if len(cp) != 4 {
-				b.Fatal("len should be 4")
-			}
-		}
-	})
-
-	b.Run("new", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cp := make([]string, len(sample))
-			copy(cp, sample)
-			cp = FastDistinct(cp)
-			if len(cp) != 4 {
-				b.Fatal("len should be 4")
-			}
-		}
-	})
-}
-
-func TestMapTo(t *testing.T) {
-	s := []string{"1", "2", "3"}
-	v := MapTo(s, func(s string) int { return cast.ToInt(s) })
-	if len(v) < 3 {
-		t.Fatal("len != 3")
-	}
-	if v[0] != 1 {
-		t.Fatal("[0] != 1")
-	}
-	if v[1] != 2 {
-		t.Fatal("[1] != 2")
-	}
-	if v[2] != 3 {
-		t.Fatal("[2] != 3")
-	}
-	t.Log(v)
-}
-
 func TestRWMap(t *testing.T) {
 	m := NewRWMap[string, string]()
 	aw := NewAwaitFutures[any](NewAsyncPool(100, 5))
@@ -168,32 +92,6 @@ func TestRWMap(t *testing.T) {
 			t.Fatal("!ok")
 		}
 		t.Logf("%v -> %v", k, v)
-	}
-}
-
-func TestMergeSlice(t *testing.T) {
-	type vt struct {
-		name string
-		val  int
-	}
-	vs := []vt{{name: "apple", val: 1}, {name: "juice", val: 2}, {name: "apple", val: 3}}
-	m := MergeSlice(vs, func(v vt) string { return v.name })
-	t.Logf("merged: %+v", m)
-
-	s, ok := m["apple"]
-	if !ok {
-		t.Fatal("apple not found")
-	}
-	if len(s) != 2 {
-		t.Fatal("apple should have 2 values")
-	}
-
-	s, ok = m["juice"]
-	if !ok {
-		t.Fatal("juice not found")
-	}
-	if len(s) != 1 {
-		t.Fatal("juice should have 1 value")
 	}
 }
 
@@ -249,22 +147,6 @@ func TestStack(t *testing.T) {
 	s.Push(&v4)
 	t.Logf("stack: %v", s)
 	s.ForEach(fef)
-}
-
-func TestSliceCop(t *testing.T) {
-	a := []int{1, 2, 3, 4, 5}
-	b := SliceCopy(a)
-	b[0] = -1
-	t.Logf("a: %v, b: %v", a, b)
-
-	c := SliceCopy([]int(nil))
-	t.Logf("c: %v", c)
-}
-
-func TestSliceRemove(t *testing.T) {
-	a := []int{1, 2, 3, 4, 5}
-	b := SliceRemove(a, 1, 3)
-	t.Logf("a: %v, b: %v", a, b)
 }
 
 func TestHeap(t *testing.T) {
