@@ -2,10 +2,14 @@ package util
 
 import (
 	"reflect"
+
+	"github.com/curtisnewbie/miso/util/cli"
 )
 
 var (
 	voidType = reflect.TypeOf(Void{})
+
+	Printlnf = cli.Printlnf
 )
 
 // Empty Struct

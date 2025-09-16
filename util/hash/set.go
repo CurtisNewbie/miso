@@ -10,13 +10,13 @@ import (
 //
 // To create a new Set, use [NewSet].
 type Set[T comparable] struct {
-	// keys in Set
-	keys map[T]struct{}
+	// Keys in Set
+	Keys map[T]struct{}
 }
 
 // Test whether the key is in the set
 func (s *Set[T]) Has(key T) bool {
-	_, ok := (s.keys)[key]
+	_, ok := (s.Keys)[key]
 	return ok
 }
 
@@ -25,13 +25,13 @@ func (s *Set[T]) Add(key T) bool {
 	if s.Has(key) {
 		return false
 	}
-	(s.keys)[key] = struct{}{}
+	(s.Keys)[key] = struct{}{}
 	return true
 }
 
 // Delete key.
 func (s *Set[T]) Del(key T) {
-	delete(s.keys, key)
+	delete(s.Keys, key)
 }
 
 // Add keys to set
@@ -46,7 +46,7 @@ func (s *Set[T]) AddAll(keys []T) {
 
 // Add key to set (same as Add, but used for method chaining)
 func (s *Set[T]) AddThen(key T) *Set[T] {
-	(s.keys)[key] = struct{}{}
+	(s.Keys)[key] = struct{}{}
 	return s
 }
 
@@ -57,12 +57,12 @@ func (s *Set[T]) IsEmpty() bool {
 
 // Get the size of the Set
 func (s *Set[T]) Size() int {
-	return len(s.keys)
+	return len(s.Keys)
 }
 
 // To string
 func (s Set[T]) String() string {
-	var ks []T = MapKeys(s.keys)
+	var ks []T = MapKeys(s.Keys)
 	lks := len(ks)
 	st := "{ "
 	for i, k := range ks {
@@ -77,15 +77,15 @@ func (s Set[T]) String() string {
 
 // Copy keys in set
 func (s *Set[T]) CopyKeys() []T {
-	var keys []T = make([]T, 0, len(s.keys))
-	for k := range s.keys {
+	var keys []T = make([]T, 0, len(s.Keys))
+	for k := range s.Keys {
 		keys = append(keys, k)
 	}
 	return keys
 }
 
 func (s *Set[T]) ForEach(f func(v T) (stop bool)) {
-	for k := range s.keys {
+	for k := range s.Keys {
 		if f(k) {
 			return
 		}
@@ -94,7 +94,7 @@ func (s *Set[T]) ForEach(f func(v T) (stop bool)) {
 
 // Create new Set
 func NewSet[T comparable](keys ...T) Set[T] {
-	s := Set[T]{keys: map[T]struct{}{}}
+	s := Set[T]{Keys: map[T]struct{}{}}
 	for _, k := range keys {
 		s.Add(k)
 	}
