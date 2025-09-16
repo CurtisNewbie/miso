@@ -65,6 +65,7 @@ $ misoapi -h
 #   misoapi-ngtable                                                     // generate angular table code
 #   misoapi-raw                                                         // raw endpoint without auto request/response json handling
 #   misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only
+#   misoapi-ignore                                                      // ignored by misoapi
 ```
 
 ## `misocurl` - generate miso.TClient from curl
@@ -110,12 +111,28 @@ $ misoconfig -h
 #
 # For example:
 #
+# In prop.go:
 #
-# // misoconfig-section: Web Server Configuration
-# const (
+#   // misoconfig-section: Web Server Configuration
+#   const (
 #
-#         // misoconfig-prop: enable http server | true
-#         PropServerEnabled = "server.enabled"
+#           // misoconfig-prop: enable http server | true
+#           PropServerEnabled = "server.enabled"
 #
-# )
+#           // misoconfig-prop: my prop
+#           // misoconfig-alias: old-prop
+#           PropDeprecated = "new-prop"
+#
+#           // misoconfig-prop: my special prop
+#           // misoconfig-doc-only
+#           PropDocOnly = "prod-only-shown-in-doc"
+#
+#           // misoconfig-default-start
+#           // misoconfig-default-end
+#   )
+#
+# In ./doc/config.md:
+#
+#   <!-- misoconfig-table-start -->
+#   <!-- misoconfig-table-end -->
 ```
