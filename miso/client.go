@@ -746,8 +746,8 @@ func (t *Client) addQueryParam(k string, v string) *Client {
 // Create new defualt Client with EnableServiceDiscovery(), EnableTracing(), and Require2xx() turned on.
 //
 // The provided relUrl should be a relative url starting with '/'.
-func NewDynClient(ec Rail, relUrl string, serviceName string) *Client {
-	return NewClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing().Require2xx()
+func NewDynClient(rail Rail, relUrl string, serviceName string) *Client {
+	return NewClient(rail, relUrl).EnableServiceDiscovery(serviceName).EnableTracing().Require2xx()
 }
 
 // Create new miso HTTP Client.

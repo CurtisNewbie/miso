@@ -23,6 +23,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [CLI Tools](./doc/tools.md)
 - [Configuration](./doc/config.md)
 - [Application Lifecycle](./doc/lifecycle.md)
+- [HTTP Client](./doc/http_client.md)
 - [HTTP API Declaration](./doc/web.md)
 - [Tracing](./doc/trace.md)
 - [Database](./doc/database.md)
