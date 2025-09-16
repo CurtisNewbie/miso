@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/errs"
 	"gorm.io/gorm"
 )
 
@@ -37,18 +38,18 @@ func InitSchemaConditionally(rail miso.Rail, conditionalSegments []ConditionalSc
 		if seg.Condition != nil {
 			ok, err = seg.Condition(db)
 			if err != nil {
-				return miso.WrapErrf(err, "failed to execute Condition func")
+				return errs.WrapErrf(err, "failed to execute Condition func")
 			}
 		}
 		if ok {
 			if err := db.Exec(seg.Script).Error; err != nil {
-				return miso.WrapErrf(err, "failed to executed '%v'", seg.Script)
+				return errs.WrapErrf(err, "failed to executed '%v'", seg.Script)
 			}
 			rail.Debugf("Executed: '%v'", seg.Script)
 
 			if seg.AfterExec != nil {
 				if err := seg.AfterExec(db); err != nil {
-					return miso.WrapErrf(err, "failed to call AfterExec for script '%v'", seg.Script)
+					return errs.WrapErrf(err, "failed to call AfterExec for script '%v'", seg.Script)
 				}
 			}
 		}

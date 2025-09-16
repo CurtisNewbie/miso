@@ -162,9 +162,9 @@ func (e *MisoErr) WithMsg(msg string) *MisoErr {
 // Returns true, if both are *MisoErr and the code matches.
 //
 // WithInternalMsg always create new error, so we can basically
-// reuse the same error created using 'miso.NewErrf(...).WithCode(...)'
+// reuse the same error created using 'errs.NewErrf(...).WithCode(...)'
 //
-//	var ErrIllegalArgument = miso.NewErrf(...).WithCode(...)
+//	var ErrIllegalArgument = errs.NewErrf(...).WithCode(...)
 //
 //	var e1 = ErrIllegalArgument.WithInternalMsg(...)
 //	var e2 = ErrIllegalArgument.WithInternalMsg(...)

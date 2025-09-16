@@ -11,6 +11,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/protocol"
 )
@@ -95,7 +96,7 @@ func WriteMessageJson(rail miso.Rail, topic string, key string, value any) error
 func WriteMessage(rail miso.Rail, topic string, key string, value []byte) error {
 	w := GetWriter()
 	if w == nil {
-		return miso.NewErrf("failed to obtain Kafka Writer")
+		return errs.NewErrf("failed to obtain Kafka Writer")
 	}
 
 	// propogate trace through headers
@@ -163,7 +164,7 @@ func bootstrapKafka(rail miso.Rail) error {
 			defer func() {
 				if v := recover(); v != nil {
 					miso.Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
-					err = miso.NewErrf("kafka listener panic recovered, %v", v)
+					err = errs.NewErrf("kafka listener panic recovered, %v", v)
 				}
 			}()
 

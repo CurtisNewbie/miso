@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -371,7 +372,7 @@ func (q *Query) OrFunc(f func(*Query) *Query) *Query {
 func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	tx := q.tx.Scan(ptr)
 	rowsAffected = tx.RowsAffected
-	err = miso.WrapErr(tx.Error)
+	err = errs.WrapErr(tx.Error)
 	if v, ok := ptr.(Nilable); ok && v != nil {
 		v.MarkZero(rowsAffected < 1)
 	}
@@ -400,7 +401,7 @@ func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	sql = strings.TrimSpace(sql)
 	tx := q.tx.Exec(sql, args...)
 	rowsAffected = tx.RowsAffected
-	err = miso.WrapErr(tx.Error)
+	err = errs.WrapErr(tx.Error)
 	return
 }
 
@@ -410,7 +411,7 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 	}
 	tx := q.tx.Updates(q.updateColumns)
 	rowsAffected = tx.RowsAffected
-	err = miso.WrapErr(tx.Error)
+	err = errs.WrapErr(tx.Error)
 	return
 }
 
@@ -427,7 +428,7 @@ func (q *Query) Set(col string, arg any) *Query {
 func (q *Query) Count() (int64, error) {
 	var n int64
 	tx := q.tx.Count(&n)
-	return n, miso.WrapErr(tx.Error)
+	return n, errs.WrapErr(tx.Error)
 }
 
 func (q *Query) ignoreGormField(ft reflect.StructField) bool {
@@ -574,14 +575,14 @@ func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	tx := q.tx.Create(v)
 	rowsAffected = tx.RowsAffected
-	err = miso.WrapErr(tx.Error)
+	err = errs.WrapErr(tx.Error)
 	return
 }
 
 func (q *Query) Delete() (rowsAffected int64, err error) {
 	tx := q.tx.Delete(nil)
 	rowsAffected = tx.RowsAffected
-	err = miso.WrapErr(tx.Error)
+	err = errs.WrapErr(tx.Error)
 	return
 }
 
@@ -715,7 +716,7 @@ func (pq *PageQuery[V]) IterateAll(rail miso.Rail, param IteratePageParam, forEa
 		rail.Debugf("IterateAll '%v', page: %v", caller, p.Page)
 		l, err := pq.scan(rail, p, false)
 		if err != nil {
-			return miso.WrapErr(err)
+			return errs.WrapErr(err)
 		}
 		for _, l := range l.Payload {
 			stop, err := forEach(l)
@@ -746,7 +747,7 @@ func (pq *PageQuery[V]) IterateAllPages(rail miso.Rail, param IteratePageParam, 
 		rail.Debugf("IterateAllPages '%v', page: %v", caller, p.Page)
 		l, err := pq.scan(rail, p, false)
 		if err != nil {
-			return miso.WrapErr(err)
+			return errs.WrapErr(err)
 		}
 		stop, err := forEachPage(l.Payload)
 		if err != nil || stop {
@@ -783,7 +784,7 @@ func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOf
 		rail.Debugf("IterateAllByOffset '%v', offset: %v", caller, offset)
 		l, err := p.FetchPage(rail, db, offset)
 		if err != nil {
-			return miso.WrapErr(err)
+			return errs.WrapErr(err)
 		}
 		for _, l := range l {
 			stop, err := p.ForEach(l)

@@ -11,6 +11,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 const (
@@ -240,7 +241,7 @@ func (m *taskModule) releaseMasterNodeLock(jobName string) {
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return
 		}
-		miso.Errorf("Failed to release master node lock for %v, %v", jobName, miso.WrapErr(cmd.Err()))
+		miso.Errorf("Failed to release master node lock for %v, %v", jobName, errs.WrapErr(cmd.Err()))
 		return
 	}
 	miso.Debugf("Release master node lock for %v, released? %v", jobName, cmd.Val() == int64(1))
@@ -285,7 +286,7 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail, jobName string) bool {
 
 	bcmd := redis.GetRedis().SetNX(rail.Context(), m.getTaskMasterKey(jobName), m.nodeId, defMstLockTtl)
 	if bcmd.Err() != nil {
-		rail.Errorf("Try to become master node for job %v, %v", jobName, miso.WrapErr(bcmd.Err()))
+		rail.Errorf("Try to become master node for job %v, %v", jobName, errs.WrapErr(bcmd.Err()))
 		return false
 	}
 
@@ -313,7 +314,7 @@ func (m *taskModule) registerTasks(tasks []miso.Job) error {
 	}
 	for _, d := range tasks {
 		if err := miso.ScheduleCron(d); err != nil {
-			return fmt.Errorf("failed to schedule cron job, %+v, %w", d, miso.WrapErr(err))
+			return fmt.Errorf("failed to schedule cron job, %+v, %w", d, errs.WrapErr(err))
 		}
 	}
 	return nil

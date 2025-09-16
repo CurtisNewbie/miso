@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"github.com/spf13/cast"
@@ -319,7 +320,7 @@ func RegisterConsulService() error {
 	}
 
 	if err := GetConsulClient().Agent().ServiceRegister(registration); err != nil {
-		return WrapErrf(err, "failed to register consul service")
+		return errs.WrapErrf(err, "failed to register consul service")
 	}
 	consulRegistration.serviceId = proposedServiceId
 	consulRegistration.serviceName = registerName
@@ -450,7 +451,7 @@ func consulBootstrap(rail Rail) error {
 
 	OnAppReady(func(rail Rail) error {
 		if e := RegisterConsulService(); e != nil {
-			return WrapErrf(e, "failed to register on Consul")
+			return errs.WrapErrf(e, "failed to register on Consul")
 		}
 		return nil
 	})

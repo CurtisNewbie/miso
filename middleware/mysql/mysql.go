@@ -9,6 +9,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -121,7 +122,7 @@ func (m *mysqlModule) initManaged(rail miso.Rail) error {
 
 		conn, err := NewMySQLConn(rail, p)
 		if err != nil {
-			return miso.WrapErrf(err, "failed to create mysql connection for '%v', %v:***/%v", n, p.User, p.Schema)
+			return errs.WrapErrf(err, "failed to create mysql connection for '%v', %v:***/%v", n, p.User, p.Schema)
 		}
 		m.managed[n] = conn
 		rail.Infof("Initialized managed MySQL connection '%v'", n)
@@ -150,7 +151,7 @@ func (m *mysqlModule) initPrimary(rail miso.Rail, p MySQLConnParam) error {
 
 	conn, err := NewMySQLConn(rail, p)
 	if err != nil {
-		return miso.WrapErrf(err, "failed to create mysql connection, %v:***/%v", p.User, p.Schema)
+		return errs.WrapErrf(err, "failed to create mysql connection, %v:***/%v", p.User, p.Schema)
 	}
 	m.conn = conn
 	return nil
@@ -202,7 +203,7 @@ func (m *mysqlModule) runBootstrapCallbacks(rail miso.Rail) error {
 		db := GetMySQL()
 		for _, cbk := range m.bootstrapCallbacks {
 			if err := cbk(rail, db); err != nil {
-				return miso.WrapErrf(err, "failed to execute MySQLBootstrapCallback")
+				return errs.WrapErrf(err, "failed to execute MySQLBootstrapCallback")
 			}
 		}
 	}
@@ -341,10 +342,10 @@ func mysqlBootstrap(rail miso.Rail) error {
 	m := module()
 
 	if e := InitMySQLFromProp(rail); e != nil {
-		return miso.WrapErrf(e, "failed to establish connection to MySQL")
+		return errs.WrapErrf(e, "failed to establish connection to MySQL")
 	}
 	if e := m.initManaged(rail); e != nil {
-		return miso.WrapErrf(e, "failed to establish connection to MySQL")
+		return errs.WrapErrf(e, "failed to establish connection to MySQL")
 	}
 
 	// run bootstrap callbacks

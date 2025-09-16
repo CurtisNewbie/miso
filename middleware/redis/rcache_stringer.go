@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 // Redis Cache implementation.
@@ -83,7 +84,7 @@ func NewRCacheV2[K any, T any](name string, conf RCacheConfig) *rcacheV2[K, T] {
 	}
 
 	if toKey == nil {
-		panic(miso.NewErrf("K type must either be string or fmt.Stringer"))
+		panic(errs.NewErrf("K type must either be string or fmt.Stringer"))
 	}
 
 	c := NewRCache[T](name, conf)

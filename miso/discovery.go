@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 const (
@@ -30,9 +31,9 @@ var (
 )
 
 var (
-	ErrMissingServiceName      = NewErrf("service name is required")
-	ErrServiceInstanceNotFound = NewErrf("unable to find any available service instance")
-	ErrServerListNotFound      = NewErrf("fail to find ServerList implemnetation")
+	ErrMissingServiceName      = errs.NewErrf("service name is required")
+	ErrServiceInstanceNotFound = errs.NewErrf("unable to find any available service instance")
+	ErrServerListNotFound      = errs.NewErrf("fail to find ServerList implemnetation")
 )
 
 var discModule = InitAppModuleFunc(newModule)

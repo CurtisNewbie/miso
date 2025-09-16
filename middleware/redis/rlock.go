@@ -8,6 +8,7 @@ import (
 
 	"github.com/bsm/redislock"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 type Runnable func() error
@@ -44,7 +45,7 @@ func RLockRun[T any](rail miso.Rail, key string, runnable LRunnable[T], op ...rL
 
 	lock := NewRLock(rail, key)
 	if err := lock.Lock(op...); err != nil {
-		return t, miso.WrapErrf(err, "failed to obtain lock, key: %v", key)
+		return t, errs.WrapErrf(err, "failed to obtain lock, key: %v", key)
 	}
 	defer lock.Unlock()
 
@@ -168,7 +169,7 @@ func (r *RLock) Lock(op ...rLockOption) error {
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),
 	})
 	if err != nil {
-		return miso.WrapErrf(err, "failed to obtain lock, key: %v", r.key)
+		return errs.WrapErrf(err, "failed to obtain lock, key: %v", r.key)
 	}
 	lockStart := time.Now()
 	r.lock = lock

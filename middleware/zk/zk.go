@@ -8,6 +8,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/go-zookeeper/zk"
 )
 
@@ -41,7 +42,7 @@ func zkBootstrap(rail miso.Rail) error {
 		zc.SetLogger(miso.EmptyRail())
 	})
 	if err != nil {
-		return miso.WrapErrf(err, "connect zookeeper failed")
+		return errs.WrapErrf(err, "connect zookeeper failed")
 	}
 	m.client = c
 	miso.AddShutdownHook(func() { m.client.Close() })
@@ -130,7 +131,7 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 	}
 
 	if errors.Is(err, zk.ErrConnectionClosed) {
-		return false, miso.WrapErrf(err, "zk connection closed")
+		return false, errs.WrapErrf(err, "zk connection closed")
 	}
 
 	// node occupied, watch and try again
@@ -139,7 +140,7 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 
 		ch, err := Watch(l.leaderPath)
 		if err != nil {
-			return false, miso.WrapErrf(err, "failed to watch zk path: %v", l.leaderPath)
+			return false, errs.WrapErrf(err, "failed to watch zk path: %v", l.leaderPath)
 		}
 
 		rail, cancel := rail.WithCancel()
@@ -154,7 +155,7 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 					if err := CreateEphNode(l.leaderPath, util.UnsafeStr2Byt(nodeId)); err != nil {
 						rail.Errorf("received EventNodeDeleted but failed to elect leader, %v", err)
 						if errors.Is(err, zk.ErrConnectionClosed) {
-							return false, miso.WrapErrf(err, "zk connection closed")
+							return false, errs.WrapErrf(err, "zk connection closed")
 						}
 					} else {
 						rail.Info("Elected to be the leader, running hook")
@@ -170,5 +171,5 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 	}
 
 	// unknown error
-	return false, miso.WrapErrf(err, "create zk node failed")
+	return false, errs.WrapErrf(err, "create zk node failed")
 }

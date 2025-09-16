@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
@@ -283,7 +284,7 @@ func DefaultRecovery(c *gin.Context, e interface{}) {
 		return
 	}
 
-	endpointResultHandler(c, rail, nil, NewErrf("Unknown error, please try again later"))
+	endpointResultHandler(c, rail, nil, errs.NewErrf("Unknown error, please try again later"))
 }
 
 // Tracing Middleware
@@ -458,7 +459,7 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 func mustBind(rail Rail, c *gin.Context, ptr any) {
 	onFailed := func(err error) {
 		rail.Errorf("Bind payload failed, %v", err)
-		panic(NewErrf("Illegal Arguments"))
+		panic(errs.NewErrf("Illegal Arguments"))
 	}
 
 	// we now use jsoniter

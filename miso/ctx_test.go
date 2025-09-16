@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 func TestNewSpan(t *testing.T) {
@@ -60,14 +62,14 @@ func TestErrorfStackTrace(t *testing.T) {
 }
 
 func testErrorfStackTrace1() error {
-	return NewErrf("NO!!!!!")
+	return errs.NewErrf("NO!!!!!")
 }
 
 func TestErrorStackTrace(t *testing.T) {
-	EmptyRail().Error(NewErrf("oh no"))
-	Error(NewErrf("oh no"))
-	EmptyRail().Warn(NewErrf("oh no"))
-	Warn(NewErrf("oh no"))
+	EmptyRail().Error(errs.NewErrf("oh no"))
+	Error(errs.NewErrf("oh no"))
+	EmptyRail().Warn(errs.NewErrf("oh no"))
+	Warn(errs.NewErrf("oh no"))
 	EmptyRail().Error((*MisoErr)(nil))
 	Error((*MisoErr)(nil))
 	EmptyRail().Warn((*MisoErr)(nil))

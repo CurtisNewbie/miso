@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/nacos-group/nacos-sdk-go/clients"
@@ -72,7 +73,7 @@ func BootstrapConfigCenter(rail miso.Rail) error {
 
 	ok, err := module().initConfigCenter(rail)
 	if err != nil {
-		return miso.WrapErrf(err, "failed to initialize nacos module for config center")
+		return errs.WrapErrf(err, "failed to initialize nacos module for config center")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
@@ -89,7 +90,7 @@ func BootstrapServiceDiscovery(rail miso.Rail) error {
 
 	ok, err := module().initDiscovery(rail)
 	if err != nil {
-		return miso.WrapErrf(err, "failed to initialize nacos module for service discovery")
+		return errs.WrapErrf(err, "failed to initialize nacos module for service discovery")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
@@ -158,7 +159,7 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 		},
 	)
 	if err != nil {
-		return false, miso.WrapErrf(err, "failed to create nacos naming client")
+		return false, errs.WrapErrf(err, "failed to create nacos naming client")
 	}
 	m.serverList.client = nc
 	rail.Infof("Created nacos naming client")
@@ -176,7 +177,7 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 	// register current instance
 	miso.OnAppReady(func(rail miso.Rail) error {
 		if err := registerNacosService(nc); err != nil {
-			return miso.WrapErrf(err, "failed to register on nacos")
+			return errs.WrapErrf(err, "failed to register on nacos")
 		}
 		return nil
 	})
@@ -200,7 +201,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		}
 		contentByte, err := util.ReadFileAll(f)
 		if err != nil {
-			return false, miso.WrapErr(err)
+			return false, errs.WrapErr(err)
 		}
 		content := strings.TrimSpace(string(contentByte))
 		if content != "" {
@@ -226,7 +227,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		},
 	)
 	if err != nil {
-		return false, miso.WrapErrf(err, "failed to create nacos config client")
+		return false, errs.WrapErrf(err, "failed to create nacos config client")
 	}
 	m.configClient = cc
 
@@ -234,7 +235,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		p := vo.ConfigParam{DataId: w.DataId, Group: w.Group}
 		configStr, err := m.configClient.GetConfig(p)
 		if err != nil {
-			return "", miso.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
+			return "", errs.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, desensitizeConfigContent(configStr))
@@ -294,7 +295,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 	appDataId := miso.GetPropStr(PropNacosConfigDataId)
 	appGroup := miso.GetPropStr(PropNacosConfigGroup)
 	if util.IsBlankStr(appDataId) {
-		return false, miso.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
+		return false, errs.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
 	}
 	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
 	appConfigStr, err := mergeConfig(appConfig)
@@ -403,7 +404,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 	port := miso.GetPropInt(PropNacosServerPort)
 	serverAddr := strings.TrimSpace(miso.GetPropStr(PropNacosServerAddr))
 	if serverAddr == "" {
-		return constant.ClientConfig{}, nil, miso.NewErrf("Missing config: '%v'", PropNacosServerAddr)
+		return constant.ClientConfig{}, nil, errs.NewErrf("Missing config: '%v'", PropNacosServerAddr)
 	}
 
 	contextPath := miso.GetPropStr(PropNacosServerContextPath)
@@ -606,10 +607,10 @@ func registerNacosService(nc naming_client.INamingClient) error {
 		Enable:      true,
 	})
 	if err != nil {
-		return miso.WrapErr(err)
+		return errs.WrapErr(err)
 	}
 	if !ok {
-		return miso.NewErrf("Register nacos service failed")
+		return errs.NewErrf("Register nacos service failed")
 	}
 
 	miso.Infof("Registered on nacos, %v %v:%v", registerName, registerAddress, serverPort)

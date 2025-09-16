@@ -9,6 +9,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -90,7 +91,7 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 
 	cmd := rdb.Ping(rail.Context())
 	if cmd.Err() != nil {
-		return nil, miso.WrapErrf(cmd.Err(), "ping redis failed")
+		return nil, errs.WrapErrf(cmd.Err(), "ping redis failed")
 	}
 
 	rail.Info("Redis connection initialized")
@@ -167,7 +168,7 @@ func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 func redisBootstrap(rail miso.Rail) error {
 	m := module()
 	if _, e := m.initFromProp(rail); e != nil {
-		return miso.WrapErrf(e, "failed to establish connection to Redis")
+		return errs.WrapErrf(e, "failed to establish connection to Redis")
 	}
 	m.addHealthIndicator()
 	redis.SetLogger(redisLogger{})
@@ -237,7 +238,7 @@ func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
 	if err != nil {
 		return err
 	}
-	return miso.WrapErr(GetRedis().Publish(rail.Context(), p.topic, ms).Err())
+	return errs.WrapErr(GetRedis().Publish(rail.Context(), p.topic, ms).Err())
 }
 
 func NewTopic[T any](topic string) *rtopic[T] {

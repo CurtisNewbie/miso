@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/version"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -406,7 +407,7 @@ func (a *MisoApp) callBoostrapComponents(rail Rail) error {
 		if sbc.Condition != nil {
 			ok, ce := sbc.Condition(rail)
 			if ce != nil {
-				return WrapErrf(ce, "failed to bootstrap server component: %v, failed on condition check", sbc.Name)
+				return errs.WrapErrf(ce, "failed to bootstrap server component: %v, failed on condition check", sbc.Name)
 			}
 			if !ok {
 				continue
@@ -416,7 +417,7 @@ func (a *MisoApp) callBoostrapComponents(rail Rail) error {
 		rail.Debugf("Starting to bootstrap component %-30s", sbc.Name)
 		start := time.Now()
 		if e := sbc.Bootstrap(rail); e != nil {
-			return WrapErrf(e, "failed to bootstrap server component: %v", sbc.Name)
+			return errs.WrapErrf(e, "failed to bootstrap server component: %v", sbc.Name)
 		}
 		took := time.Since(start)
 		rail.Debugf("Callback %-30s - took %v", sbc.Name, took)

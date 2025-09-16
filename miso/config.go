@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
@@ -342,7 +343,7 @@ func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
 			// if viper.ReadConfig() failed, all configs are lost, we have to avoid that.
 			var tmp map[string]interface{}
 			if err := yaml.Unmarshal(util.UnsafeStr2Byt(c), &tmp); err != nil {
-				return WrapErrf(err, "Failed reload nacos configs, invalid format")
+				return errs.WrapErrf(err, "Failed reload nacos configs, invalid format")
 			}
 		}
 	}

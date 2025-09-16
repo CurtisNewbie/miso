@@ -3,6 +3,8 @@ package miso
 import (
 	"errors"
 	"fmt"
+
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 type RespUnwrapper interface {
@@ -36,7 +38,7 @@ func (r GnResp[T]) Unwrap() Resp {
 
 func (r GnResp[T]) Err() error {
 	if r.Error {
-		return ErrfCode(r.ErrorCode, r.Msg)
+		return errs.NewErrfCode(r.ErrorCode, r.Msg)
 	}
 	return nil
 }

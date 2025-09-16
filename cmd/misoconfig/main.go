@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
@@ -220,7 +220,7 @@ func parseFileAst(files []FsFile) ([]DstFile, error) {
 func walkDir(n string, suffix string) ([]FsFile, error) {
 	entries, err := os.ReadDir(n)
 	if err != nil {
-		return nil, miso.WrapErr(err)
+		return nil, errs.WrapErr(err)
 	}
 	files := make([]FsFile, 0, len(entries))
 	for _, et := range entries {

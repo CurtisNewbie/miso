@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/go-redis/redis_rate/v10"
 )
 
@@ -32,7 +32,7 @@ func (r *rateLimiter) Acquire() (bool, error) {
 		Period: r.period,
 	})
 	if err != nil {
-		return false, miso.WrapErr(err)
+		return false, errs.WrapErr(err)
 	}
 	return res.Allowed > 0, nil
 }

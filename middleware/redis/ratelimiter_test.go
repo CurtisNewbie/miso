@@ -6,6 +6,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 func TestRateLimiter(t *testing.T) {
@@ -28,7 +29,7 @@ func TestRateLimiter(t *testing.T) {
 				if ok {
 					return i, nil
 				}
-				return -1, miso.NewErrf("Rate limited")
+				return -1, errs.NewErrf("Rate limited")
 			})
 		}
 		time.Sleep(time.Second)
