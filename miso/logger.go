@@ -3,7 +3,6 @@ package miso
 import (
 	"context"
 	"io"
-	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -351,29 +350,29 @@ func getCallerFn() string {
 	return ""
 }
 
-type callerFileLine struct {
-	Func string
-	File string
-	Line int
-}
+// type callerFileLine struct {
+// 	Func string
+// 	File string
+// 	Line int
+// }
 
-func getCallerFileLine() callerFileLine {
-	pcs := callerUintptrPool.Get().(*[]uintptr)
-	defer putCallerUintptrPool(pcs)
+// func getCallerFileLine() callerFileLine {
+// 	pcs := callerUintptrPool.Get().(*[]uintptr)
+// 	defer putCallerUintptrPool(pcs)
 
-	depth := runtime.Callers(3, *pcs)
-	frames := runtime.CallersFrames((*pcs)[:depth])
+// 	depth := runtime.Callers(3, *pcs)
+// 	frames := runtime.CallersFrames((*pcs)[:depth])
 
-	// we only need the first frame
-	for f, next := frames.Next(); next; {
-		return callerFileLine{
-			Func: unsafeGetShortFnName(f.Function),
-			File: path.Base(f.File),
-			Line: f.Line,
-		}
-	}
-	return callerFileLine{}
-}
+// 	// we only need the first frame
+// 	for f, next := frames.Next(); next; {
+// 		return callerFileLine{
+// 			Func: unsafeGetShortFnName(f.Function),
+// 			File: path.Base(f.File),
+// 			Line: f.Line,
+// 		}
+// 	}
+// 	return callerFileLine{}
+// }
 
 func getCallerFnUpN(n int) string {
 	pcs := callerUintptrPool.Get().(*[]uintptr)
@@ -440,12 +439,13 @@ func unsafeGetShortFnName(fn string) string {
 	fnb := util.UnsafeStr2Byt(fn)
 	for i := len(fnb) - 1; i >= 0; i-- {
 		ib := fnb[i]
-		if ib == '/' {
+		switch ib {
+		case '/':
 			if i+1 < len(fnb) {
 				return trimLengthyName(fnb[i+1:])
 			}
 			return trimLengthyName(fnb[i:])
-		} else if ib == '(' {
+		case '(':
 			return trimLengthyName(fnb[i:])
 		}
 	}
