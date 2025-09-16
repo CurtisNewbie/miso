@@ -1,0 +1,172 @@
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.NewSet
++hash.NewSet
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.NewRWMap
++hash.NewRWMap
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.NewStrRWMap
++hash.NewStrRWMap
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.StrRWMap
++hash.StrRWMap
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/cli"
+
+-util.Printlnf
++cli.Printlnf
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/cli"
+
+-util.DebugPrintlnf
++cli.DebugPrintlnf
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/cli"
+
+-util.Printlnf
++cli.Printlnf
+
+@@
+@@
+
+-miso.NewTClient
++miso.NewClient
+
+@@
+@@
+
+-miso.NewDynTClient
++miso.NewDynClient
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/stack"
+
+-util.NewStack
++stack.New
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/queue"
+
+-util.NewQueue
++queue.New
+
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/errs"
+
+-miso.NewErrfCode
++errs.NewErrfCode
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/errs"
+
+-miso.NewErrf
++errs.NewErrf
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/errs"
+
+-miso.WrapErr
++errs.WrapErr
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/errs"
+
+-miso.WrapErrf
++errs.WrapErrf
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.Distinct
++slutil.Distinct
+
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.Distinct
++slutil.Distinct
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.QuoteStrSlice
++slutil.QuoteStrSlice
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.SliceFirst
++slutil.SliceFirst
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.SliceFilterFirst
++slutil.SliceFilterFirst
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.SliceCopy
++slutil.SliceCopy
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.StrMap
++hash.StrMap
+
+@@
+@@
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.StrSliceMap
++hash.StrSliceMap
+
+@@
+@@
+
+-miso.ContainsProp
++miso.HasProp
+
+@@
+@@
+
+-miso.GetConfIntSlice
++miso.GetPropIntSlice

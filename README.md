@@ -36,6 +36,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [API Documentation Generation](./doc/api_doc_gen.md)
 - [Using pprof](./doc/pprof.md)
 - [List of Supported Middlewares](./doc/middlewares.md)
+- [Upgrade & Migration](./doc/migration.md)
 
 ## Projects that use miso
 
