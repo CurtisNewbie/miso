@@ -48,6 +48,10 @@ const (
 )
 
 var (
+	PostServerBootstrapped = PostServerBootstrap
+)
+
+var (
 	loggerOut    io.Writer = os.Stdout
 	loggerErrOut io.Writer = os.Stderr
 

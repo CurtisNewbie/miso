@@ -187,3 +187,8 @@
 
 -miso.GetConfIntSlice
 +miso.GetPropIntSlice
+
+@@
+@@
+-miso.PostServerBootstrapped
++miso.PostServerBootstrapp
