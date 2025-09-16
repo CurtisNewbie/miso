@@ -9,6 +9,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/version"
 )
 
@@ -601,6 +602,6 @@ logging:
 	}
 
 	if err := exec.Command("go", "fmt", "./...").Run(); err != nil {
-		util.Printlnf("failed to fmt source code, %v", err)
+		cli.Printlnf("failed to fmt source code, %v", err)
 	}
 }

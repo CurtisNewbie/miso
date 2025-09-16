@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/cli"
 )
 
 func TestRunAsync(t *testing.T) {
@@ -91,7 +93,7 @@ func TestRunAsyncWithPanic(t *testing.T) {
 }
 
 func panicFunc() (struct{}, error) {
-	Printlnf("about to panic")
+	cli.Printlnf("about to panic")
 	panic("panic func panicked")
 }
 
@@ -184,19 +186,19 @@ func TestAsyncPoolStop(t *testing.T) {
 		pool.Go(func() {
 			start := Now().FormatStdMilli()
 			time.Sleep(time.Second)
-			TPrintlnf("start: %v, v: %v", start, v)
+			cli.TPrintlnf("start: %v, v: %v", start, v)
 		})
 	}
-	Printlnf("Test pre stop")
+	cli.Printlnf("Test pre stop")
 	pool.StopAndWait()
-	Printlnf("Test post stop")
+	cli.Printlnf("Test post stop")
 
 	for i := 10; i < 15; i++ {
 		v := i
 		pool.Go(func() {
 			start := Now().FormatStdMilli()
 			time.Sleep(time.Second)
-			TPrintlnf("start: %v, v: %v", start, v)
+			cli.TPrintlnf("start: %v, v: %v", start, v)
 		})
 	}
 
@@ -205,7 +207,7 @@ func TestAsyncPoolStop(t *testing.T) {
 
 func TestAsyncOnce(t *testing.T) {
 	f := RunAsync(func() (int, error) {
-		Printlnf("async ran")
+		cli.Printlnf("async ran")
 		time.Sleep(time.Millisecond * 500)
 		return 1, nil
 	})

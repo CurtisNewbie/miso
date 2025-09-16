@@ -15,6 +15,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -50,12 +51,12 @@ var (
 
 func main() {
 	flag.Usage = func() {
-		util.Printlnf("\nmisoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
-		util.Printlnf("  Supported miso version: %v\n", version.Version)
-		util.Printlnf("Usage of %s:", os.Args[0])
+		cli.Printlnf("\nmisoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
+		cli.Printlnf("  Supported miso version: %v\n", version.Version)
+		cli.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
-		util.Printlnf("\nFor example:")
-		util.Printlnf(`
+		cli.Printlnf("\nFor example:")
+		cli.Printlnf(`
 In prop.go:
 
   // misoconfig-section: Web Server Configuration
@@ -86,11 +87,11 @@ In ./doc/config.md:
 
 	files, err := walkDir(".", ".go")
 	if err != nil {
-		util.Printlnf("[ERROR] walkDir failed, %v", err)
+		cli.Printlnf("[ERROR] walkDir failed, %v", err)
 		return
 	}
 	if err := parseFiles(files); err != nil {
-		util.Printlnf("[ERROR] parseFiles failed, %v", err)
+		cli.Printlnf("[ERROR] parseFiles failed, %v", err)
 	}
 }
 
@@ -107,7 +108,7 @@ func parseFiles(files []FsFile) error {
 
 	if *Debug {
 		for _, f := range dstFiles {
-			util.Printlnf("[DEBUG] Found %v", f.Path)
+			cli.Printlnf("[DEBUG] Found %v", f.Path)
 		}
 	}
 
@@ -128,7 +129,7 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
-	util.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
+	cli.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
 	flushConfigTable(configDecl)
 	return nil
 }
@@ -176,7 +177,7 @@ func parseMisoConfigTag(path string, start dst.Decorations) ([]MisoConfigTag, bo
 				pre := m[:pi]
 				m = m[pi+1:]
 				if *Debug {
-					util.Printlnf("[DEBUG] parseMisoConfigTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
+					cli.Printlnf("[DEBUG] parseMisoConfigTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
 				pre = strings.TrimSpace(pre)
 				t = append(t, MisoConfigTag{
@@ -224,7 +225,7 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil {
-			util.Printlnf("[ERROR] %v", err)
+			cli.Printlnf("[ERROR] %v", err)
 			continue
 		}
 		p := n + "/" + fi.Name()
@@ -317,7 +318,7 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 		if cd.Name == "" {
 			return section
 		}
-		util.DebugPrintlnf(*Debug, "parseConfigDecl() %v: (%v) %v -> %#v", srcPath, section, constName, cd)
+		cli.DebugPrintlnf(*Debug, "parseConfigDecl() %v: (%v) %v -> %#v", srcPath, section, constName, cd)
 		sec := section
 		if sec == "" {
 			sec = "General"
@@ -351,11 +352,11 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	// find file
 	f, err := findConfigTableFile()
 	if err != nil {
-		util.Printlnf("Failed to find config table file, %v", err)
+		cli.Printlnf("Failed to find config table file, %v", err)
 		return
 	}
 	if f == nil {
-		util.Printlnf("Failed to find config table file")
+		cli.Printlnf("Failed to find config table file")
 		return
 	}
 	defer f.Close()
@@ -426,9 +427,9 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	f.Seek(0, io.SeekStart)
 	f.Truncate(0)
 	if _, err := f.WriteString(out); err != nil {
-		util.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
+		cli.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
 	} else {
-		util.Printlnf("Generated config table to %v", f.Name())
+		cli.Printlnf("Generated config table to %v", f.Name())
 	}
 
 	// write default value in golang source code
@@ -445,7 +446,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 		path := src[0].Source
 		pkg := src[0].Package
-		util.DebugPrintlnf(*Debug, "path: %v, pkg: %v", path, pkg)
+		cli.DebugPrintlnf(*Debug, "path: %v, pkg: %v", path, pkg)
 
 		f, err := util.ReadWriteFile(path)
 		if err != nil {
@@ -563,7 +564,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		if _, err := f.WriteString(content); err != nil {
 			panic(err)
 		}
-		util.Printlnf("Generated default config code in %v", f.Name())
+		cli.Printlnf("Generated default config code in %v", f.Name())
 	}
 }
 

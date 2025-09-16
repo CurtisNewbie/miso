@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/cli"
 )
 
 type RCacheDummy struct {
@@ -187,9 +187,9 @@ func TestRCacheV2(t *testing.T) {
 		Name: "hay",
 		Age:  10,
 	})
-	util.Must(err)
+	cli.Must(err)
 	v, ok, err := c.Get(rail, k)
-	util.Must(err)
+	cli.Must(err)
 	if !ok {
 		t.Fatal("not ok")
 	}
@@ -212,9 +212,9 @@ func TestRCacheV2Two(t *testing.T) {
 		Name: "hay",
 		Age:  10,
 	})
-	util.Must(err)
+	cli.Must(err)
 	v, ok, err := c.Get(rail, "aaa")
-	util.Must(err)
+	cli.Must(err)
 	if !ok {
 		t.Fatal("not ok")
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ChimeraCoder/gojson"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/version"
 	"golang.design/x/clipboard"
 )
@@ -18,9 +19,9 @@ var (
 
 func main() {
 	flag.Usage = func() {
-		util.Printlnf("\nmisocurl - automatically miso.TClient code based on curl in clipboard\n")
-		util.Printlnf("  Supported miso version: %v\n", version.Version)
-		util.Printlnf("Usage of %s:", os.Args[0])
+		cli.Printlnf("\nmisocurl - automatically miso.TClient code based on curl in clipboard\n")
+		cli.Printlnf("  Supported miso version: %v\n", version.Version)
+		cli.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.BoolVar(&Debug, "debug", false, "Debug")
@@ -28,7 +29,7 @@ func main() {
 
 	var curl string
 	err := clipboard.Init()
-	util.DebugPrintlnf(Debug, "clipboard init")
+	cli.DebugPrintlnf(Debug, "clipboard init")
 	if err == nil {
 		txt := clipboard.Read(clipboard.FmtText)
 		if txt != nil {
@@ -40,17 +41,17 @@ func main() {
 	}
 
 	if curl == "" {
-		util.Printlnf("Missing curl command, please copy the curl command to clipboard.")
+		cli.Printlnf("Missing curl command, please copy the curl command to clipboard.")
 		return
 	}
 
 	inst, ok := ParseCurl(curl)
 	if !ok {
-		util.Printlnf("Failed to parse curl command")
+		cli.Printlnf("Failed to parse curl command")
 		return
 	}
 
-	util.DebugPrintlnf(Debug, "%#v", inst)
+	cli.DebugPrintlnf(Debug, "%#v", inst)
 
 	py := GenRequests(inst)
 	print(py)
@@ -145,7 +146,7 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 	p := NewCurlParser(curl)
 	for p.HasNext() {
 		tok := p.Next()
-		util.DebugPrintlnf(Debug, "next tok: %v", tok)
+		cli.DebugPrintlnf(Debug, "next tok: %v", tok)
 		switch tok {
 		case "-H":
 			k, v, ok := util.SplitKV(unquote(p.Next()), ":")
@@ -165,7 +166,7 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 			inst.Payload = p.Next()
 		case "curl":
 		default:
-			util.DebugPrintlnf(Debug, "default tok: %v", tok)
+			cli.DebugPrintlnf(Debug, "default tok: %v", tok)
 			if tok != "" {
 				inst.Url = unquote(tok)
 			}
@@ -183,7 +184,7 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 		}
 	}
 
-	util.DebugPrintlnf(Debug, "inst: %+v", inst)
+	cli.DebugPrintlnf(Debug, "inst: %+v", inst)
 	ok = true
 	return
 }
@@ -268,7 +269,7 @@ func (c *CurlParser) parseStr() string {
 	s := c.rcurl[c.pos : c.pos+i]
 	c.move(i)
 	vs := string(s)
-	util.DebugPrintlnf(Debug, "parseStr, s: %v", vs)
+	cli.DebugPrintlnf(Debug, "parseStr, s: %v", vs)
 	return vs
 }
 

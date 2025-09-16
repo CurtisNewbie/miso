@@ -15,6 +15,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -57,7 +58,7 @@ const (
 
 var (
 	refPat              = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
-	flagTags            = util.NewSet[string](tagNgTable, tagRaw, tagIgnore)
+	flagTags            = util.NewSet(tagNgTable, tagRaw, tagIgnore)
 	injectTokenToImport = map[string]string{
 		typeCommonUser:     importCommonUser,
 		typeMySqlQryPtr:    importMySQL,
@@ -80,32 +81,32 @@ var (
 
 func main() {
 	flag.Usage = func() {
-		util.Printlnf("\nmisoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
-		util.Printlnf("  Supported miso version: %v\n", version.Version)
-		util.Printlnf("Usage of %s:", os.Args[0])
+		cli.Printlnf("\nmisoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
+		cli.Printlnf("  Supported miso version: %v\n", version.Version)
+		cli.Printlnf("Usage of %s:", os.Args[0])
 		flag.PrintDefaults()
-		util.Printlnf("\nFor example:\n")
-		util.Printlnf("  misoapi-http: GET /open/api/doc                                     // http method and url")
-		util.Printlnf("  misoapi-desc: open api endpoint to retrieve documents               // description")
-		util.Printlnf("  misoapi-query-doc: page: curent page index                          // query parameter")
-		util.Printlnf("  misoapi-header-doc: Authorization: bearer authorization token       // header parameter")
-		util.Printlnf("  misoapi-scope: PROTECTED                                            // access scope")
-		util.Printlnf("  misoapi-resource: document:read                                     // resource code")
-		util.Printlnf("  misoapi-ngtable                                                     // generate angular table code")
-		util.Printlnf("  misoapi-raw                                                         // raw endpoint without auto request/response json handling")
-		util.Printlnf("  misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only")
-		util.Printlnf("  misoapi-ignore                                                      // ignored by misoapi")
-		util.Printlnf("")
+		cli.Printlnf("\nFor example:\n")
+		cli.Printlnf("  misoapi-http: GET /open/api/doc                                     // http method and url")
+		cli.Printlnf("  misoapi-desc: open api endpoint to retrieve documents               // description")
+		cli.Printlnf("  misoapi-query-doc: page: curent page index                          // query parameter")
+		cli.Printlnf("  misoapi-header-doc: Authorization: bearer authorization token       // header parameter")
+		cli.Printlnf("  misoapi-scope: PROTECTED                                            // access scope")
+		cli.Printlnf("  misoapi-resource: document:read                                     // resource code")
+		cli.Printlnf("  misoapi-ngtable                                                     // generate angular table code")
+		cli.Printlnf("  misoapi-raw                                                         // raw endpoint without auto request/response json handling")
+		cli.Printlnf("  misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only")
+		cli.Printlnf("  misoapi-ignore                                                      // ignored by misoapi")
+		cli.Printlnf("")
 	}
 	flag.Parse()
 
 	files, err := walkDir(".", ".go")
 	if err != nil {
-		util.Printlnf("[ERROR] walkDir failed, %v", err)
+		cli.ErrorPrintlnf("walkDir failed, %v", err)
 		return
 	}
 	if err := parseFiles(files); err != nil {
-		util.Printlnf("[ERROR] parseFiles failed, %v", err)
+		cli.ErrorPrintlnf("parseFiles failed, %v", err)
 	}
 }
 
@@ -128,15 +129,13 @@ func parseFiles(files []FsFile) error {
 		return err
 	}
 
-	if *Debug {
-		for _, f := range dstFiles {
-			util.Printlnf("[DEBUG] Found %v", f.Path)
-		}
+	for _, f := range dstFiles {
+		cli.DebugPrintlnf(*Debug, "Found %v", f.Path)
 	}
 
 	modName := ""
 	{
-		out, err := util.ExecCmd("go", []string{"list", "-m"})
+		out, err := cli.Run(nil, "go", []string{"list", "-m"})
 		if err != nil {
 			panic(fmt.Errorf("%s, %v", out, err))
 		}
@@ -192,34 +191,28 @@ func parseFiles(files []FsFile) error {
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
 		for _, ad := range v.Apis {
-			if *Debug {
-				util.Printlnf("[DEBUG] %v (%v) => %#v", dir, v.Pkg, ad)
-			}
+			cli.DebugPrintlnf(*Debug, "%v (%v) => %#v", dir, v.Pkg, ad)
 		}
 		// check if package is imported in main
 		{
-			out, err := util.ExecCmd("grep", []string{"-r", v.PkgPath, "--include", "*.go"}, func(c *exec.Cmd) {
-				if *Debug {
-					util.DebugPrintlnf(*Debug, "cmd: %v", c)
-				}
-			})
+			out, err := cli.Run(nil, "grep", []string{"-r", v.PkgPath, "--include", "*.go"})
 			if err != nil {
 				var extErr *exec.ExitError
 				if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
-					util.Printlnf(util.ANSIRed+"Warning: (1) package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+					cli.Printlnf(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
 				} else {
-					util.Printlnf("[ERROR] check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
+					cli.ErrorPrintlnf("check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
 				}
 			} else {
 				if strings.TrimSpace(string(out)) == "" {
-					util.Printlnf(util.ANSIRed+"Warning: (2) package '%v' is not imported!"+util.ANSIReset, v.PkgPath)
+					cli.Printlnf(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
 				}
 			}
 		}
 
 		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
 		if err != nil {
-			util.Printlnf("[ERROR] generate code failed, %v", err)
+			cli.ErrorPrintlnf("generate code failed, %v", err)
 			continue
 		}
 		if code == "" {
@@ -254,9 +247,7 @@ ${code}
 			"importStr":   importSb.String(),
 		})
 
-		if *Debug {
-			util.Printlnf("[DEBUG] %v (%v) => \n\n%v", dir, v.Pkg, out)
-		}
+		cli.DebugPrintlnf(*Debug, "%v (%v) => \n\n%v", dir, v.Pkg, out)
 		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
 
 		prev, err := os.ReadFile(outFile)
@@ -267,18 +258,18 @@ ${code}
 			}
 			outBody := out[strings.Index(out, "\n")+1:]
 			if prevs == outBody {
-				util.DebugPrintlnf(*Debug, "Generated code remain the same, skipping %v", outFile)
+				cli.DebugPrintlnf(*Debug, "Generated code remain the same, skipping %v", outFile)
 				continue
 			}
 		}
 
 		f, err := util.ReadWriteFile(outFile)
-		util.Must(err)
-		util.Must(f.Truncate(0))
+		cli.Must(err)
+		cli.Must(f.Truncate(0))
 		_, err = f.WriteString(out)
-		util.Must(err)
+		cli.Must(err)
 		f.Close()
-		util.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
+		cli.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
 	}
 
 	return nil
@@ -304,22 +295,16 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 			alias = path.Base(importPath)
 		}
 		importSpec[alias] = importPath
-		if *Debug {
-			util.Printlnf("[DEBUG] parseApiDecl() alias: %v, importPath: %v", alias, importPath)
-		}
+		cli.DebugPrintlnf(*Debug, "parseApiDecl() alias: %v, importPath: %v", alias, importPath)
 	case *dst.FuncDecl:
 		imports := util.NewSet[string]()
 		tags, ok := parseMisoApiTag(srcPath, n.Decs.Start)
 		if ok {
-			if *Debug {
-				util.Printlnf("[DEBUG] parseApiDecl() type results: %#v", n.Type.Results)
-				util.Printlnf("[DEBUG] parseApiDecl() tags: %+v", tags)
-			}
+			cli.DebugPrintlnf(*Debug, "parseApiDecl() type results: %#v", n.Type.Results)
+			cli.DebugPrintlnf(*Debug, "parseApiDecl() tags: %+v", tags)
 			for _, t := range tags {
 				kv, ok := t.BodyKV()
-				if *Debug {
-					util.Printlnf("[DEBUG] parseApiDecl() tag -> %#v, kv: %#v, ok: %v", t, kv, ok)
-				}
+				cli.DebugPrintlnf(*Debug, "parseApiDecl() tag -> %#v, kv: %#v, ok: %v", t, kv, ok)
 			}
 			ad, ok := BuildApiDecl(tags)
 			if ok {
@@ -359,15 +344,13 @@ func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec m
 			varName = p.Names[0].String()
 		}
 
-		if *Debug {
-			util.Printlnf("[DEBUG] parseParamMeta() func: %v, param [%v], p: %#v", funcName, i, p.Type)
-		}
+		cli.DebugPrintlnf(*Debug, "parseParamMeta() func: %v, param [%v], p: %#v", funcName, i, p.Type)
 
 		typeName := parseParamName(p.Type, importSpec, imports)
 		if typeName != "" {
 			pm = append(pm, ParamMeta{Name: varName, Type: typeName})
 		} else {
-			util.Printlnf("[ERROR] failed to parse param[%d]: %v %#v, %v: %v", i, p.Names, p.Type, path, funcName)
+			cli.ErrorPrintlnf("failed to parse param[%d]: %v %#v, %v: %v", i, p.Names, p.Type, path, funcName)
 		}
 	}
 	return pm
@@ -636,7 +619,7 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 			default:
 				l = fmt.Sprintf("Scope(\"%v\")", d.Scope)
 			}
-			w.NoLbWritefWhen(extraLines > 0, l)
+			w.NoLbWritefWhen(extraLines > 0, "%s", l)
 		}
 		if d.Resource != "" {
 			extraLines--
@@ -748,9 +731,7 @@ func parseMisoApiTag(path string, start dst.Decorations) ([]MisoApiTag, bool) {
 			if pi := strings.Index(m, ":"); pi > -1 { // e.g., "misoapi-http: POST /api/doc"
 				pre := m[:pi]
 				m = m[pi+1:]
-				if *Debug {
-					util.Printlnf("[DEBUG] parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
-				}
+				cli.DebugPrintlnf(*Debug, "parseMisoApiTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				pre = strings.TrimSpace(pre)
 				currIsDesc = pre == tagDesc
 				t = append(t, MisoApiTag{
@@ -838,7 +819,7 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil {
-			util.Printlnf("[ERROR] %v", err)
+			cli.ErrorPrintlnf("%v", err)
 			continue
 		}
 		p := n + "/" + fi.Name()

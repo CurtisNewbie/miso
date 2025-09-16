@@ -1,142 +1,52 @@
 package util
 
 import (
-	"context"
-	"flag"
-	"fmt"
 	"os/exec"
-	"runtime"
-	"strings"
+
+	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/flags"
 )
 
-func TermOpenUrl(url string) error {
-	var cmd string
-	var args []string
+// Deprecated: Migrate to cli pkg. Will be removed in v0.2.19.
+var (
+	TermOpenUrl   = cli.TermOpenUrl
+	Printlnf      = cli.Printlnf
+	TPrintlnf     = cli.TPrintlnf
+	DebugPrintlnf = cli.DebugPrintlnf
+	CliRun        = cli.Run
+	Must          = cli.Must
+)
 
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default:
-		cmd = "xdg-open"
-	}
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
-}
+// Deprecated: Use [flags.StrSliceFlag] instead. Will be removed in v0.2.19.
+type StrSliceFlag = flags.StrSliceFlag
 
-type StrSliceFlag []string
-
-func (s *StrSliceFlag) String() string {
-	return fmt.Sprintf("%v", []string(*s))
-}
-
-func (s *StrSliceFlag) Set(t string) error {
-	*s = append(*s, t)
-	return nil
-}
-
+// Deprecated: Use [flags.StrSlice] instead. Will be removed in v0.2.19.
 func FlagStrSlice(name string, usage string) *StrSliceFlag {
-	p := new(StrSliceFlag)
-	flag.Var(p, name, usage)
-	return p
-}
-
-func Printlnf(pat string, args ...any) {
-	fmt.Printf(pat+"\n", args...)
-}
-
-func TPrintlnf(pat string, args ...any) {
-	t := Now().FormatStdMilli()
-	fmt.Printf(t+" "+pat+"\n", args...)
-}
-
-func DebugPrintlnf(debug bool, pat string, args ...any) {
-	if debug {
-		fmt.Printf("[DEBUG] "+pat+"\n", args...)
-	}
-}
-
-func NamedPrintlnf(pat string, p map[string]any) {
-	println(NamedSprintf(pat, p))
-}
-
-func DebugNamedPrintlnf(debug bool, pat string, p map[string]any) {
-	if debug {
-		println(NamedSprintf("[DEBUG] "+pat, p))
-	}
-}
-
-func Must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func MustGet[V any](v V, err error) V {
-	if err != nil {
-		panic(err)
-	}
-	return v
+	return flags.StrSlice(name, usage, false)
 }
 
 // Run python script.
 //
 // Python executable must be available beforehand.
+//
+// Deprecated: Use [cli.RunPy] instead. Will be removed in v0.2.19.
 func RunPyScript(pyExec string, pyContent string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
-	// '-' tells python to read from stdin
-	if len(args) < 1 {
-		args = append(args, "")
-		copy(args[1:], args)
-		args[0] = "-"
-	} else if args[0] != "-" {
-		args = append(args, "-")
-	}
-	// remove '-' flag in script
-	pyContent = "import sys\nsys.argv = sys.argv[1:]\n" + pyContent
-
-	opts = append(opts, func(c *exec.Cmd) {
-		c.Stdin = strings.NewReader(pyContent)
-	})
-	return ExecCmd(pyExec, args, opts...)
+	return cli.RunPy(nil, pyExec, pyContent, args, opts...)
 }
 
 // CLI runs command.
 //
 // If err is not nil, out may still contain output from the command.
+//
+// Deprecated: Use [cli.Run] instead. Will be removed in v0.2.19.
 func ExecCmd(executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
-	cmd := exec.Command(executable, args...)
-	for _, op := range opts {
-		op(cmd)
-	}
-
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		return out, err
-	}
-	return out, nil
+	return cli.Run(nil, executable, args, opts...)
 }
 
-// CLI runs command.
-//
-// If err is not nil, out may still contain output from the command.
-func CliRun(rail interface {
-	Infof(format string, args ...interface{})
-	Context() context.Context
-}, executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
-
-	cmd := exec.CommandContext(rail.Context(), executable, args...)
-	for _, op := range opts {
-		op(cmd)
-	}
-	rail.Infof("Executing Command: %v", cmd)
-
-	out, err = cmd.CombinedOutput()
+// Deprecated: Use [cli.MustGet] instead. Will be removed in v0.2.19.
+func MustGet[V any](v V, err error) V {
 	if err != nil {
-		rail.Infof("Failed to execute command, %s", out)
-		return out, err
+		panic(err)
 	}
-
-	return out, nil
+	return v
 }

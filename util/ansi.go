@@ -1,15 +1,17 @@
 package util
 
-// https://stackoverflow.com/questions/8357203/is-it-possible-to-display-text-in-a-console-with-a-strike-through-effect
-// https://en.wikipedia.org/wiki/ANSI_escape_code
-const (
-	//lint:ignore U1000 ansi color code, keep it for future use
-	ANSIRed   = "\033[1;31m"
-	ANSIGreen = "\033[1;32m"
-	ANSICyan  = "\033[1;36m"
-	ANSIReset = "\033[0m"
+import "github.com/curtisnewbie/miso/util/cli"
 
-	ANSIBlinkRed   = "\033[1;5;31m"
-	ANSIBlinkGreen = "\033[1;5;32m"
-	ANSIBlinkCyan  = "\033[1;5;36m"
+// Deprecated: Use cli pkg instead. Will be removed in v0.2.19.
+//
+//lint:ignore U1000 ansi color code, keep it for future use
+const (
+	ANSIRed   = cli.ANSIRed
+	ANSIGreen = cli.ANSIGreen
+	ANSICyan  = cli.ANSICyan
+	ANSIReset = cli.ANSIReset
+
+	ANSIBlinkRed   = cli.ANSIBlinkRed
+	ANSIBlinkGreen = cli.ANSIBlinkGreen
+	ANSIBlinkCyan  = cli.ANSIBlinkCyan
 )

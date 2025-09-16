@@ -72,19 +72,19 @@ func String(name string, value string, usage string, required bool) *string {
 	return p
 }
 
-type strSlice []string
+type StrSliceFlag []string
 
-func (s *strSlice) String() string {
+func (s *StrSliceFlag) String() string {
 	return fmt.Sprintf("%v", []string(*s))
 }
 
-func (s *strSlice) Set(t string) error {
+func (s *StrSliceFlag) Set(t string) error {
 	*s = append(*s, t)
 	return nil
 }
 
-func StrSlice(name string, usage string, required bool) *strSlice {
-	p := new(strSlice)
+func StrSlice(name string, usage string, required bool) *StrSliceFlag {
+	p := new(StrSliceFlag)
 	flag.Var(p, name, usage)
 	if required {
 		requiredFlags[name] = struct{}{}
