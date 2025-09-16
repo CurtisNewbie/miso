@@ -1,5 +1,6 @@
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.NewSet
@@ -7,6 +8,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.NewRWMap
@@ -14,6 +16,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.NewStrRWMap
@@ -21,6 +24,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.StrRWMap
@@ -28,6 +32,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/cli"
 
 -util.Printlnf
@@ -35,6 +40,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/cli"
 
 -util.DebugPrintlnf
@@ -42,6 +48,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/cli"
 
 -util.Printlnf
@@ -49,18 +56,17 @@
 
 @@
 @@
-
 -miso.NewTClient
 +miso.NewClient
 
 @@
 @@
-
 -miso.NewDynTClient
 +miso.NewDynClient
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/stack"
 
 -util.NewStack
@@ -68,14 +74,15 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/queue"
 
 -util.NewQueue
 +queue.New
 
-
 @@
 @@
+-import "github.com/curtisnewbie/miso/miso"
 +import "github.com/curtisnewbie/miso/util/errs"
 
 -miso.NewErrfCode
@@ -83,6 +90,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/miso"
 +import "github.com/curtisnewbie/miso/util/errs"
 
 -miso.NewErrf
@@ -90,6 +98,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/miso"
 +import "github.com/curtisnewbie/miso/util/errs"
 
 -miso.WrapErr
@@ -104,6 +113,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.Distinct
@@ -112,6 +122,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.Distinct
@@ -119,6 +130,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.QuoteStrSlice
@@ -126,6 +138,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.SliceFirst
@@ -133,6 +146,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.SliceFilterFirst
@@ -140,6 +154,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
 -util.SliceCopy
@@ -147,6 +162,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.StrMap
@@ -154,6 +170,7 @@
 
 @@
 @@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.StrSliceMap

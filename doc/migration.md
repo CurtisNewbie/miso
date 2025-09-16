@@ -8,10 +8,12 @@ Install [uber-go/gopatch](https://github.com/uber-go/gopatch).
 go install github.com/uber-go/gopatch@latest
 ```
 
-Go to your project directory, run the following command to apply patch:
+Go to your project directory, run the following command to apply patch (v0.3.0.patch is just an example),
+
+e.g.,
 
 ```sh
-miso_patch_path="$miso_home/patch/v0.3.0.path"
+miso_patch_path="$miso_home/patch/v0.3.0.patch"
 
 gopatch -p "$miso_patch_path" ./...
 ```
