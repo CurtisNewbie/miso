@@ -1405,7 +1405,7 @@ func genNgTableDemo(d httpRouteDoc) string {
 						} else {
 							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
 						}
-						sl.Printlnf(util.Tabs(1) + "</ng-container>")
+						sl.Println(util.Tabs(1) + "</ng-container>")
 						cols = append(cols, "'"+f.JsonName+"'")
 					}
 				}
@@ -1427,8 +1427,8 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 	sl.Printlnf("import { HttpClient } from \"@angular/common/http\";")
 	sl.Printlnf("")
 	sl.Printlnf("constructor(")
-	sl.Printlnf(util.Spaces(2) + "private snackBar: MatSnackBar,")
-	sl.Printlnf(util.Spaces(2) + "private http: HttpClient")
+	sl.Println(util.Spaces(2) + "private snackBar: MatSnackBar,")
+	sl.Println(util.Spaces(2) + "private http: HttpClient")
 	sl.Printlnf(") {}")
 	sl.Printlnf("")
 
@@ -1527,25 +1527,25 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 
 	if len(d.Headers) > 0 {
 		sl.Printf(",")
-		sl.Printlnf(util.Spaces(2) + "{")
-		sl.Printlnf(util.Spaces(4) + "headers: {")
+		sl.Println(util.Spaces(2) + "{")
+		sl.Println(util.Spaces(4) + "headers: {")
 		for _, h := range d.Headers {
 			sl.Printlnf(util.Spaces(6)+"\"%s\": %s", h.Name, util.CamelCase(h.Name))
 		}
-		sl.Printlnf(util.Spaces(4) + "}")
-		sl.Printlnf(util.Spaces(2) + "})")
+		sl.Println(util.Spaces(4) + "}")
+		sl.Println(util.Spaces(2) + "})")
 	} else {
 		sl.Printf(")")
 	}
-	sl.Printlnf(util.Spaces(2) + ".subscribe({")
+	sl.Println(util.Spaces(2) + ".subscribe({")
 
 	if respTypeName != "" {
-		sl.Printlnf(util.Spaces(4) + "next: (resp) => {")
+		sl.Println(util.Spaces(4) + "next: (resp) => {")
 		if isBuiltinResp {
-			sl.Printlnf(util.Spaces(6) + "if (resp.error) {")
-			sl.Printlnf(util.Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
-			sl.Printlnf(util.Spaces(8) + "return;")
-			sl.Printlnf(util.Spaces(6) + "}")
+			sl.Println(util.Spaces(6) + "if (resp.error) {")
+			sl.Println(util.Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
+			sl.Println(util.Spaces(8) + "return;")
+			sl.Println(util.Spaces(6) + "}")
 			if hasData {
 				if dataField, ok := slutil.SliceFilterFirst(d.JsonResponseDesc.Fields,
 					func(d FieldDesc) bool { return d.GoFieldName == "Data" }); ok {
@@ -1553,17 +1553,17 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 				}
 			}
 		}
-		sl.Printlnf(util.Spaces(4) + "},")
+		sl.Println(util.Spaces(4) + "},")
 	} else {
-		sl.Printlnf(util.Spaces(4) + "next: () => {")
-		sl.Printlnf(util.Spaces(4) + "},")
+		sl.Println(util.Spaces(4) + "next: () => {")
+		sl.Println(util.Spaces(4) + "},")
 	}
 
-	sl.Printlnf(util.Spaces(4) + "error: (err) => {")
-	sl.Printlnf(util.Spaces(6) + "console.log(err)")
-	sl.Printlnf(util.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
-	sl.Printlnf(util.Spaces(4) + "}")
-	sl.Printlnf(util.Spaces(2) + "});")
+	sl.Println(util.Spaces(4) + "error: (err) => {")
+	sl.Println(util.Spaces(6) + "console.log(err)")
+	sl.Println(util.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
+	sl.Println(util.Spaces(4) + "}")
+	sl.Println(util.Spaces(2) + "});")
 
 	sl.LinePrefix = ""
 	sl.Printlnf("}\n")

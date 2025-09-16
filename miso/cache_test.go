@@ -257,7 +257,7 @@ func BenchmarkTTLCache(b *testing.B) {
 	})
 
 	m := map[string]ttlDummy{
-		"1": ttlDummy{
+		"1": {
 			name: "myDummy",
 		},
 	}
