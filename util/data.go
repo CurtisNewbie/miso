@@ -363,6 +363,7 @@ func (r *RWMap[K, V]) GetElseErr(k K, elseFunc func(k K) (V, error)) (V, error) 
 	return newItem, nil
 }
 
+// Deprecated: Since v0.2.17, migrate to [slutil.NewStack].
 func NewStack[T any](cap int) *Stack[T] {
 	if cap < 0 {
 		cap = 0
@@ -373,6 +374,7 @@ func NewStack[T any](cap int) *Stack[T] {
 	}
 }
 
+// Deprecated: Since v0.2.17, migrate to [slutil.Stack].
 type Stack[T any] struct {
 	st []T
 	p  int
@@ -441,12 +443,14 @@ func MapCopy[T comparable, V any](v map[T]V) map[T]V {
 	return cp
 }
 
+// Deprecated: Since v0.2.17, migrate to [slutil.NewQueue].
 func NewQueue[T any]() *Queue[T] {
 	return &Queue[T]{
 		l: &list.List{},
 	}
 }
 
+// Deprecated: Since v0.2.17, migrate to [Queue].
 type Queue[T any] struct {
 	l *list.List
 }
@@ -512,6 +516,7 @@ func (l *sliceHeap[T]) Peek() T {
 	return (*l.Slice)[0]
 }
 
+// Deprecated: Since v0.2.17, migrate to [slutil.Heap].
 type Heap[T any] struct {
 	heap *sliceHeap[T]
 }
@@ -532,6 +537,7 @@ func (h *Heap[T]) Peek() T {
 	return h.heap.Peek()
 }
 
+// Deprecated: Since v0.2.17, migrate to [slutil.NewHeap].
 func NewHeap[T any](cap int, lessFunc func(iv T, jv T) bool) *Heap[T] {
 	if cap < 0 {
 		cap = 0
