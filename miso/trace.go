@@ -3,7 +3,7 @@ package miso
 import (
 	"sync"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/spf13/cast"
 )
 
@@ -13,11 +13,11 @@ const (
 )
 
 var (
-	propagationKeys = PropagationKeys{keys: util.NewSet[string]()}
+	propagationKeys = PropagationKeys{keys: hash.NewSet[string]()}
 )
 
 type PropagationKeys struct {
-	keys util.Set[string]
+	keys hash.Set[string]
 	rwmu sync.RWMutex
 }
 
@@ -62,21 +62,17 @@ func AddPropagationKey(key string) {
 func GetPropagationKeys() []string {
 	propagationKeys.rwmu.RLock()
 	defer propagationKeys.rwmu.RUnlock()
-
-	keys := []string{}
-	for k := range propagationKeys.keys.Keys {
-		keys = append(keys, k)
-	}
-	return keys
+	return propagationKeys.keys.CopyKeys()
 }
 
 func UsePropagationKeys(forEach func(key string)) {
 	propagationKeys.rwmu.RLock()
 	defer propagationKeys.rwmu.RUnlock()
 
-	for k := range propagationKeys.keys.Keys {
-		forEach(k)
-	}
+	propagationKeys.keys.ForEach(func(v string) (stop bool) {
+		forEach(v)
+		return false
+	})
 }
 
 func LoadPropagationKeysFromHeaders[T any](rail Rail, headers map[string]T) Rail {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/gin-gonic/gin"
 )
@@ -117,7 +117,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			EnableTracing()
 
 		// propagate all headers to client, except the headers for tracing
-		propagationKeys := util.NewSet[string]()
+		propagationKeys := hash.NewSet[string]()
 		propagationKeys.AddAll(GetPropagationKeys())
 
 		for k, arr := range r.Header {

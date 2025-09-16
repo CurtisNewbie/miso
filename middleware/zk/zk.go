@@ -90,7 +90,7 @@ func NewLeaderElection(rootPath string) *LeaderElection {
 		mu:         &sync.Mutex{},
 		rootPath:   rootPath,
 		leaderPath: rootPath + "/leader",
-		nodeIdFunc: func() string { return miso.GetLocalIPV4() },
+		nodeIdFunc: func() string { return util.GetLocalIPV4() },
 	}
 }
 

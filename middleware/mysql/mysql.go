@@ -9,6 +9,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/pair"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -46,11 +47,11 @@ type mysqlModule struct {
 	managed            map[string]*gorm.DB
 }
 
-func (m *mysqlModule) getAllManaged() []util.StrGnPair[*gorm.DB] {
+func (m *mysqlModule) getAllManaged() []pair.Pair[string, *gorm.DB] {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	clt := []util.StrGnPair[*gorm.DB]{}
+	clt := []pair.Pair[string, *gorm.DB]{}
 	if len(m.managed) < 1 {
 		return clt
 	}
@@ -61,7 +62,7 @@ func (m *mysqlModule) getAllManaged() []util.StrGnPair[*gorm.DB] {
 		if debug {
 			cp = v.Debug()
 		}
-		clt = append(clt, util.StrGnPair[*gorm.DB]{Left: k, Right: cp})
+		clt = append(clt, pair.New(k, cp))
 	}
 	return clt
 }
@@ -212,8 +213,8 @@ func (m *mysqlModule) registerHealthIndicator() {
 	miso.AddHealthIndicator(miso.HealthIndicator{
 		Name: "MySQL Component",
 		CheckHealth: func(rail miso.Rail) bool {
-			dbs := []util.StrGnPair[*gorm.DB]{}
-			dbs = append(dbs, util.StrGnPair[*gorm.DB]{Left: "primary", Right: m.mysql()})
+			dbs := []pair.Pair[string, *gorm.DB]{}
+			dbs = append(dbs, pair.New("primary", m.mysql()))
 			dbs = append(dbs, m.getAllManaged()...)
 
 			for _, d := range dbs {

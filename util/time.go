@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/hash"
 )
 
 const (
@@ -219,7 +221,7 @@ var jsonParseTimeFormats = []string{
 }
 
 func AddETimeParseFormat(fmt ...string) {
-	m := NewSet[string](jsonParseTimeFormats...)
+	m := hash.NewSet[string](jsonParseTimeFormats...)
 	m.AddAll(fmt)
 	jsonParseTimeFormats = m.CopyKeys()
 }

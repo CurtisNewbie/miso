@@ -244,7 +244,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		return configStr, nil
 	}
 
-	watchedKeys := util.NewSet[string]()
+	watchedKeys := hash.NewSet[string]()
 	addWatchConfig := func(w string) error {
 		rail.Debugf("Parsing nacos watch config value: %v", w)
 		tok := strings.SplitN(w, ":", 2)

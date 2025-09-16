@@ -16,6 +16,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -58,7 +59,7 @@ const (
 
 var (
 	refPat              = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
-	flagTags            = util.NewSet(tagNgTable, tagRaw, tagIgnore)
+	flagTags            = hash.NewSet(tagNgTable, tagRaw, tagIgnore)
 	injectTokenToImport = map[string]string{
 		typeCommonUser:     importCommonUser,
 		typeMySqlQryPtr:    importMySQL,
@@ -115,7 +116,7 @@ type GroupedApiDecl struct {
 	Pkg     string
 	PkgPath string
 	Apis    []ApiDecl
-	Imports util.Set[string]
+	Imports hash.Set[string]
 }
 
 type FsFile struct {
@@ -143,7 +144,7 @@ func parseFiles(files []FsFile) error {
 	}
 
 	pathApiDecls := make(map[string]GroupedApiDecl)
-	addApiDecl := func(p string, pkg string, pkgPath string, d ApiDecl, imports util.Set[string]) {
+	addApiDecl := func(p string, pkg string, pkgPath string, d ApiDecl, imports hash.Set[string]) {
 		dir, _ := path.Split(p)
 		v, ok := pathApiDecls[dir]
 		if ok {
@@ -151,7 +152,7 @@ func parseFiles(files []FsFile) error {
 			v.Imports.AddAll(imports.CopyKeys())
 			pathApiDecls[dir] = v
 		} else {
-			imp := util.NewSet[string]()
+			imp := hash.NewSet[string]()
 			imp.AddAll(imports.CopyKeys())
 			pathApiDecls[dir] = GroupedApiDecl{
 				Dir:     dir,
@@ -280,7 +281,7 @@ type DstFile struct {
 	Path string
 }
 
-func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]string) (ApiDecl, util.Set[string], bool) {
+func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]string) (ApiDecl, hash.Set[string], bool) {
 	switch n := cursor.Node().(type) {
 	case *dst.ImportSpec:
 		alias := ""
@@ -297,7 +298,7 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 		importSpec[alias] = importPath
 		cli.DebugPrintlnf(*Debug, "parseApiDecl() alias: %v, importPath: %v", alias, importPath)
 	case *dst.FuncDecl:
-		imports := util.NewSet[string]()
+		imports := hash.NewSet[string]()
 		tags, ok := parseMisoApiTag(srcPath, n.Decs.Start)
 		if ok {
 			cli.DebugPrintlnf(*Debug, "parseApiDecl() type results: %#v", n.Type.Results)
@@ -315,10 +316,10 @@ func parseApiDecl(cursor *dstutil.Cursor, srcPath string, importSpec map[string]
 			return ad, imports, ok
 		}
 	}
-	return ApiDecl{}, util.Set[string]{}, false
+	return ApiDecl{}, hash.Set[string]{}, false
 }
 
-func guessImport(n string, importSpec map[string]string, imports util.Set[string]) {
+func guessImport(n string, importSpec map[string]string, imports hash.Set[string]) {
 	if n == "" || importSpec == nil {
 		return
 	}
@@ -333,7 +334,7 @@ func guessImport(n string, importSpec map[string]string, imports util.Set[string
 	}
 }
 
-func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec map[string]string, imports util.Set[string]) []ParamMeta {
+func parseParamMeta(l *dst.FieldList, path string, funcName string, importSpec map[string]string, imports hash.Set[string]) []ParamMeta {
 	if l == nil {
 		return []ParamMeta{}
 	}
@@ -373,10 +374,10 @@ type ApiDecl struct {
 	FuncName    string
 	FuncParams  []ParamMeta
 	FuncResults []ParamMeta
-	Flags       util.Set[string]
+	Flags       hash.Set[string]
 
 	JsonRespType string
-	Imports      util.Set[string]
+	Imports      hash.Set[string]
 }
 
 func (d ApiDecl) countExtraLines() int {
@@ -476,7 +477,7 @@ func (d ApiDecl) printInvokeFunc(extra ...func(typ string) (string, bool)) strin
 	return fmt.Sprintf("%v(%v)", d.FuncName, params)
 }
 
-func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (util.Set[string], string, error) {
+func genGoApiRegister(dec []ApiDecl, baseIndent int, imports hash.Set[string]) (hash.Set[string], string, error) {
 	w := util.NewIndentWriter("\t")
 	w.SetIndent(baseIndent)
 	imports.Add(importMiso)
@@ -653,8 +654,8 @@ func genGoApiRegister(dec []ApiDecl, baseIndent int, imports util.Set[string]) (
 
 func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 	ad := ApiDecl{
-		Flags:   util.NewSet[string](),
-		Imports: util.NewSet[string](),
+		Flags:   hash.NewSet[string](),
+		Imports: hash.NewSet[string](),
 	}
 	for _, t := range tags {
 		switch t.Command {
@@ -837,7 +838,7 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 	return files, nil
 }
 
-func parseParamName(t dst.Expr, importSpec map[string]string, imports util.Set[string]) string {
+func parseParamName(t dst.Expr, importSpec map[string]string, imports hash.Set[string]) string {
 	switch v := t.(type) {
 	case *dst.Ident:
 		p := v.Path

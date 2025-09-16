@@ -559,9 +559,6 @@ func Shutdown() {
 	App().Shutdown()
 }
 
-// deprecated: use PostServerBootstrap(...) instead.
-var PostServerBootstrapped = PostServerBootstrap
-
 // Add listener that is invoked when server is ready.
 //
 // OnAppReady(...) callbacks are invoked after PostServerBoostrap().

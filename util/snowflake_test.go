@@ -3,6 +3,8 @@ package util
 import (
 	"sync"
 	"testing"
+
+	"github.com/curtisnewbie/miso/util/hash"
 )
 
 func BenchmarkGetIdPerf(b *testing.B) {
@@ -18,7 +20,7 @@ func BenchmarkGetIdPerf(b *testing.B) {
 }
 
 func TestGetId(t *testing.T) {
-	var set Set[string] = NewSet[string]()
+	var set hash.Set[string] = hash.NewSet[string]()
 	var mu sync.Mutex
 
 	threadCnt := 50
@@ -27,7 +29,7 @@ func TestGetId(t *testing.T) {
 	var wg sync.WaitGroup
 	for j := 0; j < threadCnt; j++ {
 		wg.Add(1)
-		go func(idSet *Set[string], threadId int) {
+		go func(idSet *hash.Set[string], threadId int) {
 			defer wg.Done()
 			for i := 0; i < loopCnt; i++ {
 				id := SnowflakeId()

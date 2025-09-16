@@ -218,16 +218,6 @@ func NewErrfCode(code string, msg string, args ...any) *MisoErr {
 	return me
 }
 
-// Deprecated: Use NewErrfCode() instead
-func ErrfCode(code string, msg string, args ...any) *MisoErr {
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
-	}
-	me := &MisoErr{msg: msg, internalMsg: "", err: nil, code: code}
-	me.withStack()
-	return me
-}
-
 // Wrap an error to create new *MisoErr without any extra context.
 //
 // This is almost equivalent to ErrUnknownError.Wrap(err)

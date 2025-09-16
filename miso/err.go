@@ -32,7 +32,7 @@ var (
 	NewErrf         = errs.NewErrf
 	IsNoneErr       = errs.IsNoneErr
 	NewErrfCode     = errs.NewErrfCode
-	ErrfCode        = errs.ErrfCode
+	ErrfCode        = errs.NewErrfCode
 	UnknownErr      = errs.UnknownErr
 	WrapErr         = errs.WrapErr
 	WrapErrMulti    = errs.WrapErrMulti

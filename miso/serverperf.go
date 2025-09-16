@@ -3,12 +3,12 @@ package miso
 import (
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/gin-gonic/gin"
 )
 
 var (
-	perfLogExcluded util.Set[string] = util.NewSet[string]()
+	perfLogExcluded hash.Set[string] = hash.NewSet[string]()
 )
 
 // Perf Middleware that calculates how much time each request takes

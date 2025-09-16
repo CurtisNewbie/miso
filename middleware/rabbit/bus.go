@@ -7,6 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 )
 
 const (
@@ -20,7 +21,7 @@ var (
 
 func init() {
 	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
-		return buildPipelineDoc(util.MapValues(busModule().pipelineDescMap))
+		return buildPipelineDoc(hash.MapValues(busModule().pipelineDescMap))
 	})
 }
 

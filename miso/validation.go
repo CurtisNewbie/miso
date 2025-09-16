@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 )
 
 var (
-	rules = util.NewSet[string](
+	rules = hash.NewSet[string](
 		ValidMaxLen,
 		ValidNotEmpty,
 		ValidNotNil,

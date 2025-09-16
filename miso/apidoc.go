@@ -14,6 +14,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/getkin/kin-openapi/openapi3"
 	jsoniter "github.com/json-iterator/go"
@@ -414,7 +415,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	openApiSpecPatterns := GetPropStrSlice(PropServerGenerateEndpointDocOpenApiSpecPathPatterns)
 
 	matchGoFilePathPatterns := matchGoFilePathPatternFunc()
-	seenGlobalGoTypeDef := util.NewSet[string]()
+	seenGlobalGoTypeDef := hash.NewSet[string]()
 	globalGoTypeDef := []string{}
 
 	for _, r := range hr {
@@ -468,7 +469,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		if d.JsonRequestValue != nil {
 			d.JsonRequestDesc = BuildJsonPayloadDesc(*d.JsonRequestValue)
 			d.JsonReqTsDef = genJsonTsDef(d.JsonRequestDesc)
-			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc, util.NewSet[string]())
+			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genJsonGoDef(d.JsonRequestDesc, hash.NewSet[string]())
 
 			if addGlobalGoTypeDef {
 				td, _ := genJsonGoDef(d.JsonRequestDesc, seenGlobalGoTypeDef)
@@ -484,7 +485,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildJsonPayloadDesc(*d.JsonResponseValue)
 			d.JsonRespTsDef = genJsonTsDef(d.JsonResponseDesc)
-			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc, util.NewSet[string]())
+			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genJsonGoDef(d.JsonResponseDesc, hash.NewSet[string]())
 
 			if addGlobalGoTypeDef {
 				td, _ := genJsonGoDef(d.JsonResponseDesc, seenGlobalGoTypeDef)
@@ -764,9 +765,9 @@ func BuildJsonPayloadDesc(v reflect.Value) JsonPayloadDesc {
 	return JsonPayloadDesc{TypeName: v.Type().Name(), TypePkg: v.Type().PkgPath()}
 }
 
-func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
+func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 	if seen == nil {
-		st := util.NewSet[reflect.Type]()
+		st := hash.NewSet[reflect.Type]()
 		seen = &st
 	}
 
@@ -887,7 +888,7 @@ func buildJsonDesc(v reflect.Value, seen *util.Set[reflect.Type]) []FieldDesc {
 	return jds
 }
 
-func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, seen *util.Set[reflect.Type]) []FieldDesc {
+func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, seen *hash.Set[reflect.Type]) []FieldDesc {
 	if t.Kind() == reflect.Struct {
 		fields = append(fields, buildJsonDesc(v, seen)...)
 	} else if t.Kind() == reflect.Slice {
@@ -1126,7 +1127,7 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 */
 
 // generate one or more golang type definitions.
-func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef util.Set[string]) (string, string) {
+func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, string) {
 	if rv.TypeName == "any" {
 		return "", ""
 	}
@@ -1179,7 +1180,7 @@ func inclGoTypeDef(f interface {
 	isBuiltInType() bool
 	isMisoPkg() bool
 	pureGoTypeName() string
-}, seenTypeDef util.Set[string]) bool {
+}, seenTypeDef hash.Set[string]) bool {
 
 	if f.isBuiltInType() { // e.g., map
 		return false
@@ -1206,7 +1207,7 @@ func inclGoTypeDef(f interface {
 	return true
 }
 
-func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef util.Set[string]) {
+func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef hash.Set[string]) {
 	for _, f := range fields {
 		var jsonTag string
 		if f.JsonTag != "" {
@@ -1255,7 +1256,7 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 		return ""
 	}
 	sb, writef := util.NewIndWritef("  ")
-	seenType := util.NewSet[string]()
+	seenType := hash.NewSet[string]()
 	tsTypeName := guessTsItfName(typeName)
 	seenType.Add(tsTypeName)
 	writef(0, "export interface %s {", tsTypeName)
@@ -1270,7 +1271,7 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), descs []FieldDesc, seenType util.Set[string]) {
+func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
 	for i := range descs {
 		d := descs[i]
 

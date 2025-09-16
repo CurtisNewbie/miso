@@ -31,7 +31,6 @@ func init() {
 type Job struct {
 	Name                   string                // name of the job.
 	Cron                   string                // cron expr.
-	CronWithSeconds        bool                  // Deprecated: since v0.2.2, this is set by miso. This field is left for backward compatibility only.
 	Run                    func(rail Rail) error // actual job execution logic.
 	LogJobExec             bool                  // should job execution be logged, error msg is always logged regardless.
 	TriggeredOnBoostrapped bool                  // should job be triggered when server is fully bootstrapped
@@ -130,8 +129,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	var err error
 	s := m.scheduler
 	wrappedJob := m.wrapJob(job)
-	job.CronWithSeconds = m.guessCronWithSceond(job.Cron)
-	if job.CronWithSeconds {
+	if m.guessCronWithSceond(job.Cron) {
 		_, err = s.CronWithSeconds(job.Cron).Tag(job.Name).Do(wrappedJob)
 	} else {
 		_, err = s.Cron(job.Cron).Tag(job.Name).Do(wrappedJob)
@@ -298,37 +296,6 @@ func (t *TickRunner) Stop() {
 	}
 	t.ticker.Stop()
 	t.ticker = nil
-}
-
-// Deprecated: since v0.2.2, please migrate to [CronExprEveryXSec] instead.
-func CronEveryXSec(n int, options ...func(j Job) Job) Job {
-	j := Job{
-		Cron: CronExprEveryXSec(n),
-	}
-	return buildCronJob(j, options...)
-}
-
-// Deprecated: since v0.2.2, please migrate to [CronExprEveryXMin] instead.
-func CronEveryXMin(n int, options ...func(j Job) Job) Job {
-	j := Job{
-		Cron: CronExprEveryXMin(n),
-	}
-	return buildCronJob(j, options...)
-}
-
-// Deprecated: since v0.2.2, please migrate to [CronExprEveryXHour] instead.
-func CronEveryXHour(n int, options ...func(j Job) Job) Job {
-	j := Job{
-		Cron: CronExprEveryXHour(n),
-	}
-	return buildCronJob(j, options...)
-}
-
-func buildCronJob(j Job, options ...func(j Job) Job) Job {
-	for _, op := range options {
-		j = op(j)
-	}
-	return j
 }
 
 // Build cron expression (with sceond field) for every X seconds.

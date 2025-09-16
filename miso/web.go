@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 
@@ -126,8 +127,8 @@ func SetResultBodyBuilder(rbb ResultBodyBuilder) error {
 }
 
 // Record server route
-func recordHttpServerRoute(url string, method string, extra ...util.StrPair) {
-	extras := util.MergeStrPairs(extra...)
+func recordHttpServerRoute(url string, method string, extra ...pair.Pair[string, any]) {
+	extras := pair.MergeStrPairs(extra...)
 	r := HttpRoute{
 		Url:    url,
 		Method: method,
@@ -610,8 +611,8 @@ type LazyRouteDecl struct {
 	Method  string
 	Handler func(c *gin.Context)
 
-	RegisterFunc func(extra ...util.StrPair)
-	Extras       []util.StrPair
+	RegisterFunc func(extra ...pair.Pair[string, any])
+	Extras       []pair.Pair[string, any]
 }
 
 // Build endpoint.
@@ -657,11 +658,11 @@ func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
 	return g.extra(key, value, nil)
 }
 
-type extraMatchCond = func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool)
+type extraMatchCond = func(key string, val any, ex pair.Pair[string, any]) (overwrite bool, breakLoop bool)
 
 func (g *LazyRouteDecl) extra(key string, value any, cond extraMatchCond) *LazyRouteDecl {
 	if cond == nil {
-		g.Extras = append(g.Extras, util.StrPair{Left: key, Right: value})
+		g.Extras = append(g.Extras, pair.New(key, value))
 	} else {
 		for i, ex := range g.Extras {
 			overwrite, breakLoop := cond(key, value, ex)
@@ -675,7 +676,7 @@ func (g *LazyRouteDecl) extra(key string, value any, cond extraMatchCond) *LazyR
 				return g
 			}
 		}
-		g.Extras = append(g.Extras, util.StrPair{Left: key, Right: value})
+		g.Extras = append(g.Extras, pair.New(key, value))
 	}
 	return g
 }
@@ -720,7 +721,7 @@ func (g *LazyRouteDecl) DocJsonResp(v any) *LazyRouteDecl {
 }
 
 func extraFilterOneByKey() extraMatchCond {
-	return func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool) {
+	return func(key string, val any, ex pair.Pair[string, any]) (overwrite bool, breakLoop bool) {
 		if key == ex.Left {
 			return true, true
 		}
@@ -729,7 +730,7 @@ func extraFilterOneByKey() extraMatchCond {
 }
 
 func extraFilterOneParamDocByName() extraMatchCond {
-	return func(key string, val any, ex util.StrPair) (overwrite bool, breakLoop bool) {
+	return func(key string, val any, ex pair.Pair[string, any]) (overwrite bool, breakLoop bool) {
 		vd := val.(ParamDoc)
 
 		if key != ex.Left {
@@ -753,7 +754,7 @@ func newLazyRouteDecl(url string, method string, handler func(c *gin.Context)) *
 		Url:     url,
 		Method:  method,
 		Handler: interceptedHandler(handler),
-		Extras:  []util.StrPair{},
+		Extras:  []pair.Pair[string, any]{},
 	}
 	lazyRouteRegistars = append(lazyRouteRegistars, dec)
 	return dec
@@ -1170,7 +1171,7 @@ type resAwareHandler = interface {
 	res() any
 }
 
-func HttpAny(url string, handler RawTRouteHandler, extra ...util.StrPair) {
+func HttpAny(url string, handler RawTRouteHandler, extra ...pair.Pair[string, any]) {
 	for _, method := range anyHttpMethods {
 		recordHttpServerRoute(url, method, extra...)
 	}

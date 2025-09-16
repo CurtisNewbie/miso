@@ -240,7 +240,7 @@ func (a *AppConfig) OverwriteConf(args []string) {
 //
 // The loaded configuration can be overriden by the cli arguments and environment variables.
 func (a *AppConfig) DefaultReadConfig(args []string) {
-	loaded := util.NewSet[string]()
+	loaded := hash.NewSet[string]()
 
 	defConfigFile := GuessConfigFilePath(args)
 	loaded.Add(defConfigFile)
@@ -502,22 +502,8 @@ func SetDefProp(prop string, defVal any) {
 }
 
 // Check whether the prop exists
-//
-// deprecated: use HasProp(..) instead.
-func ContainsProp(prop string) bool {
-	return globalConfig().HasProp(prop)
-}
-
-// Check whether the prop exists
 func HasProp(prop string) bool {
 	return globalConfig().HasProp(prop)
-}
-
-// Get prop as int slice
-//
-// deprecated: use GetPropIntSlice(..) instead.
-func GetConfIntSlice(prop string) []int {
-	return globalConfig().GetPropIntSlice(prop)
 }
 
 // Get prop as int slice

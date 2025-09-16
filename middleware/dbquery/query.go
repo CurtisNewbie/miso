@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
@@ -28,15 +29,6 @@ type Query struct {
 
 func (q *Query) copyNew() *Query {
 	return NewQuery(q._db)
-}
-
-// Same as *Query.Table().
-//
-// It was a mistake to call it From(), since we also use *Query to update tables :(
-//
-// Deprecated: Use [Query.Table] instead.
-func (q *Query) From(table string) *Query {
-	return q.Table(table)
 }
 
 func (q *Query) Table(table string) *Query {
@@ -75,7 +67,7 @@ func (q *Query) SelectCols(v any) *Query {
 		return q.Select(selected.(string))
 	}
 
-	colSet := util.NewSetPtr[string]()
+	colSet := hash.NewSet[string]()
 	for i := range rt.NumField() {
 		q.selectFields(colSet, rt.Field(i))
 	}
@@ -84,7 +76,7 @@ func (q *Query) SelectCols(v any) *Query {
 	return q.Select(selected)
 }
 
-func (q *Query) selectFields(colSet *util.Set[string], ft reflect.StructField) {
+func (q *Query) selectFields(colSet hash.Set[string], ft reflect.StructField) {
 	if q.ignoreGormField(ft) {
 		return
 	}
@@ -470,7 +462,7 @@ func (q *Query) doSetCols(arg any, inclEmpty bool, cols ...string) *Query {
 		return q
 	}
 
-	colSet := util.NewSetPtr[string]()
+	colSet := hash.NewSet[string]()
 	for _, c := range cols {
 		colSet.AddAll(util.SplitStr(c, ","))
 	}
@@ -485,7 +477,7 @@ func (q *Query) doSetCols(arg any, inclEmpty bool, cols ...string) *Query {
 	return q
 }
 
-func (q *Query) setField(colSet *util.Set[string], ft reflect.StructField, fv reflect.Value, inclEmpty bool) {
+func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv reflect.Value, inclEmpty bool) {
 	fname := q.ColumnName(ft.Name)
 	if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
 		return // specified column names explicitly, check if it's in the name set
