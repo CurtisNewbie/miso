@@ -1,4 +1,4 @@
-package slutil
+package heap
 
 import (
 	"container/heap"
@@ -59,7 +59,7 @@ func (h *Heap[T]) Peek() T {
 	return h.heap.Peek()
 }
 
-func NewHeap[T any](cap int, lessFunc func(iv T, jv T) bool) *Heap[T] {
+func New[T any](cap int, lessFunc func(iv T, jv T) bool) *Heap[T] {
 	if cap < 0 {
 		cap = 0
 	}

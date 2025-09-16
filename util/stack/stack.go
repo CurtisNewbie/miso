@@ -1,4 +1,4 @@
-package slutil
+package stack
 
 import (
 	"fmt"
@@ -64,7 +64,7 @@ func (s *Stack[T]) Slice() []T {
 	return slices.Clone(s.st)
 }
 
-func NewStack[T any](cap int) *Stack[T] {
+func New[T any](cap int) *Stack[T] {
 	if cap < 0 {
 		cap = 0
 	}

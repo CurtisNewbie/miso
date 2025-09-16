@@ -1,8 +1,8 @@
-package slutil
+package queue
 
 import "container/list"
 
-func NewQueue[T any]() *Queue[T] {
+func New[T any]() *Queue[T] {
 	return &Queue[T]{
 		l: &list.List{},
 	}
