@@ -8,11 +8,6 @@ import (
 	"github.com/curtisnewbie/miso/util"
 )
 
-var (
-	// deprecated: Use [util.FindTestdata] instead.
-	FindTestdata = util.FindTestdata
-)
-
 // Prepare Test Environment
 //
 // Before calling this method, you should make sure related modules are imported in go test file, or else the dependencies may not be bootstrapped properly.
