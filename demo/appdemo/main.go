@@ -54,7 +54,6 @@ func PrepareServer(rail miso.Rail) error {
 	// register some distributed tasks
 	err := task.ScheduleDistributedTask(miso.Job{
 		Cron:                   "*/15 * * * *",
-		CronWithSeconds:        false,
 		Name:                   "MyDistributedTask",
 		LogJobExec:             true,
 		TriggeredOnBoostrapped: false,
@@ -99,7 +98,7 @@ func TriggerWorkflowOnBootstrapped(rail miso.Rail) error {
 	// maybe send some requests to other backend services
 	// (using consul-based service discovery)
 	var res TriggerResult
-	err := miso.NewDynTClient(rail, "/open/api/engine", "workflow-engine" /* service name */).
+	err := miso.NewDynClient(rail, "/open/api/engine", "workflow-engine" /* service name */).
 		PostJson(TriggerWorkFlow{WorkFlowId: "123"}).
 		Json(&res)
 

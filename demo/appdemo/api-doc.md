@@ -67,7 +67,7 @@
 
   func api1(rail miso.Rail, req PostReq) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v1", "demo").
+  	err := miso.NewDynClient(rail, "/api/v1", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -162,7 +162,7 @@
 
   func api2(rail miso.Rail, req *PostReq) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v2", "demo").
+  	err := miso.NewDynClient(rail, "/api/v2", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -257,7 +257,7 @@
 
   func api3(rail miso.Rail, req *PostReq) (*PostRes, error) {
   	var res miso.GnResp[*PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v3", "demo").
+  	err := miso.NewDynClient(rail, "/api/v3", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -358,7 +358,7 @@
 
   func api4(rail miso.Rail, req ApiReq) (*PostRes, error) {
   	var res miso.GnResp[*PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v4", "demo").
+  	err := miso.NewDynClient(rail, "/api/v4", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -464,7 +464,7 @@
 
   func api5(rail miso.Rail, req *ApiReq) (*PostRes, error) {
   	var res miso.GnResp[*PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v5", "demo").
+  	err := miso.NewDynClient(rail, "/api/v5", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -570,7 +570,7 @@
 
   func api6(rail miso.Rail, req *ApiReq) (*PostRes, error) {
   	var res miso.GnResp[*PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v6", "demo").
+  	err := miso.NewDynClient(rail, "/api/v6", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -672,7 +672,7 @@
 
   func api7(rail miso.Rail, req *ApiReq) (ApiRes, error) {
   	var res miso.GnResp[ApiRes]
-  	err := miso.NewDynTClient(rail, "/api/v7", "demo").
+  	err := miso.NewDynClient(rail, "/api/v7", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -770,7 +770,7 @@
 
   func api8(rail miso.Rail, req *ApiReq) (*ApiRes, error) {
   	var res miso.GnResp[*ApiRes]
-  	err := miso.NewDynTClient(rail, "/api/v8", "demo").
+  	err := miso.NewDynClient(rail, "/api/v8", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -867,7 +867,7 @@
 
   func api9(rail miso.Rail, req *ApiReq) ([]*ApiRes, error) {
   	var res miso.GnResp[[]*ApiRes]
-  	err := miso.NewDynTClient(rail, "/api/v9", "demo").
+  	err := miso.NewDynClient(rail, "/api/v9", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -965,7 +965,7 @@
 
   func api10(rail miso.Rail, req *ApiReq) ([]ApiRes, error) {
   	var res miso.GnResp[[]ApiRes]
-  	err := miso.NewDynTClient(rail, "/api/v10", "demo").
+  	err := miso.NewDynClient(rail, "/api/v10", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1067,7 +1067,7 @@
 
   func api11(rail miso.Rail, req *ApiReq) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v11", "demo").
+  	err := miso.NewDynClient(rail, "/api/v11", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1174,7 +1174,7 @@
 
   func api12(rail miso.Rail, req []ApiReq) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v12", "demo").
+  	err := miso.NewDynClient(rail, "/api/v12", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1273,7 +1273,7 @@
 
   func api13(rail miso.Rail, req []ApiReq) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v13", "demo").
+  	err := miso.NewDynClient(rail, "/api/v13", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1372,7 +1372,7 @@
 
   func api14(rail miso.Rail, req ApiReq) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v14", "demo").
+  	err := miso.NewDynClient(rail, "/api/v14", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1464,7 +1464,7 @@
 
   func api15(rail miso.Rail) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v15", "demo").
+  	err := miso.NewDynClient(rail, "/api/v15", "demo").
   		Get().
   		Json(&res)
   	if err != nil {
@@ -1552,7 +1552,7 @@
 
   func api16(rail miso.Rail) (miso.PageRes[PostRes], error) {
   	var res miso.GnResp[miso.PageRes[PostRes]]
-  	err := miso.NewDynTClient(rail, "/api/v16", "demo").
+  	err := miso.NewDynClient(rail, "/api/v16", "demo").
   		Get().
   		Json(&res)
   	if err != nil {
@@ -1635,7 +1635,8 @@
   	</ng-container>
   	<tr mat-row *matRowDef="let row; columns: ['resultId','time'];"></tr>
   	<tr mat-header-row *matHeaderRowDef="['resultId','time']"></tr>
-  </table>  ```
+  </table>
+  ```
 
 ## GET /api/v17
 
@@ -1660,7 +1661,7 @@
 
   func api17(rail miso.Rail) ([]PostRes, error) {
   	var res miso.GnResp[[]PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v17", "demo").
+  	err := miso.NewDynClient(rail, "/api/v17", "demo").
   		Get().
   		Json(&res)
   	if err != nil {
@@ -1734,7 +1735,7 @@
   ```go
   func api18(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v18", "demo").
+  	err := miso.NewDynClient(rail, "/api/v18", "demo").
   		Post(nil).
   		Json(&res)
   	if err != nil {
@@ -1800,7 +1801,7 @@
   ```go
   func api19(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v19", "demo").
+  	err := miso.NewDynClient(rail, "/api/v19", "demo").
   		Get().
   		Json(&res)
   	if err != nil {
@@ -1881,7 +1882,7 @@
 
   func api20(rail miso.Rail, req ApiReq) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v20", "demo").
+  	err := miso.NewDynClient(rail, "/api/v20", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -1968,7 +1969,7 @@
 
   func api21(rail miso.Rail, req ApiReq) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v21", "demo").
+  	err := miso.NewDynClient(rail, "/api/v21", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -2053,7 +2054,7 @@
 
   func api22(rail miso.Rail, req ApiReq) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v22", "demo").
+  	err := miso.NewDynClient(rail, "/api/v22", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -2129,7 +2130,7 @@
 
   func api23(rail miso.Rail) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v23", "demo").
+  	err := miso.NewDynClient(rail, "/api/v23", "demo").
   		Post(nil).
   		Json(&res)
   	if err != nil {
@@ -2187,7 +2188,7 @@
   ```go
   func api24(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v24", "demo").
+  	err := miso.NewDynClient(rail, "/api/v24", "demo").
   		Post(nil).
   		Json(&res)
   	if err != nil {
@@ -2244,7 +2245,7 @@
 
   func api25(rail miso.Rail) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/api/v25", "demo").
+  	err := miso.NewDynClient(rail, "/api/v25", "demo").
   		Post(nil).
   		Json(&res)
   	if err != nil {
@@ -2302,7 +2303,7 @@
   ```go
   func api26(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v26", "demo").
+  	err := miso.NewDynClient(rail, "/api/v26", "demo").
   		Options().
   		Json(&res)
   	if err != nil {
@@ -2351,7 +2352,7 @@
   ```go
   func api27(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v27", "demo").
+  	err := miso.NewDynClient(rail, "/api/v27", "demo").
   		Head().
   		Json(&res)
   	if err != nil {
@@ -2400,7 +2401,7 @@
   ```go
   func api28(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v28", "demo").
+  	err := miso.NewDynClient(rail, "/api/v28", "demo").
   		Patch().
   		Json(&res)
   	if err != nil {
@@ -2449,7 +2450,7 @@
   ```go
   func api29(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v29", "demo").
+  	err := miso.NewDynClient(rail, "/api/v29", "demo").
   		Connect().
   		Json(&res)
   	if err != nil {
@@ -2498,7 +2499,7 @@
   ```go
   func api30(rail miso.Rail) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v30", "demo").
+  	err := miso.NewDynClient(rail, "/api/v30", "demo").
   		Trace().
   		Json(&res)
   	if err != nil {
@@ -2554,7 +2555,7 @@
 
   func api31(rail miso.Rail, req EmptyReq) error {
   	var res miso.GnResp[any]
-  	err := miso.NewDynTClient(rail, "/api/v31", "demo").
+  	err := miso.NewDynClient(rail, "/api/v31", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -2628,7 +2629,7 @@
 
   func api32(rail miso.Rail, req EmptyReq) (map[string]int32, error) {
   	var res miso.GnResp[map[string]int32]
-  	err := miso.NewDynTClient(rail, "/api/v32", "demo").
+  	err := miso.NewDynClient(rail, "/api/v32", "demo").
   		PostJson(req).
   		Json(&res)
   	if err != nil {
@@ -2722,7 +2723,7 @@
   // Post demo stuff
   func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
   	var res miso.GnResp[PostRes]
-  	err := miso.NewDynTClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").
+  	err := miso.NewDynClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").
   		AddHeader("authorization", authorization).
   		PostJson(req).
   		Json(&res)

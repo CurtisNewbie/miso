@@ -112,7 +112,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		if r.URL.RawQuery != "" {
 			path += "?" + r.URL.RawQuery
 		}
-		cli := NewTClient(*pc.Rail, path).
+		cli := NewClient(*pc.Rail, path).
 			UseClient(h.client).
 			EnableTracing()
 

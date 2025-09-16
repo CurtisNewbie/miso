@@ -109,7 +109,7 @@ func GenRequests(inst Instruction) string {
 
 	return util.NamedSprintf(`${callType}
 	rail := miso.EmptyRail()
-	s, err := miso.NewTClient(rail, "${url}").${headers}
+	s, err := miso.NewClient(rail, "${url}").${headers}
 		Require2xx().${call}
 		Str()
 	if err != nil {

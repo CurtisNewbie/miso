@@ -38,6 +38,12 @@ var (
 	MisoDefaultClient *http.Client
 )
 
+// Deprecated: since v0.1.17.
+var (
+	NewDynTClient = NewDynClient
+	NewTClient    = NewClient
+)
+
 func init() {
 	MisoDefaultClient = &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -285,10 +291,12 @@ func (he HttpError) Error() string {
 	return fmt.Sprintf("http request failed, status: %v, body: %v", he.StatusCode, he.Body)
 }
 
+type TClient = Client
+
 // Helper type for sending HTTP requests
 //
 // Provides convenients methods to build requests, use http.Client and propagate tracing information
-type TClient struct {
+type Client struct {
 	Url        string              // request url (absolute or relative)
 	Headers    map[string][]string // request headers
 	Ctx        context.Context     // context provided by caller
@@ -307,13 +315,13 @@ type TClient struct {
 	reqURL    string
 }
 
-func (t *TClient) LogBody() *TClient {
+func (t *Client) LogBody() *Client {
 	t.logBody = true
 	return t
 }
 
 // Change the underlying *http.Client
-func (t *TClient) UseClient(client *http.Client) *TClient {
+func (t *Client) UseClient(client *http.Client) *Client {
 	t.client = client
 	return t
 }
@@ -323,7 +331,7 @@ func (t *TClient) UseClient(client *http.Client) *TClient {
 // If service discovery is enabled, serviceName will be resolved using Consul.
 //
 // If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
-func (t *TClient) prepReqUrl() (string, error) {
+func (t *Client) prepReqUrl() (string, error) {
 	url := t.Url
 
 	if t.discoverService {
@@ -346,26 +354,26 @@ func (t *TClient) prepReqUrl() (string, error) {
 }
 
 // Requires response to have 2xx status code, if not, the *TResponse will contain error built for this specific reason.
-func (t *TClient) Require2xx() *TClient {
+func (t *Client) Require2xx() *Client {
 	t.require2xx = true
 	return t
 }
 
 // Enable service discovery
-func (t *TClient) EnableServiceDiscovery(serviceName string) *TClient {
+func (t *Client) EnableServiceDiscovery(serviceName string) *Client {
 	t.serviceName = serviceName
 	t.discoverService = true
 	return t
 }
 
 // Enable tracing by putting propagation key/value pairs on http headers.
-func (t *TClient) EnableTracing() *TClient {
+func (t *Client) EnableTracing() *Client {
 	t.trace = true
 	return t
 }
 
 // Set Content-Type
-func (t *TClient) SetContentType(ct string) *TClient {
+func (t *Client) SetContentType(ct string) *Client {
 	t.SetHeaders(contentType, ct)
 	return t
 }
@@ -373,7 +381,7 @@ func (t *TClient) SetContentType(ct string) *TClient {
 // Append 'http://' protocol.
 //
 // If service discovery is enabled, or the url contains http protocol already, this will be skipped.
-func (t *TClient) Http() *TClient {
+func (t *Client) Http() *Client {
 	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
 		return t
 	}
@@ -385,7 +393,7 @@ func (t *TClient) Http() *TClient {
 // Append 'https://' protocol.
 //
 // If service discovery is enabled, or the url contains http protocol already, this will be skipped.
-func (t *TClient) Https() *TClient {
+func (t *Client) Https() *Client {
 	if t.discoverService || httpProtoRegex.MatchString(t.Url) {
 		return t
 	}
@@ -395,7 +403,7 @@ func (t *TClient) Https() *TClient {
 }
 
 // Send GET request
-func (t *TClient) Get() *TResponse {
+func (t *Client) Get() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -408,7 +416,7 @@ func (t *TClient) Get() *TResponse {
 	return t.send(req)
 }
 
-func (t *TClient) Trace() *TResponse {
+func (t *Client) Trace() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -421,7 +429,7 @@ func (t *TClient) Trace() *TResponse {
 	return t.send(req)
 }
 
-func (t *TClient) Connect() *TResponse {
+func (t *Client) Connect() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -434,7 +442,7 @@ func (t *TClient) Connect() *TResponse {
 	return t.send(req)
 }
 
-func (t *TClient) Patch() *TResponse {
+func (t *Client) Patch() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -448,13 +456,13 @@ func (t *TClient) Patch() *TResponse {
 }
 
 // Send POST request with urlencoded form data
-func (t *TClient) PostForm(data url.Values) *TResponse {
+func (t *Client) PostForm(data url.Values) *TResponse {
 	t.SetContentType(formEncoded)
 	return t.Post(strings.NewReader(data.Encode()))
 }
 
 // Send PUT request with urlencoded form data
-func (t *TClient) PutForm(data url.Values) *TResponse {
+func (t *Client) PutForm(data url.Values) *TResponse {
 	t.SetContentType(formEncoded)
 	return t.Put(strings.NewReader(data.Encode()))
 }
@@ -462,7 +470,7 @@ func (t *TClient) PutForm(data url.Values) *TResponse {
 // Send POST request with urlencoded form data
 //
 // Caller is responsible for closing all the reader.
-func (t *TClient) PostFormData(data map[string]io.Reader) *TResponse {
+func (t *Client) PostFormData(data map[string]io.Reader) *TResponse {
 	b, err := t.buildFormData(data)
 	if err != nil {
 		return t.errorResponse(err)
@@ -473,7 +481,7 @@ func (t *TClient) PostFormData(data map[string]io.Reader) *TResponse {
 // Send PUT request with urlencoded form data
 //
 // Caller is responsible for closing all the reader.
-func (t *TClient) PutFormData(data map[string]io.Reader) *TResponse {
+func (t *Client) PutFormData(data map[string]io.Reader) *TResponse {
 	b, err := t.buildFormData(data)
 	if err != nil {
 		return t.errorResponse(err)
@@ -481,7 +489,7 @@ func (t *TClient) PutFormData(data map[string]io.Reader) *TResponse {
 	return t.Put(b)
 }
 
-func (t *TClient) buildFormData(data map[string]io.Reader) (io.Reader, error) {
+func (t *Client) buildFormData(data map[string]io.Reader) (io.Reader, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	for k, r := range data {
@@ -513,7 +521,7 @@ func (t *TClient) buildFormData(data map[string]io.Reader) (io.Reader, error) {
 // Send POST request with JSON.
 //
 // Use simple types like struct instad of pointer for body.
-func (t *TClient) PostJson(body any) *TResponse {
+func (t *Client) PostJson(body any) *TResponse {
 	jsonBody, e := json.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
@@ -522,12 +530,12 @@ func (t *TClient) PostJson(body any) *TResponse {
 	return t.Post(bytes.NewReader(jsonBody))
 }
 
-func (t *TClient) errorResponse(e error) *TResponse {
+func (t *Client) errorResponse(e error) *TResponse {
 	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody, reqStart: t.reqStart, reqMethod: t.reqMethod, reqURL: t.reqURL}
 }
 
 // Send POST request with reader to request body.
-func (t *TClient) Post(body io.Reader) *TResponse {
+func (t *Client) Post(body io.Reader) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -541,12 +549,12 @@ func (t *TClient) Post(body io.Reader) *TResponse {
 }
 
 // Send POST request with bytes.
-func (t *TClient) PostBytes(body []byte) *TResponse {
+func (t *Client) PostBytes(body []byte) *TResponse {
 	return t.Post(bytes.NewReader(body))
 }
 
 // Send PUT request with JSON
-func (t *TClient) PutJson(body any) *TResponse {
+func (t *Client) PutJson(body any) *TResponse {
 	jsonBody, e := json.WriteJson(body)
 	if e != nil {
 		return t.errorResponse(e)
@@ -556,7 +564,7 @@ func (t *TClient) PutJson(body any) *TResponse {
 }
 
 // Send PUT request
-func (t *TClient) Put(body io.Reader) *TResponse {
+func (t *Client) Put(body io.Reader) *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -570,12 +578,12 @@ func (t *TClient) Put(body io.Reader) *TResponse {
 }
 
 // Send PUT request with bytes.
-func (t *TClient) PutBytes(body []byte) *TResponse {
+func (t *Client) PutBytes(body []byte) *TResponse {
 	return t.Put(bytes.NewReader(body))
 }
 
 // Send DELETE request
-func (t *TClient) Delete() *TResponse {
+func (t *Client) Delete() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -589,7 +597,7 @@ func (t *TClient) Delete() *TResponse {
 }
 
 // Send HEAD request
-func (t *TClient) Head() *TResponse {
+func (t *Client) Head() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -603,7 +611,7 @@ func (t *TClient) Head() *TResponse {
 }
 
 // Send OPTIONS request
-func (t *TClient) Options() *TResponse {
+func (t *Client) Options() *TResponse {
 	u, e := t.prepReqUrl()
 	if e != nil {
 		return t.errorResponse(e)
@@ -617,7 +625,7 @@ func (t *TClient) Options() *TResponse {
 }
 
 // Send request
-func (t *TClient) send(req *http.Request) *TResponse {
+func (t *Client) send(req *http.Request) *TResponse {
 	if t.trace {
 		req = TraceRequest(t.Ctx, req)
 	}
@@ -679,7 +687,7 @@ func contentTypeLoggable(contentType string) bool {
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers
-func (t *TClient) AddHeaders(headers map[string]string) *TClient {
+func (t *Client) AddHeaders(headers map[string]string) *Client {
 	for k, v := range headers {
 		if t.Headers[k] == nil {
 			t.Headers[k] = []string{v}
@@ -691,7 +699,7 @@ func (t *TClient) AddHeaders(headers map[string]string) *TClient {
 }
 
 // Append header, subsequent method calls doesn't override previously appended headers
-func (t *TClient) AddHeader(k string, v string) *TClient {
+func (t *Client) AddHeader(k string, v string) *Client {
 	if t.Headers[k] == nil {
 		t.Headers[k] = []string{v}
 	} else {
@@ -701,23 +709,23 @@ func (t *TClient) AddHeader(k string, v string) *TClient {
 }
 
 // Add Authorization: Bearer *** header.
-func (t *TClient) AddAuthBearer(v string) *TClient {
+func (t *Client) AddAuthBearer(v string) *Client {
 	return t.AddAuthHeader("Bearer " + strings.TrimSpace(v))
 }
 
 // Add Authorization: *** header.
-func (t *TClient) AddAuthHeader(v string) *TClient {
+func (t *Client) AddAuthHeader(v string) *Client {
 	return t.AddHeader("Authorization", v)
 }
 
 // Overwrite header
-func (t *TClient) SetHeaders(k string, v ...string) *TClient {
+func (t *Client) SetHeaders(k string, v ...string) *Client {
 	t.Headers[k] = v
 	return t
 }
 
 // Append Query Parameters, subsequent method calls doesn't override previously appended parameters
-func (t *TClient) AddQueryParams(k string, v ...string) *TClient {
+func (t *Client) AddQueryParams(k string, v ...string) *Client {
 	for i := range v {
 		t.addQueryParam(k, v[i])
 	}
@@ -725,7 +733,7 @@ func (t *TClient) AddQueryParams(k string, v ...string) *TClient {
 }
 
 // Append Query Parameters, subsequent method calls doesn't override previously appended parameters
-func (t *TClient) addQueryParam(k string, v string) *TClient {
+func (t *Client) addQueryParam(k string, v string) *Client {
 	if t.QueryParam[k] == nil {
 		t.QueryParam[k] = []string{v}
 	} else {
@@ -734,16 +742,16 @@ func (t *TClient) addQueryParam(k string, v string) *TClient {
 	return t
 }
 
-// Create new defualt TClient with EnableServiceDiscovery(), EnableTracing(), and Require2xx() turned on.
+// Create new defualt Client with EnableServiceDiscovery(), EnableTracing(), and Require2xx() turned on.
 //
 // The provided relUrl should be a relative url starting with '/'.
-func NewDynTClient(ec Rail, relUrl string, serviceName string) *TClient {
-	return NewTClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing().Require2xx()
+func NewDynClient(ec Rail, relUrl string, serviceName string) *Client {
+	return NewClient(ec, relUrl).EnableServiceDiscovery(serviceName).EnableTracing().Require2xx()
 }
 
-// Create new TClient.
-func NewTClient(rail Rail, url string) *TClient {
-	return &TClient{
+// Create new miso HTTP Client.
+func NewClient(rail Rail, url string) *Client {
+	return &Client{
 		Url: url, Headers: map[string][]string{}, Ctx: rail.Context(), client: MisoDefaultClient,
 		Rail: rail, QueryParam: map[string][]string{},
 	}

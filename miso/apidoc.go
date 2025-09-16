@@ -1668,7 +1668,7 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 
 	sl.LinePrefix = "\t"
 	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
-	sl.Printf("\n%serr := miso.NewDynTClient(rail, \"%s\", \"%s\")", util.Tabs(1), d.Url, GetPropStr(PropAppName))
+	sl.Printf("\n%serr := miso.NewDynClient(rail, \"%s\", \"%s\")", util.Tabs(1), d.Url, GetPropStr(PropAppName))
 
 	for _, q := range d.QueryParams {
 		cname := util.CamelCase(q.Name)
