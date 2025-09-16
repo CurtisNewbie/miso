@@ -103,11 +103,7 @@ func CutSuffixIgnoreCaseAny(s string, suffix ...string) (string, bool) {
 }
 
 func ToStr(v any) string {
-	switch v.(type) {
-	case float32, float64:
-		return fmt.Sprintf("%f", v)
-	}
-	return fmt.Sprintf("%v", v)
+	return cast.ToString(v)
 }
 
 func Spaces(count int) string {
