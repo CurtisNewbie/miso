@@ -3,8 +3,6 @@ package miso
 import (
 	"bytes"
 	"testing"
-
-	"github.com/curtisnewbie/miso/util/cli"
 )
 
 func TestResolveArg(t *testing.T) {
@@ -281,7 +279,9 @@ test:
   node-c:
     name: "c"
 `, EmptyRail())
-	cli.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("%+v", GetPropAny("test"))
 	for i, v := range GetPropChild("test") {
 		t.Logf("%v, %v", i, v)

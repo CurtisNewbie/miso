@@ -2,8 +2,6 @@ package lua
 
 import (
 	"testing"
-
-	"github.com/curtisnewbie/miso/util/cli"
 )
 
 func TestRunLua(t *testing.T) {
@@ -22,6 +20,8 @@ return "1234.11"
 			"name": "yongjie",
 			"age":  100,
 		}))
-	cli.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("%#v", res)
 }

@@ -266,10 +266,10 @@ ${code}
 		}
 
 		f, err := util.ReadWriteFile(outFile)
-		cli.Must(err)
-		cli.Must(f.Truncate(0))
+		util.Must(err)
+		util.Must(f.Truncate(0))
 		_, err = f.WriteString(out)
-		cli.Must(err)
+		util.Must(err)
 		f.Close()
 		cli.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
 	}
