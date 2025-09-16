@@ -9,6 +9,7 @@ import (
 	"github.com/ChimeraCoder/gojson"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/version"
 	"golang.design/x/clipboard"
 )
@@ -241,7 +242,7 @@ func (c *CurlParser) parseCmdKey() string {
 }
 
 func (c *CurlParser) parseStr() string {
-	stack := util.NewStack[rune](10)
+	stack := slutil.NewStack[rune](10)
 	cur := c.peek(0)
 	stack.Push(cur)
 	i := 1

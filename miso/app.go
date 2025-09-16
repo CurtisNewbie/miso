@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/version"
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -101,7 +102,7 @@ func newApp() *MisoApp {
 		manualSigQuit:    make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:     false,
 		shuttingDown:     &atomic.Bool{},
-		store:            &appStore{store: util.NewStrRWMap[any]()},
+		store:            &appStore{store: hash.NewStrRWMap[any]()},
 		config:           newAppConfig(),
 		fullyBoostrapped: &atomic.Bool{},
 	}
@@ -620,7 +621,7 @@ type OrderedShutdownHook struct {
 }
 
 type appStore struct {
-	store *util.StrRWMap[any]
+	store *hash.StrRWMap[any]
 }
 
 func (a *appStore) Get(k string) (any, bool) {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
@@ -23,11 +24,11 @@ import (
 var module = miso.InitAppModuleFunc(func() *nacosModule {
 	return &nacosModule{
 		mut:            &sync.RWMutex{},
-		configContent:  util.NewStrRWMap[string](),
+		configContent:  hash.NewStrRWMap[string](),
 		watchedConfigs: make([]watchingConfig, 0, 1),
 		reloadMut:      &sync.Mutex{},
 		serverList: &NacosServerList{
-			watchedServices: util.NewSetPtr[string](),
+			watchedServices: hash.NewSet[string](),
 			wsmu:            &sync.RWMutex{},
 		},
 	}
@@ -104,7 +105,7 @@ type nacosModule struct {
 	discoveryInitialized bool
 	configClient         config_client.IConfigClient
 	onConfigChange       []func()
-	configContent        *util.StrRWMap[string]
+	configContent        *hash.StrRWMap[string]
 	preloadedFiles       []string
 	watchedConfigs       []watchingConfig
 	reloadMut            *sync.Mutex
@@ -509,7 +510,7 @@ func (w watchingConfig) Key() string {
 // Holder of a list of ServiceHolder
 type NacosServerList struct {
 	client          naming_client.INamingClient
-	watchedServices *util.Set[string]
+	watchedServices hash.Set[string]
 	wsmu            *sync.RWMutex
 }
 
@@ -548,7 +549,7 @@ func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server
 			return miso.Server{
 				Address: v.Ip,
 				Port:    int(v.Port),
-				Meta:    util.MapCopy(v.Metadata),
+				Meta:    hash.MapCopy(v.Metadata),
 			}
 		}),
 		slutil.FilterFunc(func(i model.Instance) bool {

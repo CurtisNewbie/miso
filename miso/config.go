@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -31,7 +32,7 @@ type AppConfig struct {
 
 	// fast bool cache, GetBool() is a frequent operation, this aims to speed up the key lookup.
 	// key is always the real key not the alias
-	fastBoolCache *util.StrRWMap[bool]
+	fastBoolCache *hash.StrRWMap[bool]
 
 	// aliases of keys
 	// alias -> key
@@ -315,7 +316,7 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 		}
 
 		// reset the whole fastBoolCache
-		a.fastBoolCache = util.NewStrRWMap[bool]()
+		a.fastBoolCache = hash.NewStrRWMap[bool]()
 	})
 
 	return eo
@@ -364,7 +365,7 @@ func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
 		}
 
 		// reset the whole fastBoolCache
-		a.fastBoolCache = util.NewStrRWMap[bool]()
+		a.fastBoolCache = hash.NewStrRWMap[bool]()
 	})
 	return eo
 }
@@ -383,7 +384,7 @@ func (a *AppConfig) ReloadConfigFromReader(reader io.Reader) error {
 		}
 
 		// reset the whole fastBoolCache
-		a.fastBoolCache = util.NewStrRWMap[bool]()
+		a.fastBoolCache = hash.NewStrRWMap[bool]()
 	})
 
 	return eo
@@ -465,7 +466,7 @@ func newAppConfig() *AppConfig {
 	ac := &AppConfig{
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
-		fastBoolCache: util.NewStrRWMap[bool](),
+		fastBoolCache: hash.NewStrRWMap[bool](),
 		// aliases:       map[string]string{},
 	}
 	ac.vp.SetConfigType("yml")
