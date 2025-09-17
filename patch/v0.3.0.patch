@@ -7,12 +7,53 @@
 +hash.NewSet
 
 @@
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.NewSetFromSlice(b)
++hash.NewSet(b...)
+
+@@
 @@
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/hash"
 
 -util.Set
 +hash.Set
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.MapKeys
++hash.MapKeys
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.MapFirst
++hash.MapFirst
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.MapValues
++hash.MapValues
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/hash"
+
+-util.MapCopy
++hash.MapCopy
 
 @@
 @@
@@ -183,6 +224,14 @@
 
 -util.QuoteStrSlice
 +slutil.QuoteStrSlice
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.SplitSubSlices
++slutil.SplitSubSlices
 
 @@
 @@
@@ -847,6 +896,14 @@ var b expression
 +strutil.HasAnySuffix(a, b...)
 
 @@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasAnySuffix(...)
++strutil.HasAnySuffix(...)
+
+@@
 var a expression
 var b expression
 @@
@@ -855,6 +912,14 @@ var b expression
 
 -util.HasAnyPrefix(a, b...)
 +strutil.HasAnyPrefix(a, b...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasAnyPrefix(...)
++strutil.HasAnyPrefix(...)
 
 @@
 @@
@@ -887,3 +952,27 @@ var b expression
 
 -util.Filter
 +slutil.Filter
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.CopyFilter
++slutil.CopyFilter
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/miso"
++import "github.com/curtisnewbie/miso/util"
+
+-miso.FindTestdata(...)
++util.FindTestdata(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/cli"
+
+-util.ExecCmd(...)
++cli.Run(nil, ...)
