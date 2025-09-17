@@ -871,3 +871,11 @@ var b expression
 
 -util.SplitStr(...)
 +strutil.SplitStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pair"
+
+-util.StrPair
++pair.Pair[string, any]
