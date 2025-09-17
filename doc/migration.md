@@ -8,7 +8,13 @@ Install [uber-go/gopatch](https://github.com/uber-go/gopatch).
 go install github.com/uber-go/gopatch@latest
 ```
 
-Go to your project directory, run the following command to apply patch (v0.3.0.patch is just an example),
+Upgrade your project to latest release:
+
+```sh
+go get github.com/curtisnewbie/miso@387e76071ee8f929b01e80693b76881845b72488
+```
+
+Run the following command to apply patch (v0.3.0.patch is just an example),
 
 e.g.,
 
@@ -18,4 +24,4 @@ miso_patch_path="$miso_home/patch/v0.3.0.patch"
 gopatch -p "$miso_patch_path" ./...
 ```
 
-Then use git diff to see the changes.
+Use git diff to see the changes and run your project to see if it still works.
