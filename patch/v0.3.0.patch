@@ -879,3 +879,11 @@ var b expression
 
 -util.StrPair
 +pair.Pair[string, any]
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
+-util.Filter
++slutil.Filter
