@@ -242,3 +242,27 @@ miso.Job{
 -   CronWithSeconds: false,
     ...,
 }
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/csv"
+
+-util.CsvReader
++csv.Reader
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/csv"
+
+-util.CsvReadAll
++csv.ReadAll
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/csv"
+
+-util.CsvReadAllIgnoreEmpty
++csv.ReadAllIgnoreEmpty

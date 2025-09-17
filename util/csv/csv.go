@@ -1,4 +1,4 @@
-package util
+package csv
 
 import (
 	"encoding/csv"
@@ -9,22 +9,22 @@ import (
 	"golang.org/x/text/transform"
 )
 
-func CsvReader(reader io.Reader) *csv.Reader {
+func Reader(reader io.Reader) *csv.Reader {
 	var transformer = unicode.BOMOverride(encoding.Nop.NewDecoder())
 	return csv.NewReader(transform.NewReader(reader, transformer))
 }
 
-func CsvReadAll(reader io.Reader) ([][]string, error) {
-	records, err := CsvReader(reader).ReadAll()
+func ReadAll(reader io.Reader) ([][]string, error) {
+	records, err := Reader(reader).ReadAll()
 	if err != nil {
 		return nil, err
 	}
 	return records, nil
 }
 
-func CsvReadAllIgnoreEmpty(reader io.Reader) ([][]string, error) {
+func ReadAllIgnoreEmpty(reader io.Reader) ([][]string, error) {
 	records := [][]string{}
-	r := CsvReader(reader)
+	r := Reader(reader)
 	validRow := func(row []string) bool {
 		for _, c := range row {
 			if c != "" {
