@@ -266,3 +266,511 @@ miso.Job{
 
 -util.CsvReadAllIgnoreEmpty
 +csv.ReadAllIgnoreEmpty
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.ForEachField
++rfutil.ForEachField
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.TagRetriever
++rfutil.TagRetriever
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.Introspector
++rfutil.Introspector
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.Introspect(...)
++rfutil.Introspect(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.CollectFields(...)
++rfutil.CollectFields(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.CollectTypeFields(...)
++rfutil.CollectTypeFields(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.IsFieldExposed(...)
++rfutil.IsFieldExposed(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.FuncName(...)
++rfutil.FuncName(...)
+
+@@
+var v identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.NewVar[v]()
++rfutil.NewVar[v]()
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.TypeName(...)
++rfutil.TypeName(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.WalkTagCallback
++rfutil.WalkTagCallback
+
+@@
+var a expression
+var v expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.WalkTagShallow(a, v);
++rfutil.WalkTagShallow(a, v);
+
+@@
+var a expression
+var v expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.WalkTagShallow(a, v...);
++rfutil.WalkTagShallow(a, v...);
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.ReflectGenMap(...)
++rfutil.ReflectGenMap(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.ReflectFuncName(...)
++rfutil.ReflectFuncName(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.IsBasicKind(...)
++rfutil.IsBasicKind(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.ReflectBasicValue(...)
++rfutil.ReflectBasicValue(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.IsAnyNil(...)
++rfutil.IsAnyNil(...)
+
+@@
+var v identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.FindEmbedStruct[v](...)
++rfutil.FindEmbedStruct[v](...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.PadNum(...)
++strutil.PadNum(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.IsBlankStr(...)
++strutil.IsBlankStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.MaxLenStr(...)
++strutil.MaxLenStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasPrefixIgnoreCase(...)
++strutil.HasPrefixIgnoreCase(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutPrefixIgnoreCase(...)
++strutil.CutPrefixIgnoreCase(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutPrefixIgnoreCaseAny(...)
++strutil.CutPrefixIgnoreCaseAny(...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutPrefixIgnoreCaseAny(a, b...)
++strutil.CutPrefixIgnoreCaseAny(a, b...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasSuffixIgnoreCase(...)
++strutil.HasSuffixIgnoreCase(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutSuffixIgnoreCase(...)
++strutil.CutSuffixIgnoreCase(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutSuffixIgnoreCaseAny(...)
++strutil.CutSuffixIgnoreCaseAny(...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CutSuffixIgnoreCaseAny(a, b...)
++strutil.CutSuffixIgnoreCaseAny(a, b...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.ToStr(...)
++strutil.ToStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.Spaces(...)
++strutil.Spaces(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.Tabs(...)
++strutil.Tabs(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.SLPinter
++strutil.SLPinter
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.IndWritef
++strutil.IndWritef
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.NewIndWritef(...)
++strutil.NewIndWritef(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.IndentWriter
++strutil.IndentWriter
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.NewIndentWriter(...)
++strutil.NewIndentWriter(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.CamelCase(...)
++strutil.CamelCase(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.LastNStr(...)
++strutil.LastNStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.NamedSprintf(...)
++strutil.NamedSprintf(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.NamedSprintfv(...)
++strutil.NamedSprintfv(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.FmtFloat(...)
++strutil.FmtFloat(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.PadSpace(...)
++strutil.PadSpace(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.RuneWidth(...)
++strutil.RuneWidth(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.StrWidth(...)
++strutil.StrWidth(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.PadToken(...)
++strutil.PadToken(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.SplitKV(...)
++strutil.SplitKV(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.SAddLineIndent(...)
++strutil.SAddLineIndent(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.MatchPathAny(...)
++strutil.MatchPathAny(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.MatchPath(...)
++strutil.MatchPath(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.ContainsAnyStr(...)
++strutil.ContainsAnyStr(...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.ContainsAnyStr(a, b...)
++strutil.ContainsAnyStr(a, b...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.ContainsAnyStrIgnoreCase(a, b...)
++strutil.ContainsAnyStrIgnoreCase(a, b...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.QuoteStr(...)
++strutil.QuoteStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.UnquoteStr(...)
++strutil.UnquoteStr(...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.EqualAnyStr(a, b...)
++strutil.EqualAnyStr(a, b...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasAnySuffix(a, b...)
++strutil.HasAnySuffix(a, b...)
+
+@@
+var a expression
+var b expression
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.HasAnyPrefix(a, b...)
++strutil.HasAnyPrefix(a, b...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.TrimStrSlice(...)
++strutil.TrimStrSlice(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.SplitStr(...)
++strutil.SplitStr(...)

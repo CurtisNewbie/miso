@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"github.com/spf13/cast"
@@ -399,7 +400,7 @@ func consulBootstrap(rail Rail) error {
 
 	if GetPropBool(PropConsulEnableDeregisterUrl) {
 		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
-		if !util.IsBlankStr(deregisterUrl) {
+		if !strutil.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
 
 			HttpGet(deregisterUrl, ResHandler(

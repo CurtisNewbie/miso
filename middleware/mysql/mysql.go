@@ -8,9 +8,9 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -95,18 +95,18 @@ func (m *mysqlModule) initManaged(rail miso.Rail) error {
 		}
 		prepareStmt := true
 		{
-			k := util.NamedSprintf(PropMySQLManagedPrepareStmt, pm)
+			k := strutil.NamedSprintf(PropMySQLManagedPrepareStmt, pm)
 			if miso.HasProp(k) {
 				prepareStmt = miso.GetPropBool(k)
 			}
 		}
 
 		p := MySQLConnParam{
-			User:            miso.GetPropStr(util.NamedSprintf(PropMySQLManagedUser, pm)),
-			Password:        miso.GetPropStr(util.NamedSprintf(PropMySQLManagedPassword, pm)),
-			Schema:          miso.GetPropStr(util.NamedSprintf(PropMySQLManagedSchema, pm)),
-			Host:            miso.GetPropStr(util.NamedSprintf(PropMySQLManagedHost, pm)),
-			Port:            miso.GetPropInt(util.NamedSprintf(PropMySQLManagedPort, pm)),
+			User:            miso.GetPropStr(strutil.NamedSprintf(PropMySQLManagedUser, pm)),
+			Password:        miso.GetPropStr(strutil.NamedSprintf(PropMySQLManagedPassword, pm)),
+			Schema:          miso.GetPropStr(strutil.NamedSprintf(PropMySQLManagedSchema, pm)),
+			Host:            miso.GetPropStr(strutil.NamedSprintf(PropMySQLManagedHost, pm)),
+			Port:            miso.GetPropInt(strutil.NamedSprintf(PropMySQLManagedPort, pm)),
 			ConnParam:       strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
 			MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
 			MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),

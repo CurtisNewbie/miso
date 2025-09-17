@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 var (
@@ -31,7 +33,7 @@ func SetMachineCode(code int) error {
 
 	_idMu.Lock()
 	defer _idMu.Unlock()
-	machineCode = PadNum(code, 6)
+	machineCode = strutil.PadNum(code, 6)
 	return nil
 }
 

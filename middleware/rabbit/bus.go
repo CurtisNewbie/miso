@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 const (
@@ -144,7 +144,7 @@ func (ep *EventPipeline[T]) Document(name string, desc string, provider string) 
 			RoutingKey: BusRoutingKey,
 			Queue:      ep.name,
 			Exchange:   ep.name,
-			PayloadVal: util.NewVar[T](),
+			PayloadVal: rfutil.NewVar[T](),
 		}
 		return nil
 	})

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 var (
@@ -141,7 +141,7 @@ func (e *MisoErr) Error() string {
 }
 
 func (e *MisoErr) HasCode() bool {
-	return !util.IsBlankStr(e.code)
+	return !strutil.IsBlankStr(e.code)
 }
 
 func (e *MisoErr) WithCode(code string) *MisoErr {

@@ -3,6 +3,8 @@ package util
 import (
 	"reflect"
 	"testing"
+
+	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 func TestCpuProfileFunc(t *testing.T) {
@@ -11,7 +13,7 @@ func TestCpuProfileFunc(t *testing.T) {
 		Desc string `alias:"dummyDesc"`
 	}
 	d := dummy{Name: "name 1", Desc: "desc 2"}
-	callback := WalkTagCallback{
+	callback := rfutil.WalkTagCallback{
 		Tag: "alias",
 		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
 			fieldVal.SetString("yo")
@@ -21,7 +23,7 @@ func TestCpuProfileFunc(t *testing.T) {
 	var err error
 	if err := CpuProfileFunc("out.prof", func() {
 		for i := 0; i < 9999999; i++ { // if func runs too fast, the profile will be empty
-			err = WalkTagShallow(&d, callback)
+			err = rfutil.WalkTagShallow(&d, callback)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -37,7 +39,7 @@ func TestMemProfileFunc(t *testing.T) {
 		Desc string `alias:"dummyDesc"`
 	}
 	d := dummy{Name: "name 1", Desc: "desc 2"}
-	callback := WalkTagCallback{
+	callback := rfutil.WalkTagCallback{
 		Tag: "alias",
 		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
 			fieldVal.SetString("yo")
@@ -47,7 +49,7 @@ func TestMemProfileFunc(t *testing.T) {
 	var err error
 	if err := MemoryProfileFunc("out.prof", func() {
 		for i := 0; i < 99999999; i++ {
-			err = WalkTagShallow(&d, callback)
+			err = rfutil.WalkTagShallow(&d, callback)
 			if err != nil {
 				t.Fatal(err)
 			}

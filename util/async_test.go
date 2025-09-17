@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/utillog"
 )
 
 func TestRunAsync(t *testing.T) {
@@ -386,7 +387,7 @@ func TestBatchTask(t *testing.T) {
 }
 
 func TestAyncPoolFull(t *testing.T) {
-	DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
+	utillog.DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
 	ap := NewAsyncPool(0, 0, CallerRunTaskWhenPoolFull())
 	v := &atomic.Int32{}
 	ap.Go(func() {
@@ -423,7 +424,7 @@ func TestAyncPoolFull(t *testing.T) {
 }
 
 func TestAntsAyncPoolFull(t *testing.T) {
-	DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
+	utillog.DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
 	ap := NewAntsAsyncPool(1, CallerRunTaskWhenPoolFull())
 	v := &atomic.Int32{}
 	var cnt int32 = 10

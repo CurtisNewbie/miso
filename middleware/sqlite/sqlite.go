@@ -7,7 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/dbquery"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -132,7 +132,7 @@ func sqliteBootstrap(rail miso.Rail) error {
 }
 
 func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
-	return !util.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
+	return !strutil.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
 }
 
 func logSql() bool {

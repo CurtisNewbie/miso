@@ -12,6 +12,8 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/rfutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
@@ -263,7 +265,7 @@ func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 }
 
 func (q *Query) WhereNotNil(query string, v any) *Query {
-	if util.IsAnyNil(v) {
+	if rfutil.IsAnyNil(v) {
 		return q
 	}
 	return q.Where(query, v)
@@ -469,7 +471,7 @@ func (q *Query) doSetCols(arg any, inclEmpty bool, cols ...string) *Query {
 
 	colSet := hash.NewSet[string]()
 	for _, c := range cols {
-		colSet.AddAll(util.SplitStr(c, ","))
+		colSet.AddAll(strutil.SplitStr(c, ","))
 	}
 
 	rt := rv.Type()

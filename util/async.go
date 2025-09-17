@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/panjf2000/ants"
 )
 
@@ -125,7 +126,7 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 
 			// task() panicked, change err
 			if v := recover(); v != nil {
-				ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				utillog.ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 				if verr, ok := v.(error); ok {
 					err = verr
 				} else {
@@ -270,7 +271,7 @@ type asyncPoolCommon struct {
 }
 
 func (a *asyncPoolCommon) unwrapPoolCommon() *asyncPoolCommon {
-	DebugLog("Unwrapped *asyncPoolCommon")
+	utillog.DebugLog("Unwrapped *asyncPoolCommon")
 	return a
 }
 
@@ -323,7 +324,7 @@ func DropTaskWhenPoolFull() asyncPoolOption {
 	return func(a AsyncPoolItf) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
 			ap.doWhenPoolFull = func(task func()) {
-				DebugLog("Pool is full, task dropped")
+				utillog.DebugLog("Pool is full, task dropped")
 				// drop task
 			}
 			ap.blockWhenPoolFull = false
@@ -335,7 +336,7 @@ func CallerRunTaskWhenPoolFull() asyncPoolOption {
 	return func(a AsyncPoolItf) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
 			ap.doWhenPoolFull = func(task func()) {
-				DebugLog("Pool is full, caller runs task")
+				utillog.DebugLog("Pool is full, caller runs task")
 				task()
 			}
 			ap.blockWhenPoolFull = false
@@ -437,7 +438,7 @@ func (p *AsyncPool) Go(f func()) error {
 // spawn a new worker.
 func (p *AsyncPool) spawn(first func()) {
 	defer func() { <-p.workers }()
-	DebugLog("AyncPool created worker")
+	utillog.DebugLog("AyncPool created worker")
 
 	if first != nil {
 		PanicSafeFunc(first)()
@@ -454,7 +455,7 @@ func (p *AsyncPool) spawn(first func()) {
 			}
 			PanicSafeFunc(f)()
 		case <-idleTimer.C:
-			DebugLog("AsyncPool.Worker has been idle for %v, release worker", p.idleDur)
+			utillog.DebugLog("AsyncPool.Worker has been idle for %v, release worker", p.idleDur)
 			return
 		}
 	}
@@ -464,7 +465,7 @@ func PanicSafeFunc(op func()) func() {
 	return func() {
 		defer func() {
 			if v := recover(); v != nil {
-				ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+				utillog.ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 			}
 		}()
 		op()
@@ -477,7 +478,7 @@ func PanicSafeRun(op func()) {
 
 func recoverPanic() {
 	if v := recover(); v != nil {
-		ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
+		utillog.ErrorLog("panic recovered, %v\n%v", v, UnsafeByt2Str(debug.Stack()))
 	}
 }
 
@@ -603,7 +604,7 @@ func (a *AntsAsyncPool) Go(f func()) error {
 	err := a.p.Submit(wrp)
 	if err != nil {
 		if errors.Is(err, ants.ErrPoolOverload) {
-			DebugLog("AntsAsyncPool full, calling fallback, %v", err)
+			utillog.DebugLog("AntsAsyncPool full, calling fallback, %v", err)
 			a.doWhenPoolFull(wrp)
 			return nil
 		} else {

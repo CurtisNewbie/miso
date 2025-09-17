@@ -1,4 +1,4 @@
-package util
+package strutil
 
 import (
 	"fmt"
@@ -134,41 +134,6 @@ func TestCutSuffixIgnoreCase(t *testing.T) {
 		r, _ := CutSuffixIgnoreCase(s, p)
 		if r != m {
 			t.Logf("%v:, s: %v, p: %v, m: %v, r: %v", i, s, p, m, r)
-			t.FailNow()
-		}
-	}
-}
-
-func TestHasSuffixIgnoreCaseFuzz(t *testing.T) {
-	for i := 0; i < 500; i++ {
-		s := strings.ToLower(RandStr(30))
-		p := strings.ToLower(RandStr(3))
-		if strings.HasSuffix(s, p) != HasSuffixIgnoreCase(s, p) {
-			t.Logf("s: %v, p: %v", s, p)
-			t.FailNow()
-		}
-	}
-}
-
-func TestCutSuffixIgnoreCaseFuzz(t *testing.T) {
-	for i := 0; i < 500; i++ {
-		s := strings.ToLower(RandStr(30))
-		p := strings.ToLower(RandStr(3))
-		v, _ := strings.CutSuffix(s, p)
-		sv, _ := CutSuffixIgnoreCase(s, p)
-		if v != sv {
-			t.Logf("s: %v, p: %v, v: %v", s, p, v)
-			t.FailNow()
-		}
-	}
-}
-
-func TestHasPrefixIgnoreCaseFuzz(t *testing.T) {
-	for i := 0; i < 500; i++ {
-		s := strings.ToLower(RandStr(30))
-		p := strings.ToLower(RandStr(3))
-		if strings.HasPrefix(s, p) != HasPrefixIgnoreCase(s, p) {
-			t.Logf("s: %v, p: %v", s, p)
 			t.FailNow()
 		}
 	}

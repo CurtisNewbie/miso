@@ -15,6 +15,7 @@ import (
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -141,7 +142,7 @@ func (a *AppConfig) GetPropStrSlice(prop string) []string {
 	return returnWithReadLock(a, func() []string {
 		v := a.vp.Get(prop)
 		if s, ok := v.(string); ok {
-			return util.SplitStr(s, ",")
+			return strutil.SplitStr(s, ",")
 		}
 		return cast.ToStringSlice(v)
 	})
@@ -675,7 +676,7 @@ func doWithReadLock(a *AppConfig, f func()) {
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
 func ResolveServerHost(address string) string {
-	if util.IsBlankStr(address) || address == util.LocalIpAny {
+	if strutil.IsBlankStr(address) || address == util.LocalIpAny {
 		address = util.GetLocalIPV4()
 	}
 	return address
@@ -730,7 +731,7 @@ func buildArgKeyValMap(args []string, requirePrefix bool) map[string][]string {
 		}
 
 		// e.g., 'miso_nacos_server_address' becomes 'nacos.server.address'
-		if key2, ok := util.CutPrefixIgnoreCase(key, "miso_"); ok {
+		if key2, ok := strutil.CutPrefixIgnoreCase(key, "miso_"); ok {
 			key2 = argKeyValRegex.ReplaceAllLiteralString(key2, ".")
 			doAppend(key2, val)
 		}

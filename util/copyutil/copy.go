@@ -1,14 +1,14 @@
 package copyutil
 
 import (
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/jinzhu/copier"
 )
 
 func Copy(from any, toPtr any) {
 	if err := copier.Copy(toPtr, from); err != nil {
-		util.ErrorLog("Failed to copy value, %v", errs.WrapErr(err))
+		utillog.ErrorLog("Failed to copy value, %v", errs.WrapErr(err))
 	}
 }
 

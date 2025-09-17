@@ -15,7 +15,9 @@ import (
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/getkin/kin-openapi/openapi3"
 	jsoniter "github.com/json-iterator/go"
 )
@@ -178,7 +180,7 @@ func (f FieldDesc) comment(withSlash bool) string {
 	appendComment := func(r string) {
 		r = strings.TrimSpace(r)
 		if comment != "" {
-			if !util.HasAnySuffix(comment, ".", ",") {
+			if !strutil.HasAnySuffix(comment, ".", ",") {
 				comment += "."
 			}
 			comment += " " + r
@@ -196,7 +198,7 @@ func (f FieldDesc) comment(withSlash bool) string {
 		var remaining string
 		rules := strings.Split(f.ValidTag, ",")
 		appendRemaining := func(r string) {
-			if remaining != "" && !util.HasAnySuffix(remaining, ".", ",") {
+			if remaining != "" && !strutil.HasAnySuffix(remaining, ".", ",") {
 				remaining += "."
 			}
 			remaining += " " + r
@@ -421,7 +423,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 	for _, r := range hr {
 		excl := false
 		for _, filtered := range filteredPathPatterns {
-			if util.MatchPath(filtered, r.Url) {
+			if strutil.MatchPath(filtered, r.Url) {
 				excl = true
 				break
 			}
@@ -525,7 +527,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		// openapi 3.0.0
 		var matchSpecPattern bool = true
 		if len(openApiSpecPatterns) > 0 {
-			matchSpecPattern = util.MatchPathAny(openApiSpecPatterns, d.Url)
+			matchSpecPattern = strutil.MatchPathAny(openApiSpecPatterns, d.Url)
 		}
 
 		if matchSpecPattern {
@@ -583,7 +585,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString("- Header Parameter:")
 			for _, h := range r.Headers {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- \"")
 				b.WriteString(h.Name)
 				b.WriteString("\": ")
@@ -592,11 +594,11 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 		}
 		if len(r.QueryParams) > 0 {
 			b.WriteRune('\n')
-			b.WriteString(util.Spaces(2))
+			b.WriteString(strutil.Spaces(2))
 			b.WriteString("- Query Parameter:")
 			for _, q := range r.QueryParams {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- \"")
 				b.WriteString(q.Name)
 				b.WriteString("\": ")
@@ -623,51 +625,51 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 		if r.Curl != "" {
 			b.WriteRune('\n')
 			b.WriteString("- cURL:\n")
-			b.WriteString(util.Spaces(2) + "```sh\n")
-			b.WriteString(util.SAddLineIndent(r.Curl, util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
+			b.WriteString(strutil.Spaces(2) + "```sh\n")
+			b.WriteString(strutil.SAddLineIndent(r.Curl, strutil.Spaces(2)))
+			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 
 		if r.MisoTClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
 			b.WriteRune('\n')
 			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
-			b.WriteString(util.Spaces(2) + "```go\n")
-			b.WriteString(util.SAddLineIndent(r.MisoTClientDemo+"\n", util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
+			b.WriteString(strutil.Spaces(2) + "```go\n")
+			b.WriteString(strutil.SAddLineIndent(r.MisoTClientDemo+"\n", strutil.Spaces(2)))
+			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 
 		if r.JsonTsDef != "" {
 			b.WriteRune('\n')
 			b.WriteString("- JSON Request / Response Object In TypeScript:\n")
-			b.WriteString(util.Spaces(2) + "```ts\n")
-			b.WriteString(util.SAddLineIndent(r.JsonTsDef, util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
+			b.WriteString(strutil.Spaces(2) + "```ts\n")
+			b.WriteString(strutil.SAddLineIndent(r.JsonTsDef, strutil.Spaces(2)))
+			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 
 		if !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
 			if r.NgHttpClientDemo != "" {
 				b.WriteRune('\n')
 				b.WriteString("- Angular HttpClient Demo:\n")
-				b.WriteString(util.Spaces(2) + "```ts\n")
-				b.WriteString(util.SAddLineIndent(r.NgHttpClientDemo, util.Spaces(2)))
-				b.WriteString(util.Spaces(2) + "```\n")
+				b.WriteString(strutil.Spaces(2) + "```ts\n")
+				b.WriteString(strutil.SAddLineIndent(r.NgHttpClientDemo, strutil.Spaces(2)))
+				b.WriteString(strutil.Spaces(2) + "```\n")
 			}
 
 			if r.NgTableDemo != "" {
 				b.WriteRune('\n')
 				b.WriteString("- Angular NgTable Demo:\n")
-				b.WriteString(util.Spaces(2) + "```html\n")
-				b.WriteString(util.SAddLineIndent(r.NgTableDemo+"\n", util.Spaces(2)))
-				b.WriteString(util.Spaces(2) + "```\n")
+				b.WriteString(strutil.Spaces(2) + "```html\n")
+				b.WriteString(strutil.SAddLineIndent(r.NgTableDemo+"\n", strutil.Spaces(2)))
+				b.WriteString(strutil.Spaces(2) + "```\n")
 			}
 		}
 
 		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApi) {
 			b.WriteRune('\n')
 			b.WriteString("- Open Api (experimental, demo may not work):\n")
-			b.WriteString(util.Spaces(2) + "```json\n")
-			b.WriteString(util.SAddLineIndent(r.OpenApiDoc+"\n", util.Spaces(2)))
-			b.WriteString(util.Spaces(2) + "```\n")
+			b.WriteString(strutil.Spaces(2) + "```json\n")
+			b.WriteString(strutil.SAddLineIndent(r.OpenApiDoc+"\n", strutil.Spaces(2)))
+			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 	}
 
@@ -682,14 +684,14 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 			if p.Desc != "" {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- Description: ")
 				b.WriteString(p.Desc)
 			}
 
 			if p.Queue != "" {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- RabbitMQ Queue: `")
 				b.WriteString(p.Queue)
 				b.WriteString("`")
@@ -697,7 +699,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 			if p.Exchange != "" {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- RabbitMQ Exchange: `")
 				b.WriteString(p.Exchange)
 				b.WriteString("`")
@@ -705,7 +707,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 			if p.RoutingKey != "" {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- RabbitMQ RoutingKey: `")
 				b.WriteString(p.RoutingKey)
 				b.WriteString("`")
@@ -713,7 +715,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 			if len(p.PayloadDesc.Fields) > 0 {
 				b.WriteRune('\n')
-				b.WriteString(util.Spaces(2))
+				b.WriteString(strutil.Spaces(2))
 				b.WriteString("- Event Payload:")
 				if p.PayloadDesc.IsSlice {
 					b.WriteString(" (array)")
@@ -729,7 +731,7 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 
 func appendJsonPayloadDoc(b *strings.Builder, jds []FieldDesc, indent int) {
 	for _, jd := range jds {
-		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", util.Spaces(indent+2), jd.JsonName, jd.TypeNameAlias, jd.comment(false)))
+		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", strutil.Spaces(indent+2), jd.JsonName, jd.TypeNameAlias, jd.comment(false)))
 
 		if len(jd.Fields) > 0 {
 			appendJsonPayloadDoc(b, jd.Fields, indent+2)
@@ -811,7 +813,7 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 			jsonName = json.LowercaseNamingStrategy(f.Name)
 		}
 
-		originTypeName := util.TypeName(f.Type)
+		originTypeName := rfutil.TypeName(f.Type)
 		typeName, typeAliasMatched := translateTypeAlias(originTypeName)
 
 		jsonTag := f.Tag.Get("json")
@@ -842,7 +844,7 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 			if !fv.IsZero() && !fv.IsNil() {
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
-					jd.OriginTypeName = util.TypeName(et)
+					jd.OriginTypeName = rfutil.TypeName(et)
 					jd.TypePkg = et.PkgPath()
 					jd.TypeNameAlias, _ = translateTypeAlias(jd.OriginTypeName)
 					switch et.Kind() {
@@ -1033,7 +1035,7 @@ func parseHeaderDoc(t reflect.Type) []ParamDoc {
 }
 
 func genRouteCurl(d httpRouteDoc) string {
-	sl := new(util.SLPinter)
+	sl := new(strutil.SLPinter)
 	sl.LineSuffix = " \\"
 	var qp string
 	for i, q := range d.QueryParams {
@@ -1139,7 +1141,7 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, str
 					return "", ""
 				}
 				inclTypeDef := inclGoTypeDef(f, seenTypeDef)
-				sb, writef := util.NewIndWritef("\t")
+				sb, writef := strutil.NewIndWritef("\t")
 				ptn := f.pureGoTypeName()
 				if inclTypeDef {
 					writef(0, "type %s struct {", ptn)
@@ -1157,7 +1159,7 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, str
 		}
 		return "", ""
 	} else {
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
 		ptn := rv.pureGoTypeName()
 		if inclTypeDef {
@@ -1207,7 +1209,7 @@ func inclGoTypeDef(f interface {
 	return true
 }
 
-func genJsonGoDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef hash.Set[string]) {
+func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef hash.Set[string]) {
 	for _, f := range fields {
 		var jsonTag string
 		if f.JsonTag != "" {
@@ -1255,7 +1257,7 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 	if len(payload.Fields) < 1 && typeName == "" {
 		return ""
 	}
-	sb, writef := util.NewIndWritef("  ")
+	sb, writef := strutil.NewIndWritef("  ")
 	seenType := hash.NewSet[string]()
 	tsTypeName := guessTsItfName(typeName)
 	seenType.Add(tsTypeName)
@@ -1271,7 +1273,7 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef util.IndWritef, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
+func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
 	for i := range descs {
 		d := descs[i]
 
@@ -1379,7 +1381,7 @@ func guessGoTypName(n string) string {
 
 func genNgTableDemo(d httpRouteDoc) string {
 	var respTypeName string = d.JsonResponseDesc.TypeName
-	sl := new(util.SLPinter)
+	sl := new(strutil.SLPinter)
 	sl.Println(`<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
 
 	var cols []string
@@ -1398,14 +1400,14 @@ func genNgTableDemo(d httpRouteDoc) string {
 				})
 				if hasPayload {
 					for _, f := range pl.Fields {
-						sl.Printlnf(util.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.JsonName)
-						sl.Printlnf(util.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.GoFieldName)
+						sl.Printlnf(strutil.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.JsonName)
+						sl.Printlnf(strutil.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.GoFieldName)
 						if f.OriginTypeName == "ETime" || f.OriginTypeName == "*ETime" || f.OriginTypeName == "util.ETime" || f.OriginTypeName == "*util.ETime" {
-							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.JsonName)
+							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.JsonName)
 						} else {
-							sl.Printlnf(util.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
+							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
 						}
-						sl.Println(util.Tabs(1) + "</ng-container>")
+						sl.Println(strutil.Tabs(1) + "</ng-container>")
 						cols = append(cols, "'"+f.JsonName+"'")
 					}
 				}
@@ -1414,21 +1416,21 @@ func genNgTableDemo(d httpRouteDoc) string {
 	}
 
 	colstr := "[" + strings.Join(cols, ",") + "]"
-	sl.Printlnf(util.Tabs(1)+"<tr mat-row *matRowDef=\"let row; columns: %v;\"></tr>", colstr)
-	sl.Printlnf(util.Tabs(1)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
+	sl.Printlnf(strutil.Tabs(1)+"<tr mat-row *matRowDef=\"let row; columns: %v;\"></tr>", colstr)
+	sl.Printlnf(strutil.Tabs(1)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
 	sl.Printlnf(`</table>`)
 	return sl.String()
 }
 
 func genNgHttpClientDemo(d httpRouteDoc) string {
 	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
-	sl := new(util.SLPinter)
+	sl := new(strutil.SLPinter)
 	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
 	sl.Printlnf("import { HttpClient } from \"@angular/common/http\";")
 	sl.Printlnf("")
 	sl.Printlnf("constructor(")
-	sl.Println(util.Spaces(2) + "private snackBar: MatSnackBar,")
-	sl.Println(util.Spaces(2) + "private http: HttpClient")
+	sl.Println(strutil.Spaces(2) + "private snackBar: MatSnackBar,")
+	sl.Println(strutil.Spaces(2) + "private http: HttpClient")
 	sl.Printlnf(") {}")
 	sl.Printlnf("")
 
@@ -1437,12 +1439,12 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 		if strings.HasPrefix(strings.ToLower(d.Name), "api") {
 			dr := []rune(d.Name)
 			if len(dr) > 3 {
-				mn = util.CamelCase(string(dr[3:]))
+				mn = strutil.CamelCase(string(dr[3:]))
 			} else {
-				mn = util.CamelCase(d.Name)
+				mn = strutil.CamelCase(d.Name)
 			}
 		} else {
-			mn = util.CamelCase(d.Name)
+			mn = strutil.CamelCase(d.Name)
 		}
 	} else if reqTypeName != "" {
 		if len(reqTypeName) > 1 {
@@ -1454,7 +1456,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 
 	var qp string
 	for i, q := range d.QueryParams {
-		cname := util.CamelCase(q.Name)
+		cname := strutil.CamelCase(q.Name)
 		sl.Printlnf("let %s: any | null = null;", cname)
 
 		if qp == "" {
@@ -1478,7 +1480,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 	}
 
 	for _, h := range d.Headers {
-		sl.Printlnf("let %s: any | null = null;", util.CamelCase(h.Name))
+		sl.Printlnf("let %s: any | null = null;", strutil.CamelCase(h.Name))
 	}
 
 	isBuiltinResp := false
@@ -1527,43 +1529,43 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 
 	if len(d.Headers) > 0 {
 		sl.Printf(",")
-		sl.Println(util.Spaces(2) + "{")
-		sl.Println(util.Spaces(4) + "headers: {")
+		sl.Println(strutil.Spaces(2) + "{")
+		sl.Println(strutil.Spaces(4) + "headers: {")
 		for _, h := range d.Headers {
-			sl.Printlnf(util.Spaces(6)+"\"%s\": %s", h.Name, util.CamelCase(h.Name))
+			sl.Printlnf(strutil.Spaces(6)+"\"%s\": %s", h.Name, strutil.CamelCase(h.Name))
 		}
-		sl.Println(util.Spaces(4) + "}")
-		sl.Println(util.Spaces(2) + "})")
+		sl.Println(strutil.Spaces(4) + "}")
+		sl.Println(strutil.Spaces(2) + "})")
 	} else {
 		sl.Printf(")")
 	}
-	sl.Println(util.Spaces(2) + ".subscribe({")
+	sl.Println(strutil.Spaces(2) + ".subscribe({")
 
 	if respTypeName != "" {
-		sl.Println(util.Spaces(4) + "next: (resp) => {")
+		sl.Println(strutil.Spaces(4) + "next: (resp) => {")
 		if isBuiltinResp {
-			sl.Println(util.Spaces(6) + "if (resp.error) {")
-			sl.Println(util.Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
-			sl.Println(util.Spaces(8) + "return;")
-			sl.Println(util.Spaces(6) + "}")
+			sl.Println(strutil.Spaces(6) + "if (resp.error) {")
+			sl.Println(strutil.Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
+			sl.Println(strutil.Spaces(8) + "return;")
+			sl.Println(strutil.Spaces(6) + "}")
 			if hasData {
 				if dataField, ok := slutil.SliceFilterFirst(d.JsonResponseDesc.Fields,
 					func(d FieldDesc) bool { return d.GoFieldName == "Data" }); ok {
-					sl.Printlnf(util.Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
+					sl.Printlnf(strutil.Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
 				}
 			}
 		}
-		sl.Println(util.Spaces(4) + "},")
+		sl.Println(strutil.Spaces(4) + "},")
 	} else {
-		sl.Println(util.Spaces(4) + "next: () => {")
-		sl.Println(util.Spaces(4) + "},")
+		sl.Println(strutil.Spaces(4) + "next: () => {")
+		sl.Println(strutil.Spaces(4) + "},")
 	}
 
-	sl.Println(util.Spaces(4) + "error: (err) => {")
-	sl.Println(util.Spaces(6) + "console.log(err)")
-	sl.Println(util.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
-	sl.Println(util.Spaces(4) + "}")
-	sl.Println(util.Spaces(2) + "});")
+	sl.Println(strutil.Spaces(4) + "error: (err) => {")
+	sl.Println(strutil.Spaces(6) + "console.log(err)")
+	sl.Println(strutil.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
+	sl.Println(strutil.Spaces(4) + "}")
+	sl.Println(strutil.Spaces(2) + "});")
 
 	sl.LinePrefix = ""
 	sl.Printlnf("}\n")
@@ -1573,7 +1575,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 
 func genTClientDemo(d httpRouteDoc) (code string) {
 	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
-	sl := new(util.SLPinter)
+	sl := new(strutil.SLPinter)
 
 	buildTypeName := func(s string, isPtr bool, isSlice bool) string {
 		// TODO: pointer of slice?
@@ -1625,10 +1627,10 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 
 	qhp := make([]string, 0, len(d.QueryParams)+len(d.Headers))
 	for _, s := range d.QueryParams {
-		qhp = append(qhp, fmt.Sprintf("%s string", util.CamelCase(s.Name)))
+		qhp = append(qhp, fmt.Sprintf("%s string", strutil.CamelCase(s.Name)))
 	}
 	for _, s := range d.Headers {
-		qhp = append(qhp, fmt.Sprintf("%s string", util.CamelCase(s.Name)))
+		qhp = append(qhp, fmt.Sprintf("%s string", strutil.CamelCase(s.Name)))
 	}
 
 	qh := ""
@@ -1648,7 +1650,7 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	{
 		desc := strings.TrimSpace(d.Desc)
 		if desc != "" {
-			sl.Println(util.SAddLineIndent(desc, "// "))
+			sl.Println(strutil.SAddLineIndent(desc, "// "))
 		}
 	}
 	if reqTypeName != "" {
@@ -1668,16 +1670,16 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 
 	sl.LinePrefix = "\t"
 	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
-	sl.Printf("\n%serr := miso.NewDynClient(rail, \"%s\", \"%s\")", util.Tabs(1), d.Url, GetPropStr(PropAppName))
+	sl.Printf("\n%serr := miso.NewDynClient(rail, \"%s\", \"%s\")", strutil.Tabs(1), d.Url, GetPropStr(PropAppName))
 
 	for _, q := range d.QueryParams {
-		cname := util.CamelCase(q.Name)
-		sl.Printf(".\n%sAddQueryParams(\"%s\", %s)", util.Tabs(2), cname, cname)
+		cname := strutil.CamelCase(q.Name)
+		sl.Printf(".\n%sAddQueryParams(\"%s\", %s)", strutil.Tabs(2), cname, cname)
 	}
 
 	for _, h := range d.Headers {
-		cname := util.CamelCase(h.Name)
-		sl.Printf(".\n%sAddHeader(\"%s\", %s)", util.Tabs(2), cname, cname)
+		cname := strutil.CamelCase(h.Name)
+		sl.Printf(".\n%sAddHeader(\"%s\", %s)", strutil.Tabs(2), cname, cname)
 	}
 
 	httpCall := d.Method
@@ -1687,28 +1689,28 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	um := strings.ToUpper(d.Method)
 	if reqTypeName != "" {
 		if um == "POST" {
-			sl.Printf(".\n%sPostJson(req)", util.Tabs(2))
+			sl.Printf(".\n%sPostJson(req)", strutil.Tabs(2))
 		} else if um == "PUT" {
-			sl.Printf(".\n%sPutJson(req)", util.Tabs(2))
+			sl.Printf(".\n%sPutJson(req)", strutil.Tabs(2))
 		}
 	} else {
 		if um == "POST" {
-			sl.Printf(".\n%sPost(nil)", util.Tabs(2))
+			sl.Printf(".\n%sPost(nil)", strutil.Tabs(2))
 		} else if um == "PUT" {
-			sl.Printf(".\n%sPut(nil)", util.Tabs(2))
+			sl.Printf(".\n%sPut(nil)", strutil.Tabs(2))
 		} else {
-			sl.Printf(".\n%s%s()", util.Tabs(2), httpCall)
+			sl.Printf(".\n%s%s()", strutil.Tabs(2), httpCall)
 		}
 	}
-	sl.Printf(".\n%sJson(&res)", util.Tabs(2))
+	sl.Printf(".\n%sJson(&res)", strutil.Tabs(2))
 
 	sl.Printlnf("if err != nil {")
-	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", util.Tabs(1))
+	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
 	if respGeneName == "any" {
-		sl.Printlnf("%sreturn err", util.Tabs(1))
+		sl.Printlnf("%sreturn err", strutil.Tabs(1))
 	} else {
 		if strings.HasPrefix(respGeneName, "*") {
-			sl.Printlnf("%sreturn nil, err", util.Tabs(1))
+			sl.Printlnf("%sreturn nil, err", strutil.Tabs(1))
 		} else {
 			dat := "dat"
 			switch respGeneName {
@@ -1719,9 +1721,9 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 			case "bool":
 				dat = "false"
 			default:
-				sl.Printlnf("%svar dat %s", util.Tabs(1), respGeneName)
+				sl.Printlnf("%svar dat %s", strutil.Tabs(1), respGeneName)
 			}
-			sl.Printlnf("%sreturn %s, err", util.Tabs(1), dat)
+			sl.Printlnf("%sreturn %s, err", strutil.Tabs(1), dat)
 		}
 	}
 	sl.Printlnf("}")
@@ -1729,7 +1731,7 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	if respGeneName == "any" {
 		sl.Printlnf("err = res.Err()")
 		sl.Printlnf("if err != nil {")
-		sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", util.Tabs(1))
+		sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
 		sl.Printlnf("}")
 		sl.Printlnf("return err")
 		sl.Printf("\n}")
@@ -1738,7 +1740,7 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 
 	sl.Printlnf("dat, err := res.Res()")
 	sl.Printlnf("if err != nil {")
-	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", util.Tabs(1))
+	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
 	sl.Printlnf("}")
 	sl.Printlnf("return dat, err")
 	sl.Printf("\n}")
@@ -1933,13 +1935,13 @@ func matchGoFilePathPatternFunc() func(u string) bool {
 	goFilePathPatterns := GetPropStrSlice(PropServerApiDocGoPathPatterns)
 	goFileExclPathPatterns := GetPropStrSlice(PropServerApiDocGoExclPathPatterns)
 	matchPatterns := func(u string) bool {
-		if len(goFileExclPathPatterns) > 0 && util.MatchPathAny(goFileExclPathPatterns, u) {
+		if len(goFileExclPathPatterns) > 0 && strutil.MatchPathAny(goFileExclPathPatterns, u) {
 			return false
 		}
 		if len(goFilePathPatterns) < 1 {
 			return true
 		}
-		return util.MatchPathAny(goFilePathPatterns, u)
+		return strutil.MatchPathAny(goFilePathPatterns, u)
 	}
 	return matchPatterns
 }

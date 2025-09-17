@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/stack"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
 	"golang.design/x/clipboard"
 )
@@ -72,7 +73,7 @@ func GenRequests(inst Instruction) string {
 		}
 		sb.WriteString("\n\t\t}).")
 		call = sb.String()
-	} else if !util.IsBlankStr(inst.Payload) {
+	} else if !strutil.IsBlankStr(inst.Payload) {
 
 		inst.Payload = unquote(inst.Payload)
 		out, err := gojson.Generate(strings.NewReader(inst.Payload), gojson.ParseJson, "Req", "main", []string{"fmt"}, false, true)
@@ -80,7 +81,7 @@ func GenRequests(inst Instruction) string {
 			callType = string(out)
 			callType = strings.ReplaceAll(callType, "package main", "")
 			callType = strings.TrimSpace(callType)
-			callType = "\n" + util.SAddLineIndent(callType, "\t") + "\n"
+			callType = "\n" + strutil.SAddLineIndent(callType, "\t") + "\n"
 
 			sb := strings.Builder{}
 			sb.WriteString("\n")
@@ -107,7 +108,7 @@ func GenRequests(inst Instruction) string {
 	}
 	headers = headersb.String()
 
-	return util.NamedSprintf(`${callType}
+	return strutil.NamedSprintf(`${callType}
 	rail := miso.EmptyRail()
 	s, err := miso.NewClient(rail, "${url}").${headers}
 		Require2xx().${call}
@@ -124,6 +125,7 @@ func GenRequests(inst Instruction) string {
 			"headers":  headers,
 			"call":     call,
 		})
+
 }
 
 type Instruction struct {
@@ -135,12 +137,12 @@ type Instruction struct {
 }
 
 func ParseCurl(curl string) (inst Instruction, ok bool) {
-	if util.IsBlankStr(curl) {
+	if strutil.IsBlankStr(curl) {
 		return
 	}
 	inst.Headers = map[string]string{}
 	inst.Form = map[string]string{}
-	if util.IsBlankStr(inst.Method) {
+	if strutil.IsBlankStr(inst.Method) {
 		inst.Method = "GET"
 	}
 
@@ -150,7 +152,7 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 		cli.DebugPrintlnf(Debug, "next tok: %v", tok)
 		switch tok {
 		case "-H":
-			k, v, ok := util.SplitKV(unquote(p.Next()), ":")
+			k, v, ok := strutil.SplitKV(unquote(p.Next()), ":")
 			if ok {
 				inst.Headers[k] = v
 			}
@@ -159,7 +161,7 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 		case "-b": // don't need it yet
 			p.Next()
 		case "-F":
-			k, v, ok := util.SplitKV(unquote(p.Next()), "=")
+			k, v, ok := strutil.SplitKV(unquote(p.Next()), "=")
 			if ok {
 				inst.Form[k] = v
 			}

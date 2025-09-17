@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 const (
@@ -184,7 +185,7 @@ func (t ETime) String() string {
 func (t ETime) MarshalJSON() ([]byte, error) {
 	var v string
 	if etimeMarshalFormat != "" {
-		v = QuoteStr(t.ToTime().Format(etimeMarshalFormat)) // other format configured
+		v = strutil.QuoteStr(t.ToTime().Format(etimeMarshalFormat)) // other format configured
 	} else {
 		v = fmt.Sprintf("%d", t.UnixMilli()) // epoch milli by default
 	}
@@ -199,7 +200,7 @@ func (t *ETime) UnmarshalJSON(b []byte) error {
 	}
 	millisec, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		s = UnquoteStr(s)
+		s = strutil.UnquoteStr(s)
 		// try SQLDateTimeFormat
 		if xer := t.Scan(s); xer != nil {
 			return fmt.Errorf("failed to UnmarshalJSON, tried epoch milliseconds format %w, tried '2006-01-02 15:04:05.999999' format %w", err, xer)

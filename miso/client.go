@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
 	"github.com/tmaxmax/go-sse"
 )
@@ -684,7 +685,7 @@ func (t *Client) send(req *http.Request) *TResponse {
 
 func contentTypeLoggable(contentType string) bool {
 	lct := strings.ToLower(contentType)
-	return util.ContainsAnyStr(lct, applicationJson, applicationXml, textPlain, textXml)
+	return strutil.ContainsAnyStr(lct, applicationJson, applicationXml, textPlain, textXml)
 }
 
 // Append headers, subsequent method calls doesn't override previously appended headers

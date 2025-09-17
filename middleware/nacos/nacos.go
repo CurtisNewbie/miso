@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
@@ -116,7 +117,7 @@ type nacosModule struct {
 func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
 	if miso.GetPropBool(PropNacosDiscoveryEnabled) && miso.GetPropBool(PropNacosDiscoveryEnableDeregisterUrl) {
 		deregisterUrl := miso.GetPropStr(PropNacosDiscoveryDeregisterUrl)
-		if !util.IsBlankStr(deregisterUrl) {
+		if !strutil.IsBlankStr(deregisterUrl) {
 			rail.Infof("Enabled 'GET %v' for manual nacos service deregistration", deregisterUrl)
 
 			miso.HttpGet(deregisterUrl, miso.ResHandler(
@@ -294,7 +295,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 	// merge app's nacos config
 	appDataId := miso.GetPropStr(PropNacosConfigDataId)
 	appGroup := miso.GetPropStr(PropNacosConfigGroup)
-	if util.IsBlankStr(appDataId) {
+	if strutil.IsBlankStr(appDataId) {
 		return false, errs.NewErrf("Missing configuration: '%v'", PropNacosConfigDataId)
 	}
 	appConfig := watchingConfig{DataId: appDataId, Group: appGroup}
@@ -415,10 +416,10 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 			continue
 		}
 		scheme := miso.GetPropStr(PropNacosServerScheme)
-		if s, ok := util.CutPrefixIgnoreCase(host, "http://"); ok {
+		if s, ok := strutil.CutPrefixIgnoreCase(host, "http://"); ok {
 			scheme = "http"
 			host = s
-		} else if s, ok := util.CutPrefixIgnoreCase(host, "https://"); ok {
+		} else if s, ok := strutil.CutPrefixIgnoreCase(host, "https://"); ok {
 			scheme = "https"
 			host = s
 			if port == 0 {

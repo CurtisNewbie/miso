@@ -1,4 +1,4 @@
-package util
+package strutil
 
 import (
 	"fmt"
@@ -8,7 +8,9 @@ import (
 	"unicode"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
+	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/spf13/cast"
 	"golang.org/x/text/width"
 )
@@ -43,7 +45,12 @@ func IsBlankStr(s string) bool {
 // Substring such that len(s) <= max
 func MaxLenStr(s string, max int) string {
 	ru := []rune(s)
-	return string(ru[:MinInt(len(ru), max)])
+	n := max
+	l := len(ru)
+	if l < max {
+		n = l
+	}
+	return string(ru[:n])
 }
 
 // Check if s has the prefix in a case-insensitive way.
@@ -269,7 +276,7 @@ func NamedSprintf(pat string, p map[string]any) string {
 //
 //	NamedSprintf(pat, ReflectGenMap(myStruct))
 func NamedSprintfv(pat string, v any) string {
-	return NamedSprintf(pat, ReflectGenMap(v))
+	return NamedSprintf(pat, rfutil.ReflectGenMap(v))
 }
 
 func FmtFloat(f float64, width int, precision int) string {
@@ -371,7 +378,7 @@ func MatchPathAny(pattern []string, s string) bool {
 func MatchPath(pattern, s string) bool {
 	ok, err := doublestar.Match(pattern, s)
 	if err != nil {
-		ErrorLog("Path Pattern is invalid, pattern: '%v', %v", pattern, err)
+		utillog.ErrorLog("Path Pattern is invalid, pattern: '%v', %v", pattern, err)
 		return false
 	}
 	return ok

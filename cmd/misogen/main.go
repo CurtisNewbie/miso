@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
 )
 
@@ -130,11 +131,11 @@ func main() {
 				panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 			}
 
-			iw := util.NewIndentWriter("\t")
+			iw := strutil.NewIndentWriter("\t")
 			iw.Writef("package main")
 			iw.Writef("")
 			iw.Writef("import (").
-				StepIn(func(iw *util.IndentWriter) {
+				StepIn(func(iw *strutil.IndentWriter) {
 					iw.Writef("\"flag\"")
 					iw.Writef("")
 					iw.Writef("\"github.com/curtisnewbie/miso/miso\"")
@@ -144,33 +145,33 @@ func main() {
 				Writef(")").Writef("")
 
 			iw.Writef("var (").
-				StepIn(func(iw *util.IndentWriter) {
+				StepIn(func(iw *strutil.IndentWriter) {
 					iw.Writef("DebugFlag = flag.Bool(\"debug\", false, \"Enable debug log\")")
 				}).
 				Writef(")").Writef("")
 
 			// main func
 			iw.Writef("func main() {").
-				StepIn(func(iw *util.IndentWriter) {
+				StepIn(func(iw *strutil.IndentWriter) {
 					iw.Writef("rail := miso.EmptyRail()")
 					iw.Writef("flag.Parse()")
 					iw.Writef("")
 					iw.Writef("if *DebugFlag {").
-						StepIn(func(iw *util.IndentWriter) {
+						StepIn(func(iw *strutil.IndentWriter) {
 							iw.Writef("miso.SetLogLevel(\"debug\")")
 						}).
 						Writef("}").Writef("")
 
 					iw.Writef("// for mysql")
 					iw.Writef("if err := mysql.InitMySQL(rail, mysql.MySQLConnParam{}); err != nil {").
-						StepIn(func(iw *util.IndentWriter) {
+						StepIn(func(iw *strutil.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
 					iw.Writef("db := mysql.GetMySQL()")
 					iw.Writef("if err := db.Exec(`SELECT 1`).Error; err != nil {").
-						StepIn(func(iw *util.IndentWriter) {
+						StepIn(func(iw *strutil.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}").Writef("")
@@ -178,14 +179,14 @@ func main() {
 					iw.Writef("// for redis")
 					iw.Writef("red, err := redis.InitRedis(rail, redis.RedisConnParam{})")
 					iw.Writef("if err != nil {").
-						StepIn(func(iw *util.IndentWriter) {
+						StepIn(func(iw *strutil.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
 
 					iw.Writef("res, err := red.Ping().Result()")
 					iw.Writef("if err != nil {").
-						StepIn(func(iw *util.IndentWriter) {
+						StepIn(func(iw *strutil.IndentWriter) {
 							iw.Writef("panic(err)")
 						}).
 						Writef("}")
@@ -328,7 +329,7 @@ logging:
 `
 
 		dbName := strings.ReplaceAll(strings.ToLower(modName), "-", "_")
-		s = util.NamedSprintf(s, map[string]any{
+		s = strutil.NamedSprintf(s, map[string]any{
 			"modName": modName,
 			"dbName":  dbName,
 		})
@@ -355,7 +356,7 @@ logging:
 			panic(err)
 		}
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "// This is for automated MySQL schema migration.")
 		writef(0, "//")
 		writef(0, "// See https://github.com/CurtisNewbie/svc for more information.")
@@ -394,7 +395,7 @@ logging:
 			panic(err)
 		}
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package static")
 		writef(0, "")
 		writef(0, "import (")
@@ -436,7 +437,7 @@ logging:
 			panic(fmt.Errorf("failed to create file %s, %v", VersionFile, err))
 		}
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "const (")
@@ -456,7 +457,7 @@ logging:
 			panic(fmt.Errorf("failed to create file %s, %v", ServerFile, err))
 		}
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package server")
 		writef(0, "")
 		writef(0, "import (")
@@ -533,7 +534,7 @@ logging:
 		}
 		defer webf.Close()
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package web")
 		writef(0, "")
 		writef(0, "import \"github.com/curtisnewbie/miso/miso\"")
@@ -557,7 +558,7 @@ logging:
 		}
 		defer configf.Close()
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package config")
 		writef(0, "")
 		writef(0, "// misoconfig-section: General Configuration")
@@ -582,7 +583,7 @@ logging:
 			panic(fmt.Errorf("failed to create file %s, %v", MainFile, err))
 		}
 
-		sb, writef := util.NewIndWritef("\t")
+		sb, writef := strutil.NewIndWritef("\t")
 		writef(0, "package main")
 		writef(0, "")
 		writef(0, "import (")

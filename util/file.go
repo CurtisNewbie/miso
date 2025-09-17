@@ -9,6 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 const (
@@ -120,7 +122,7 @@ func FileHasSuffix(name string, ext string) bool {
 	if name == "" || ext == "" {
 		return false
 	}
-	return HasSuffixIgnoreCase(name, "."+ext)
+	return strutil.HasSuffixIgnoreCase(name, "."+ext)
 }
 
 func FileHasAnySuffix(name string, ext ...string) bool {

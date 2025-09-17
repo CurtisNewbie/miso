@@ -1,4 +1,4 @@
-package util
+package utillog
 
 import "github.com/curtisnewbie/miso/util/cli"
 

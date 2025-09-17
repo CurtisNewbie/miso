@@ -19,6 +19,8 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/rfutil"
+	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/curtisnewbie/miso/version"
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -462,8 +464,8 @@ func (a *MisoApp) RegisterConfigLoader(callback ...func(rail Rail) error) {
 }
 
 func (a *MisoApp) configureLogging() error {
-	util.ErrorLog = Errorf
-	util.DebugLog = Debugf
+	utillog.ErrorLog = Errorf
+	utillog.DebugLog = Debugf
 	c := a.Config()
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
@@ -660,8 +662,8 @@ func AppStoreGetElse[V any](app *MisoApp, k string, f func() V) V {
 }
 
 func InitAppModuleFunc[V any](initFunc func() V) func() V {
-	t := reflect.TypeOf(util.NewVar[V]())
-	k := util.TypeName(t)
+	t := reflect.TypeOf(rfutil.NewVar[V]())
+	k := rfutil.TypeName(t)
 	if k == "" {
 		panic(fmt.Errorf("cannot obtain type name of %v, unable to create InitAppModuleFunc", t))
 	}

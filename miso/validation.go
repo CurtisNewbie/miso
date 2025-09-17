@@ -7,8 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/rfutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 const (
@@ -47,11 +48,11 @@ var (
 		Validated,
 		ValidTrim,
 	)
-	ValidateWalkTagCallbackDeprecated = util.WalkTagCallback{
+	ValidateWalkTagCallbackDeprecated = rfutil.WalkTagCallback{
 		Tag:      TagValidationV1,
 		OnWalked: validateOnWalked,
 	}
-	ValidateWalkTagCallback = util.WalkTagCallback{
+	ValidateWalkTagCallback = rfutil.WalkTagCallback{
 		Tag:      TagValidationV2,
 		OnWalked: validateOnWalked,
 	}
@@ -103,7 +104,7 @@ func Validate(target any) error {
 		target = rv.Interface() // unwrap first
 	}
 
-	introspector := util.Introspect(target)
+	introspector := rfutil.Introspect(target)
 	targetVal := reflect.ValueOf(target)
 	var verr error
 
@@ -186,7 +187,7 @@ func parseValidRule(rule string) (bool, parsedValidRule) {
 
 func ValidateRule(field reflect.StructField, value reflect.Value, rule string, ruleParam string) error {
 	fname := field.Name
-	if !util.IsFieldExposed(fname) {
+	if !rfutil.IsFieldExposed(fname) {
 		return nil
 	}
 
@@ -216,7 +217,7 @@ func ValidateRule(field reflect.StructField, value reflect.Value, rule string, r
 		switch value.Kind() {
 		case reflect.String:
 			sval := value.String()
-			if util.IsBlankStr(sval) {
+			if strutil.IsBlankStr(sval) {
 				return &ValidationError{Field: fname, Rule: rule, ValidationMsg: "must not be empty",
 					CustomValidationMsg: customMsg}
 			}

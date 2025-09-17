@@ -3,6 +3,8 @@ package util
 import (
 	"bytes"
 	"sync"
+
+	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 type ByteBufPool struct {
@@ -79,7 +81,7 @@ func (r *FixedPool[T]) Pop() (T, bool) {
 		}
 		return c, true
 	}
-	return NewVar[T](), false
+	return rfutil.NewVar[T](), false
 }
 
 func (r *FixedPool[T]) TryPop() (T, bool) {
@@ -91,7 +93,7 @@ func (r *FixedPool[T]) TryPop() (T, bool) {
 			}
 			return v, true
 		default:
-			return NewVar[T](), false
+			return rfutil.NewVar[T](), false
 		}
 	}
 }

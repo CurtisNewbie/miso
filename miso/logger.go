@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 )
@@ -89,28 +90,28 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(levelstr)
 
 	if len(levelstr) < levelWidth {
-		b.WriteString(util.Spaces(levelWidth - len(levelstr)))
+		b.WriteString(strutil.Spaces(levelWidth - len(levelstr)))
 	}
 
 	b.WriteString(" [")
 	b.WriteString(traceId)
 
 	if len(traceId) < traceSpanIdWidth {
-		b.WriteString(util.Spaces(traceSpanIdWidth - len(traceId)))
+		b.WriteString(strutil.Spaces(traceSpanIdWidth - len(traceId)))
 	}
 
 	b.WriteByte(',')
 	b.WriteString(spanId)
 
 	if len(spanId) < traceSpanIdWidth {
-		b.WriteString(util.Spaces(traceSpanIdWidth - len(spanId)))
+		b.WriteString(strutil.Spaces(traceSpanIdWidth - len(spanId)))
 	}
 
 	b.WriteString("]  ")
 	b.WriteString(fn)
 
 	if len(fn) < fnWidth {
-		b.WriteString(util.Spaces(fnWidth - len(fn)))
+		b.WriteString(strutil.Spaces(fnWidth - len(fn)))
 	}
 
 	b.WriteString(" : ")

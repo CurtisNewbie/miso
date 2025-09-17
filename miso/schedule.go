@@ -8,6 +8,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
 	"github.com/robfig/cron"
 )
@@ -316,7 +317,7 @@ func CronExprEveryXHour(n int) string {
 
 // Trigger Named Job.
 func TriggerJob(rail Rail, name string) error {
-	if util.IsBlankStr(name) {
+	if strutil.IsBlankStr(name) {
 		return errs.NewErrf("Job name is empty")
 	}
 

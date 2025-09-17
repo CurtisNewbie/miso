@@ -15,12 +15,11 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
+	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
-	"github.com/spf13/cast"
-
-	"github.com/curtisnewbie/miso/util"
-
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -181,7 +180,7 @@ func addRoutesRegistar(reg routesRegistar) {
 // Register GIN route for consul healthcheck
 func registerRouteForHealthcheck() {
 	url := GetPropStr(PropHealthCheckUrl)
-	if !util.IsBlankStr(url) {
+	if !strutil.IsBlankStr(url) {
 		HttpGet(url, RawHandler(DefaultHealthCheckInbound))
 	}
 }
@@ -389,7 +388,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 			wtcbCnt += 1
 		}
 		if wtcbCnt > 0 {
-			wtcb := make([]util.WalkTagCallback, 0, wtcbCnt)
+			wtcb := make([]rfutil.WalkTagCallback, 0, wtcbCnt)
 
 			// validate request
 			if GetPropBool(PropServerRequestValidateEnabled) {
@@ -401,7 +400,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 				wtcb = append(wtcb, reflectSetHeaderCallback(c))
 			}
 
-			if err := util.WalkTagShallow(&req, wtcb...); err != nil {
+			if err := rfutil.WalkTagShallow(&req, wtcb...); err != nil {
 				endpointResultHandler(c, rail, nil, err)
 				return
 			}
@@ -807,7 +806,7 @@ func PreProcessGin(preProcessor GinPreProcessor) {
 	ginPreProcessors = append(ginPreProcessors, preProcessor)
 }
 
-func reflectSetHeaderCallback(c *gin.Context) util.WalkTagCallback {
+func reflectSetHeaderCallback(c *gin.Context) rfutil.WalkTagCallback {
 	return walkHeaderTagCallback(func(k string) string { return c.GetHeader(k) })
 }
 
@@ -833,8 +832,8 @@ func reflectSetHeaderValue(fieldVal reflect.Value, fieldType reflect.Type, heade
 	}
 }
 
-func walkHeaderTagCallback(getHeader func(k string) string) util.WalkTagCallback {
-	return util.WalkTagCallback{
+func walkHeaderTagCallback(getHeader func(k string) string) rfutil.WalkTagCallback {
+	return rfutil.WalkTagCallback{
 		Tag: TagHeaderParam,
 		OnWalked: func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error {
 			hv := getHeader(tagVal)
@@ -1059,7 +1058,7 @@ func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
 func MatchPathPatternFunc(patterns ...string) func(method string, url string) bool {
 	Infof("Matching patterns: %#v", patterns)
 	return func(method string, url string) bool {
-		return util.MatchPathAny(patterns, url)
+		return strutil.MatchPathAny(patterns, url)
 	}
 }
 
@@ -1249,8 +1248,8 @@ func setAwareHandler(decl *LazyRouteDecl, handler any) *LazyRouteDecl {
 // With both Req and Res type declared, miso will automatically parse these two types using reflect
 // and generate an API documentation describing the endpoint.
 func AutoHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) httpHandler {
-	req := util.NewVar[Req]()
-	res := util.NewVar[Res]()
+	req := rfutil.NewVar[Req]()
+	res := rfutil.NewVar[Res]()
 	return &autoHandler{
 		handleFunc: newMappedTRouteHandler(handler),
 		reqVar:     req,
@@ -1275,7 +1274,7 @@ func RawHandler(handler RawTRouteHandler) httpHandler {
 // With Res type declared, miso will automatically parse these the type using reflect
 // and generate an API documentation describing the endpoint.
 func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
-	res := util.NewVar[Res]()
+	res := rfutil.NewVar[Res]()
 	return &resAutoHandler{
 		handleFunc: newTRouteHandler(handler),
 		resVar:     res,

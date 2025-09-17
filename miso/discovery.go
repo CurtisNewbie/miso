@@ -16,6 +16,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 const (
@@ -202,14 +203,14 @@ type hardcodedServiceRegistry struct {
 }
 
 func (r hardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relativeUrl string) (string, error) {
-	if util.IsBlankStr(service) {
+	if strutil.IsBlankStr(service) {
 		return "", ErrMissingServiceName.New()
 	}
 
 	host := r.serverHostFromProp(service)
 	port := r.serverPortFromProp(service)
 
-	if util.IsBlankStr(host) {
+	if strutil.IsBlankStr(host) {
 		return httpProto + service + relativeUrl, nil
 	}
 
@@ -217,14 +218,14 @@ func (r hardcodedServiceRegistry) ResolveUrl(rail Rail, service string, relative
 }
 
 func (r hardcodedServiceRegistry) ListServers(rail Rail, service string) ([]Server, error) {
-	if util.IsBlankStr(service) {
+	if strutil.IsBlankStr(service) {
 		return []Server{}, ErrMissingServiceName.New()
 	}
 
 	host := r.serverHostFromProp(service)
 	port := r.serverPortFromProp(service)
 
-	if !util.IsBlankStr(host) {
+	if !strutil.IsBlankStr(host) {
 		return []Server{{Address: host, Port: port, Meta: map[string]string{}}}, nil
 	}
 

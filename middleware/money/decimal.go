@@ -7,6 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
 	"golang.org/x/text/currency"
 	inf "gopkg.in/inf.v0"
@@ -184,7 +185,7 @@ func (a Amt) Value() (driver.Value, error) {
 func (a Amt) MarshalJSON() ([]byte, error) {
 	v := a.String()
 	if marshalAsString {
-		v = util.QuoteStr(v)
+		v = strutil.QuoteStr(v)
 	}
 	return util.UnsafeStr2Byt(v), nil
 }
@@ -195,7 +196,7 @@ func (t *Amt) UnmarshalJSON(b []byte) error {
 	if s == "null" || s == "\"\"" || len(s) < 2 {
 		return nil
 	}
-	s = util.UnquoteStr(s)
+	s = strutil.UnquoteStr(s)
 	return t.SetString(s)
 }
 

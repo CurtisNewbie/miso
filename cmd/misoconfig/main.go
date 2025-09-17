@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -313,7 +314,7 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 
 		for _, v := range n.Values {
 			if bl, ok := v.(*dst.BasicLit); ok && bl.Kind == token.STRING {
-				cd.Name = util.UnquoteStr(bl.Value)
+				cd.Name = strutil.UnquoteStr(bl.Value)
 			}
 		}
 		if cd.Name == "" {
@@ -339,7 +340,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		sections = append(sections, ConfigSection{Configs: v, Name: k})
 	}
 	hasPrioritisedKw := func(n string) bool {
-		return util.ContainsAnyStr(n, "Common", "General")
+		return strutil.ContainsAnyStr(n, "Common", "General")
 	}
 	sort.SliceStable(sections, func(i, j int) bool {
 		if hasPrioritisedKw(sections[i].Name) {
@@ -362,8 +363,8 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	}
 	defer f.Close()
 
-	sb := util.SLPinter{}
-	wlen := func(s string) int { return util.StrWidth(s) }
+	sb := strutil.SLPinter{}
+	wlen := func(s string) int { return strutil.StrWidth(s) }
 
 	for _, sec := range sections {
 		if len(sec.Configs) < 1 {
@@ -389,21 +390,21 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 
 		sb.Printlnf("\n## %v\n", sec.Name)
-		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
-			"Name":         util.PadSpace(-maxNameLen, "property"),
-			"Description":  util.PadSpace(-maxDescLen, "description"),
-			"DefaultValue": util.PadSpace(-maxValLen, "default value"),
+		sb.Println(strutil.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
+			"Name":         strutil.PadSpace(-maxNameLen, "property"),
+			"Description":  strutil.PadSpace(-maxDescLen, "description"),
+			"DefaultValue": strutil.PadSpace(-maxValLen, "default value"),
 		}))
-		sb.Println(util.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
-			"Name":         util.PadToken(-maxNameLen, "---", "-"),
-			"Description":  util.PadToken(-maxDescLen, "---", "-"),
-			"DefaultValue": util.PadToken(-maxValLen, "---", "-"),
+		sb.Println(strutil.NamedSprintf("| ${Name} | ${Description} | ${DefaultValue} |", map[string]any{
+			"Name":         strutil.PadToken(-maxNameLen, "---", "-"),
+			"Description":  strutil.PadToken(-maxDescLen, "---", "-"),
+			"DefaultValue": strutil.PadToken(-maxValLen, "---", "-"),
 		}))
 		for _, c := range configs {
-			c.Name = util.PadSpace(-maxNameLen, c.Name)
-			c.Description = util.PadSpace(-maxDescLen, c.Description)
-			c.DefaultValue = util.PadSpace(-maxValLen, c.DefaultValue)
-			sb.Println(util.NamedSprintfv("| ${Name} | ${Description} | ${DefaultValue} |", c))
+			c.Name = strutil.PadSpace(-maxNameLen, c.Name)
+			c.Description = strutil.PadSpace(-maxDescLen, c.Description)
+			c.DefaultValue = strutil.PadSpace(-maxValLen, c.DefaultValue)
+			sb.Println(strutil.NamedSprintfv("| ${Name} | ${Description} | ${DefaultValue} |", c))
 		}
 	}
 
@@ -487,10 +488,10 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 			if pkg != "miso" {
 				pkgPrefix = "miso."
 			}
-			iw := util.NewIndentWriter("\t")
+			iw := strutil.NewIndentWriter("\t")
 			iw.SetIndent(1)
 			iw.Writef("%vPostServerBootstrap(func(rail %vRail) error {", pkgPrefix, pkgPrefix)
-			iw.StepIn(func(iw *util.IndentWriter) {
+			iw.StepIn(func(iw *strutil.IndentWriter) {
 				iw.Writef("deprecatedProps := [][]string{}")
 				for _, c := range src {
 					if skipConfig(c) {
@@ -502,9 +503,9 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 				}
 
 				iw.Writef("for _, p := range deprecatedProps {")
-				iw.StepIn(func(iw *util.IndentWriter) {
+				iw.StepIn(func(iw *strutil.IndentWriter) {
 					iw.Writef("if %vHasProp(p[0]) {", pkgPrefix)
-					iw.StepIn(func(iw *util.IndentWriter) {
+					iw.StepIn(func(iw *strutil.IndentWriter) {
 						iw.Writef("%vErrorf(\"Config prop: '%%v' has been deprecated since '%%v', please change to '%%v'\", p[0], p[1], p[2])", pkgPrefix)
 					})
 					iw.Writef("}")

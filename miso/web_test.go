@@ -3,7 +3,7 @@ package miso
 import (
 	"testing"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 func BenchmarkSetHeaderTag(b *testing.B) {
@@ -30,7 +30,7 @@ func BenchmarkSetHeaderTag(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = util.WalkTagShallow(&d, callback)
+		err = rfutil.WalkTagShallow(&d, callback)
 	}
 
 	if err != nil {

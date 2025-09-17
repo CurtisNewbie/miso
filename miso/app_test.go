@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 func TestBootstrapServer(t *testing.T) {
@@ -123,7 +123,7 @@ func TestSetHeaderTag(t *testing.T) {
 		}
 		return ""
 	}
-	err := util.WalkTagShallow(&d, walkHeaderTagCallback(GetHeader))
+	err := rfutil.WalkTagShallow(&d, walkHeaderTagCallback(GetHeader))
 	if err != nil {
 		t.Fatal(err)
 	}
