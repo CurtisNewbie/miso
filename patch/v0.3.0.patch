@@ -341,6 +341,26 @@ var v identifier
 +rfutil.NewVar[v]()
 
 @@
+var v identifier
+var b identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.NewVar[v.b]()
++rfutil.NewVar[v.b]()
+
+@@
+var v identifier
+var b identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.NewVar[*v.b]()
++rfutil.NewVar[*v.b]()
+
+@@
 @@
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/rfutil"
@@ -363,8 +383,8 @@ var v expression
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/rfutil"
 
--util.WalkTagShallow(a, v);
-+rfutil.WalkTagShallow(a, v);
+-util.WalkTagShallow(a, v)
++rfutil.WalkTagShallow(a, v)
 
 @@
 var a expression
@@ -373,8 +393,8 @@ var v expression
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/rfutil"
 
--util.WalkTagShallow(a, v...);
-+rfutil.WalkTagShallow(a, v...);
+-util.WalkTagShallow(a, v...)
++rfutil.WalkTagShallow(a, v...)
 
 @@
 @@
@@ -417,13 +437,33 @@ var v expression
 +rfutil.IsAnyNil(...)
 
 @@
-var v identifier
+var a identifier
 @@
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/rfutil"
 
--util.FindEmbedStruct[v](...)
-+rfutil.FindEmbedStruct[v](...)
+-util.FindEmbedStruct[a](...)
++rfutil.FindEmbedStruct[a](...)
+
+@@
+var a identifier
+var b identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.FindEmbedStruct[a.b](...)
++rfutil.FindEmbedStruct[a.b](...)
+
+@@
+var a identifier
+var b identifier
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/rfutil"
+
+-util.FindEmbedStruct[*a.b](...)
++rfutil.FindEmbedStruct[*a.b](...)
 
 @@
 @@
@@ -704,6 +744,15 @@ var b expression
 +strutil.ContainsAnyStr(a, b...)
 
 @@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.ContainsAnyStrIgnoreCase(...)
++strutil.ContainsAnyStrIgnoreCase(...)
+
+
+@@
 var a expression
 var b expression
 @@
@@ -728,6 +777,14 @@ var b expression
 
 -util.UnquoteStr(...)
 +strutil.UnquoteStr(...)
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.EqualAnyStr(...)
++strutil.EqualAnyStr(...)
 
 @@
 var a expression
