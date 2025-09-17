@@ -124,6 +124,14 @@
 -import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/slutil"
 
+-util.FastDistinct
++slutil.FastDistinct
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/slutil"
+
 -util.Distinct
 +slutil.Distinct
 
