@@ -75,10 +75,42 @@
 @@
 @@
 -import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/heap"
+
+-util.Heap
++heap.Heap
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/heap"
+
+-util.NewHeap
++heap.New
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/stack"
+
+-util.Stack
++stack.Stack
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
 +import "github.com/curtisnewbie/miso/util/stack"
 
 -util.NewStack
 +stack.New
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/queue"
+
+-util.Queue
++queue.Queue
 
 @@
 @@
