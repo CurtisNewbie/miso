@@ -13,8 +13,18 @@ import (
 	inf "gopkg.in/inf.v0"
 )
 
+type Rounder = inf.Rounder
+
 var (
 	marshalAsString = true
+
+	RoundDown     = inf.RoundDown     // towards 0
+	RoundUp       = inf.RoundUp       // away from 0
+	RoundFloor    = inf.RoundFloor    // towards -infinity
+	RoundCeil     = inf.RoundCeil     // towards +infinity
+	RoundHalfDown = inf.RoundHalfDown // to nearest; towards 0 if same distance
+	RoundHalfUp   = inf.RoundHalfUp   // to nearest; away from 0 if same distance
+	RoundHalfEven = inf.RoundHalfEven // to nearest; even last digit if same distance
 )
 
 func init() {
@@ -45,11 +55,25 @@ func RoundUnit(d *inf.Dec, unit currency.Unit) *inf.Dec {
 	return Round(d, UnitScale(unit))
 }
 
+// Round d to currency scale using HalfEven rounding mode.
+//
+// Value of d is unchanged.
+func RoundUnitWithRounder(d *inf.Dec, unit currency.Unit, rounder Rounder) *inf.Dec {
+	return RoundWithRounder(d, UnitScale(unit), rounder)
+}
+
 // Round d to scale using HalfEven rounding mode.
 //
 // Value of d is unchanged.
 func Round(d *inf.Dec, scale int) *inf.Dec {
-	return new(inf.Dec).Round(d, inf.Scale(scale), inf.RoundHalfEven)
+	return new(inf.Dec).Round(d, inf.Scale(scale), RoundHalfEven)
+}
+
+// Round d to scale using specified rounding mode.
+//
+// Value of d is unchanged.
+func RoundWithRounder(d *inf.Dec, scale int, rounder Rounder) *inf.Dec {
+	return new(inf.Dec).Round(d, inf.Scale(scale), rounder)
 }
 
 // Return d1 + d2.
@@ -70,7 +94,14 @@ func Sub(d1 *inf.Dec, d2 *inf.Dec) *inf.Dec {
 //
 // Values of d1 and d2 are unchanged.
 func Div(d1 *inf.Dec, d2 *inf.Dec, scale int) *inf.Dec {
-	return new(inf.Dec).QuoRound(d1, d2, inf.Scale(scale), inf.RoundHalfEven)
+	return DivWith(d1, d2, scale, RoundHalfEven)
+}
+
+// Return d1 / d2 with specified rounding.
+//
+// Values of d1 and d2 are unchanged.
+func DivWith(d1 *inf.Dec, d2 *inf.Dec, scale int, rounder Rounder) *inf.Dec {
+	return new(inf.Dec).QuoRound(d1, d2, inf.Scale(scale), rounder)
 }
 
 // Return d1 * d2.
@@ -87,7 +118,9 @@ func Mul(d1 *inf.Dec, d2 *inf.Dec) *inf.Dec {
 // Different from inf.Dec, Amt always create new value for all math op (Add/Sub/Div/Mul)
 // instead of setting the result back to the value itself.
 //
-// Amt always use HalfEven rounding mode.
+// By default Amt uses HalfEven rounding mode, you can specify rounding mode by providing a Rounder using those XxxWith() methods.
+//
+// e.g., [Amt.DivWith], [Amt.RoundWith], [Amt.RoundUnitWith], [Amt.RoundCurrencyWith].
 type Amt inf.Dec
 
 func (a *Amt) SetString(s string) error {
@@ -139,15 +172,34 @@ func (a *Amt) Div(b *Amt, scale int) *Amt {
 	return &v
 }
 
+func (a *Amt) DivWith(b *Amt, scale int, r Rounder) *Amt {
+	aa := inf.Dec(*a)
+	ba := inf.Dec(*b)
+	v := Amt(*DivWith(&aa, &ba, scale, r))
+	return &v
+}
+
 func (a *Amt) Round(scale int) *Amt {
 	aa := inf.Dec(*a)
 	v := Amt(*Round(&aa, scale))
 	return &v
 }
 
+func (a *Amt) RoundWith(scale int, r Rounder) *Amt {
+	aa := inf.Dec(*a)
+	v := Amt(*RoundWithRounder(&aa, scale, r))
+	return &v
+}
+
 func (a *Amt) RoundUnit(unit currency.Unit) *Amt {
 	aa := inf.Dec(*a)
 	v := Amt(*RoundUnit(&aa, unit))
+	return &v
+}
+
+func (a *Amt) RoundUnitWith(unit currency.Unit, rounder Rounder) *Amt {
+	aa := inf.Dec(*a)
+	v := Amt(*RoundUnitWithRounder(&aa, unit, rounder))
 	return &v
 }
 
@@ -159,8 +211,21 @@ func (a *Amt) RoundCurrency(currency string) (*Amt, error) {
 	return a.RoundUnit(u), nil
 }
 
+func (a *Amt) RoundCurrencyWith(currency string, rounder Rounder) (*Amt, error) {
+	u, err := Unit(currency)
+	if err != nil {
+		return a, err
+	}
+	return a.RoundUnitWith(u, rounder), nil
+}
+
 func (a *Amt) TryRoundCurrency(currency string) *Amt {
 	cp, _ := a.RoundCurrency(currency)
+	return cp
+}
+
+func (a *Amt) TryRoundCurrencyWith(currency string, rounder Rounder) *Amt {
+	cp, _ := a.RoundCurrencyWith(currency, rounder)
 	return cp
 }
 
