@@ -70,6 +70,11 @@ func (q *Query) Select(cols string, args ...any) *Query {
 	return q
 }
 
+func (q *Query) Clauses(c ...clause.Expression) *Query {
+	q.tx = q.tx.Clauses(c...)
+	return q
+}
+
 func (q *Query) SelectCols(v any) *Query {
 	if v == nil {
 		return q
