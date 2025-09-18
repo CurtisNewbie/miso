@@ -42,5 +42,5 @@ func (MisoJSONSerializer) Scan(ctx context.Context, field *schema.Field, dst ref
 
 // Value implements serializer interface
 func (MisoJSONSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue interface{}) (interface{}, error) {
-	return json.WriteJson(fieldValue)
+	return json.SWriteJson(fieldValue)
 }

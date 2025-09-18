@@ -184,16 +184,17 @@ func (m *mysqlModule) addMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 
 func (m *mysqlModule) initFromProp(rail miso.Rail) error {
 	p := MySQLConnParam{
-		User:            miso.GetPropStr(PropMySQLUser),
-		Password:        miso.GetPropStr(PropMySQLPassword),
-		Schema:          miso.GetPropStr(PropMySQLSchema),
-		Host:            miso.GetPropStr(PropMySQLHost),
-		Port:            miso.GetPropInt(PropMySQLPort),
-		ConnParam:       strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
-		MaxOpenConns:    miso.GetPropInt(PropMySQLMaxOpenConns),
-		MaxIdleConns:    miso.GetPropInt(PropMySQLMaxIdleConns),
-		MaxConnLifetime: miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
-		NotPrepareStmt:  !miso.GetPropBool(PropMySQLPrepareStmt),
+		User:                        miso.GetPropStr(PropMySQLUser),
+		Password:                    miso.GetPropStr(PropMySQLPassword),
+		Schema:                      miso.GetPropStr(PropMySQLSchema),
+		Host:                        miso.GetPropStr(PropMySQLHost),
+		Port:                        miso.GetPropInt(PropMySQLPort),
+		ConnParam:                   strings.Join(miso.GetPropStrSlice(PropMySQLConnParam), "&"),
+		MaxOpenConns:                miso.GetPropInt(PropMySQLMaxOpenConns),
+		MaxIdleConns:                miso.GetPropInt(PropMySQLMaxIdleConns),
+		MaxConnLifetime:             miso.GetPropDur(PropMySQLConnLifetime, time.Minute),
+		NotPrepareStmt:              !miso.GetPropBool(PropMySQLPrepareStmt),
+		NotDisableNestedTransaction: !miso.GetPropBool(PropMySQLDisableNestedTx),
 	}
 	return m.initPrimary(rail, p)
 }
@@ -256,16 +257,17 @@ func InitMySQLFromProp(rail miso.Rail) error {
 }
 
 type MySQLConnParam struct {
-	User            string
-	Password        string
-	Schema          string
-	Host            string
-	Port            int
-	ConnParam       string
-	MaxConnLifetime time.Duration
-	MaxOpenConns    int
-	MaxIdleConns    int
-	NotPrepareStmt  bool
+	User                        string
+	Password                    string
+	Schema                      string
+	Host                        string
+	Port                        int
+	ConnParam                   string
+	MaxConnLifetime             time.Duration
+	MaxOpenConns                int
+	MaxIdleConns                int
+	NotPrepareStmt              bool
+	NotDisableNestedTransaction bool
 }
 
 // Create new MySQL connection
@@ -276,11 +278,12 @@ func NewMySQLConn(rail miso.Rail, p MySQLConnParam) (*gorm.DB, error) {
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s%s", p.User, p.Password, p.Host, p.Port, p.Schema, p.ConnParam)
-	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s' (MaxLifetime: %v, MaxOpen: %v, MaxIdle: %v, PrepareStmt: %v)", p.Host, p.Port, p.Schema, p.ConnParam, p.MaxConnLifetime, p.MaxOpenConns, p.MaxIdleConns, !p.NotPrepareStmt)
+	rail.Infof("Connecting to database '%s:%d/%s' with params: '%s' (MaxLifetime: %v, MaxOpen: %v, MaxIdle: %v, PrepareStmt: %v, NestedTx: %v)", p.Host, p.Port, p.Schema, p.ConnParam, p.MaxConnLifetime, p.MaxOpenConns, p.MaxIdleConns, !p.NotPrepareStmt, p.NotDisableNestedTransaction)
 
 	cfg := &gorm.Config{
 		PrepareStmt: !p.NotPrepareStmt, CreateBatchSize: 100,
-		Logger: dbLogger,
+		Logger:                   dbLogger,
+		DisableNestedTransaction: !p.NotDisableNestedTransaction,
 	}
 	conn, err := gorm.Open(mysql.Open(dsn), cfg)
 	if err != nil {

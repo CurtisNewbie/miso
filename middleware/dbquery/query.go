@@ -23,7 +23,7 @@ var (
 	typeColCache = sync.Map{}
 
 	updateHooks = slutil.NewSyncSlice[func(table string, q *Query)](0)
-	createHooks = slutil.NewSyncSlice[func(table string, q *Query, v any)](0)
+	createHooks = slutil.NewSyncSlice[func(table string, q *Query, v []map[string]any)](0)
 )
 
 type Query struct {
@@ -105,7 +105,9 @@ func (q *Query) SelectCols(v any) *Query {
 }
 
 func (q *Query) selectFields(colSet hash.Set[string], ft reflect.StructField) {
-	if q.ignoreGormField(ft) {
+
+	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
+	if v, ok := tagSet["-"]; ok && strings.TrimSpace(v) == "-" {
 		return
 	}
 
@@ -117,6 +119,10 @@ func (q *Query) selectFields(colSet hash.Set[string], ft reflect.StructField) {
 	}
 
 	fname := q.ColumnName(ft.Name)
+	if c, ok := tagSet["COLUMN"]; ok {
+		fname = c
+	}
+
 	colSet.Add(fname)
 }
 
@@ -459,15 +465,6 @@ func (q *Query) Count() (int64, error) {
 	return n, errs.WrapErr(tx.Error)
 }
 
-func (q *Query) ignoreGormField(ft reflect.StructField) bool {
-	for _, v := range strings.Split(ft.Tag.Get("gorm"), ":") {
-		if v == "-" {
-			return true
-		}
-	}
-	return false
-}
-
 func (q *Query) SetCols(arg any, cols ...string) *Query {
 	q.doSetCols(arg, true, cols...)
 	return q
@@ -512,7 +509,8 @@ func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv ref
 		return // specified column names explicitly, check if it's in the name set
 	}
 
-	if q.ignoreGormField(ft) {
+	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
+	if v, ok := tagSet["-"]; ok && strings.TrimSpace(v) == "-" {
 		return
 	}
 
@@ -523,11 +521,6 @@ func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv ref
 		}
 		return
 	}
-
-	// val, ok := reflectValue(fv)
-	// if ok {
-	// 	q.Set(fname, val)
-	// }
 
 	if !inclEmpty {
 		switch fv.Kind() {
@@ -560,19 +553,20 @@ func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv ref
 
 	if val != nil {
 		// TODO: we only support our json serializer for now
-		ts := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
-		if ts != nil {
-			var serializerName = ts["JSON"]
-			if serializerName == "" {
-				serializerName = ts["SERIALIZER"]
-			}
-			if serializerName == "json" {
-				vs, err := json.WriteJson(val)
-				if err == nil {
-					val = vs
-				}
+		var serializerName = tagSet["JSON"]
+		if serializerName == "" {
+			serializerName = tagSet["SERIALIZER"]
+		}
+		if serializerName == "json" {
+			vs, err := json.WriteJson(val)
+			if err == nil {
+				val = vs
 			}
 		}
+	}
+
+	if c, ok := tagSet["COLUMN"]; ok {
+		fname = c
 	}
 
 	q.Set(fname, val)
@@ -590,8 +584,8 @@ func (q *Query) CreateIgnoreAny(v any) error {
 	return err
 }
 
-func (q *Query) runCreateHooks(v any) {
-	createHooks.ForEach(func(f func(string, *Query, any)) (stop bool) {
+func (q *Query) runCreateHooks(v []map[string]any) {
+	createHooks.ForEach(func(f func(string, *Query, []map[string]any)) (stop bool) {
 		f(q.stmtTable(), q, v)
 		return false
 	})
@@ -622,9 +616,102 @@ func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 	return q.Create(v)
 }
 
+func (q *Query) insertOneRowMaps(v any) map[string]any {
+	m := map[string]any{}
+	if v == nil {
+		return m
+	}
+
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return m
+	}
+
+	rt := rv.Type()
+	for i := range rv.NumField() {
+		ft := rt.Field(i)
+		fv := rv.Field(i)
+		q.setInsertRowMaps(m, ft, fv)
+	}
+
+	return m
+}
+
+func (q *Query) CreateInsertRowMaps(v any) []map[string]any {
+	m := []map[string]any{}
+	if v == nil {
+		return m
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < rv.Len(); i++ {
+			ele := rv.Index(i)
+			m = append(m, q.insertOneRowMaps(ele.Interface()))
+		}
+	default:
+		m = append(m, q.insertOneRowMaps(v))
+	}
+	return m
+}
+
+func (q *Query) setInsertRowMaps(m map[string]any, ft reflect.StructField, fv reflect.Value) {
+	fname := q.ColumnName(ft.Name)
+
+	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
+	if v, ok := tagSet["-"]; ok && strings.TrimSpace(v) == "-" {
+		return
+	}
+
+	// embedded struct
+	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
+		for i := range ft.Type.NumField() {
+			q.setInsertRowMaps(m, ft.Type.Field(i), fv.Field(i))
+		}
+		return
+	}
+
+	var val any
+	switch fv.Kind() {
+	case reflect.Pointer:
+		if fv.IsNil() {
+			val = nil
+		} else {
+			val = fv.Elem().Interface()
+		}
+	default:
+		val = fv.Interface()
+	}
+
+	if val != nil {
+		// TODO: we only support our json serializer for now
+		var serializerName = tagSet["JSON"]
+		if serializerName == "" {
+			serializerName = tagSet["SERIALIZER"]
+		}
+		if serializerName == "json" {
+			vs, err := json.SWriteJson(val)
+			if err == nil {
+				val = vs
+			}
+		}
+	}
+
+	if c, ok := tagSet["COLUMN"]; ok {
+		fname = c
+	}
+
+	m[fname] = val
+}
+
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
-	q.runCreateHooks(v)
-	tx := q.tx.Create(v)
+	rows := q.CreateInsertRowMaps(v)
+	q.runCreateHooks(rows)
+	tx := q.tx.Create(rows)
 	rowsAffected = tx.RowsAffected
 	err = errs.WrapErr(tx.Error)
 	return
@@ -989,7 +1076,7 @@ func ExecSQL(rail miso.Rail, db *gorm.DB, sql string, args ...any) error {
 }
 
 // Register hooks for [Query.Create], [Query.CreateAny] and [Query.CreateIgnore].
-func AddCreateHooks(f func(table string, q *Query, v any)) {
+func AddCreateHooks(f func(table string, q *Query, v []map[string]any)) {
 	createHooks.Append(f)
 }
 
