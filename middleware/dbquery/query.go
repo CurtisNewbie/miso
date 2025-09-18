@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/rfutil"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,17 +22,33 @@ import (
 
 var (
 	typeColCache = sync.Map{}
+
+	updateHooks = slutil.NewSyncSlice[func(table string, q *Query)](0)
+	createHooks = slutil.NewSyncSlice[func(table string, q *Query, v any)](0)
 )
 
 type Query struct {
 	_db *gorm.DB
 	tx  *gorm.DB
 
+	rail *miso.Rail
+
 	updateColumns map[string]any
 }
 
 func (q *Query) copyNew() *Query {
+	r, ok := q.Rail()
+	if ok {
+		return NewQuery(r, q._db)
+	}
 	return NewQuery(q._db)
+}
+
+func (q *Query) Rail() (miso.Rail, bool) {
+	if q.rail != nil {
+		return *q.rail, true
+	}
+	return miso.Rail{}, false
 }
 
 func (q *Query) From(table string) *Query {
@@ -415,6 +432,7 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 	if len(q.updateColumns) < 1 {
 		return 0, nil
 	}
+	q.runUpdateHooks()
 	tx := q.tx.Updates(q.updateColumns)
 	rowsAffected = tx.RowsAffected
 	err = errs.WrapErr(tx.Error)
@@ -568,6 +586,28 @@ func (q *Query) CreateIgnoreAny(v any) error {
 	return err
 }
 
+func (q *Query) runCreateHooks(v any) {
+	createHooks.ForEach(func(f func(string, *Query, any)) (stop bool) {
+		f(q.stmtTable(), q, v)
+		return false
+	})
+}
+
+func (q *Query) runUpdateHooks() {
+	updateHooks.ForEach(func(f func(string, *Query)) (stop bool) {
+		f(q.stmtTable(), q)
+		return false
+	})
+}
+
+func (q *Query) stmtTable() string {
+	table := ""
+	if q.tx.Statement != nil {
+		table = q.tx.Statement.Table
+	}
+	return table
+}
+
 func (q *Query) CreateAny(v any) error {
 	_, err := q.Create(v)
 	return err
@@ -579,6 +619,7 @@ func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 }
 
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
+	q.runCreateHooks(v)
 	tx := q.tx.Create(v)
 	rowsAffected = tx.RowsAffected
 	err = errs.WrapErr(tx.Error)
@@ -653,7 +694,7 @@ func NewQuery(opts ...any) *Query {
 	} else if c != nil {
 		db = db.WithContext(c)
 	}
-	q := &Query{tx: db, _db: db, updateColumns: map[string]any{}}
+	q := &Query{tx: db, _db: db, rail: r, updateColumns: map[string]any{}}
 	return q
 }
 
@@ -939,4 +980,14 @@ func reflectValue(rv reflect.Value) (any, bool) {
 
 func ExecSQL(rail miso.Rail, db *gorm.DB, sql string, args ...any) error {
 	return NewQuery(rail, db).ExecAny(sql, args...)
+}
+
+// Register hooks for [Query.Create], [Query.CreateAny] and [Query.CreateIgnore].
+func AddCreateHooks(f func(table string, q *Query, v any)) {
+	createHooks.Append(f)
+}
+
+// Register hooks for [Query.Update] and [Query.UpdateAny].
+func AddUpdateHooks(f func(table string, q *Query)) {
+	updateHooks.Append(f)
 }

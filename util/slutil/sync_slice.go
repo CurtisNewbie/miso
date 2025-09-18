@@ -38,8 +38,8 @@ func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
 	}
 }
 
-func NewSyncSlice[T any](cap int) *syncSlice[T] {
-	sl := make([]T, cap)
+func NewSyncSlice[T any](initCap int) *syncSlice[T] {
+	sl := make([]T, initCap)
 	v := &syncSlice[T]{
 		sl: &sl,
 		mu: &sync.RWMutex{},
