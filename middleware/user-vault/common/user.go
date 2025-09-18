@@ -12,9 +12,10 @@ type User struct {
 }
 
 const (
-	UserNoTraceKey   = "x-userno"
-	UsernameTraceKey = "x-username"
-	RoleNoTraceKey   = "x-roleno"
+	UsernameTraceKey = miso.XUsername
+
+	UserNoTraceKey = "x-userno"
+	RoleNoTraceKey = "x-roleno"
 )
 
 var (
@@ -23,7 +24,7 @@ var (
 
 // load builtin propagation keys, so all dependents get the same behaviour
 func LoadBuiltinPropagationKeys() {
-	miso.AddPropagationKeys(UserNoTraceKey, UsernameTraceKey, RoleNoTraceKey)
+	miso.AddPropagationKeys(UserNoTraceKey, RoleNoTraceKey)
 }
 
 // Get a 'nil' User.

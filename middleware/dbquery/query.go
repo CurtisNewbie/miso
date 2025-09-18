@@ -2,7 +2,6 @@ package dbquery
 
 import (
 	"context"
-	"database/sql/driver"
 	"reflect"
 	"strings"
 	"sync"
@@ -949,6 +948,7 @@ func (n *NilableValue) MarkZero(isZero bool) {
 	n.zero = isZero
 }
 
+/*
 func isValueKind(v reflect.Value) (any, bool) {
 	k := v.Kind()
 	switch k {
@@ -982,6 +982,7 @@ func reflectValue(rv reflect.Value) (any, bool) {
 	}
 	return nil, false
 }
+*/
 
 func ExecSQL(rail miso.Rail, db *gorm.DB, sql string, args ...any) error {
 	return NewQuery(rail, db).ExecAny(sql, args...)

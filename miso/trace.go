@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	XTraceId = "X-B3-TraceId"
-	XSpanId  = "X-B3-SpanId"
+	XTraceId  = "X-B3-TraceId"
+	XSpanId   = "X-B3-SpanId"
+	XUsername = "x-username"
 )
 
 var (
@@ -24,6 +25,7 @@ type PropagationKeys struct {
 func init() {
 	propagationKeys.keys.Add(XTraceId)
 	propagationKeys.keys.Add(XSpanId)
+	propagationKeys.keys.Add(XUsername)
 }
 
 // Read property and find propagation keys .

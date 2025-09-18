@@ -61,6 +61,14 @@ func (r Rail) TraceId() string {
 	return r.CtxValStr(XTraceId)
 }
 
+func (r Rail) Username() string {
+	return r.CtxValStr(XUsername)
+}
+
+func (r Rail) WithUsername(v string) Rail {
+	return r.WithCtxVal(XUsername, v)
+}
+
 func (r Rail) SpanId() string {
 	return r.CtxValStr(XSpanId)
 }
