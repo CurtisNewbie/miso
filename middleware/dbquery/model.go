@@ -1,6 +1,9 @@
 package dbquery
 
-import "github.com/curtisnewbie/miso/miso"
+import (
+	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/slutil"
+)
 
 var (
 	CreatedByExtractor func(rail miso.Rail) string = func(rail miso.Rail) string {
@@ -70,7 +73,12 @@ func PrepareCreateModelHook() {
 // Return whether the hook should run for current table, e.g., some table may not have trace_id and updated_by fields.
 //
 // Call this func before miso bootstraps.
-func PrepareUpdateModelHooks(fn func(table string) (ok bool)) error {
+func PrepareUpdateModelHooks(optionalFn ...func(table string) (ok bool)) error {
+	fn, ok := slutil.SliceFirst(optionalFn)
+	if !ok {
+		fn = func(_ string) (ok bool) { return true }
+	}
+
 	AddUpdateHooks(func(table string, q *Query) {
 		r, ok := q.Rail()
 		if ok {
