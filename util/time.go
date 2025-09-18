@@ -27,61 +27,64 @@ const (
 
 var (
 	etimeMarshalFormat = ""
+	ToETime            = WrapTime
 )
 
-// ETime enhanced wrapper of time.Time.
+type ETime = Time
+
+// Enhanced wrapper of time.Time.
 //
 // This type implements sql.Scanner and driver.Valuer, and thus can be safely used in GORM just like time.Time. It also
 // implements json/encoding Marshaler and Unmarshaler to support json marshalling (in forms of epoch milliseconds 'by default').
 //
-// In previous releases, ETime was a type alias to time.Time. Since v0.1.2, ETime embeds time.Time to access all of it's methods.
+// In previous releases, Time was a type alias to time.Time. Since v0.1.2, Time embeds time.Time to access all of it's methods.
 //
-// To cast from time.Time to ETime, use ToETime() method. To cast from ETime to time.Time, use ETime.ToTime() method.
-type ETime struct {
+// To cast from time.Time to Time, use [WrapTime] method. To cast from Time to time.Time, use [Time.Unwrap] method.
+type Time struct {
 	time.Time
 }
 
-func Now() ETime {
+func Now() Time {
 	return ToETime(time.Now())
 }
 
-func NowUTC() ETime {
+func NowUTC() Time {
 	return ToETime(time.Now().UTC())
 }
 
-func NowPtr() *ETime {
+func NowPtr() *Time {
 	t := Now()
 	return &t
 }
 
-func NowUTCPtr() *ETime {
+func NowUTCPtr() *Time {
 	t := NowUTC()
 	return &t
 }
 
-func ToETime(t time.Time) ETime {
-	return ETime{t}
+func WrapTime(t time.Time) Time {
+	return Time{t}
 }
 
-func (t ETime) GoString() string {
+func (t Time) GoString() string {
 	return t.String()
 }
 
 // At 23:59:59.999999.
-func (t ETime) EndOfDay() ETime {
+func (t Time) EndOfDay() Time {
 	yyyy, mm, dd := t.Date()
 	tt := time.Date(yyyy, mm, dd, 23, 59, 59, 999_999000, t.Location())
-	return ETime{tt}
+	return Time{tt}
 }
 
 // At 00:00:00.000000.
-func (t ETime) StartOfDay() ETime {
+func (t Time) StartOfDay() Time {
 	yyyy, mm, dd := t.Date()
 	tt := time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
-	return ETime{tt}
+	return Time{tt}
 }
 
-func (t ETime) LastWeekday(w time.Weekday) ETime {
+func (t Time) LastWeekday(w time.Weekday) Time {
 	wkd := t.Weekday()
 	diff := 0
 	if wkd < w {
@@ -94,7 +97,7 @@ func (t ETime) LastWeekday(w time.Weekday) ETime {
 	return t.AddDate(0, 0, -diff)
 }
 
-func (t ETime) NextWeekday(w time.Weekday) ETime {
+func (t Time) NextWeekday(w time.Weekday) Time {
 	wkd := t.Weekday()
 	diff := 0
 	if wkd < w {
@@ -107,69 +110,74 @@ func (t ETime) NextWeekday(w time.Weekday) ETime {
 	return t.AddDate(0, 0, diff)
 }
 
-func (t ETime) ToTime() time.Time {
+// Deprecated: change to [Time.Unwrap].
+func (t Time) ToTime() time.Time {
 	return t.Time
 }
 
-func (t ETime) Add(d time.Duration) ETime {
+func (t Time) Unwrap() time.Time {
+	return t.Time
+}
+
+func (t Time) Add(d time.Duration) Time {
 	t.Time = t.Time.Add(d)
 	return t
 }
 
-func (t ETime) Sub(u ETime) time.Duration {
+func (t Time) Sub(u Time) time.Duration {
 	return t.Time.Sub(u.Time)
 }
 
-func (t ETime) AddDate(years int, months int, days int) ETime {
+func (t Time) AddDate(years int, months int, days int) Time {
 	t.Time = t.Time.AddDate(years, months, days)
 	return t
 }
 
-func (t ETime) After(u ETime) bool {
+func (t Time) After(u Time) bool {
 	return t.Time.After(u.Time)
 }
 
-func (t ETime) Before(u ETime) bool {
+func (t Time) Before(u Time) bool {
 	return t.Time.Before(u.Time)
 }
 
-func (t ETime) In(z *time.Location) ETime {
-	return ToETime(t.ToTime().In(z))
+func (t Time) In(z *time.Location) Time {
+	return ToETime(t.Unwrap().In(z))
 }
 
-func (t ETime) InZone(diffInHours int) ETime {
+func (t Time) InZone(diffInHours int) Time {
 	if diffInHours == 0 {
 		return t.In(time.UTC)
 	}
 	return t.In(time.FixedZone("", diffInHours*60*60))
 }
 
-func (t ETime) FormatDate() string {
-	return t.ToTime().Format(time.DateOnly)
+func (t Time) FormatDate() string {
+	return t.Unwrap().Format(time.DateOnly)
 }
 
-func (t ETime) FormatClassic() string {
-	return t.ToTime().Format(ClassicDateTimeFormat)
+func (t Time) FormatClassic() string {
+	return t.Unwrap().Format(ClassicDateTimeFormat)
 }
 
-func (t ETime) FormatClassicLocale() string {
-	return t.ToTime().Format(ClassicDateTimeLocaleFormat)
+func (t Time) FormatClassicLocale() string {
+	return t.Unwrap().Format(ClassicDateTimeLocaleFormat)
 }
 
-func (t ETime) FormatStd() string {
-	return t.ToTime().Format(StdDateTimeFormat)
+func (t Time) FormatStd() string {
+	return t.Unwrap().Format(StdDateTimeFormat)
 }
 
-func (t ETime) FormatStdMilli() string {
-	return t.ToTime().Format(StdDateTimeMilliFormat)
+func (t Time) FormatStdMilli() string {
+	return t.Unwrap().Format(StdDateTimeMilliFormat)
 }
 
-func (t ETime) FormatStdLocale() string {
-	return t.ToTime().Format(StdDateTimeLocaleFormat)
+func (t Time) FormatStdLocale() string {
+	return t.Unwrap().Format(StdDateTimeLocaleFormat)
 }
 
 // Implements driver.Valuer in database/sql.
-func (t ETime) Value() (driver.Value, error) {
+func (t Time) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
@@ -177,15 +185,15 @@ func (t ETime) Value() (driver.Value, error) {
 	return t.Format(SQLDateTimeFormat), nil
 }
 
-func (t ETime) String() string {
-	return t.ToTime().Format("2006-01-02 15:04:05.999999 (MST)")
+func (t Time) String() string {
+	return t.Unwrap().Format("2006-01-02 15:04:05.999999 (MST)")
 }
 
 // Implements encoding/json Marshaler
-func (t ETime) MarshalJSON() ([]byte, error) {
+func (t Time) MarshalJSON() ([]byte, error) {
 	var v string
 	if etimeMarshalFormat != "" {
-		v = strutil.QuoteStr(t.ToTime().Format(etimeMarshalFormat)) // other format configured
+		v = strutil.QuoteStr(t.Unwrap().Format(etimeMarshalFormat)) // other format configured
 	} else {
 		v = fmt.Sprintf("%d", t.UnixMilli()) // epoch milli by default
 	}
@@ -193,7 +201,7 @@ func (t ETime) MarshalJSON() ([]byte, error) {
 }
 
 // Implements encoding/json Unmarshaler.
-func (t *ETime) UnmarshalJSON(b []byte) error {
+func (t *Time) UnmarshalJSON(b []byte) error {
 	s := string(b)
 	if s == "" {
 		return nil
