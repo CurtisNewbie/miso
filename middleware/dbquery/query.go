@@ -615,16 +615,21 @@ func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 }
 
 func (q *Query) insertOneRowMaps(v any) map[string]any {
-	m := map[string]any{}
 	if v == nil {
-		return m
+		return map[string]any{}
 	}
 
 	rv := reflect.ValueOf(v)
 	if !rv.IsValid() {
-		return m
+		return map[string]any{}
 	}
 	rv = reflect.Indirect(rv)
+
+	if cv, ok := rv.Interface().(map[string]any); ok {
+		return cv
+	}
+
+	m := map[string]any{}
 	if rv.Kind() == reflect.Map {
 		if rv.Type().Key().Kind() != reflect.String {
 			return m
