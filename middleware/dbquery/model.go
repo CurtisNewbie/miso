@@ -102,16 +102,19 @@ func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) error {
 	}
 
 	AddUpdateHooks(func(table string, q *Query) {
+		if !fn(table) {
+			return
+		}
+		if len(q.updateColumns) < 1 {
+			return
+		}
+
 		r, ok := q.Rail()
 		if ok {
-			if ok := fn(table); ok {
-				q.Set("trace_id", r.TraceId())
+			q.Set("trace_id", r.TraceId())
 
-				if q.updateColumns != nil {
-					if _, ok := q.updateColumns["updated_by"]; !ok {
-						q.Set("updated_by", UpdatedByExtractor(r))
-					}
-				}
+			if _, ok := q.updateColumns["updated_by"]; !ok {
+				q.Set("updated_by", UpdatedByExtractor(r))
 			}
 		}
 	})
