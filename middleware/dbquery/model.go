@@ -84,6 +84,7 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 		addInsertColStr("trace_id", r.TraceId(), true)
 		addInsertColStr("created_by", CreatedByExtractor(r), false)
 	})
+	miso.Info("Registered CreateModelHook")
 }
 
 // Prepare UpdateModel Hook that will run when [Query] call UPDATED related methods, see [AddUpdateHooks].
@@ -95,7 +96,7 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 // By default, hooks are executed for all tables unless optionalFn is provided.
 //
 // Call this func before miso bootstraps.
-func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) error {
+func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) {
 	fn, ok := slutil.SliceFirst(optionalFn)
 	if !ok {
 		fn = func(_ string) (ok bool) { return true }
@@ -118,5 +119,5 @@ func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) error {
 			}
 		}
 	})
-	return nil
+	miso.Info("Registered UpdateModelHook")
 }
