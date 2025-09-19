@@ -1,10 +1,13 @@
 package dbquery
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
@@ -505,14 +508,21 @@ func (q *Query) doSetCols(arg any, inclEmpty bool, cols ...string) *Query {
 
 func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv reflect.Value, inclEmpty bool) {
 	fname := q.ColumnName(ft.Name)
-	if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) {
-		return // specified column names explicitly, check if it's in the name set
-	}
 
 	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
 	if v, ok := tagSet["-"]; ok && strings.TrimSpace(v) == "-" {
 		return
 	}
+
+	nameAlias := fname
+	if c, ok := tagSet["COLUMN"]; ok {
+		nameAlias = c
+	}
+
+	if !colSet.IsEmpty() && !colSet.Has(fname) && !colSet.Has(ft.Name) && !colSet.Has(nameAlias) {
+		return // specified column names explicitly, check if it's in the name set
+	}
+	fname = nameAlias
 
 	// embedded struct
 	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
@@ -552,21 +562,9 @@ func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv ref
 	}
 
 	if val != nil {
-		// TODO: we only support our json serializer for now
-		var serializerName = tagSet["JSON"]
-		if serializerName == "" {
-			serializerName = tagSet["SERIALIZER"]
+		if v, ok := q.serializeValueWithTagSet(tagSet, fv, val); ok {
+			val = v
 		}
-		if serializerName == "json" {
-			vs, err := json.WriteJson(val)
-			if err == nil {
-				val = vs
-			}
-		}
-	}
-
-	if c, ok := tagSet["COLUMN"]; ok {
-		fname = c
 	}
 
 	q.Set(fname, val)
@@ -649,7 +647,7 @@ func (q *Query) insertOneRowMaps(v any) map[string]any {
 	for i := range rv.NumField() {
 		ft := rt.Field(i)
 		fv := rv.Field(i)
-		q.setInsertRowMaps(m, ft, fv)
+		q.setInsertRowMap(m, ft, fv)
 	}
 
 	return m
@@ -678,7 +676,7 @@ func (q *Query) CreateInsertRowMaps(v any) []map[string]any {
 	return m
 }
 
-func (q *Query) setInsertRowMaps(m map[string]any, ft reflect.StructField, fv reflect.Value) {
+func (q *Query) setInsertRowMap(m map[string]any, ft reflect.StructField, fv reflect.Value) {
 	fname := q.ColumnName(ft.Name)
 
 	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
@@ -689,7 +687,7 @@ func (q *Query) setInsertRowMaps(m map[string]any, ft reflect.StructField, fv re
 	// embedded struct
 	if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
 		for i := range ft.Type.NumField() {
-			q.setInsertRowMaps(m, ft.Type.Field(i), fv.Field(i))
+			q.setInsertRowMap(m, ft.Type.Field(i), fv.Field(i))
 		}
 		return
 	}
@@ -707,16 +705,8 @@ func (q *Query) setInsertRowMaps(m map[string]any, ft reflect.StructField, fv re
 	}
 
 	if val != nil {
-		// TODO: we only support our json serializer for now
-		var serializerName = tagSet["JSON"]
-		if serializerName == "" {
-			serializerName = tagSet["SERIALIZER"]
-		}
-		if serializerName == "json" {
-			vs, err := json.SWriteJson(val)
-			if err == nil {
-				val = vs
-			}
+		if v, ok := q.serializeValueWithTagSet(tagSet, fv, val); ok {
+			val = v
 		}
 	}
 
@@ -725,6 +715,48 @@ func (q *Query) setInsertRowMaps(m map[string]any, ft reflect.StructField, fv re
 	}
 
 	m[fname] = val
+}
+
+func (q *Query) serializeValueWithTagSet(tagSet map[string]string, fv reflect.Value, val any) (any, bool) {
+	var serializerName = tagSet["JSON"]
+	if serializerName == "" {
+		serializerName = tagSet["SERIALIZER"]
+	}
+	if v, ok := q.serializeValue(serializerName, fv, val); ok {
+		return v, true
+	}
+	return val, false
+}
+
+func (q *Query) serializeValue(serializer string, fv reflect.Value, val any) (any, bool) {
+	// support default gob, unixtime serializer
+	// default json serializer is replaced with MisoJSONSerializer
+	switch serializer {
+	case "json":
+		vs, err := json.SWriteJson(val)
+		if err == nil {
+			return vs, true
+		}
+	case "gob":
+		buf := new(bytes.Buffer)
+		err := gob.NewEncoder(buf).Encode(val)
+		if err == nil {
+			return buf.Bytes(), true
+		}
+	case "unixtime":
+		switch v := val.(type) {
+		case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
+			val = time.Unix(reflect.Indirect(reflect.ValueOf(v)).Int(), 0)
+			return val, true
+		}
+	default:
+		ser, ok := schema.GetSerializer(serializer)
+		if ok {
+			// last resort, unfortunately, field can't be provided for now
+			ser.Value(context.Background(), nil, fv, val)
+		}
+	}
+	return val, false
 }
 
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
