@@ -22,6 +22,7 @@ import (
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/curtisnewbie/miso/version"
+	"github.com/google/gops/agent"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -153,6 +154,14 @@ func (a *MisoApp) Bootstrap(args []string) {
 	rail.Infof("Miso Version: %s", version.Version)
 	rail.Infof("Production Mode: %v", a.Config().GetPropBool(PropProdMode))
 	rail.Infof("CPUs: %v, GOMAXPROCS: %v", runtime.NumCPU(), runtime.GOMAXPROCS(0))
+
+	// initiate gops
+	if err := agent.Listen(agent.Options{}); err != nil {
+		rail.Errorf("Failed to create gops agent, %v", err)
+		return
+	}
+	AddShutdownHook(func() { agent.Close() })
+	rail.Debug("Created gops agent")
 
 	// bootstrap health indicator
 	a.addBootstrapHealthIndicator()

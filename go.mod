@@ -15,6 +15,7 @@ require (
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/google/gops v0.3.28
 	github.com/hashicorp/consul/api v1.15.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jinzhu/copier v0.4.0
