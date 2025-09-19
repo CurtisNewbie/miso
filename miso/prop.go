@@ -64,7 +64,7 @@ const (
 	// misoconfig-prop: enable inbound request parameter validation | true
 	PropServerRequestValidateEnabled = "server.validate.request.enabled"
 
-	// misoconfig-prop: enable server request log | false
+	// misoconfig-prop: enable server request log | true
 	PropServerRequestLogEnabled = "server.request-log.enabled"
 
 	// misoconfig-prop: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
@@ -309,7 +309,7 @@ func init() {
 	SetDefProp(PropServerPerfEnabled, false)
 	SetDefProp(PropServerPropagateInboundTrace, true)
 	SetDefProp(PropServerRequestValidateEnabled, true)
-	SetDefProp(PropServerRequestLogEnabled, false)
+	SetDefProp(PropServerRequestLogEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
 	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
 	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)

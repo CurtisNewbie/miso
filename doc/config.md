@@ -238,7 +238,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.perf.enabled                       | logs time duration for each inbound http request                                                                          | false         |
 | server.trace.inbound.propagate            | propagate trace info from inbound requests                                                                                | true          |
 | server.validate.request.enabled           | enable inbound request parameter validation                                                                               | true          |
-| server.request-log.enabled                | enable server request log                                                                                                 | false         |
+| server.request-log.enabled                | enable server request log                                                                                                 | true          |
 | server.pprof.enabled                      | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
 | server.pprof.auth.bearer                  | bearer token for pprof endpoints' authentication. however, if `server.auth.bearer` is set, this prop is ignored.          |               |
 | server.api-doc.enabled                    | generate api doc                                                                                                          | true          |
