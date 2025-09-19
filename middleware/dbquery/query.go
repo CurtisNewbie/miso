@@ -623,9 +623,24 @@ func (q *Query) insertOneRowMaps(v any) map[string]any {
 	}
 
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
+	if !rv.IsValid() {
+		return m
 	}
+	rv = reflect.Indirect(rv)
+	if rv.Kind() == reflect.Map {
+		if rv.Type().Key().Kind() != reflect.String {
+			return m
+		}
+		// cast map[string]? to map[string]any
+		mr := rv.MapRange()
+		for mr.Next() {
+			k := mr.Key().Interface().(string)
+			v := mr.Value().Interface()
+			m[k] = v
+		}
+		return m
+	}
+
 	if rv.Kind() != reflect.Struct {
 		return m
 	}
@@ -647,6 +662,10 @@ func (q *Query) CreateInsertRowMaps(v any) []map[string]any {
 	}
 
 	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
+		return m
+	}
+	rv = reflect.Indirect(rv)
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < rv.Len(); i++ {
