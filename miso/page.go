@@ -10,6 +10,11 @@ type Paging struct {
 	Total int `json:"total" desc:"total count"`
 }
 
+type PageReq[T any] struct {
+	Paging Paging `json:"paging" desc:"pagination parameters"`
+	Req    T
+}
+
 type PageRes[T any] struct {
 	Page    Paging `json:"paging" desc:"pagination parameters"`
 	Payload []T    `json:"payload" desc:"payload values in current page"`
