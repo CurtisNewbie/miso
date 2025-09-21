@@ -83,6 +83,7 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 
 		addInsertColStr("trace_id", r.TraceId(), true)
 		addInsertColStr("created_by", CreatedByExtractor(r), false)
+		addInsertColStr("updated_by", UpdatedByExtractor(r), false)
 	})
 	miso.Info("Registered CreateModelHook")
 }
