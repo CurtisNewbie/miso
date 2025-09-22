@@ -19,6 +19,6 @@ func TestGetOneWithBackoff(t *testing.T) {
 		return errs.NewErrf("no")
 	})
 	if err == nil {
-		t.Fatal("err should be nil")
+		t.Fatal("err should not be nil")
 	}
 }
