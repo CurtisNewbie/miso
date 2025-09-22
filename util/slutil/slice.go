@@ -166,6 +166,14 @@ func SliceFirst[T any](v []T) (t T, ok bool) {
 	return
 }
 
+func VarArgAny[T any](v []T, defVal func() T) (t T) {
+	f, ok := SliceFirst(v)
+	if ok {
+		return f
+	}
+	return defVal()
+}
+
 func SliceRemove[T any](v []T, idx ...int) []T {
 	cp := make([]T, 0, len(v)-len(idx))
 	idSet := map[int]struct{}{}
