@@ -767,6 +767,9 @@ func (q *Query) serializeValue(serializer string, fv reflect.Value, val any) (an
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	rows := q.CreateInsertRowMaps(v)
 	q.runCreateHooks(rows)
+	if len(rows) < 1 {
+		return 0, nil
+	}
 	tx := q.tx.Create(rows)
 	rowsAffected = tx.RowsAffected
 	err = errs.WrapErr(tx.Error)
