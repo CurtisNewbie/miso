@@ -5,6 +5,12 @@ import (
 	"github.com/curtisnewbie/miso/util/slutil"
 )
 
+const (
+	ColUpdatedBy = "updated_by"
+	ColCreatedBy = "created_by"
+	ColTraceId   = "trace_id"
+)
+
 var (
 	CreatedByExtractor func(rail miso.Rail) string = func(rail miso.Rail) string {
 		return rail.Username()
@@ -31,7 +37,7 @@ type UpdateModel struct {
 	TraceId   string
 }
 
-// Prepare Hook that will run when [Query] call INSERT related methods, see [AddCreateHooks].
+// Prepare Hook that will run when [Query] call INSERT related methods, see [AddCreateHooks] and [CreateModel].
 //
 // The created_by and trace_id fields are extracted from trace and [CreatedByExtractor], and are automatically set as part of INSERT SQL when you call [Query] INSERT releated methods.
 //
@@ -81,14 +87,13 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 			}
 		}
 
-		addInsertColStr("trace_id", r.TraceId(), true)
-		addInsertColStr("created_by", CreatedByExtractor(r), false)
-		addInsertColStr("updated_by", UpdatedByExtractor(r), false)
+		addInsertColStr(ColTraceId, r.TraceId(), true)
+		addInsertColStr(ColCreatedBy, CreatedByExtractor(r), false)
 	})
 	miso.Info("Registered CreateModelHook")
 }
 
-// Prepare UpdateModel Hook that will run when [Query] call UPDATED related methods, see [AddUpdateHooks].
+// Prepare UpdateModel Hook that will run when [Query] call UPDATED related methods, see [AddUpdateHooks] and [UpdateModel].
 //
 // This hook will attempt to extract trace_id and updated_by field from trace ([miso.Rail]) and [UpdatedByExtractor], these fields are then updated to database along with other fields.
 //
@@ -113,10 +118,10 @@ func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) {
 
 		r, ok := q.Rail()
 		if ok {
-			q.Set("trace_id", r.TraceId())
+			q.Set(ColTraceId, r.TraceId())
 
-			if _, ok := q.updateColumns["updated_by"]; !ok {
-				q.Set("updated_by", UpdatedByExtractor(r))
+			if _, ok := q.updateColumns[ColUpdatedBy]; !ok {
+				q.Set(ColUpdatedBy, UpdatedByExtractor(r))
 			}
 		}
 	})
