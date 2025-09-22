@@ -145,7 +145,7 @@ func SIndent(b string) string {
 	return Indent(util.UnsafeStr2Byt(b))
 }
 
-func EscapeStr(s string) string {
+func EscapeString(s string) string {
 	b, err := jso.Marshal(s)
 	if err != nil {
 		return s
