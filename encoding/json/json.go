@@ -144,3 +144,12 @@ func Indent(b []byte) string {
 func SIndent(b string) string {
 	return Indent(util.UnsafeStr2Byt(b))
 }
+
+func EscapeStr(s string) string {
+	b, err := jso.Marshal(s)
+	if err != nil {
+		return s
+	}
+	s = string(b)
+	return s[1 : len(s)-1]
+}
