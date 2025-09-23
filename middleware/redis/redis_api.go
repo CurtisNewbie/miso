@@ -103,3 +103,51 @@ func Scan(rail miso.Rail, pat string, scanLimit int64, f func(key string) error)
 	}
 	return nil
 }
+
+func Incr(rail miso.Rail, key string) (ok bool, after int64, er error) {
+	c := GetRedis().Incr(rail.Context(), key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, 0, nil
+		}
+		return false, 0, errs.WrapErr(err)
+	}
+	return true, v, err
+}
+
+func Decr(rail miso.Rail, key string) (ok bool, after int64, er error) {
+	c := GetRedis().Decr(rail.Context(), key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, 0, nil
+		}
+		return false, 0, errs.WrapErr(err)
+	}
+	return true, v, err
+}
+
+func IncrBy(rail miso.Rail, key string, v int64) (ok bool, after int64, er error) {
+	c := GetRedis().IncrBy(rail.Context(), key, v)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, 0, nil
+		}
+		return false, 0, errs.WrapErr(err)
+	}
+	return true, v, err
+}
+
+func DecrBy(rail miso.Rail, key string, v int64) (ok bool, after int64, er error) {
+	c := GetRedis().DecrBy(rail.Context(), key, v)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, 0, nil
+		}
+		return false, 0, errs.WrapErr(err)
+	}
+	return true, v, err
+}
