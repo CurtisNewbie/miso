@@ -258,21 +258,9 @@ func IsConsulServiceRegistered() bool {
 	return consulRegistration.serviceId != ServiceIdNil
 }
 
-/*
-Register current instance as a service
-
-If we have already registered before, current method call will be ignored.
-
-This func looks for following prop:
-
-	"server.port"
-	"consul.registerName"
-	"consul.healthCheckInterval"
-	"consul.registerAddress"
-	"consul.healthCheckUrl"
-	"consul.healthCheckTimeout"
-	"consul.healthCheckFailedDeregisterAfter"
-*/
+// Register current instance as a service
+//
+// If we have already registered before, current method call will be ignored.
 func RegisterConsulService() error {
 	consulRegistration.mu.Lock()
 	defer consulRegistration.mu.Unlock()

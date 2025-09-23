@@ -29,21 +29,32 @@ import (
 const (
 	// Default shutdown hook execution order.
 	DefShutdownOrder = 5
+)
 
+const (
 	// Components like database that are essential and must be ready before anything else.
-	BootstrapOrderL1 = -20
+	//
+	// Since v0.3.2, L1 was updated from -20 to -30.
+	BootstrapOrderL1 = -30
 
 	// Components that are bootstraped before the web server, such as metrics stuff.
-	BootstrapOrderL2 = -15
+	//
+	// Since v0.3.2, L2 was updated from -15 to -20.
+	BootstrapOrderL2 = -20
 
 	// The web server or anything similar, bootstraping web server doesn't really mean that we will receive inbound requests.
 	BootstrapOrderL3 = -10
+
+	// Default bootstrap order 0.
+	BootstrapOrderDefault = 0
 
 	// Components that introduce inbound requests or job scheduling.
 	//
 	// When these components bootstrap, the server is considered truly running.
 	// For example, service registration (for service discovery), MQ broker connection and so on.
-	BootstrapOrderL4 = -5
+	//
+	// Since v0.3.2, L4 was updated from -5 to 10.
+	BootstrapOrderL4 = 10
 )
 
 const (
