@@ -85,3 +85,21 @@ func SetNXJson(rail miso.Rail, key string, val any, exp time.Duration) (bool, er
 	}
 	return SetNX(rail, key, s, exp)
 }
+
+func Scan(rail miso.Rail, pat string, scanLimit int64, f func(key string) error) error {
+	cmd := GetRedis().Scan(rail.Context(), 0, pat, scanLimit)
+	if cmd.Err() != nil {
+		return errs.WrapErrf(cmd.Err(), "failed to scan redis with pattern '%v'", pat)
+	}
+
+	iter := cmd.Iterator()
+	for iter.Next(rail.Context()) {
+		if iter.Err() != nil {
+			return errs.WrapErrf(iter.Err(), "failed to iterate using scan, pattern: '%v'", pat)
+		}
+		if err := f(iter.Val()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
