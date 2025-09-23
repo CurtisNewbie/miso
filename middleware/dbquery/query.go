@@ -343,6 +343,10 @@ func (q *Query) Offset(n int) *Query {
 	return q
 }
 
+func (q *Query) AtPage(p miso.Paging) *Query {
+	return q.Limit(p.GetLimit()).Offset(p.GetOffset())
+}
+
 // LIKE '%?'
 func (q *Query) LikeLeftIf(cond bool, col string, val string) *Query {
 	if cond {
