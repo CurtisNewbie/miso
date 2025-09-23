@@ -183,7 +183,7 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 		if cmd.Err() == nil {
 			return cmd.Val() > 0, nil
 		}
-		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
+		if !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
 			return false, errs.WrapErrf(cmd.Err(), "failed to get value from redis, unknown error")
 		}
 		return false, nil
