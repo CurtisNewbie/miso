@@ -2,10 +2,12 @@ package miso
 
 import (
 	"context"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
@@ -302,7 +304,7 @@ func (r Rail) NextSpan() Rail {
 	for _, k := range GetPropagationKeys() {
 		r = r.WithCtxVal(k, prev.Value(k))
 	}
-	return r.WithCtxVal(XSpanId, util.RandLowerAlphaNumeric16())
+	return r.WithCtxVal(XSpanId, NewSpanId())
 }
 
 // Create a new Rail with a new Context
@@ -334,13 +336,36 @@ func EmptyRail() Rail {
 	return NewRail(context.Background())
 }
 
+// Create new TraceId.
+func NewTraceId() string {
+
+	// in latest implementation, it's [16]byte{}
+	/*
+		t := [16]byte{}
+		binary.NativeEndian.PutUint64(t[:8], rand.Uint64())
+		binary.NativeEndian.PutUint64(t[8:], rand.Uint64())
+		return hex.EncodeToString(t[:])
+	*/
+
+	t := [8]byte{} // in latest implementation, it's [16]byte{}
+	binary.NativeEndian.PutUint64(t[:], rand.Uint64())
+	return hex.EncodeToString(t[:])
+}
+
+// Create new SpanId.
+func NewSpanId() string {
+	s := [8]byte{}
+	binary.NativeEndian.PutUint64(s[:], rand.Uint64())
+	return hex.EncodeToString(s[:])
+}
+
 // Create new Rail from context.
 func NewRail(ctx context.Context) Rail {
 	if ctx.Value(XSpanId) == nil {
-		ctx = context.WithValue(ctx, XSpanId, util.RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
+		ctx = context.WithValue(ctx, XSpanId, NewSpanId()) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 	if ctx.Value(XTraceId) == nil {
-		ctx = context.WithValue(ctx, XTraceId, util.RandLowerAlphaNumeric16()) //lint:ignore SA1029 keys must be exposed for user to use
+		ctx = context.WithValue(ctx, XTraceId, NewTraceId()) //lint:ignore SA1029 keys must be exposed for user to use
 	}
 	return Rail{ctx: ctx}
 }
