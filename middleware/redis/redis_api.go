@@ -145,3 +145,69 @@ func DecrBy(rail miso.Rail, key string, v int64) (after int64, er error) {
 	}
 	return v, err
 }
+
+func LPush(rail miso.Rail, key string, v any) error {
+	c := GetRedis().LPush(rail.Context(), key, v)
+	return errs.WrapErr(c.Err())
+}
+
+func RPush(rail miso.Rail, key string, v any) error {
+	c := GetRedis().RPush(rail.Context(), key, v)
+	return errs.WrapErr(c.Err())
+}
+
+func LPop(rail miso.Rail, key string) (string, bool, error) {
+	c := GetRedis().LPop(rail.Context(), key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return v, false, nil
+		}
+		return v, false, errs.WrapErr(err)
+	}
+	return v, true, nil
+}
+
+func RPop(rail miso.Rail, key string) (string, bool, error) {
+	c := GetRedis().RPop(rail.Context(), key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return v, false, nil
+		}
+		return v, false, errs.WrapErr(err)
+	}
+	return v, true, nil
+}
+
+func BRPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, error) {
+	c := GetRedis().BRPop(rail.Context(), timeout, key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return v, false, nil
+		}
+		return v, false, errs.WrapErr(err)
+	}
+	if len(v) > 0 {
+		v = v[1:]
+	}
+	return v, true, nil
+
+}
+
+func BLPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, error) {
+	c := GetRedis().BRPop(rail.Context(), timeout, key)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return v, false, nil
+		}
+		return v, false, errs.WrapErr(err)
+	}
+	if len(v) > 0 {
+		v = v[1:]
+	}
+	return v, true, nil
+
+}
