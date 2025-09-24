@@ -1,6 +1,19 @@
-# Distributed Task Scheduling
+# Cron Scheduler & Distributed Task Scheduling
 
-Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling.
+Miso provides basic cron-based scheduling functionality, for example:
+
+```go
+err := miso.ScheduleCron(Job{
+    Name: "RotateLogJob",
+    Cron: "0 0 0 * * ?",
+    Run:  func(r Rail) error { return log.Rotate() },
+});
+if err != nil {
+    panic("...")
+}
+```
+
+It also wraps the cron scheduler to support distributed task scheduling.
 
 A cluster is distinguished by a group name, which by default is `${app.name}`. Each cluster can only have one master node.
 
