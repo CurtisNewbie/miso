@@ -3,10 +3,10 @@
 Miso provides basic cron-based scheduling functionality, for example:
 
 ```go
-err := miso.ScheduleCron(Job{
+err := miso.ScheduleCron(miso.Job{
     Name: "RotateLogJob",
     Cron: "0 0 0 * * ?",
-    Run:  func(r Rail) error { return log.Rotate() },
+    Run:  func(r miso.Rail) error { return log.Rotate() },
 });
 if err != nil {
     panic("...")
