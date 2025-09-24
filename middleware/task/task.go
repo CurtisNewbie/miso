@@ -20,6 +20,10 @@ const (
 	defMstLockTtlSec = 60
 )
 
+var (
+	staleTaskThreshold = 5 * time.Second
+)
+
 func init() {
 	// run before SchedulerBootstrap
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
@@ -96,6 +100,7 @@ func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) err
 				default:
 					if err := m.pullTasks(miso.EmptyRail()); err != nil {
 						miso.Errorf("Pull tasks queue failed, %v", err)
+						time.Sleep(time.Millisecond * 500) // backoff from error
 					}
 				}
 			}
@@ -186,7 +191,9 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		}
 
 		start := time.Now()
-		err := actualRun(rail)
+		err := util.PanicSafeRunErr(func() error {
+			return actualRun(rail)
+		})
 		took := time.Since(start)
 
 		if logJobExec {
@@ -243,8 +250,8 @@ func (m *taskModule) pullTasks(rail miso.Rail) error {
 	}
 
 	for _, qt := range v {
-		if qt.ScheduledAt.Before(util.NowUTC().Add(-time.Second * 10)) {
-			rail.Warnf("Task was triggered 10s ago, ignore, %v", qt.ScheduledAt)
+		if qt.ScheduledAt.Before(util.NowUTC().Add(-staleTaskThreshold)) {
+			rail.Warnf("Task was triggered 5s ago, ignore, %v", qt.ScheduledAt)
 			continue
 		}
 
