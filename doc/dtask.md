@@ -17,7 +17,9 @@ It also wraps the cron scheduler to support distributed task scheduling.
 
 A cluster is distinguished by a group name, which by default is `${app.name}`. Each cluster can only have one master node.
 
-Inspired by [github.com/rq/rq](https://github.com/rq/rq), the Producer/Worker model is applied, the master node acts as the **Producer** that is responsible for pushing scheduled tasks to the **Queue** (Redis List). The Queue is shared among the cluster, **Workers** (all the nodes, including the master node) constantly pull tasks from the Queue and run them.
+Inspired by [github.com/rq/rq](https://github.com/rq/rq), Distributed Task Scheduling module follows the Producer-Worker Design; the master node acts as the **Producer** that is responsible for pushing scheduled tasks to the **Queue** (Redis List). The Queue is shared among the cluster, **Workers** (all the nodes, including the master node) constantly pull tasks from the Queue and run them.
+
+To register distributed tasks:
 
 ```go
 func main() {
@@ -45,7 +47,7 @@ func main() {
 }
 ```
 
-The code above is automatically handled by `miso.BootstrapServer(...)` func.
+The code above is automatically handled by `miso.BootstrapServer(...)` func, for example:
 
 ```go
 func main() {
