@@ -1,6 +1,10 @@
 # Distributed Task Scheduling
 
-Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling. A cluster is distinguished by a group name, which by default is `${app.name}`. Each cluster of nodes can only have one master, and the master node is responsible for running all the tasks. If there is any distributed task registered in an app, it will try to obtain the master lock on startup. You can think of it as a combination of cron scheduler and redis based lock.
+Miso provides basic cron-based scheduling functionality. It also wraps the cron scheduler to support distributed task scheduling.
+
+A cluster is distinguished by a group name, which by default is `${app.name}`. Each cluster can only have one master node.
+
+Inspired by [github.com/rq/rq](https://github.com/rq/rq), the Producer/Worker model is applied, the master node acts as the **Producer** that is responsible for pushing scheduled tasks to the **Queue** (Redis List). The Queue is shared among the cluster, **Workers** (all the nodes, including the master node) constantly pull tasks from the Queue and run them.
 
 ```go
 func main() {
