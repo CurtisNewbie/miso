@@ -1,14 +1,12 @@
 package task
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
@@ -231,39 +229,20 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 		Name:        name,
 		ScheduledAt: util.NowUTC(),
 	}
-	v, err := json.SWriteJson(qt)
-	if err != nil {
-		return err
-	}
-
-	c := redis.GetRedis().LPush(rail.Context(), m.getTaskQueueKey(), v)
-	if c.Err() != nil {
-		return c.Err()
-	}
-	return nil
+	return redis.LPushJson(rail, m.getTaskQueueKey(), qt)
 }
 
 func (m *taskModule) pullTasks(rail miso.Rail) error {
 
-	c := redis.GetRedis().BRPop(rail.Context(), time.Second*10, m.getTaskQueueKey())
-	v, err := c.Result()
+	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*10, m.getTaskQueueKey())
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return nil
-		}
-		return errs.WrapErr(err)
+		return err
 	}
-	if len(v) > 0 {
-		v = v[1:]
+	if !ok {
+		return nil
 	}
 
-	for _, j := range v {
-		qt, err := json.SParseJsonAs[queuedTask](j)
-		if err != nil {
-			rail.Errorf("Failed to unmarshal queued task: '%v', %v", j, err)
-			continue
-		}
-
+	for _, qt := range v {
 		if qt.ScheduledAt.Before(util.NowUTC().Add(-time.Second * 10)) {
 			rail.Warnf("Task was triggered 10s ago, ignore, %v", qt.ScheduledAt)
 			continue
@@ -360,7 +339,7 @@ func (m *taskModule) startTaskMasterLockTicker() {
 }
 
 func (m *taskModule) releaseMasterNodeLock() {
-	cmd := redis.GetRedis().Eval(context.Background(), `
+	v, err := redis.Eval(miso.EmptyRail(), `
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -370,14 +349,11 @@ func (m *taskModule) releaseMasterNodeLock() {
 		return 1;
 	end;
 	return 0;`, []string{m.getTaskMasterKey()}, m.nodeId)
-	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return
-		}
-		miso.Errorf("Failed to release master node lock, %v", errs.WrapErr(cmd.Err()))
+	if err != nil {
+		miso.Errorf("Failed to release master node lock, %v", err)
 		return
 	}
-	miso.Debugf("Release master node lock, released? %v", cmd.Val() == int64(1))
+	miso.Debugf("Release master node lock, released? %v", v == int64(1))
 }
 
 // Stop refreshing master lock ticker
@@ -392,13 +368,13 @@ func (m *taskModule) stopTaskMasterLockTicker() {
 
 // Refresh master lock key ttl
 func (m *taskModule) refreshTaskMasterLock(rail miso.Rail) error {
-	err := redis.GetRedis().Eval(rail.Context(), `
+	_, err := redis.Eval(rail, `
 	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
 		redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
 		return 1;
 	end;
 	return 0;
-	`, []string{m.getTaskMasterKey()}, m.nodeId, defMstLockTtlSec).Err()
+	`, []string{m.getTaskMasterKey()}, m.nodeId, defMstLockTtlSec)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			rail.Debugf("Failed to refreshTaskMasterLock, masterLock not obtained")
@@ -417,13 +393,13 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 		return true
 	}
 
-	bcmd := redis.GetRedis().SetNX(rail.Context(), m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
-	if bcmd.Err() != nil {
-		rail.Errorf("Try to become master node %v", errs.WrapErr(bcmd.Err()))
+	ok, err := redis.SetNX(rail, m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
+	if err != nil {
+		rail.Errorf("Try to become master node %v", errs.WrapErr(err))
 		return false
 	}
 
-	isMaster := bcmd.Val()
+	isMaster := ok
 	if isMaster {
 		rail.Infof("Elected to be the master node for group: '%s'", m.group)
 		m.startTaskMasterLockTicker()

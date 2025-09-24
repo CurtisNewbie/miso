@@ -7,6 +7,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -60,14 +61,15 @@ func Set(rail miso.Rail, key string, val any, exp time.Duration) error {
 	c := GetRedis().Set(rail.Context(), key, val, exp)
 	err := c.Err()
 	if err != nil {
-		return err
+		return errs.WrapErr(err)
 	}
 	return nil
 }
 
 func SetNX(rail miso.Rail, key string, val any, exp time.Duration) (bool, error) {
 	c := GetRedis().SetNX(rail.Context(), key, val, exp)
-	return c.Result()
+	v, err := c.Result()
+	return v, errs.WrapErr(err)
 }
 
 func SetJson(rail miso.Rail, key string, val any, exp time.Duration) error {
@@ -146,6 +148,22 @@ func DecrBy(rail miso.Rail, key string, v int64) (after int64, er error) {
 	return v, err
 }
 
+func LPushJson(rail miso.Rail, key string, v any) error {
+	s, err := json.SWriteJson(v)
+	if err != nil {
+		return err
+	}
+	return LPush(rail, key, s)
+}
+
+func RPushJson(rail miso.Rail, key string, v any) error {
+	s, err := json.SWriteJson(v)
+	if err != nil {
+		return err
+	}
+	return RPush(rail, key, s)
+}
+
 func LPush(rail miso.Rail, key string, v any) error {
 	c := GetRedis().LPush(rail.Context(), key, v)
 	return errs.WrapErr(c.Err())
@@ -180,7 +198,31 @@ func RPop(rail miso.Rail, key string) (string, bool, error) {
 	return v, true, nil
 }
 
-func BRPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, error) {
+func LPopJson[T any](rail miso.Rail, key string) (T, bool, error) {
+	var t T
+	s, ok, err := LPop(rail, key)
+	if err != nil || !ok {
+		return t, ok, err
+	}
+	if err := json.SParseJson(s, &t); err != nil {
+		return t, true, err
+	}
+	return t, true, err
+}
+
+func RPopJson[T any](rail miso.Rail, key string) (T, bool, error) {
+	var t T
+	s, ok, err := RPop(rail, key)
+	if err != nil || !ok {
+		return t, ok, err
+	}
+	if err := json.SParseJson(s, &t); err != nil {
+		return t, true, err
+	}
+	return t, true, err
+}
+
+func BRPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, error) {
 	c := GetRedis().BRPop(rail.Context(), timeout, key)
 	v, err := c.Result()
 	if err != nil {
@@ -196,7 +238,7 @@ func BRPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, e
 
 }
 
-func BLPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, error) {
+func BLPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, error) {
 	c := GetRedis().BRPop(rail.Context(), timeout, key)
 	v, err := c.Result()
 	if err != nil {
@@ -209,5 +251,42 @@ func BLPop(rail miso.Rail, key string, timeout time.Duration) ([]string, bool, e
 		v = v[1:]
 	}
 	return v, true, nil
+}
 
+func BLPopJson[T any](rail miso.Rail, timeout time.Duration, key string) ([]T, bool, error) {
+	s, ok, err := BLPop(rail, timeout, key)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	v := slutil.MapTo[string, T](s, func(j string) T {
+		t, perr := json.SParseJsonAs[T](j)
+		if perr != nil {
+			err = errs.WrapErr(perr)
+			rail.Errorf("Failed unmarshal BLPOP value to json, '%v', %v", j, err)
+		}
+		return t
+	})
+	return v, true, err
+}
+
+func BRPopJson[T any](rail miso.Rail, timeout time.Duration, key string) ([]T, bool, error) {
+	s, ok, err := BLPop(rail, timeout, key)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	v := slutil.MapTo[string, T](s, func(j string) T {
+		t, perr := json.SParseJsonAs[T](j)
+		if perr != nil {
+			err = errs.WrapErr(perr)
+			rail.Errorf("Failed unmarshal BLPOP value to json, '%v', %v", j, err)
+		}
+		return t
+	})
+	return v, true, err
+}
+
+func Eval(rail miso.Rail, script string, keys []string, args ...interface{}) (any, error) {
+	c := GetRedis().Eval(rail.Context(), script, keys, args...)
+	v, err := c.Result()
+	return v, errs.WrapErr(err)
 }
