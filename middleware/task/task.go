@@ -251,7 +251,7 @@ func (m *taskModule) pullTasks(rail miso.Rail) error {
 
 	for _, qt := range v {
 		if qt.ScheduledAt.Before(util.NowUTC().Add(-staleTaskThreshold)) {
-			rail.Warnf("Task was triggered 5s ago, ignore, %v", qt.ScheduledAt)
+			rail.Warnf("Task was triggered 5s ago, ignore, %v, scheduledAt: %v", qt.Name, qt.ScheduledAt)
 			continue
 		}
 
