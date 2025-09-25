@@ -14,16 +14,12 @@ const (
 	// misoconfig-prop: disable specific task by it's name | false
 	// misoconfig-doc-only
 	PropTaskSchedulingTaskDisabled = "task.scheduling.${taskName}.disabled"
-
-	// misoconfig-prop: enable api to manually trigger tasks on one of the worker nodes | false
-	PropTaskSchedulingApiTriggerJobEnabled = "task.scheduling.api.trigger-task.enabled"
 )
 
 // misoconfig-default-start
 func init() {
 	miso.SetDefProp(PropTaskSchedulingEnabled, true)
 	miso.SetDefProp(PropTaskSchedulingGroup, "${app.name}")
-	miso.SetDefProp(PropTaskSchedulingApiTriggerJobEnabled, false)
 }
 
 // misoconfig-default-end

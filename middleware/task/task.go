@@ -493,7 +493,7 @@ func distriTaskBootstrap(rail miso.Rail) error {
 
 // enable api to manually trigger tasks
 func registerRouteForJobTriggers() {
-	if !miso.GetPropBool(PropTaskSchedulingApiTriggerJobEnabled) {
+	if !miso.GetPropBool(miso.PropSchedApiTriggerJobEnabled) {
 		return
 	}
 
