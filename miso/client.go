@@ -902,6 +902,10 @@ func TraceRequest(ctx context.Context, req *http.Request) *http.Request {
 	UsePropagationKeys(func(key string) {
 		v := ctx.Value(key)
 		if v != nil {
+			if key == XSpanId {
+				req.Header.Set(key, NewSpanId())
+				return
+			}
 			if sv := cast.ToString(v); sv != "" {
 				req.Header.Set(key, sv)
 			}
