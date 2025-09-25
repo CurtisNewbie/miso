@@ -32,6 +32,10 @@ func init() {
 		Bootstrap: distriTaskBootstrap,
 		Order:     miso.BootstrapOrderL4,
 	})
+	miso.BeforeWebRouteRegister(func() error {
+		registerRouteForJobTriggers()
+		return nil
+	})
 }
 
 var module = miso.InitAppModuleFunc(func() *taskModule {
@@ -485,4 +489,18 @@ func distriTaskBootstrap(rail miso.Rail) error {
 	_ = redis.GetRedis() // check if redis is initialized
 	miso.AddOrderedShutdownHook(miso.DefShutdownOrder-1, func() { m.stop() })
 	return m.bootstrapAsComponent(rail)
+}
+
+// enable api to manually trigger tasks
+func registerRouteForJobTriggers() {
+	if !miso.GetPropBool(PropTaskSchedulingApiTriggerJobEnabled) {
+		return
+	}
+
+	miso.HttpGet("/debug/task/trigger", miso.RawHandler(func(inb *miso.Inbound) {
+		rail := inb.Rail()
+		name := inb.Query("name")
+		err := module().triggerWorker(rail, name)
+		inb.HandleResult(nil, err)
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Task By Name")
 }

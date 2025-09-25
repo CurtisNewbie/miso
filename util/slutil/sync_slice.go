@@ -7,10 +7,10 @@ type syncSlice[T any] struct {
 	mu *sync.RWMutex
 }
 
-func (s *syncSlice[T]) Append(t T) {
+func (s *syncSlice[T]) Append(t ...T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	*s.sl = append(*s.sl, t)
+	*s.sl = append(*s.sl, t...)
 }
 
 func (s *syncSlice[T]) ForEachErr(f func(t T) (stop bool, err error)) error {
@@ -39,7 +39,7 @@ func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
 }
 
 func NewSyncSlice[T any](initCap int) *syncSlice[T] {
-	sl := make([]T, initCap)
+	sl := make([]T, 0, initCap)
 	v := &syncSlice[T]{
 		sl: &sl,
 		mu: &sync.RWMutex{},

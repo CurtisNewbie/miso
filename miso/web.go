@@ -42,6 +42,8 @@ const (
 )
 
 var (
+	beforeRouteRegister = slutil.NewSyncSlice[func() error](2)
+
 	interceptors []func(c *gin.Context, next func())
 
 	lazyRouteRegistars []*LazyRouteDecl
@@ -107,6 +109,13 @@ func init() {
 		Bootstrap: webServerBootstrap,
 		Condition: webServerBootstrapCondition,
 		Order:     BootstrapOrderL3,
+	})
+	BeforeWebRouteRegister(func() error {
+		// register consul health check
+		if !defaultHealthCheckHandlerDisabled {
+			registerRouteForHealthcheck()
+		}
+		return nil
 	})
 }
 
@@ -580,12 +589,11 @@ func webServerBootstrap(rail Rail) error {
 	// register customer recovery func
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
-	// register consul health check
-	if !defaultHealthCheckHandlerDisabled {
-		registerRouteForHealthcheck()
+	if err := beforeRouteRegister.ForEachErr(func(t func() error) (stop bool, err error) {
+		return false, t()
+	}); err != nil {
+		return err
 	}
-
-	registerRouteForJobTriggers()
 
 	if err := serveApiDocTmpl(rail); err != nil {
 		rail.Errorf("failed to server apidoc, %v", err)
@@ -1312,16 +1320,6 @@ func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
 	}
 }
 
-// enable api to manually trigger jobs
-func registerRouteForJobTriggers() {
-	if !GetPropBool(PropSchedApiTriggerJobEnabled) {
-		return
-	}
-
-	HttpGet("/debug/job/trigger", RawHandler(func(inb *Inbound) {
-		rail := inb.Rail()
-		name := inb.Query("name")
-		err := TriggerJob(rail, name)
-		inb.HandleResult(nil, err)
-	})).DocQueryParam("name", "job name").Desc("Manually Trigger Job By Name")
+func BeforeWebRouteRegister(f ...func() error) {
+	beforeRouteRegister.Append(f...)
 }

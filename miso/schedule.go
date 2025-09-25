@@ -28,6 +28,10 @@ func init() {
 		Condition: schedulerBootstrapCondition,
 		Bootstrap: schedulerBootstrap,
 	})
+	BeforeWebRouteRegister(func() error {
+		registerRouteForJobTriggers()
+		return nil
+	})
 }
 
 type Job struct {
@@ -329,4 +333,18 @@ func TriggerJob(rail Rail, name string) error {
 		rail.Debugf("Job '%v' triggered", name)
 		return nil
 	}
+}
+
+// enable api to manually trigger jobs
+func registerRouteForJobTriggers() {
+	if !GetPropBool(PropSchedApiTriggerJobEnabled) {
+		return
+	}
+
+	HttpGet("/debug/job/trigger", RawHandler(func(inb *Inbound) {
+		rail := inb.Rail()
+		name := inb.Query("name")
+		err := TriggerJob(rail, name)
+		inb.HandleResult(nil, err)
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Job By Name")
 }
