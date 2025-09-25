@@ -993,11 +993,16 @@ func (i *Inbound) LogRequest() {
 	_, r := i.Unwrap()
 	rail.Infof("Receive '%v %v' request from %v", r.Method, r.RequestURI, r.RemoteAddr)
 	rail.Infof("Content-Length: %v", r.ContentLength)
-	body, e := io.ReadAll(r.Body)
-	if e != nil {
-		rail.Errorf("Failed to read request body, %v", e)
-		i.Status(http.StatusInternalServerError)
-		return
+
+	var bodystr string
+	if r.Body != nil {
+		body, e := io.ReadAll(r.Body)
+		if e != nil {
+			rail.Errorf("Failed to read request body, %v", e)
+			i.Status(http.StatusInternalServerError)
+			return
+		}
+		bodystr = string(body)
 	}
 	rail.Info("Headers: ")
 	for k, v := range r.Header {
@@ -1009,7 +1014,7 @@ func (i *Inbound) LogRequest() {
 
 	rail.Info("")
 	rail.Info("Body: ")
-	rail.Infof("  %s", string(body))
+	rail.Infof("  %s", bodystr)
 	rail.Info("")
 }
 

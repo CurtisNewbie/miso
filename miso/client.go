@@ -271,6 +271,15 @@ func (tr *TResponse) Is2xx() bool {
 	return tr.StatusCode >= 200 && tr.StatusCode < 300
 }
 
+// Check if response ok.
+//
+// Response is always closed automatically.
+func (tr *TResponse) Ok() error {
+	defer tr.Close()
+
+	return tr.Err
+}
+
 // Check if it's 2xx, else return error
 func (tr *TResponse) Require2xx() error {
 	if !tr.Is2xx() {
