@@ -502,5 +502,5 @@ func registerRouteForJobTriggers() {
 		name := inb.Query("name")
 		err := module().triggerWorker(rail, name)
 		inb.HandleResult(nil, err)
-	})).DocQueryParam("name", "job name").Desc("Manually Trigger Task By Name")
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
 }

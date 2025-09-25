@@ -346,5 +346,5 @@ func registerRouteForJobTriggers() {
 		name := inb.Query("name")
 		err := TriggerJob(rail, name)
 		inb.HandleResult(nil, err)
-	})).DocQueryParam("name", "job name").Desc("Manually Trigger Job By Name")
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Cron Job By Name")
 }
