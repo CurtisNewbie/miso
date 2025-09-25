@@ -26,6 +26,13 @@ import (
 )
 
 const (
+	typeInvalidMisoInboundVal = "miso.Inbound"
+	typeInvalidMisoRailPtr    = "*miso.Rail"
+	typeInvalidGormDbVal      = "gorm.DB"
+	typeInvalidCommonUserPtr  = "*common.User"
+)
+
+const (
 	MisoApiPrefix = "misoapi-"
 
 	typeMisoInboundPtr = "*miso.Inbound"
@@ -75,6 +82,12 @@ var (
 		typeMySqlQryPtr:    "mysql.NewQuery(dbquery.GetDB())",
 		typeGormDbPtr:      "dbquery.GetDB()",
 		typeCommonUser:     "common.GetUser(inb.Rail())",
+	}
+	invalidInjectTokens = map[string]string{
+		typeInvalidMisoInboundVal: typeMisoInboundPtr,
+		typeInvalidMisoRailPtr:    typeMisoRail,
+		typeInvalidGormDbVal:      typeGormDbPtr,
+		typeInvalidCommonUserPtr:  typeCommonUser,
 	}
 )
 
@@ -468,10 +481,18 @@ func (d ApiDecl) guessInjectToken(typ string, extra ...func(typ string) (string,
 func (d ApiDecl) injectFuncParams(extra ...func(typ string) (string, bool)) string {
 	paramTokens := make([]string, 0, len(d.FuncParams))
 	for _, p := range d.FuncParams {
+		if alt, ok := d.invalidInjectToken(p.Type); !ok {
+			panic(errs.NewErrf("Found invalid func arg type: '%v' in '%v(..)', maybe you mean '%v'?", p.Type, d.FuncName, alt))
+		}
 		var v string = d.guessInjectToken(p.Type, extra...)
 		paramTokens = append(paramTokens, v)
 	}
 	return strings.Join(paramTokens, ", ")
+}
+
+func (d ApiDecl) invalidInjectToken(t string) (string, bool) {
+	alt, ok := invalidInjectTokens[t]
+	return alt, !ok
 }
 
 func (d ApiDecl) printInvokeFunc(extra ...func(typ string) (string, bool)) string {
