@@ -3,6 +3,7 @@ package miso
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -985,6 +986,31 @@ func (i *Inbound) WriteString(v string) {
 func (i *Inbound) WriteJsonStatus(v any, httpStatus int) {
 	i.Status(httpStatus)
 	i.WriteJson(v)
+}
+
+func (i *Inbound) LogRequest() {
+	rail := i.Rail()
+	_, r := i.Unwrap()
+	rail.Infof("Receive '%v %v' request from %v", r.Method, r.RequestURI, r.RemoteAddr)
+	rail.Infof("Content-Length: %v", r.ContentLength)
+	body, e := io.ReadAll(r.Body)
+	if e != nil {
+		rail.Errorf("Failed to read request body, %v", e)
+		i.Status(http.StatusInternalServerError)
+		return
+	}
+	rail.Info("Headers: ")
+	for k, v := range r.Header {
+		if strutil.ContainsAnyStrIgnoreCase(k, "authorization", "cookie", "token") {
+			v = []string{"***"}
+		}
+		rail.Infof("  %-30s: %v", k, v)
+	}
+
+	rail.Info("")
+	rail.Info("Body: ")
+	rail.Infof("  %s", string(body))
+	rail.Info("")
 }
 
 func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
