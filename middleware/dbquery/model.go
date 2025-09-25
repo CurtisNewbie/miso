@@ -93,7 +93,7 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 	miso.Info("Registered CreateModelHook")
 }
 
-// Prepare UpdateModel Hook that will run when [Query] call UPDATED related methods, see [AddUpdateHooks] and [UpdateModel].
+// Prepare UpdateModel Hook that will run when [Query] call UPDATE related methods, see [AddUpdateHooks] and [UpdateModel].
 //
 // This hook will attempt to extract trace_id and updated_by field from trace ([miso.Rail]) and [UpdatedByExtractor], these fields are then updated to database along with other fields.
 //
