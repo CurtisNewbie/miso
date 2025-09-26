@@ -371,3 +371,11 @@ func IsAny(curr error, others ...error) bool {
 	}
 	return false
 }
+
+func As[T error](err error) (T, bool) {
+	var t T
+	if errors.As(err, &t) {
+		return t, true
+	}
+	return t, false
+}
