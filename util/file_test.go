@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 )
@@ -122,4 +123,48 @@ func TestFileChangeSuffix(t *testing.T) {
 		t.Fatal(v)
 	}
 	t.Log(v)
+}
+
+func TestMkdirTree(t *testing.T) {
+	defer os.RemoveAll("./testMkdirTree")
+	dt := DirTree{
+		Name: "./testMkdirTree",
+		Childs: []DirTree{
+			{
+				Name: "doc",
+			},
+			{
+				Name: "internal",
+				Childs: []DirTree{
+					{
+						Name: "server",
+						Childs: []DirTree{
+							{
+								Name:   "server.go",
+								IsFile: true,
+								OnCreated: func(f *os.File) error {
+									fmt.Printf("Created %v", f.Name())
+									return nil
+								},
+							},
+						},
+					},
+					{
+						Name: "config",
+					},
+					{
+						Name: "repo",
+					},
+					{
+						Name: "domain",
+					},
+				},
+			},
+		},
+	}
+	err := MkdirTree(dt)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
 }

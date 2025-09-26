@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
 
@@ -63,7 +64,8 @@ func ReadFileAll(path string) ([]byte, error) {
 
 // Open file with 0666 permission.
 func OpenFile(name string, flag int) (*os.File, error) {
-	return os.OpenFile(name, flag, DefFileMode)
+	f, err := os.OpenFile(name, flag, DefFileMode)
+	return f, errs.WrapErr(err)
 }
 
 // Create appendable file with 0666 permission.
@@ -94,7 +96,7 @@ func OpenRWFile(name string, createIfAbsent bool) (*os.File, error) {
 
 // MkdirAll with 0755 perm.
 func MkdirAll(path string) error {
-	return os.MkdirAll(path, 0755)
+	return errs.WrapErr(os.MkdirAll(path, 0755))
 }
 
 // MkdirAll but only for the parent directory of the path, perm 0755 is used.
@@ -238,4 +240,74 @@ func WalkDir(n string, suffix ...string) ([]WalkFsFile, error) {
 		}
 	}
 	return files, nil
+}
+
+type DirTree struct {
+	Name      string
+	Childs    []DirTree
+	IsFile    bool
+	OnCreated func(f *os.File) error
+	Skip      bool
+}
+
+func MkdirTree(t DirTree) error {
+	if t.Skip {
+		return nil
+	}
+	if t.IsFile {
+		f, err := OpenRWFile(t.Name, true)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if t.OnCreated != nil {
+			return t.OnCreated(f)
+		}
+		return nil
+	}
+
+	for _, c := range t.Childs {
+		err := walkMkdirTree(t.Name, c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func walkMkdirTree(parent string, t DirTree) error {
+	fp := path.Join(parent, t.Name)
+	if t.Skip {
+		if err := MkdirParentAll(fp); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if t.IsFile {
+		if err := MkdirParentAll(fp); err != nil {
+			return err
+		}
+		f, err := OpenRWFile(fp, true)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if t.OnCreated != nil {
+			return t.OnCreated(f)
+		}
+		return nil
+	}
+
+	if len(t.Childs) > 0 {
+		for _, c := range t.Childs {
+			err := walkMkdirTree(fp, c)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		return MkdirAll(fp)
+	}
+	return nil
 }
