@@ -22,8 +22,8 @@ const (
 
 var (
 	staleTaskThreshold = 5 * time.Second
-	localIpOnce        = sync.OnceValue(func() string {
-		return util.GetLocalIPV4()
+	producerOnce       = sync.OnceValue(func() string {
+		return util.GetLocalIPV4() + "-" + miso.GetPropStr(miso.PropServerActualPort)
 	})
 )
 
@@ -236,14 +236,14 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 type queuedTask struct {
 	Name        string
 	ScheduledAt util.Time
-	ProducerIP  string
+	Producer    string
 }
 
 func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 	qt := queuedTask{
 		Name:        name,
 		ScheduledAt: util.NowUTC(),
-		ProducerIP:  localIpOnce(),
+		Producer:    producerOnce(),
 	}
 	return redis.LPushJson(rail, m.getTaskQueueKey(), qt)
 }
@@ -265,7 +265,7 @@ func (m *taskModule) pullTasks(rail miso.Rail) error {
 		}
 
 		newRail := miso.EmptyRail()
-		newRail.Infof("Pulled task '%v' from Task Queue, Producer IP: %v", qt.Name, qt.ProducerIP)
+		newRail.Infof("Pulled task '%v' from Task Queue, Producer: %v", qt.Name, qt.Producer)
 		if err := m.triggerWorker(newRail, qt.Name); err != nil {
 			newRail.Errorf("Failed to trigger worker, task: '%v'", qt.Name)
 		}
