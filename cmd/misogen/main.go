@@ -106,7 +106,22 @@ func main() {
 		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 
-	dirTree := util.DirTree{
+	dirTree := buildDirTree(cpltModName, modName)
+	if err := util.MkdirTree(dirTree); err != nil {
+		panic(err)
+	}
+
+	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
+		panic(err)
+	}
+
+	if err := exec.Command("go", "fmt", "./...").Run(); err != nil {
+		cli.Printlnf("failed to fmt source code, %v", err)
+	}
+}
+
+func buildDirTree(cpltModName string, modName string) util.DirTree {
+	return util.DirTree{
 		Name: ".",
 		Childs: []util.DirTree{
 			{
@@ -227,17 +242,6 @@ func main() {
 				},
 			},
 		},
-	}
-	if err := util.MkdirTree(dirTree); err != nil {
-		panic(err)
-	}
-
-	if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
-		panic(err)
-	}
-
-	if err := exec.Command("go", "fmt", "./...").Run(); err != nil {
-		cli.Printlnf("failed to fmt source code, %v", err)
 	}
 }
 
