@@ -264,7 +264,7 @@ func (m *taskModule) pullTasks(rail miso.Rail) error {
 			continue
 		}
 
-		rail.Infof("Pull task '%v' from Task Queue, Producer IP: %v", qt.Name, qt.ProducerIP)
+		rail.Infof("Pulled task '%v' from Task Queue, Producer IP: %v", qt.Name, qt.ProducerIP)
 		if err := m.triggerWorker(miso.EmptyRail(), qt.Name); err != nil {
 			rail.Errorf("Failed to trigger worker, task: '%v'", qt.Name)
 		}
