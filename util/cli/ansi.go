@@ -7,6 +7,7 @@ const (
 	ANSIRed   = "\033[1;31m"
 	ANSIGreen = "\033[1;32m"
 	ANSICyan  = "\033[1;36m"
+	ANSIGray  = "\033[1;90m"
 	ANSIReset = "\033[0m"
 
 	ANSIBlinkRed   = "\033[1;5;31m"
