@@ -235,10 +235,11 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 }
 
 var jsonParseTimeFormats = []string{
+	time.RFC3339,
+	time.RFC3339Nano,
 	SQLDateTimeFormat,
 	SQLDateFormat,
 	SQLDateTimeFormatWithT,
-	time.RFC3339Nano,
 }
 
 func AddETimeParseFormat(fmt ...string) {
