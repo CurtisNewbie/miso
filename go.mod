@@ -2,6 +2,8 @@ module github.com/curtisnewbie/miso
 
 go 1.24.4
 
+retract v1.0.12 // human mistake, miso v1 is not ready.
+
 require (
 	github.com/ChimeraCoder/gojson v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.8.0
