@@ -1,10 +1,10 @@
 package utillog
 
-import "github.com/curtisnewbie/miso/util/cli"
+import "fmt"
 
 var (
 	DebugLog func(pat string, args ...any) = func(pat string, args ...any) {}
 	ErrorLog func(pat string, args ...any) = func(pat string, args ...any) {
-		cli.Printlnf("[Error] "+pat, args...)
+		fmt.Printf("[Error] "+pat+"\n", args...)
 	}
 )

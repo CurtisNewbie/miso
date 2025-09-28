@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 func TermOpenUrl(url string) error {
@@ -114,4 +116,8 @@ func Run(rail CliRail, executable string, args []string, opts ...func(*exec.Cmd)
 	}
 
 	return out, nil
+}
+
+func NamedPrintlnf(pat string, p map[string]any) {
+	println(strutil.NamedSprintf(pat, p))
 }
