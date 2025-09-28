@@ -84,6 +84,18 @@ func (t Time) StartOfDay() Time {
 	return Time{tt}
 }
 
+func (t Time) EndOfMonth() Time {
+	yyyy, mm, _ := t.Date()
+	tt := time.Date(yyyy, mm+1, 0, 23, 59, 59, 999_999000, t.Location())
+	return Time{tt}
+}
+
+func (t Time) StartOfMonth() Time {
+	yyyy, mm, _ := t.Date()
+	tt := time.Date(yyyy, mm, 1, 0, 0, 0, 0, t.Location())
+	return Time{tt}
+}
+
 func (t Time) LastWeekday(w time.Weekday) Time {
 	wkd := t.Weekday()
 	diff := 0

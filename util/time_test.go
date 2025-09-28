@@ -131,3 +131,10 @@ func TestNextWeekday(t *testing.T) {
 		}
 	}
 }
+
+func TestStartEndOfMonth(t *testing.T) {
+	now := Now()
+	t.Log(now)
+	t.Log(now.StartOfMonth())
+	t.Log(now.EndOfMonth())
+}
