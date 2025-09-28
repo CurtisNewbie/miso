@@ -34,12 +34,24 @@ type ETime = Time
 
 // Enhanced wrapper of time.Time.
 //
-// This type implements sql.Scanner and driver.Valuer, and thus can be safely used in GORM just like time.Time. It also
-// implements json/encoding Marshaler and Unmarshaler to support json marshalling (in forms of epoch milliseconds 'by default').
+// This type implements sql.Scanner and driver.Valuer, it can be safely used in GORM just like time.Time.
+//
+// It also implements json/encoding Marshaler and Unmarshaler to support json marshalling.
 //
 // In previous releases, Time was a type alias to time.Time. Since v0.1.2, Time embeds time.Time to access all of it's methods.
 //
 // To cast from time.Time to Time, use [WrapTime] method. To cast from Time to time.Time, use [Time.Unwrap] method.
+//
+// By default, Time support following unmarshaling formats:
+//   - [time.RFC3339]
+//   - [time.RFC3339Nano]
+//   - 2006-01-02 15:04:05.999999
+//   - 2006-01-02
+//   - 2006-01-02T15:04:05.999999
+//   - millseconds since unix epoch
+//   - seconds since unix epoch
+//
+// By default, Time is marshaled as millseconds since unix epoch. You can change this behaviour though [SetETimeMarshalFormat].
 type Time struct {
 	time.Time
 }
@@ -164,28 +176,44 @@ func (t Time) InZone(diffInHours int) Time {
 	return t.In(time.FixedZone("", diffInHours*60*60))
 }
 
+// Format as 2006-01-02
 func (t Time) FormatDate() string {
 	return t.Unwrap().Format(time.DateOnly)
 }
 
+// Format as 2006/01/02 15:04:05
 func (t Time) FormatClassic() string {
 	return t.Unwrap().Format(ClassicDateTimeFormat)
 }
 
+// Format as 2006/01/02 15:04:05 (MST)
 func (t Time) FormatClassicLocale() string {
 	return t.Unwrap().Format(ClassicDateTimeLocaleFormat)
 }
 
+// Format as 2006-01-02 15:04:05
 func (t Time) FormatStd() string {
 	return t.Unwrap().Format(StdDateTimeFormat)
 }
 
+// Format as 2006-01-02 15:04:05.000
 func (t Time) FormatStdMilli() string {
 	return t.Unwrap().Format(StdDateTimeMilliFormat)
 }
 
+// Format as 2006-01-02 15:04:05 (MST)
 func (t Time) FormatStdLocale() string {
 	return t.Unwrap().Format(StdDateTimeLocaleFormat)
+}
+
+// Format as [time.RFC3339]
+func (t Time) FormatRFC3339() string {
+	return t.Unwrap().Format(time.RFC3339)
+}
+
+// Format as [time.RFC3339Nano]
+func (t Time) FormatRFC3339Nano() string {
+	return t.Unwrap().Format(time.RFC3339Nano)
 }
 
 // Implements driver.Valuer in database/sql.
@@ -235,7 +263,6 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 }
 
 var jsonParseTimeFormats = []string{
-	time.RFC3339,
 	time.RFC3339Nano,
 	SQLDateTimeFormat,
 	SQLDateFormat,
