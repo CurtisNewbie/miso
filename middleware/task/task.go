@@ -68,7 +68,7 @@ type taskModule struct {
 	refreshMasterTicker *time.Ticker
 
 	// ticker for pulling tasks from task queue
-	cancelPullTaskRunner func()
+	cancelPullTaskRunner []func()
 
 	// task workerRegistry
 	workerRegistry *hash.StrRWMap[func(miso.Rail) error]
@@ -82,7 +82,7 @@ func (m *taskModule) enabled() bool {
 	return miso.GetPropBool(PropTaskSchedulingEnabled) && len(m.dtasks) > 0
 }
 
-func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) error {
+func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	if len(tasks) < 1 {
 		return nil
 	}
@@ -95,24 +95,28 @@ func (m *taskModule) prepareTaskScheduling(rail miso.Rail, tasks []miso.Job) err
 	if err := m.registerTasks(tasks); err != nil {
 		return err
 	}
+	m.cancelPullTaskRunner = make([]func(), 0, len(tasks))
 
-	{
-		cr, cancel := rail.WithCancel()
-		m.cancelPullTaskRunner = cancel
-		go func() {
-			for {
-				select {
-				case <-cr.Done():
-					return
-				default:
-					if err := m.pullTasks(miso.EmptyRail()); err != nil {
-						miso.Errorf("Pull tasks queue failed, %v", err)
-						time.Sleep(time.Millisecond * 500) // backoff from error
+	// queue per task to prevent old nodes attempting to run new tasks
+	for _, t := range tasks {
+		{
+			cr, cancel := rail.WithCancel()
+			m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
+			go func() {
+				for {
+					select {
+					case <-cr.Done():
+						return
+					default:
+						if err := m.pullTasks(miso.EmptyRail(), t.Name); err != nil {
+							miso.Errorf("Pull tasks queue failed, %v", err)
+							time.Sleep(time.Millisecond * 500) // backoff from error
+						}
 					}
 				}
-			}
-		}()
-		rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey())
+			}()
+			rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey(t.Name))
+		}
 	}
 
 	rail.Infof("Scheduled %d distributed tasks, current node id: '%s', group: '%s'", len(tasks), m.nodeId, m.group)
@@ -151,8 +155,8 @@ func (m *taskModule) getTaskMasterKey() string {
 	return "task:master:group:" + m.group
 }
 
-func (m *taskModule) getTaskQueueKey() string {
-	return "task:master:queue:" + m.group
+func (m *taskModule) getTaskQueueKey(name string) string {
+	return "task:master:queue:" + m.group + ":" + name
 }
 
 func (m *taskModule) scheduleTasks(tasks ...miso.Job) error {
@@ -245,12 +249,12 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 		ScheduledAt: util.NowUTC(),
 		Producer:    producerOnce(),
 	}
-	return redis.LPushJson(rail, m.getTaskQueueKey(), qt)
+	return redis.LPushJson(rail, m.getTaskQueueKey(name), qt)
 }
 
-func (m *taskModule) pullTasks(rail miso.Rail) error {
+func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 
-	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*10, m.getTaskQueueKey())
+	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*10, m.getTaskQueueKey(name))
 	if err != nil {
 		return err
 	}
@@ -297,7 +301,7 @@ func (m *taskModule) startTaskSchedulerAsync(rail miso.Rail) error {
 	if len(m.dtasks) < 1 {
 		return nil
 	}
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks); err != nil {
 		return err
 	}
 	miso.StartSchedulerAsync()
@@ -311,7 +315,7 @@ func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 	if len(m.dtasks) < 1 {
 		return nil
 	}
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks); err != nil {
 		return err
 	}
 	miso.StartSchedulerBlocking()
@@ -321,7 +325,7 @@ func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 func (m *taskModule) bootstrapAsComponent(rail miso.Rail) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
-	if err := m.prepareTaskScheduling(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks); err != nil {
 		return fmt.Errorf("failed to prepareTaskScheduling, %w", err)
 	}
 	return nil
@@ -334,8 +338,8 @@ func (m *taskModule) stop() {
 
 	miso.StopScheduler()
 	m.releaseMaster(rail)
-	if m.cancelPullTaskRunner != nil {
-		m.cancelPullTaskRunner()
+	for _, cancel := range m.cancelPullTaskRunner {
+		cancel()
 	}
 	m.workerWg.Wait()
 }

@@ -50,7 +50,7 @@ func init() {
 		if err != nil {
 			return err
 		}
-		module().prepareDeregisterUrl(rail)
+		module().prepDeregisterUrl(rail)
 		return nil
 	})
 
@@ -114,7 +114,7 @@ type nacosModule struct {
 	serverList           *NacosServerList
 }
 
-func (m *nacosModule) prepareDeregisterUrl(rail miso.Rail) {
+func (m *nacosModule) prepDeregisterUrl(rail miso.Rail) {
 	if miso.GetPropBool(PropNacosDiscoveryEnabled) && miso.GetPropBool(PropNacosDiscoveryEnableDeregisterUrl) {
 		deregisterUrl := miso.GetPropStr(PropNacosDiscoveryDeregisterUrl)
 		if !strutil.IsBlankStr(deregisterUrl) {

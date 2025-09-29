@@ -178,19 +178,19 @@ func (a *MisoApp) Bootstrap(args []string) {
 	a.addBootstrapHealthIndicator()
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	if e := a.callPreServerBootstrapListeners(rail); e != nil {
+	if e := a.callPreServerBoot(rail); e != nil {
 		rail.Errorf("Error occurred while trigger PreServerBootstrap callbacks, %v", e)
 		return
 	}
 
 	// bootstrap components, these are sorted by their orders
-	if err := a.callBoostrapComponents(rail); err != nil {
+	if err := a.callBoostrapComp(rail); err != nil {
 		rail.Errorf("Boostrap server components failed, %v", err)
 		return
 	}
 
 	// invoke listener for serverBootstraped event
-	if e := a.callPostServerBootstrapListeners(rail); e != nil {
+	if e := a.callPostServerBoot(rail); e != nil {
 		rail.Errorf("Error occurred while triggering PostServerBootstrap callbacks, %v", e)
 		return
 	}
@@ -202,7 +202,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	{
 		rail.Infof("Triggering OnAppReady")
 		start := time.Now()
-		if e := a.callAppReadyListeners(rail); e != nil {
+		if e := a.callAppReady(rail); e != nil {
 			rail.Errorf("Error occurred while triggering OnAppReady callbacks, %v", e)
 			return
 		}
@@ -359,7 +359,7 @@ func (a *MisoApp) Shutdown() {
 	a.manualSigQuit <- 1
 }
 
-func (a *MisoApp) callAppReadyListeners(rail Rail) error {
+func (a *MisoApp) callAppReady(rail Rail) error {
 	for _, c := range a.appReadyListener {
 		if e := c(rail); e != nil {
 			return e
@@ -369,7 +369,7 @@ func (a *MisoApp) callAppReadyListeners(rail Rail) error {
 	return nil
 }
 
-func (a *MisoApp) callPostServerBootstrapListeners(rail Rail) error {
+func (a *MisoApp) callPostServerBoot(rail Rail) error {
 	rail.Infof("Triggering PostServerBootstrap")
 	start := time.Now()
 
@@ -405,7 +405,7 @@ func (a *MisoApp) callConfigLoaders(rail Rail) error {
 	return nil
 }
 
-func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
+func (a *MisoApp) callPreServerBoot(rail Rail) error {
 	rail.Infof("Triggering PreServerBootstrap")
 	start := time.Now()
 
@@ -421,7 +421,7 @@ func (a *MisoApp) callPreServerBootstrapListeners(rail Rail) error {
 	return nil
 }
 
-func (a *MisoApp) callBoostrapComponents(rail Rail) error {
+func (a *MisoApp) callBoostrapComp(rail Rail) error {
 	sort.Slice(a.serverBootrapCallbacks, func(i, j int) bool { return a.serverBootrapCallbacks[i].Order < a.serverBootrapCallbacks[j].Order })
 	Debugf("serverBootrapCallbacks: %+v", a.serverBootrapCallbacks)
 	slowBootstrapThreshold := GetPropDuration(PropAppSlowBoostrapThresohold)

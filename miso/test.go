@@ -24,13 +24,13 @@ func PrepareTestEnv(t *testing.T) Rail {
 	if err := App().callConfigLoaders(rail); err != nil {
 		t.Fatal(err)
 	}
-	if err := App().callPreServerBootstrapListeners(rail); err != nil {
+	if err := App().callPreServerBoot(rail); err != nil {
 		t.Fatal(err)
 	}
-	if err := App().callBoostrapComponents(rail); err != nil {
+	if err := App().callBoostrapComp(rail); err != nil {
 		t.Fatal(err)
 	}
-	if err := App().callPostServerBootstrapListeners(rail); err != nil {
+	if err := App().callPostServerBoot(rail); err != nil {
 		t.Fatal(err)
 	}
 
