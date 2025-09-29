@@ -1065,9 +1065,9 @@ func genRouteCurl(d httpRouteDoc) string {
 		sj, err := json.CustomSWriteJson(apiDocJsoniterConfig, jm)
 		if err == nil {
 			if d.JsonRequestDesc.IsSlice {
-				sl.Printlnf("-d '[ %s ]'", sj)
+				sl.Printlnf("-d @- << EOF\n  [ %s ]\nEOF", sj)
 			} else {
-				sl.Printlnf("-d '%s'", sj)
+				sl.Printlnf("-d @- << EOF\n  %s\nEOF", sj)
 			}
 		}
 	}
