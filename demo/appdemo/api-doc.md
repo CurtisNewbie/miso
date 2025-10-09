@@ -35,6 +35,8 @@
 - [POST /api/v31](#post-apiv31)
 - [POST /api/v32](#post-apiv32)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
+- [GET /debug/trace/recorder/run](#get-debugtracerecorderrun)
+- [GET /debug/trace/recorder/stop](#get-debugtracerecorderstop)
 
 ## POST /api/v1
 
@@ -51,7 +53,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v1' \
     -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
+    -d @- << EOF
+    {"requestId":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -62,7 +66,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api1(rail miso.Rail, req PostReq) (PostRes, error) {
@@ -146,7 +150,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v2' \
     -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
+    -d @- << EOF
+    {"requestId":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -157,7 +163,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api2(rail miso.Rail, req *PostReq) (PostRes, error) {
@@ -241,7 +247,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v3' \
     -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
+    -d @- << EOF
+    {"requestId":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -252,7 +260,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api3(rail miso.Rail, req *PostReq) (*PostRes, error) {
@@ -337,7 +345,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v4' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -353,7 +363,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api4(rail miso.Rail, req ApiReq) (*PostRes, error) {
@@ -443,7 +453,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v5' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -459,7 +471,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api5(rail miso.Rail, req *ApiReq) (*PostRes, error) {
@@ -549,7 +561,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v6' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -565,7 +579,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api6(rail miso.Rail, req *ApiReq) (*PostRes, error) {
@@ -653,7 +667,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v7' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -751,7 +767,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v8' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -848,7 +866,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v9' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -946,7 +966,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v10' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1046,7 +1068,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v11' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1062,7 +1086,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api11(rail miso.Rail, req *ApiReq) ([]PostRes, error) {
@@ -1153,7 +1177,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v12' \
     -H 'Content-Type: application/json' \
-    -d '[ {"extras":[],"name":""} ]'
+    -d @- << EOF
+    [ {"extras":[],"name":""} ]
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1169,7 +1195,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api12(rail miso.Rail, req []ApiReq) ([]PostRes, error) {
@@ -1257,7 +1283,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v13' \
     -H 'Content-Type: application/json' \
-    -d '[ {"extras":[],"name":""} ]'
+    -d @- << EOF
+    [ {"extras":[],"name":""} ]
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1351,7 +1379,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v14' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1367,7 +1397,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api14(rail miso.Rail, req ApiReq) ([]PostRes, error) {
@@ -1459,7 +1489,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api15(rail miso.Rail) ([]PostRes, error) {
@@ -1547,7 +1577,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api16(rail miso.Rail) (miso.PageRes[PostRes], error) {
@@ -1631,7 +1661,7 @@
   	</ng-container>
   	<ng-container matColumnDef="time">
   		<th mat-header-cell *matHeaderCellDef> Time </th>
-  		<td mat-cell *matCellDef="let u"> {{u.time | date: 'yyyy-MM-dd HH:mm:ss'}} </td>
+  		<td mat-cell *matCellDef="let u"> {{u.time}} </td>
   	</ng-container>
   	<tr mat-row *matRowDef="let row; columns: ['resultId','time'];"></tr>
   	<tr mat-header-row *matHeaderRowDef="['resultId','time']"></tr>
@@ -1656,7 +1686,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api17(rail miso.Rail) ([]PostRes, error) {
@@ -1866,7 +1896,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v20' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1953,7 +1985,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v21' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2033,7 +2067,9 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v22' \
     -H 'Content-Type: application/json' \
-    -d '{"extras":[],"name":""}'
+    -d @- << EOF
+    {"extras":[],"name":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2049,7 +2085,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api22(rail miso.Rail, req ApiReq) (PostRes, error) {
@@ -2125,7 +2161,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api23(rail miso.Rail) (PostRes, error) {
@@ -2240,7 +2276,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   func api25(rail miso.Rail) (PostRes, error) {
@@ -2706,7 +2742,9 @@
   curl -X POST 'http://localhost:8080/open/api/demo/grouped/open/api/demo/post' \
     -H 'Authorization: ' \
     -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
+    -d @- << EOF
+    {"requestId":""}
+  EOF
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2717,7 +2755,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.ETime `json:"time"`
+  	Time util.Time `json:"time"`
   }
 
   // Post demo stuff
@@ -2785,6 +2823,112 @@
             return;
           }
           let dat: PostRes = resp.data;
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## GET /debug/trace/recorder/run
+
+- Description: Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.
+- Query Parameter:
+  - "duration": Duration of the flight recording. Required. Duration cannot exceed 30 min.
+- cURL:
+  ```sh
+  curl -X GET 'http://localhost:8080/debug/trace/recorder/run?duration='
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  // Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.
+  func SendRequest(rail miso.Rail, duration string) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynClient(rail, "/debug/trace/recorder/run", "demo").
+  		AddQueryParams("duration", duration).
+  		Get().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendRequest() {
+    let duration: any | null = null;
+    this.http.get<any>(`/demo/debug/trace/recorder/run?duration=${duration}`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## GET /debug/trace/recorder/stop
+
+- Description: Stop existing FlightRecorder session.
+- cURL:
+  ```sh
+  curl -X GET 'http://localhost:8080/debug/trace/recorder/stop'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  // Stop existing FlightRecorder session.
+  func SendRequest(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynClient(rail, "/debug/trace/recorder/stop", "demo").
+  		Get().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendRequest() {
+    this.http.get<any>(`/demo/debug/trace/recorder/stop`)
+      .subscribe({
+        next: () => {
         },
         error: (err) => {
           console.log(err)
