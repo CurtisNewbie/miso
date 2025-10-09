@@ -689,3 +689,25 @@ func RunCancellable(f func()) (cancel func()) {
 	}()
 	return
 }
+
+func RunCancellableChan[T any](ch chan T, f func(t T) (stop bool)) (cancel func()) {
+	cr, c := context.WithCancel(context.Background())
+	cancel = c
+	go func() {
+		for {
+			select {
+			case <-cr.Done():
+				return
+			case t := <-ch:
+				stop := false
+				PanicSafeRun(func() {
+					stop = f(t)
+				})
+				if stop {
+					return
+				}
+			}
+		}
+	}()
+	return
+}
