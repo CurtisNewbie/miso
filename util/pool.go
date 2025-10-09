@@ -123,7 +123,7 @@ func (p *EphPool[T]) Pop() (T, bool) {
 	defer p.mu.Unlock()
 
 	for {
-		f := p.list.Front()
+		f := p.list.Back()
 		if f == nil {
 			var t T
 			return t, false
