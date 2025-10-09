@@ -22,6 +22,10 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+const (
+	contextKeyNotLogSQL = "dbquery:not-log-sql"
+)
+
 var (
 	typeColCache = sync.Map{}
 
@@ -30,20 +34,36 @@ var (
 )
 
 type Query struct {
-	_db *gorm.DB
-	tx  *gorm.DB
-
-	rail *miso.Rail
-
+	_db           *gorm.DB
+	tx            *gorm.DB
 	updateColumns map[string]any
+
+	rail      *miso.Rail
+	notLogSQL bool
 }
 
 func (q *Query) copyNew() *Query {
 	r, ok := q.Rail()
+	var cp *Query
 	if ok {
-		return NewQuery(r, q._db)
+		cp = NewQuery(r, q._db)
+	} else {
+		cp = NewQuery(q._db)
 	}
-	return NewQuery(q._db)
+	if q.notLogSQL {
+		cp = cp.NotLogSQL()
+	}
+	return cp
+}
+
+func (q *Query) NotLogSQL() *Query {
+	q.notLogSQL = true
+
+	// statement is never nil, but just in case
+	if q.tx.Statement != nil && q.tx.Statement.Context != nil {
+		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyNotLogSQL, true)
+	}
+	return q
 }
 
 func (q *Query) Rail() (miso.Rail, bool) {

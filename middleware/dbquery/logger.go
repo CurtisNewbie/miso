@@ -83,6 +83,10 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		return
 	}
 
+	if ctx.Value(contextKeyNotLogSQL) != nil {
+		return
+	}
+
 	elapsed := time.Since(begin)
 	switch {
 	case err != nil && l.LogLevel >= lg.Error && (!errors.Is(err, lg.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
