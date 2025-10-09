@@ -181,7 +181,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	// worker
 	m.workerRegistry.Put(t.Name, func(rail miso.Rail) error {
 		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
-			rail.Debugf("Task '%v' disabled, skipped", t.Name)
+			rail.Infof("Task '%v' disabled, skipped", t.Name)
 			return nil
 		}
 
@@ -192,7 +192,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 			}
 
 			// happens when producer out runs workers
-			rail.Debugf("Task '%v' is running by other nodes, abort", t.Name)
+			rail.Infof("'%v' is running by other nodes, abort", t.Name)
 			return nil
 		}
 		defer lock.Unlock()
@@ -511,7 +511,7 @@ func registerRouteForJobTriggers() {
 	miso.HttpGet("/debug/task/trigger", miso.RawHandler(func(inb *miso.Inbound) {
 		rail := inb.Rail()
 		name := inb.Query("name")
-		err := module().triggerWorker(rail, name)
+		err := module().produceTask(rail, name)
 		inb.HandleResult(nil, err)
 	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
 }
