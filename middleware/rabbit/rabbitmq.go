@@ -516,6 +516,10 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connect
 func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, conn *amqp.Connection) error {
 
 	n := miso.GetPropInt(PropRabbitMqPublisherChanPoolSize)
+	if n < 1 {
+		n = 1
+	}
+	rail.Infof("RabbitMQ publisher channel pool size: %v", n)
 	pub := rabbitManagedPublisher{
 		EphPool: util.NewEphPool(
 			func(c *amqp.Channel) (dropped bool) { return c.IsClosed() },
