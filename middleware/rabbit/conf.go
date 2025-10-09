@@ -24,6 +24,9 @@ const (
 
 	// misoconfig-prop: consumer QOS | 68
 	PropRabbitMqConsumerQos = "rabbitmq.consumer.qos"
+
+	// misoconfig-prop: publisher channel pool size | 20
+	PropRabbitMqPublisherChanPoolSize = "rabbitmq.publisher.channel-pool-size"
 )
 
 // misoconfig-default-start
@@ -34,6 +37,7 @@ func init() {
 	miso.SetDefProp(PropRabbitMqUsername, "guest")
 	miso.SetDefProp(PropRabbitMqPassword, "guest")
 	miso.SetDefProp(PropRabbitMqConsumerQos, 68)
+	miso.SetDefProp(PropRabbitMqPublisherChanPoolSize, 20)
 }
 
 // misoconfig-default-end

@@ -181,15 +181,16 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## RabbitMQ Configuration
 
-| property              | description                        | default value |
-| --------------------- | ---------------------------------- | ------------- |
-| rabbitmq.enabled      | enable RabbitMQ client             | false         |
-| rabbitmq.host         | RabbitMQ server host               | localhost     |
-| rabbitmq.port         | RabbitMQ server port               | 5672          |
-| rabbitmq.username     | username used to connect to server | guest         |
-| rabbitmq.password     | password used to connect to server | guest         |
-| rabbitmq.vhost        | virtual host                       |               |
-| rabbitmq.consumer.qos | consumer QOS                       | 68            |
+| property                             | description                        | default value |
+| ------------------------------------ | ---------------------------------- | ------------- |
+| rabbitmq.enabled                     | enable RabbitMQ client             | false         |
+| rabbitmq.host                        | RabbitMQ server host               | localhost     |
+| rabbitmq.port                        | RabbitMQ server port               | 5672          |
+| rabbitmq.username                    | username used to connect to server | guest         |
+| rabbitmq.password                    | password used to connect to server | guest         |
+| rabbitmq.vhost                       | virtual host                       |               |
+| rabbitmq.consumer.qos                | consumer QOS                       | 68            |
+| rabbitmq.publisher.channel-pool-size | publisher channel pool size        | 20            |
 
 ## Redis Configuration
 

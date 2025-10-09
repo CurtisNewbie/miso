@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"container/list"
 	"sync"
 
 	"github.com/curtisnewbie/miso/util/rfutil"
@@ -95,5 +96,44 @@ func (r *FixedPool[T]) TryPop() (T, bool) {
 		default:
 			return rfutil.NewVar[T](), false
 		}
+	}
+}
+
+type EphPool[T any] struct {
+	list       *list.List
+	mu         *sync.Mutex
+	filterFunc func(t T) (dropped bool)
+}
+
+func NewEphPool[T any](filterFunc func(t T) (dropped bool)) *EphPool[T] {
+	f := new(EphPool[T])
+	f.mu = &sync.Mutex{}
+	f.list = list.New()
+	return f
+}
+
+func (p *EphPool[T]) Push(t T) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.list.PushFront(t)
+}
+
+func (p *EphPool[T]) Pop() (T, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for {
+		f := p.list.Front()
+		if f == nil {
+			var t T
+			return t, false
+		}
+		vf := f.Value.(T)
+		p.list.Remove(f)
+
+		if p.filterFunc != nil && p.filterFunc(vf) {
+			continue
+		}
+		return vf, true
 	}
 }

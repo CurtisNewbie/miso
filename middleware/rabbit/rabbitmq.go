@@ -13,6 +13,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/idutil"
+	"github.com/curtisnewbie/miso/util/retry"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/cast"
 )
@@ -514,11 +515,12 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connect
 
 func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, conn *amqp.Connection) error {
 
-	n := 20
-	pub := rabbitManagedPublisher{FixedPool: util.NewFixedPool(
-		n*2,
-		util.FixedPoolFilterFunc(func(c *amqp.Channel) (dropped bool) { return c.IsClosed() }),
-	)}
+	n := miso.GetPropInt(PropRabbitMqPublisherChanPoolSize)
+	pub := rabbitManagedPublisher{
+		EphPool: util.NewEphPool(
+			func(c *amqp.Channel) (dropped bool) { return c.IsClosed() },
+		),
+	}
 	m.publisher = &pub
 
 	for i := 0; i < n; i++ {
@@ -622,17 +624,29 @@ func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delive
 	}()
 }
 
+// 600ms in total
+var borrowPubChanBackoff = []time.Duration{
+	time.Millisecond * 10,
+	time.Millisecond * 30,
+	time.Millisecond * 60,
+	time.Millisecond * 100,
+	time.Millisecond * 150,
+	time.Millisecond * 250,
+}
+
 // borrow a publishing channel from the pool.
 func (m *rabbitMqModule) borrowPubChan() (*amqp.Channel, error) {
 	if m.publisher == nil {
 		return nil, errs.NewErrf("publisher is missing")
 	}
 
-	ch, ok := m.publisher.Pop()
-	if !ok {
-		return nil, errs.NewErrf("could not create new RabbitMQ channel")
-	}
-	return ch, nil
+	return retry.GetOneWithBackoff(borrowPubChanBackoff, func() (*amqp.Channel, error) {
+		ch, ok := m.publisher.Pop()
+		if !ok {
+			return nil, errs.NewErrf("could not obtain publish channel")
+		}
+		return ch, nil
+	})
 }
 
 // return a publishing channel back to the pool.
@@ -866,7 +880,7 @@ func (r *rabbitManagedChannel) retryStart(rail miso.Rail) {
 }
 
 type rabbitManagedPublisher struct {
-	*util.FixedPool[*amqp.Channel]
+	*util.EphPool[*amqp.Channel]
 }
 
 func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
@@ -877,14 +891,7 @@ func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
 	miso.Debug("Created new RabbitMQ publishing channel")
 
 	// push newly created channel in pool
-	if !r.TryPush(ch) {
-		// pool is full, try to clean up the pool? TODO: could be an issue
-		popped, ok := r.TryPop()
-		if ok {
-			r.Push(popped)
-		}
-		r.Push(ch)
-	}
+	r.Push(ch)
 
 	miso.Debug("RabbitMQ publishing channel added to pool")
 	return nil
