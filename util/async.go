@@ -673,3 +673,19 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPoolItf {
 
 	return ap
 }
+
+func RunCancellable(f func()) (cancel func()) {
+	cr, c := context.WithCancel(context.Background())
+	cancel = c
+	go func() {
+		for {
+			select {
+			case <-cr.Done():
+				return
+			default:
+				PanicSafeRun(f)
+			}
+		}
+	}()
+	return
+}

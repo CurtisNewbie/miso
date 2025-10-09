@@ -100,21 +100,13 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	// queue per task to prevent old nodes attempting to run new tasks
 	for _, t := range tasks {
 		{
-			cr, cancel := rail.WithCancel()
-			m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
-			go func() {
-				for {
-					select {
-					case <-cr.Done():
-						return
-					default:
-						if err := m.pullTasks(miso.EmptyRail(), t.Name); err != nil {
-							miso.Errorf("Pull tasks queue failed, %v", err)
-							time.Sleep(time.Millisecond * 500) // backoff from error
-						}
-					}
+			cancel := util.RunCancellable(func() {
+				if err := util.PanicSafeRunErr(func() error { return m.pullTasks(miso.EmptyRail(), t.Name) }); err != nil {
+					miso.Errorf("Pull tasks queue failed, %v", err)
+					time.Sleep(time.Millisecond * 500) // backoff from error
 				}
-			}()
+			})
+			m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
 			rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey(t.Name))
 		}
 	}
@@ -253,6 +245,7 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 }
 
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
+	rail.Debugf("Pullling tasks: %v", name)
 
 	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*10, m.getTaskQueueKey(name))
 	if err != nil {
