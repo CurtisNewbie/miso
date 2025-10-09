@@ -16,7 +16,9 @@ Install a specific release of miso:
 go get github.com/curtisnewbie/miso@v0.3.2
 ```
 
-You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
+Again, miso is an opinionated framework, it might not be suitable for mature codebase, but you are free to explore this framework in a new project.
+
+You can generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
 
 ## Documentations
 
