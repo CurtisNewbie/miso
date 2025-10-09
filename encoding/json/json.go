@@ -60,6 +60,18 @@ func SWriteJson(body any) (string, error) {
 	return util.UnsafeByt2Str(buf), nil
 }
 
+// Write json as string.
+func TrySWriteJson(body any) string {
+	if v, ok := body.(string); ok {
+		return v
+	}
+	buf, err := WriteJson(body)
+	if err != nil {
+		return ""
+	}
+	return util.UnsafeByt2Str(buf)
+}
+
 func SWriteIndent(body any) (string, error) {
 	if v, ok := body.(string); ok {
 		return v, nil
