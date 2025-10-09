@@ -34,7 +34,7 @@ You can also generate a new project using `misogen` (see [CLI Tools](./doc/tools
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
 - [Kafka](./doc/kafka.md)
 - [API Documentation Generation](./doc/api_doc_gen.md)
-- [Using pprof](./doc/pprof.md)
+- [Debugging Performance: pprof, trace and gops](./doc/perf.md)
 - [List of Supported Middlewares](./doc/middlewares.md)
 - [Upgrade & Migration](./doc/migration.md)
 

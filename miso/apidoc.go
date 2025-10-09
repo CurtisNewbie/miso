@@ -597,7 +597,6 @@ func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
 		}
 		if len(r.QueryParams) > 0 {
 			b.WriteRune('\n')
-			b.WriteString(strutil.Spaces(2))
 			b.WriteString("- Query Parameter:")
 			for _, q := range r.QueryParams {
 				b.WriteRune('\n')

@@ -239,8 +239,8 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.trace.inbound.propagate            | propagate trace info from inbound requests                                                                                | true          |
 | server.validate.request.enabled           | enable inbound request parameter validation                                                                               | true          |
 | server.request-log.enabled                | enable server request log                                                                                                 | true          |
-| server.pprof.enabled                      | enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled                               | false         |
-| server.pprof.auth.bearer                  | bearer token for pprof endpoints' authentication. however, if `server.auth.bearer` is set, this prop is ignored.          |               |
+| server.pprof.enabled                      | enable apis for pprof (`/debug/pprof/**`) and trace (`/debug/trace/**`); in non-prod mode, it's always enabled            | false         |
+| server.pprof.auth.bearer                  | bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.    |               |
 | server.api-doc.enabled                    | generate api doc                                                                                                          | true          |
 | server.api-doc.web.enabled                | build webpage for the generated api doc                                                                                   | true          |
 | server.api-doc.file                       | generate markdown api doc to the specified file                                                                           |               |

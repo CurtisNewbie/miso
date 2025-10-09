@@ -11,9 +11,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/exp/trace"
+
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/rfutil"
@@ -42,6 +46,8 @@ const (
 )
 
 var (
+	flightRecorderOnce = sync.OnceValue(func() *flightRecorder { return newFlightRecorder("trace.out") })
+
 	beforeRouteRegister = slutil.NewSyncSlice[func() error](2)
 
 	interceptors []func(c *gin.Context, next func())
@@ -77,9 +83,10 @@ var (
 		dispatchJson(c, resultBodyBuilder.OkJsonBuilder())
 	}
 
-	// pprof endpoint register disabled
+	// pprof / trace endpoint register disabled
 	pprofRegisterDisabled = false
-	noRouteHandler        = func(ctx *gin.Context, rail Rail) {
+
+	noRouteHandler = func(ctx *gin.Context, rail Rail) {
 		ctx.AbortWithStatus(404)
 	}
 
@@ -496,11 +503,6 @@ func dispatchJsonCode(c *gin.Context, code int, body interface{}) {
 	}
 }
 
-// Dispatch error response in json format
-func dispatchErrMsgJson(c *gin.Context, msg string) {
-	dispatchJson(c, ErrorResp(msg))
-}
-
 // Dispatch a json response
 func dispatchJson(c *gin.Context, body interface{}) {
 	dispatchJsonCode(c, http.StatusOK, body)
@@ -563,23 +565,52 @@ func webServerBootstrap(rail Rail) error {
 		)
 		rail.Infof("Registered /debug/pprof APIs for debugging")
 
+		HttpGet("/debug/trace/recorder/run",
+			RawHandler(func(inb *Inbound) {
+				fr := flightRecorderOnce()
+				dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
+				if err != nil {
+					inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
+					return
+				}
+				if dur >= 30*time.Minute { // just in case
+					inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
+					return
+				}
+				if err := fr.Start(dur); err != nil {
+					inb.HandleResult(nil, err)
+					return
+				}
+			})).
+			DocQueryParam("duration", "Duration of the flight recording. Required. Duration cannot exceed 30 min.").
+			Desc("Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.")
+
+		HttpGet("/debug/trace/recorder/stop",
+			RawHandler(func(inb *Inbound) {
+				fr := flightRecorderOnce()
+				err := fr.Stop()
+				inb.HandleResult(nil, err)
+			})).
+			Desc("Stop existing FlightRecorder session.")
+		rail.Infof("Registered /debug/trace APIs for debugging")
+
 		if serverAuthBearer != "" { // server.auth.bearer is already set for all apis
-			rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerAuthBearer)
+			rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerAuthBearer)
 
 		} else {
 			// we have set auth bearer for pprof apis specifically
 			if GetPropStrTrimmed(PropServerPprofAuthBearer) != "" {
 				AddBearerAuthInterceptor(
-					MatchPathPatternFunc("/debug/pprof/**"),
+					MatchPathPatternFunc("/debug/pprof/**", "/debug/trace/**"),
 					func(tok string) bool {
 						v := GetPropStrTrimmed(PropServerPprofAuthBearer) // prop value may change while it's runs
 						return v == "" || v == tok
 					},
 				)
-				rail.Infof("Using configuration '%v' in authentication interceptor for pprof APIs", PropServerPprofAuthBearer)
+				rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerPprofAuthBearer)
 
 			} else if IsProdMode() { // in prod mode, print warning
-				rail.Warnf("pprof authentication is not enabled in production mode, pprof APIs are not protected")
+				rail.Warnf("pprof authentication is not enabled in production mode, pprof & trace APIs are not protected")
 			} else {
 				// pprof apis not protected, but we are not in prod mode either
 			}
@@ -1095,7 +1126,6 @@ func interceptedHandler(f func(c *gin.Context)) func(c *gin.Context) {
 }
 
 func MatchPathPatternFunc(patterns ...string) func(method string, url string) bool {
-	Infof("Matching patterns: %#v", patterns)
 	return func(method string, url string) bool {
 		return strutil.MatchPathAny(patterns, url)
 	}
@@ -1322,4 +1352,63 @@ func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
 
 func BeforeWebRouteRegister(f ...func() error) {
 	beforeRouteRegister.Append(f...)
+}
+
+type flightRecorder struct {
+	fr  trace.FlightRecorder
+	mu  *sync.Mutex
+	out string
+}
+
+func (f *flightRecorder) Start(dur time.Duration) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if err := f.fr.Start(); err != nil {
+		return err
+	}
+
+	Infof("FlightRecorder started, dur: %v", dur)
+
+	go func() {
+		<-time.After(dur)
+		f.Stop()
+	}()
+
+	return nil
+}
+
+func (f *flightRecorder) Stop() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if !f.fr.Enabled() {
+		return nil
+	}
+
+	fi, err := util.OpenRWFile(f.out, true)
+	if err != nil {
+		return err
+	}
+
+	_ = fi.Truncate(0)
+
+	if _, err := f.fr.WriteTo(fi); err != nil {
+		return err
+	}
+
+	if err := f.fr.Stop(); err != nil {
+		return err
+	}
+
+	Infof("FlightRecorder stopped, output written to %v", f.out)
+	return nil
+}
+
+func newFlightRecorder(out string) *flightRecorder {
+	return &flightRecorder{
+		fr:  *trace.NewFlightRecorder(),
+		mu:  &sync.Mutex{},
+		out: out,
+	}
 }

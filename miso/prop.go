@@ -67,10 +67,10 @@ const (
 	// misoconfig-prop: enable server request log | true
 	PropServerRequestLogEnabled = "server.request-log.enabled"
 
-	// misoconfig-prop: enable pprof (exposed using endpoint '/debug/pprof'); in non-prod mode, it's always enabled | false
+	// misoconfig-prop: enable apis for pprof (`/debug/pprof/**`) and trace (`/debug/trace/**`); in non-prod mode, it's always enabled | false
 	PropServerPprofEnabled = "server.pprof.enabled"
 
-	// misoconfig-prop: bearer token for pprof endpoints' authentication. however, if `server.auth.bearer` is set, this prop is ignored.
+	// misoconfig-prop: bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
 	// misoconfig-prop: generate api doc | true
