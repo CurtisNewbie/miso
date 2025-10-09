@@ -35,7 +35,7 @@ func init() {
 		Bootstrap: distriTaskBootstrap,
 		Order:     miso.BootstrapOrderL4,
 	})
-	miso.BeforeWebRouteRegister(func() error {
+	miso.BeforeWebRouteRegister(func(rail miso.Rail) error {
 		registerRouteForJobTriggers()
 		return nil
 	})

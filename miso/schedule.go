@@ -28,7 +28,7 @@ func init() {
 		Condition: schedulerBootstrapCondition,
 		Bootstrap: schedulerBootstrap,
 	})
-	BeforeWebRouteRegister(func() error {
+	BeforeWebRouteRegister(func(rail Rail) error {
 		registerRouteForJobTriggers()
 		return nil
 	})

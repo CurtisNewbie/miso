@@ -26,13 +26,14 @@ func init() {
 	propagationKeys.keys.Add(XTraceId)
 	propagationKeys.keys.Add(XSpanId)
 	propagationKeys.keys.Add(XUsername)
+
+	PreServerBootstrap(func(rail Rail) error {
+		LoadPropagationKeys(rail)
+		return nil
+	})
 }
 
-// Read property and find propagation keys .
-//
-// This func looks for following property.
-//
-//	"tracing.propagation.keys"
+// Load propagation keys.
 func LoadPropagationKeys(r Rail) {
 	propagationKeys.rwmu.Lock()
 	defer propagationKeys.rwmu.Unlock()

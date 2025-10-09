@@ -65,14 +65,16 @@ func PrepareWebStaticFs(fs embed.FS, dir string) {
 		ctx.AbortWithStatus(404)
 	})
 
-	PreProcessGin(func(rail Rail, g *gin.Engine) {
-		g.GET("/static/*filepath", func(c *gin.Context) {
+	BeforeWebRouteRegister(func(rail Rail) error {
+		HttpGet("/static/*filepath", RawHandler(func(inb *Inbound) {
+			c := inb.Engine().(*gin.Context)
 			cp := c.Param("filepath")
 			if cp == "" || cp == "/static/" {
 				cp = "index.htm"
 			}
 			serveStaticFile(c, cp)
-		})
+		}))
+		return nil
 	})
 }
 

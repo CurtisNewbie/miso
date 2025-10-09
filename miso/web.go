@@ -48,7 +48,7 @@ const (
 var (
 	flightRecorderOnce = sync.OnceValue(func() *flightRecorder { return newFlightRecorder("trace.out") })
 
-	beforeRouteRegister = slutil.NewSyncSlice[func() error](2)
+	beforeRouteRegister = slutil.NewSyncSlice[func(Rail) error](2)
 
 	interceptors []func(c *gin.Context, next func())
 
@@ -117,11 +117,10 @@ func init() {
 		Condition: webServerBootstrapCondition,
 		Order:     BootstrapOrderL3,
 	})
-	BeforeWebRouteRegister(func() error {
-		// register consul health check
-		if !defaultHealthCheckHandlerDisabled {
-			registerRouteForHealthcheck()
-		}
+	BeforeWebRouteRegister(func(rail Rail) error {
+		prepareInterceptorsDebuggingTools(rail)
+		registerRouteForHealthcheck()
+		prepareApiDocRoutes(rail)
 		return nil
 	})
 }
@@ -196,6 +195,10 @@ func addRoutesRegistar(reg routesRegistar) {
 
 // Register GIN route for consul healthcheck
 func registerRouteForHealthcheck() {
+	if defaultHealthCheckHandlerDisabled {
+		return
+	}
+
 	url := GetPropStr(PropHealthCheckUrl)
 	if !strutil.IsBlankStr(url) {
 		HttpGet(url, RawHandler(DefaultHealthCheckInbound))
@@ -228,7 +231,13 @@ func createHttpServer(router http.Handler) *http.Server {
 }
 
 // Register http routes on gin.Engine
-func registerServerRoutes(c Rail, engine *gin.Engine) {
+func registerServerRoutes(rail Rail, engine *gin.Engine) error {
+	if err := beforeRouteRegister.ForEachErr(func(t func(Rail) error) (stop bool, err error) {
+		return false, t(rail)
+	}); err != nil {
+		return err
+	}
+
 	// no route
 	engine.NoRoute(func(ctx *gin.Context) {
 		rail := BuildRail(ctx)
@@ -249,16 +258,15 @@ func registerServerRoutes(c Rail, engine *gin.Engine) {
 
 	logRoutes := GetPropBool(PropServerLogRoutes)
 	if IsDebugLevel() || logRoutes {
-		// for _, r := range GetHttpRoutes() {
-		// }
 		for _, r := range engine.Routes() {
 			if logRoutes {
-				c.Infof("%-6s %s", r.Method, r.Path)
+				rail.Infof("%-6s %s", r.Method, r.Path)
 			} else {
-				c.Debugf("%-6s %s", r.Method, r.Path)
+				rail.Debugf("%-6s %s", r.Method, r.Path)
 			}
 		}
 	}
+	return nil
 }
 
 func shutdownHttpServer(server *http.Server) {
@@ -474,7 +482,7 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 // Must bind request payload to the given pointer, else panic
 func mustBind(rail Rail, c *gin.Context, ptr any) {
 	onFailed := func(err error) {
-		rail.Errorf("Bind payload failed, %v", err)
+		rail.Warnf("Bind payload failed, %v", err)
 		panic(errs.NewErrf("Illegal Arguments"))
 	}
 
@@ -515,9 +523,6 @@ func webServerBootstrapCondition(rail Rail) (bool, error) {
 func webServerBootstrap(rail Rail) error {
 	rail.Info("Starting HTTP server")
 
-	// Load propagation keys for tracing
-	LoadPropagationKeys(rail)
-
 	// always set to releaseMode
 	gin.SetMode(gin.ReleaseMode)
 	if GetPropBool(PropServerGinValidationDisabled) {
@@ -542,96 +547,13 @@ func webServerBootstrap(rail Rail) error {
 	}
 	ginPreProcessors = nil
 
-	serverAuthBearer := GetPropStrTrimmed(PropServerAuthBearer)
-	if serverAuthBearer != "" {
-		AddBearerAuthInterceptor(
-			func(method, url string) bool { return true },
-			func(tok string) bool {
-				v := GetPropStrTrimmed(PropServerAuthBearer) // prop value may change while it's runs
-				return v == "" || v == tok
-			},
-		)
-		rail.Infof("Registered bearer authentication interceptor for all APIs")
-	}
-
-	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
-		GroupRoute("/debug/pprof",
-			HttpGet("", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
-			HttpGet("/:name", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
-			HttpGet("/cmdline", RawHandler(func(inb *Inbound) { pprof.Cmdline(inb.Unwrap()) })),
-			HttpGet("/profile", RawHandler(func(inb *Inbound) { pprof.Profile(inb.Unwrap()) })),
-			HttpGet("/symbol", RawHandler(func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) })),
-			HttpGet("/trace", RawHandler(func(inb *Inbound) { pprof.Trace(inb.Unwrap()) })),
-		)
-		rail.Infof("Registered /debug/pprof APIs for debugging")
-
-		HttpGet("/debug/trace/recorder/run",
-			RawHandler(func(inb *Inbound) {
-				fr := flightRecorderOnce()
-				dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
-				if err != nil {
-					inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
-					return
-				}
-				if dur >= 30*time.Minute { // just in case
-					inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
-					return
-				}
-				if err := fr.Start(dur); err != nil {
-					inb.HandleResult(nil, err)
-					return
-				}
-			})).
-			DocQueryParam("duration", "Duration of the flight recording. Required. Duration cannot exceed 30 min.").
-			Desc("Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.")
-
-		HttpGet("/debug/trace/recorder/stop",
-			RawHandler(func(inb *Inbound) {
-				fr := flightRecorderOnce()
-				err := fr.Stop()
-				inb.HandleResult(nil, err)
-			})).
-			Desc("Stop existing FlightRecorder session.")
-		rail.Infof("Registered /debug/trace APIs for debugging")
-
-		if serverAuthBearer != "" { // server.auth.bearer is already set for all apis
-			rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerAuthBearer)
-
-		} else {
-			// we have set auth bearer for pprof apis specifically
-			if GetPropStrTrimmed(PropServerPprofAuthBearer) != "" {
-				AddBearerAuthInterceptor(
-					MatchPathPatternFunc("/debug/pprof/**", "/debug/trace/**"),
-					func(tok string) bool {
-						v := GetPropStrTrimmed(PropServerPprofAuthBearer) // prop value may change while it's runs
-						return v == "" || v == tok
-					},
-				)
-				rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerPprofAuthBearer)
-
-			} else if IsProdMode() { // in prod mode, print warning
-				rail.Warnf("pprof authentication is not enabled in production mode, pprof & trace APIs are not protected")
-			} else {
-				// pprof apis not protected, but we are not in prod mode either
-			}
-		}
-	}
-
 	// register customer recovery func
 	engine.Use(gin.RecoveryWithWriter(loggerErrOut, DefaultRecovery))
 
-	if err := beforeRouteRegister.ForEachErr(func(t func() error) (stop bool, err error) {
-		return false, t()
-	}); err != nil {
+	// register http routes
+	if err := registerServerRoutes(rail, engine); err != nil {
 		return err
 	}
-
-	if err := serveApiDocTmpl(rail); err != nil {
-		rail.Errorf("failed to server apidoc, %v", err)
-	}
-
-	// register http routes
-	registerServerRoutes(rail, engine)
 
 	// start the http server
 	server := createHttpServer(engine)
@@ -902,7 +824,7 @@ type erail = Rail
 // calling miso's methods course.
 type Inbound struct {
 	erail
-	engine  any
+	engine  *gin.Context
 	w       http.ResponseWriter
 	r       *http.Request
 	queries url.Values
@@ -934,7 +856,7 @@ func (i *Inbound) Request() *http.Request {
 }
 
 func (i *Inbound) WriteSSE(name string, message any) {
-	i.Engine().(*gin.Context).SSEvent(name, message)
+	i.engine.SSEvent(name, message)
 }
 
 func (i *Inbound) Rail() Rail {
@@ -1002,8 +924,7 @@ func (i *Inbound) AddHeader(k string, v string) {
 }
 
 func (i *Inbound) MustBind(ptr any) {
-	c := i.Engine().(*gin.Context)
-	mustBind(i.Rail(), c, ptr)
+	mustBind(i.Rail(), i.engine, ptr)
 }
 
 func (i *Inbound) WriteJson(v any) {
@@ -1350,7 +1271,7 @@ func ResHandler[Res any](handler TRouteHandler[Res]) httpHandler {
 	}
 }
 
-func BeforeWebRouteRegister(f ...func() error) {
+func BeforeWebRouteRegister(f ...func(Rail) error) {
 	beforeRouteRegister.Append(f...)
 }
 
@@ -1410,5 +1331,88 @@ func newFlightRecorder(out string) *flightRecorder {
 		fr:  *trace.NewFlightRecorder(),
 		mu:  &sync.Mutex{},
 		out: out,
+	}
+}
+
+func prepareInterceptorsDebuggingTools(rail Rail) {
+	serverAuthBearer := GetPropStrTrimmed(PropServerAuthBearer)
+	if serverAuthBearer != "" {
+		AddBearerAuthInterceptor(
+			func(method, url string) bool { return true },
+			func(tok string) bool {
+				v := GetPropStrTrimmed(PropServerAuthBearer) // prop value may change while it's runs
+				return v == "" || v == tok
+			},
+		)
+		rail.Infof("Registered bearer authentication interceptor for all APIs")
+	}
+
+	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
+		GroupRoute("/debug/pprof",
+			HttpGet("", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
+			HttpGet("/:name", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
+			HttpGet("/cmdline", RawHandler(func(inb *Inbound) { pprof.Cmdline(inb.Unwrap()) })),
+			HttpGet("/profile", RawHandler(func(inb *Inbound) { pprof.Profile(inb.Unwrap()) })),
+			HttpGet("/symbol", RawHandler(func(inb *Inbound) { pprof.Symbol(inb.Unwrap()) })),
+			HttpGet("/trace", RawHandler(func(inb *Inbound) { pprof.Trace(inb.Unwrap()) })),
+		)
+		rail.Infof("Registered /debug/pprof APIs for debugging")
+
+		HttpGet("/debug/trace/recorder/run",
+			RawHandler(func(inb *Inbound) {
+				fr := flightRecorderOnce()
+				dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
+				if err != nil {
+					inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
+					return
+				}
+				if dur >= 30*time.Minute { // just in case
+					inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
+					return
+				}
+				if err := fr.Start(dur); err != nil {
+					inb.HandleResult(nil, err)
+					return
+				}
+			})).
+			DocQueryParam("duration", "Duration of the flight recording. Required. Duration cannot exceed 30 min.").
+			Desc("Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.")
+
+		HttpGet("/debug/trace/recorder/stop",
+			RawHandler(func(inb *Inbound) {
+				fr := flightRecorderOnce()
+				err := fr.Stop()
+				inb.HandleResult(nil, err)
+			})).
+			Desc("Stop existing FlightRecorder session.")
+		rail.Infof("Registered /debug/trace APIs for debugging")
+
+		if serverAuthBearer != "" { // server.auth.bearer is already set for all apis
+			rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerAuthBearer)
+
+		} else {
+			// we have set auth bearer for pprof apis specifically
+			if GetPropStrTrimmed(PropServerPprofAuthBearer) != "" {
+				AddBearerAuthInterceptor(
+					MatchPathPatternFunc("/debug/pprof/**", "/debug/trace/**"),
+					func(tok string) bool {
+						v := GetPropStrTrimmed(PropServerPprofAuthBearer) // prop value may change while it's runs
+						return v == "" || v == tok
+					},
+				)
+				rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerPprofAuthBearer)
+
+			} else if IsProdMode() { // in prod mode, print warning
+				rail.Warnf("pprof authentication is not enabled in production mode, pprof & trace APIs are not protected")
+			} else {
+				// pprof apis not protected, but we are not in prod mode either
+			}
+		}
+	}
+}
+
+func prepareApiDocRoutes(rail Rail) {
+	if err := serveApiDocTmpl(rail); err != nil {
+		rail.Errorf("failed to server apidoc, %v", err)
 	}
 }
