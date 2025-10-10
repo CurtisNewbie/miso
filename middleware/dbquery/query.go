@@ -56,6 +56,7 @@ func (q *Query) copyNew() *Query {
 	return cp
 }
 
+// Do not log current SQL statement.
 func (q *Query) NotLogSQL() *Query {
 	q.notLogSQL = true
 
@@ -66,6 +67,7 @@ func (q *Query) NotLogSQL() *Query {
 	return q
 }
 
+// Obtain Rail in this Query if there is any.
 func (q *Query) Rail() (miso.Rail, bool) {
 	if q.rail != nil {
 		return *q.rail, true
@@ -73,30 +75,36 @@ func (q *Query) Rail() (miso.Rail, bool) {
 	return miso.Rail{}, false
 }
 
+// Table.
 func (q *Query) From(table string) *Query {
 	return q.Table(table)
 }
 
+// Table.
 func (q *Query) Table(table string) *Query {
 	q.tx = q.tx.Table(table)
 	return q
 }
 
+// Add JOIN statements.
 func (q *Query) Joins(query string, args ...any) *Query {
 	q.tx = q.tx.Joins(query, args...)
 	return q
 }
 
+// Add SELECT statements.
 func (q *Query) Select(cols string, args ...any) *Query {
 	q.tx = q.tx.Select(cols, args...)
 	return q
 }
 
+// Add gorm clauses.
 func (q *Query) Clauses(c ...clause.Expression) *Query {
 	q.tx = q.tx.Clauses(c...)
 	return q
 }
 
+// Add SELECT statements based on the given struct value.
 func (q *Query) SelectCols(v any) *Query {
 	if v == nil {
 		return q
@@ -149,25 +157,30 @@ func (q *Query) selectFields(colSet hash.Set[string], ft reflect.StructField) {
 	colSet.Add(fname)
 }
 
+// Get column name for given golang field name.
 func (q *Query) ColumnName(s string) string {
 	return q.DB().NamingStrategy.ColumnName("", s)
 }
 
+// Add WHERE statement.
 func (q *Query) Where(query string, args ...any) *Query {
 	q.tx = q.tx.Where(query, args...)
 	return q
 }
 
+// Add IN (...) condition.
 func (q *Query) In(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" IN ?", args...)
 	return q
 }
 
+// Add NOT IN (...) condition.
 func (q *Query) NotIn(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" NOT IN ?", args...)
 	return q
 }
 
+// Scan and check if there is any record that matches the specified conditions.
 func (q *Query) HasAny() (bool, error) {
 	var v int
 	n, err := q.Select("1").
@@ -276,18 +289,21 @@ func (q *Query) GtIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
+// Add IS NULL condition.
 func (q *Query) IsNull(col string) *Query {
 	q.tx = q.tx.Where(col + " IS NULL")
 	return q
 }
 
+// Add IS NOT NULL condition.
 func (q *Query) IsNotNull(col string) *Query {
 	q.tx = q.tx.Where(col + " IS NOT NULL")
 	return q
 }
 
-func (q *Query) Between(col string, args ...any) *Query {
-	q.tx = q.tx.Where(col+" BETWEEN ? AND ?", args...)
+// Add BETWEEN ? AND ? condition.
+func (q *Query) Between(col string, a any, b any) *Query {
+	q.tx = q.tx.Where(col+" BETWEEN ? AND ?", a, b)
 	return q
 }
 
@@ -296,10 +312,12 @@ func (q *Query) WhereFunc(f func(*Query) *Query) *Query {
 	return q
 }
 
+// Add AND (...) condition.
 func (q *Query) And(f func(*Query) *Query) *Query {
 	return q.WhereFunc(f)
 }
 
+// Run f if cond is true.
 func (q *Query) If(cond bool, f func(*Query) *Query) *Query {
 	if cond {
 		return f(q)
@@ -307,6 +325,7 @@ func (q *Query) If(cond bool, f func(*Query) *Query) *Query {
 	return q
 }
 
+// Add WHERE if true.
 func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 	if addWhere {
 		return q.Where(query, args...)
@@ -314,6 +333,7 @@ func (q *Query) WhereIf(addWhere bool, query string, args ...any) *Query {
 	return q
 }
 
+// Add WHERE if v is not nil.
 func (q *Query) WhereNotNil(query string, v any) *Query {
 	if rfutil.IsAnyNil(v) {
 		return q
@@ -321,31 +341,36 @@ func (q *Query) WhereNotNil(query string, v any) *Query {
 	return q.Where(query, v)
 }
 
+// Add GROUP statement.
 func (q *Query) Group(name string) *Query {
 	q.tx = q.tx.Group(name)
 	return q
 }
 
+// Add ORDER statement.
 func (q *Query) Order(order string) *Query {
 	q.tx = q.tx.Order(order)
 	return q
 }
 
+// Add ORDER BY ? DESC.
 func (q *Query) OrderDesc(col string) *Query {
 	q.tx = q.tx.Order(col + " DESC")
 	return q
 }
 
+// Add ORDER BY ? ASC.
 func (q *Query) OrderAsc(col string) *Query {
 	q.tx = q.tx.Order(col + " ASC")
 	return q
 }
 
+// Same as [Query.Joins].
 func (q *Query) Join(query string, args ...any) *Query {
-	q.tx = q.tx.Joins(query, args...)
-	return q
+	return q.Joins(query, args...)
 }
 
+// Add JOIN if true.
 func (q *Query) JoinIf(addJoin bool, query string, args ...any) *Query {
 	if addJoin {
 		return q.Join(query, args...)
@@ -353,16 +378,19 @@ func (q *Query) JoinIf(addJoin bool, query string, args ...any) *Query {
 	return q
 }
 
+// Add LIMIT.
 func (q *Query) Limit(n int) *Query {
 	q.tx = q.tx.Limit(n)
 	return q
 }
 
+// Add OFFSET.
 func (q *Query) Offset(n int) *Query {
 	q.tx = q.tx.Offset(n)
 	return q
 }
 
+// Add OFFSET and LIMIT for given page.
 func (q *Query) AtPage(p miso.Paging) *Query {
 	return q.Limit(p.GetLimit()).Offset(p.GetOffset())
 }
@@ -406,12 +434,14 @@ func (q *Query) Like(col string, val string) *Query {
 	return q.Where(col+" LIKE ?", "%"+val+"%")
 }
 
+// Add raw SQL.
 func (q *Query) Raw(sql string, args ...any) *Query {
 	sql = strings.TrimSpace(sql)
 	q.tx = q.tx.Raw(sql, args...)
 	return q
 }
 
+// Add OR (...) condition if true.
 func (q *Query) OrIf(cond bool, query string, args ...any) *Query {
 	if cond {
 		return q.Or(query, args...)
@@ -419,16 +449,21 @@ func (q *Query) OrIf(cond bool, query string, args ...any) *Query {
 	return q
 }
 
+// Add OR (...) condition.
 func (q *Query) Or(query string, args ...any) *Query {
 	q.tx = q.tx.Or(query, args...)
 	return q
 }
 
+// Add OR (...) condition.
 func (q *Query) OrFunc(f func(*Query) *Query) *Query {
 	q.tx = q.tx.Or(f(q.copyNew()).tx)
 	return q
 }
 
+// Run SQL and scan result.
+//
+// If ptr is of type [Nilable] (e.g., by embedding [NilableValue]), [Nilable.MarkZero] is automatically called based on rowsAffected.
 func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	tx := q.tx.Scan(ptr)
 	rowsAffected = tx.RowsAffected
@@ -439,6 +474,9 @@ func (q *Query) Scan(ptr any) (rowsAffected int64, err error) {
 	return
 }
 
+// Run SQL and scan result.
+//
+// If ptr is of type [Nilable] (e.g., by embedding [NilableValue]), [Nilable.MarkZero] is automatically called based on rowsAffected.
 func (q *Query) ScanAny(ptr any) (ok bool, err error) {
 	n, err := q.Scan(ptr)
 	if err != nil {
@@ -447,16 +485,21 @@ func (q *Query) ScanAny(ptr any) (ok bool, err error) {
 	return n > 0, nil
 }
 
+// Run SQL and scan result.
+//
+// If ptr is of type [Nilable] (e.g., by embedding [NilableValue]), [Nilable.MarkZero] is automatically called based on rowsAffected.
 func (q *Query) ScanVal(ptr any) (err error) {
 	_, err = q.Scan(ptr)
 	return err
 }
 
+// Exec SQL.
 func (q *Query) ExecAny(sql string, args ...any) error {
 	_, err := q.Exec(sql, args...)
 	return err
 }
 
+// Exec SQL.
 func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	sql = strings.TrimSpace(sql)
 	tx := q.tx.Exec(sql, args...)
@@ -465,6 +508,7 @@ func (q *Query) Exec(sql string, args ...any) (rowsAffected int64, err error) {
 	return
 }
 
+// Exec UPDATE SQL.
 func (q *Query) Update() (rowsAffected int64, err error) {
 	if len(q.updateColumns) < 1 {
 		return 0, nil
@@ -476,27 +520,38 @@ func (q *Query) Update() (rowsAffected int64, err error) {
 	return
 }
 
+// Exec UPDATE SQL.
 func (q *Query) UpdateAny() error {
 	_, err := q.Update()
 	return err
 }
 
+// Add SET ? statements.
+//
+// UPDATE is not exected until one of [Query.Update] or [Query.UpdateAny] is called.
 func (q *Query) Set(col string, arg any) *Query {
 	q.updateColumns[col] = arg
 	return q
 }
 
+// Run SQL and get COUNT(?) or COUNT(*) result.
 func (q *Query) Count() (int64, error) {
 	var n int64
 	tx := q.tx.Count(&n)
 	return n, errs.WrapErr(tx.Error)
 }
 
+// Add multiple SET ? statements based on given struct / map value.
+//
+// UPDATE is not exected until one of [Query.Update] or [Query.UpdateAny] is called.
 func (q *Query) SetCols(arg any, cols ...string) *Query {
 	q.doSetCols(arg, true, cols...)
 	return q
 }
 
+// Add multiple SET ? statements based on given struct / map value, ignore empty field.
+//
+// UPDATE is not exected until one of [Query.Update] or [Query.UpdateAny] is called.
 func (q *Query) SetColsIgnoreEmpty(arg any, cols ...string) *Query {
 	q.doSetCols(arg, false, cols...)
 	return q
@@ -594,6 +649,9 @@ func (q *Query) setField(colSet hash.Set[string], ft reflect.StructField, fv ref
 	q.Set(fname, val)
 }
 
+// Add SET ? statements if true.
+//
+// UPDATE is not exected until one of [Query.Update] or [Query.UpdateAny] is called.
 func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 	if cond {
 		return q.Set(col, arg)
@@ -601,6 +659,7 @@ func (q *Query) SetIf(cond bool, col string, arg any) *Query {
 	return q
 }
 
+// Run CREATE IGNORE to insert given value.
 func (q *Query) CreateIgnoreAny(v any) error {
 	_, err := q.CreateIgnore(v)
 	return err
@@ -628,11 +687,13 @@ func (q *Query) stmtTable() string {
 	return table
 }
 
+// Insert given value.
 func (q *Query) CreateAny(v any) error {
 	_, err := q.Create(v)
 	return err
 }
 
+// Run CREATE IGNORE to insert given value.
 func (q *Query) CreateIgnore(v any) (rowsAffected int64, err error) {
 	q.tx = q.tx.Clauses(clause.Insert{Modifier: "IGNORE"})
 	return q.Create(v)
@@ -788,6 +849,7 @@ func (q *Query) serializeValue(serializer string, fv reflect.Value, val any) (an
 	return val, false
 }
 
+// Insert given value.
 func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	rows := q.CreateInsertRowMaps(v)
 	q.runCreateHooks(rows)
@@ -800,6 +862,7 @@ func (q *Query) Create(v any) (rowsAffected int64, err error) {
 	return
 }
 
+// Exec DELETE.
 func (q *Query) Delete() (rowsAffected int64, err error) {
 	tx := q.tx.Delete(nil)
 	rowsAffected = tx.RowsAffected
@@ -807,16 +870,19 @@ func (q *Query) Delete() (rowsAffected int64, err error) {
 	return
 }
 
+// Exec DELETE.
 func (q *Query) DeleteAny() error {
 	_, err := q.Delete()
 	return err
 }
 
+// Omit columns.
 func (q *Query) Omit(col ...string) *Query {
 	q.tx = q.tx.Omit(col...)
 	return q
 }
 
+// Get underlying [*gorm.DB] .
 func (q *Query) DB() *gorm.DB {
 	return q.tx
 }
@@ -828,11 +894,13 @@ func RunTransaction(rail miso.Rail, db *gorm.DB, callback func(qry func() *Query
 	})
 }
 
-// Create New *Query.
+// Create New [*Query].
 //
-// opts can be [*gorm.DB], [miso.Rail] or [context.Context].
+// Param opts can be [*gorm.DB], [miso.Rail] or [context.Context].
 //
-// If *gorm.DB is missing, [GetDB] is called to obtain the primary one.
+// If [*gorm.DB] is missing, [GetDB] is called to obtain the primary one.
+//
+// If [miso.Rail] or [context.Context] is provided, tracing baggages (e.g., trace_id, span_id) are automatically propagated to the SQL logger registered in gorm.
 func NewQuery(opts ...any) *Query {
 	var (
 		db *gorm.DB
@@ -872,6 +940,7 @@ func NewQuery(opts ...any) *Query {
 	return q
 }
 
+// Deprecated: Since v0.3.3. Use [NewQuery] instead.
 func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
 	return NewQuery(r, db)
 }
