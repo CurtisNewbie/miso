@@ -118,9 +118,10 @@ func init() {
 		Order:     BootstrapOrderL3,
 	})
 	BeforeWebRouteRegister(func(rail Rail) error {
-		prepareInterceptorsDebuggingTools(rail)
-		registerRouteForHealthcheck()
-		prepareApiDocRoutes(rail)
+		prepAuthInterceptors(rail)
+		prepDebugRoutes(rail)
+		prepHealthcheckRoutes()
+		prepApiDocRoutes(rail)
 		return nil
 	})
 }
@@ -194,7 +195,7 @@ func addRoutesRegistar(reg routesRegistar) {
 }
 
 // Register GIN route for consul healthcheck
-func registerRouteForHealthcheck() {
+func prepHealthcheckRoutes() {
 	if defaultHealthCheckHandlerDisabled {
 		return
 	}
@@ -1334,19 +1335,7 @@ func newFlightRecorder(out string) *flightRecorder {
 	}
 }
 
-func prepareInterceptorsDebuggingTools(rail Rail) {
-	serverAuthBearer := GetPropStrTrimmed(PropServerAuthBearer)
-	if serverAuthBearer != "" {
-		AddBearerAuthInterceptor(
-			func(method, url string) bool { return true },
-			func(tok string) bool {
-				v := GetPropStrTrimmed(PropServerAuthBearer) // prop value may change while it's runs
-				return v == "" || v == tok
-			},
-		)
-		rail.Infof("Registered bearer authentication interceptor for all APIs")
-	}
-
+func prepDebugRoutes(rail Rail) {
 	if !pprofRegisterDisabled && (!IsProdMode() || GetPropBool(PropServerPprofEnabled)) {
 		GroupRoute("/debug/pprof",
 			HttpGet("", RawHandler(func(inb *Inbound) { pprof.Index(inb.Unwrap()) })),
@@ -1387,9 +1376,8 @@ func prepareInterceptorsDebuggingTools(rail Rail) {
 			Desc("Stop existing FlightRecorder session.")
 		rail.Infof("Registered /debug/trace APIs for debugging")
 
-		if serverAuthBearer != "" { // server.auth.bearer is already set for all apis
+		if GetPropStrTrimmed(PropServerAuthBearer) != "" { // server.auth.bearer is already set for all apis
 			rail.Infof("Using configuration '%v' in authentication interceptor for pprof & trace APIs", PropServerAuthBearer)
-
 		} else {
 			// we have set auth bearer for pprof apis specifically
 			if GetPropStrTrimmed(PropServerPprofAuthBearer) != "" {
@@ -1411,8 +1399,21 @@ func prepareInterceptorsDebuggingTools(rail Rail) {
 	}
 }
 
-func prepareApiDocRoutes(rail Rail) {
+func prepApiDocRoutes(rail Rail) {
 	if err := serveApiDocTmpl(rail); err != nil {
 		rail.Errorf("failed to server apidoc, %v", err)
+	}
+}
+
+func prepAuthInterceptors(rail Rail) {
+	if GetPropStrTrimmed(PropServerAuthBearer) != "" {
+		AddBearerAuthInterceptor(
+			func(method, url string) bool { return true },
+			func(tok string) bool {
+				v := GetPropStrTrimmed(PropServerAuthBearer) // prop value may change while it's runs
+				return v == "" || v == tok
+			},
+		)
+		rail.Infof("Registered bearer authentication interceptor for all APIs")
 	}
 }
