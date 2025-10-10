@@ -1286,6 +1286,10 @@ func (f *flightRecorder) Start(dur time.Duration) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	if f.fr.Enabled() {
+		return ErrIllegalArgument.WithMsg("FlightRecorder is currently running")
+	}
+
 	if err := f.fr.Start(); err != nil {
 		return err
 	}
