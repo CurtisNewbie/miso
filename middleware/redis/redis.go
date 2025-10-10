@@ -218,10 +218,8 @@ func (p *rtopic[T]) Subscribe(pool util.AsyncPoolItf, handler func(rail miso.Rai
 			rail.Infof("Receive redis channel message, topic: %v, payload: %#v", p.topic, pm.Payload)
 
 			// redis subscription cannot be blocked for more than 30s, have to handle these asynchronously
-			util.SubmitAsync(pool, func() (any, error) {
-				return nil, handler(rail, pm.Payload)
-			}).Then(func(a any, err error) {
-				if err != nil {
+			pool.Go(func() {
+				if err := handler(rail, pm.Payload); err != nil {
 					rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
 				}
 			})
