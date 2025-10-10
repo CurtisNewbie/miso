@@ -243,7 +243,7 @@ func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) F
 }
 
 type AsyncPoolItf interface {
-	Go(f func()) error
+	Go(f func())
 	Stop()
 	StopAndWait()
 }
@@ -379,7 +379,7 @@ func (p *AsyncPool) isStopped() bool {
 // Submit task to the pool.
 //
 // If the pool is closed, caller will execute the submitted task directly.
-func (p *AsyncPool) Go(f func()) error {
+func (p *AsyncPool) Go(f func()) {
 
 	if p.isStopped() {
 		if p.blockWhenPoolFull {
@@ -387,7 +387,7 @@ func (p *AsyncPool) Go(f func()) error {
 		} else {
 			p.doWhenPoolFull(f)
 		}
-		return nil
+		return
 	}
 
 	p.drainTasksWg.Add(1)
@@ -410,7 +410,7 @@ func (p *AsyncPool) Go(f func()) error {
 				go p.spawn(nil)
 			default:
 			}
-			return nil
+			return
 		}
 	} else {
 		select {
@@ -426,14 +426,14 @@ func (p *AsyncPool) Go(f func()) error {
 				go p.spawn(nil)
 			default:
 			}
-			return nil
+			return
 		default:
 			// when workers are all busy and queue is full
 			defer p.drainTasksWg.Done()
 			p.doWhenPoolFull(PanicSafeFunc(f))
 		}
 	}
-	return nil
+	return
 }
 
 // spawn a new worker.
@@ -617,7 +617,7 @@ type AntsAsyncPool struct {
 	wg *sync.WaitGroup
 }
 
-func (a *AntsAsyncPool) Go(f func()) error {
+func (a *AntsAsyncPool) Go(f func()) {
 	a.wg.Add(1)
 	wrp := func() {
 		defer a.wg.Done()
@@ -625,16 +625,10 @@ func (a *AntsAsyncPool) Go(f func()) error {
 	}
 	err := a.p.Submit(wrp)
 	if err != nil {
-		if errors.Is(err, ants.ErrPoolOverload) {
-			utillog.DebugLog("AntsAsyncPool full, calling fallback, %v", err)
-			a.doWhenPoolFull(wrp)
-			return nil
-		} else {
-			a.wg.Done()
-			return err
-		}
+		utillog.DebugLog("AntsAsyncPool is full or closed, calling fallback, %v", err)
+		a.doWhenPoolFull(wrp)
+		return
 	}
-	return nil
 }
 
 func (a *AntsAsyncPool) Stop() {
