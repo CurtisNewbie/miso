@@ -88,7 +88,10 @@ func BootstrapConfigCenter(rail miso.Rail) error {
 //
 // In most cases, this should be called by miso itself when server bootstraps.
 func BootstrapServiceDiscovery(rail miso.Rail) error {
+	return bootServiceDiscovery(rail)
+}
 
+func bootServiceDiscovery(rail miso.Rail) error {
 	ok, err := module().initDiscovery(rail)
 	if err != nil {
 		return errs.WrapErrf(err, "failed to initialize nacos module for service discovery")
