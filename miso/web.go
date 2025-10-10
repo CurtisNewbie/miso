@@ -1347,33 +1347,13 @@ func prepDebugRoutes(rail Rail) {
 		)
 		rail.Infof("Registered /debug/pprof APIs for debugging")
 
-		HttpGet("/debug/trace/recorder/run",
-			RawHandler(func(inb *Inbound) {
-				fr := flightRecorderOnce()
-				dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
-				if err != nil {
-					inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
-					return
-				}
-				if dur >= 30*time.Minute { // just in case
-					inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
-					return
-				}
-				if err := fr.Start(dur); err != nil {
-					inb.HandleResult(nil, err)
-					return
-				}
-			})).
+		HttpGet("/debug/trace/recorder/run", RawHandler(HandleFlightRecorderRun)).
 			DocQueryParam("duration", "Duration of the flight recording. Required. Duration cannot exceed 30 min.").
 			Desc("Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.")
 
-		HttpGet("/debug/trace/recorder/stop",
-			RawHandler(func(inb *Inbound) {
-				fr := flightRecorderOnce()
-				err := fr.Stop()
-				inb.HandleResult(nil, err)
-			})).
+		HttpGet("/debug/trace/recorder/stop", RawHandler(HandleFlightRecorderStop)).
 			Desc("Stop existing FlightRecorder session.")
+
 		rail.Infof("Registered /debug/trace APIs for debugging")
 
 		if GetPropStrTrimmed(PropServerAuthBearer) != "" { // server.auth.bearer is already set for all apis
@@ -1416,4 +1396,27 @@ func prepAuthInterceptors(rail Rail) {
 		)
 		rail.Infof("Registered bearer authentication interceptor for all APIs")
 	}
+}
+
+func HandleFlightRecorderRun(inb *Inbound) {
+	fr := flightRecorderOnce()
+	dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
+	if err != nil {
+		inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
+		return
+	}
+	if dur >= 30*time.Minute { // just in case
+		inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
+		return
+	}
+	if err := fr.Start(dur); err != nil {
+		inb.HandleResult(nil, err)
+		return
+	}
+}
+
+func HandleFlightRecorderStop(inb *Inbound) {
+	fr := flightRecorderOnce()
+	err := fr.Stop()
+	inb.HandleResult(nil, err)
 }
