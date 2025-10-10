@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 
 	"github.com/curtisnewbie/miso/encoding/json"
@@ -59,11 +60,12 @@ func (m *redisModule) initFromProp(rail miso.Rail) (*redis.Client, error) {
 	return m.init(
 		rail,
 		RedisConnParam{
-			Address:  miso.GetPropStr(PropRedisAddress),
-			Port:     miso.GetPropStr(PropRedisPort),
-			Username: miso.GetPropStr(PropRedisUsername),
-			Password: miso.GetPropStr(PropRedisPassword),
-			Db:       miso.GetPropInt(PropRedisDatabase),
+			Address:         miso.GetPropStr(PropRedisAddress),
+			Port:            miso.GetPropStr(PropRedisPort),
+			Username:        miso.GetPropStr(PropRedisUsername),
+			Password:        miso.GetPropStr(PropRedisPassword),
+			Db:              miso.GetPropInt(PropRedisDatabase),
+			MaxConnPoolSize: miso.GetPropInt(PropRedisMaxPoolSize),
 		})
 }
 
@@ -82,11 +84,19 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 		return m.client, nil
 	}
 
-	rail.Infof("Connecting to redis '%v:%v', database: %v", p.Address, p.Port, p.Db)
+	if p.MaxConnPoolSize == 0 {
+		p.MaxConnPoolSize = 10 * runtime.GOMAXPROCS(0)
+		if p.MaxConnPoolSize < 64 {
+			p.MaxConnPoolSize = 64
+		}
+	}
+
+	rail.Infof("Connecting to redis '%v:%v', database: %v, pool_size: %v", p.Address, p.Port, p.Db, p.MaxConnPoolSize)
 	var rdb *redis.Client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", p.Address, p.Port),
 		Password: p.Password,
 		DB:       p.Db,
+		PoolSize: p.MaxConnPoolSize,
 	})
 
 	cmd := rdb.Ping(rail.Context())
@@ -131,29 +141,20 @@ func GetStr(key string) (string, error) {
 	return module().getStr(key)
 }
 
-/*
-Initialize redis client from configuration
-
-If redis client has been initialized, current func call will be ignored.
-
-This func looks for following prop:
-
-	"redis.address"
-	"redis.port"
-	"redis.username"
-	"redis.password"
-	"redis.database"
-*/
+// Initialize redis client from configuration
+//
+// If redis client has been initialized, current func call will be ignored.
 func InitRedisFromProp(rail miso.Rail) (*redis.Client, error) {
 	return module().initFromProp(rail)
 }
 
 type RedisConnParam struct {
-	Address  string
-	Port     string
-	Username string
-	Password string
-	Db       int
+	Address         string
+	Port            string
+	Username        string
+	Password        string
+	Db              int
+	MaxConnPoolSize int
 }
 
 /*

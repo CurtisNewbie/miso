@@ -194,14 +194,15 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Redis Configuration
 
-| property       | description         | default value |
-| -------------- | ------------------- | ------------- |
-| redis.enabled  | enable Redis client | false         |
-| redis.address  | Redis server host   | localhost     |
-| redis.port     | Redis server port   | 6379          |
-| redis.username | username            |               |
-| redis.password | password            |               |
-| redis.database | database            | 0             |
+| property            | description                                                                                                                                                            | default value |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| redis.enabled       | enable Redis client                                                                                                                                                    | false         |
+| redis.address       | Redis server host                                                                                                                                                      | localhost     |
+| redis.port          | Redis server port                                                                                                                                                      | 6379          |
+| redis.username      | username                                                                                                                                                               |               |
+| redis.password      | password                                                                                                                                                               |               |
+| redis.database      | database                                                                                                                                                               | 0             |
+| redis.max-pool-size | max connection pool size (Default is 10 connections per every available CPU as reported by runtime.GOMAXPROCS or 64 connections if the calculated one is less then 64) | 0             |
 
 ## SQLite Configuration
 

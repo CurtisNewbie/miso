@@ -247,7 +247,7 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 	rail.Debugf("Pullling tasks: %v", name)
 
-	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*10, m.getTaskQueueKey(name))
+	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*2, m.getTaskQueueKey(name))
 	if err != nil {
 		return err
 	}
@@ -257,7 +257,7 @@ func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 
 	for _, qt := range v {
 		if qt.ScheduledAt.Before(util.NowUTC().Add(-staleTaskThreshold)) {
-			rail.Warnf("Task was triggered 5s ago, ignore, %v, scheduledAt: %v", qt.Name, qt.ScheduledAt)
+			rail.Warnf("Task was triggered %v ago, ignore, %v, scheduledAt: %v", staleTaskThreshold, qt.Name, qt.ScheduledAt)
 			continue
 		}
 
