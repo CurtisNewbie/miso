@@ -81,33 +81,34 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 
 func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	_rail := inb.Rail()
+
 	pc := newProxyContext(&_rail, inb)
 
 	// proxy path
 	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
 	pc.ProxyPath = proxyPath
 
-	w, r := inb.Unwrap()
-	pc.Rail.Debugf("Request: %v %v, headers: %v, proxyPath: %v", r.Method, r.URL.Path, r.Header, proxyPath)
-
-	// resolve proxy target path, in most case, it's another backend server.
-	path, err := h.resolveTarget(*pc.Rail, proxyPath)
-	if err != nil {
-		pc.Rail.Warnf("Resolve target failed, path: %v, %v", proxyPath, err)
-
-		status := 0
-		if hse, ok := err.(ProxyHttpStatusError); ok {
-			status = hse.Status()
-		}
-		if status == 0 {
-			status = 404
-		}
-		w.WriteHeader(status)
-		return
-	}
 	defer pc.Rail.Debugf("Proxy request processed")
 
 	handler := func(pc *ProxyContext) {
+		w, r := pc.Inb.Unwrap()
+		pc.Rail.Debugf("Request: %v %v, headers: %v, proxyPath: %v", r.Method, r.URL.Path, r.Header, proxyPath)
+
+		// resolve proxy target path, in most case, it's another backend server.
+		path, err := h.resolveTarget(*pc.Rail, proxyPath)
+		if err != nil {
+			pc.Rail.Warnf("Resolve target failed, path: %v, %v", proxyPath, err)
+
+			status := 0
+			if hse, ok := err.(ProxyHttpStatusError); ok {
+				status = hse.Status()
+			}
+			if status == 0 {
+				status = 404
+			}
+			w.WriteHeader(status)
+			return
+		}
 
 		if r.URL.RawQuery != "" {
 			path += "?" + r.URL.RawQuery
