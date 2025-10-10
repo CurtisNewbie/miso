@@ -202,7 +202,7 @@ func (h *HttpProxy) ChangeClient(c *http.Client) {
 type ProxyContext struct {
 	Rail      *Rail
 	Inb       *Inbound
-	ProxyPath string
+	ProxyPath string // Proxied path without query parameters.
 
 	attr map[string]any // attributes, it's lazy, only initialized on write
 }
