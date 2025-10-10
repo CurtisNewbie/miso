@@ -242,10 +242,12 @@ func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) F
 	}
 }
 
+// Async Pool Interface
 type AsyncPoolItf interface {
 	Go(f func())
 	Stop()
 	StopAndWait()
+	Run(f func() error) Future[struct{}]
 }
 
 // A long live, bounded pool of goroutines.
@@ -374,6 +376,10 @@ func (p *AsyncPool) StopAndWait() {
 
 func (p *AsyncPool) isStopped() bool {
 	return atomic.LoadInt32(&p.stopped) == 1
+}
+
+func (p *AsyncPool) Run(f func() error) Future[struct{}] {
+	return SubmitAsync(p, func() (struct{}, error) { return struct{}{}, f() })
 }
 
 // Submit task to the pool.
@@ -615,6 +621,10 @@ type AntsAsyncPool struct {
 	*asyncPoolCommon
 	p  *ants.Pool
 	wg *sync.WaitGroup
+}
+
+func (p *AntsAsyncPool) Run(f func() error) Future[struct{}] {
+	return SubmitAsync(p, func() (struct{}, error) { return struct{}{}, f() })
 }
 
 func (a *AntsAsyncPool) Go(f func()) {
