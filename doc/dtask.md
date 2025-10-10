@@ -69,4 +69,4 @@ func main() {
 }
 ```
 
-As worker continually pulls tasks from Redis queue, it may occupy some connections in the Redis connection pool. If you schedule lots of tasks, say over 30 tasks, and the `GOMAXPROCS` is small, then you should consider increase the max connection pool size. [See Configuration](./config.md).
+As worker continually pulls tasks from Redis queue, it may occupy some connections in the Redis connection pool. If you schedule lots of tasks, say over 30 tasks, and the `GOMAXPROCS` is small, then you should consider increasing the max pool size. [See Configuration](./config.md).
