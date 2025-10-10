@@ -62,7 +62,7 @@ func (q *Query) NotLogSQL() *Query {
 
 	// statement is never nil, but just in case
 	if q.tx.Statement != nil && q.tx.Statement.Context != nil {
-		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyNotLogSQL, true)
+		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyNotLogSQL, true) //lint:ignore SA1029 added a prefix already, should be fine
 	}
 	return q
 }
