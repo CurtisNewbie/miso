@@ -928,6 +928,11 @@ func (i *Inbound) MustBind(ptr any) {
 	mustBind(i.Rail(), i.engine, ptr)
 }
 
+func (i *Inbound) ReadRawBytes() ([]byte, error) {
+	_, r := i.Unwrap()
+	return io.ReadAll(r.Body)
+}
+
 func (i *Inbound) WriteJson(v any) {
 	i.SetHeader("Content-Type", applicationJson)
 	w, _ := i.Unwrap()
