@@ -930,7 +930,8 @@ func (i *Inbound) MustBind(ptr any) {
 
 func (i *Inbound) ReadRawBytes() ([]byte, error) {
 	_, r := i.Unwrap()
-	return io.ReadAll(r.Body)
+	by, err := io.ReadAll(r.Body)
+	return by, errs.WrapErr(err)
 }
 
 func (i *Inbound) WriteJson(v any) {
