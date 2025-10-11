@@ -488,7 +488,7 @@ func (n *nacosLogger) Error(args ...interface{}) {
 			args[i] = desensitizeConfigContent(v)
 		}
 	}
-	miso.Error(args...)
+	miso.Warn(args...)
 }
 func (n *nacosLogger) Debug(args ...interface{})             {}
 func (n *nacosLogger) Infof(fmt string, args ...interface{}) {}
@@ -499,7 +499,7 @@ func (n *nacosLogger) Errorf(fmt string, args ...interface{}) {
 			args[i] = desensitizeConfigContent(v)
 		}
 	}
-	miso.Errorf(desensitizeConfigContent(fmt), args...)
+	miso.Warnf(desensitizeConfigContent(fmt), args...)
 }
 func (n *nacosLogger) Debugf(fmt string, args ...interface{}) {}
 
