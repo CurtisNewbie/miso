@@ -137,6 +137,9 @@ func FileHasAnySuffix(name string, ext ...string) bool {
 }
 
 func FileAddSuffix(name string, ext string) string {
+	if v, ok := strings.CutPrefix(ext, "."); ok {
+		ext = v
+	}
 	if FileHasSuffix(name, ext) {
 		return name
 	}
