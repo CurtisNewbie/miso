@@ -43,7 +43,7 @@ func TestResolveArg(t *testing.T) {
 	}
 	Infof("resolved: %s", resolved)
 
-	resolved = ResolveArg("abc.${def:123_456}.com")
+	resolved = ResolveArg("abc.${def: 123_456 }.com")
 	if resolved != "abc.123_456.com" {
 		t.Fatal(resolved)
 		return

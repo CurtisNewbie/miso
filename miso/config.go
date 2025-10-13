@@ -449,7 +449,7 @@ func (a *AppConfig) ResolveArg(arg string) string {
 		key = pair[0]
 		defVal := s
 		if len(pair) > 1 {
-			defVal = pair[1]
+			defVal = strings.TrimSpace(pair[1])
 		} else {
 			defVal = ""
 		}
