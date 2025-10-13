@@ -463,3 +463,11 @@ func SplitStr(s, sep string) []string {
 	}
 	return cp
 }
+
+func TrimSpaceLeft(s string) string {
+	return strings.TrimLeftFunc(s, unicode.IsSpace)
+}
+
+func TrimSpaceRight(s string) string {
+	return strings.TrimRightFunc(s, unicode.IsSpace)
+}
