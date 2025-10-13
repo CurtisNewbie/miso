@@ -214,3 +214,10 @@ func UpdateSliceValue[T any](s []T, upd func(t T) T) {
 		s[i] = upd(v)
 	}
 }
+
+func MergeVarargs[T any](fst T, args ...T) []T {
+	ar := make([]T, 0, 1+len(args))
+	ar = append(ar, fst)
+	ar = append(ar, args...)
+	return ar
+}
