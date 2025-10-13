@@ -23,7 +23,7 @@ import (
 
 var (
 	// regex for arg expansion
-	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\/\-\_\.:]+}`)
+	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\/\-\_\.: ]+}`)
 )
 
 type AppConfig struct {

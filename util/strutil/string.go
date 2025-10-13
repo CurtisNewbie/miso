@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	namedFmtPat = regexp.MustCompile(`\${[a-zA-Z0-9\\-\\_\.]+}`)
+	namedFmtPat = regexp.MustCompile(`\${[a-zA-Z0-9\/\-\_\. ]+}`)
 )
 
 func PadNum(n int, digit int) string {
