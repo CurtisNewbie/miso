@@ -857,6 +857,9 @@ func (i *Inbound) Request() *http.Request {
 }
 
 func (i *Inbound) WriteSSE(name string, message any) {
+	if tmp, err := json.SWriteJson(message); err == nil {
+		message = tmp // we serialize json ourselves for consistency
+	}
 	i.engine.SSEvent(name, message)
 }
 
