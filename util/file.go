@@ -146,6 +146,11 @@ func FileAddSuffix(name string, ext string) string {
 	return name + "." + ext
 }
 
+func FileReplaceSuffix(name string, ext string) string {
+	name, _, _ = FileCutDotSuffix(name)
+	return FileAddSuffix(name, ext)
+}
+
 func FileCutSuffix(name string, ext string) (string, bool) {
 	if name == "" || ext == "" {
 		return name, false
