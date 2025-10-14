@@ -402,7 +402,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		constant.WithCacheDir(miso.GetPropStr(PropNacosCacheDir)),
 		constant.WithUsername(un),
 		constant.WithPassword(miso.GetPropStr(PropNacosServerPassword)),
-		constant.WithCustomLogger(&nacosLogger{}),
+		constant.WithCustomLogger(&nacosLogger{rail: miso.EmptyRail().SetGetCallFnUpN(2)}),
 	)
 
 	port := miso.GetPropInt(PropNacosServerPort)
@@ -478,28 +478,29 @@ func ReloadConfigsOnChange(v bool) {
 }
 
 type nacosLogger struct {
+	rail miso.Rail
 }
 
 func (n *nacosLogger) Info(args ...interface{}) {}
-func (n *nacosLogger) Warn(args ...interface{}) { miso.Warn(args...) }
+func (n *nacosLogger) Warn(args ...interface{}) { n.rail.Warn(args...) }
 func (n *nacosLogger) Error(args ...interface{}) {
 	for i, v := range args {
 		if v, ok := v.(string); ok {
 			args[i] = desensitizeConfigContent(v)
 		}
 	}
-	miso.Warn(args...)
+	n.rail.Warn(args...)
 }
 func (n *nacosLogger) Debug(args ...interface{})             {}
 func (n *nacosLogger) Infof(fmt string, args ...interface{}) {}
-func (n *nacosLogger) Warnf(fmt string, args ...interface{}) { miso.Warnf(fmt, args...) }
+func (n *nacosLogger) Warnf(fmt string, args ...interface{}) { n.rail.Warnf(fmt, args...) }
 func (n *nacosLogger) Errorf(fmt string, args ...interface{}) {
 	for i, v := range args {
 		if v, ok := v.(string); ok {
 			args[i] = desensitizeConfigContent(v)
 		}
 	}
-	miso.Warnf(desensitizeConfigContent(fmt), args...)
+	n.rail.Warnf(desensitizeConfigContent(fmt), args...)
 }
 func (n *nacosLogger) Debugf(fmt string, args ...interface{}) {}
 
