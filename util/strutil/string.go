@@ -366,6 +366,9 @@ func SAddLineIndent(s string, indentChar string) string {
 	return b.String()
 }
 
+// Match any of the path pattern
+//
+// See [MatchPathAnyVal].
 func MatchPathAny(pattern []string, s string) bool {
 	for _, p := range pattern {
 		if MatchPath(p, s) {
@@ -373,6 +376,16 @@ func MatchPathAny(pattern []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// Match any of the path pattern.
+func MatchPathAnyVal(pattern []string, s string) (string, bool) {
+	for _, p := range pattern {
+		if MatchPath(p, s) {
+			return p, true
+		}
+	}
+	return "", false
 }
 
 func MatchPath(pattern, s string) bool {
