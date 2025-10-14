@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 )
 
 var (
@@ -126,20 +126,26 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			pc.Rail.Infof("Rewrite proxy-request to '%v'", targetUrl)
 
 			// propagate all headers to proxied servers, except the headers for tracing
-			propagationKeys := hash.NewSet[string]()
-			propagationKeys.AddAll(GetPropagationKeys())
+			UsePropagationKeys(func(key string) {
 
-			for k := range pr.Out.Header {
 				// the inbound request may contain headers that are one of our propagation keys
 				// this can be a security problem
-				if propagationKeys.Has(k) {
-					pr.Out.Header.Del(k)
+				pr.Out.Header.Del(key)
+
+				v := pc.Rail.ctx.Value(key)
+				if v != nil {
+					if key == XSpanId {
+						pr.Out.Header.Set(key, NewSpanId())
+						return
+					}
+					if sv := cast.ToString(v); sv != "" {
+						pr.Out.Header.Set(key, sv)
+					}
 				}
-			}
-			pr.Out = TraceRequest(pc.Rail.Context(), pr.Out)
+			})
 
 			if IsDebugLevel() {
-				pc.Rail.Debug(pr.Out.Header)
+				pc.Rail.Debugf("Proxy request headers: %v", pr.Out.Header)
 			}
 		}
 		rproxy.ModifyResponse = func(r *http.Response) error {
