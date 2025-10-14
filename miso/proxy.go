@@ -1,9 +1,10 @@
 package miso
 
 import (
-	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -113,76 +114,40 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		if r.URL.RawQuery != "" {
 			path += "?" + r.URL.RawQuery
 		}
-		cli := NewClient(*pc.Rail, path).
-			UseClient(h.client).
-			EnableTracing()
 
-		// propagate all headers to client, except the headers for tracing
-		propagationKeys := hash.NewSet[string]()
-		propagationKeys.AddAll(GetPropagationKeys())
-
-		for k, arr := range r.Header {
-			// the inbound request may contain headers that are one of our propagation keys
-			// this can be a security problem
-			if propagationKeys.Has(k) {
-				continue
-			}
-			for _, v := range arr {
-				cli.AddHeader(k, v)
-			}
+		rproxy := &httputil.ReverseProxy{}
+		rproxy.Transport = h.client.Transport
+		rproxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			pc.Rail.Errorf("Failed to proxy request, %v", err)
 		}
+		rproxy.Rewrite = func(pr *httputil.ProxyRequest) {
+			targetUrl, _ := url.Parse(path)
+			pr.Out.URL = targetUrl
+			pc.Rail.Infof("Rewrite proxy-request to '%v'", targetUrl)
 
-		var tr *TResponse
-		switch r.Method {
-		case http.MethodGet:
-			tr = cli.Get()
-		case http.MethodPut:
-			tr = cli.Put(r.Body)
-		case http.MethodPost:
-			tr = cli.Post(r.Body)
-		case http.MethodDelete:
-			tr = cli.Delete()
-		case http.MethodHead:
-			tr = cli.Head()
-		case http.MethodOptions:
-			tr = cli.Options()
-		default:
-			w.WriteHeader(404) // not gonna happen
-			return
-		}
+			// propagate all headers to proxied servers, except the headers for tracing
+			propagationKeys := hash.NewSet[string]()
+			propagationKeys.AddAll(GetPropagationKeys())
 
-		if tr.Err != nil {
-			pc.Rail.Warnf("Proxy request failed, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
-			if nerr, ok := tr.Err.(net.Error); ok && nerr.Timeout() {
-				pc.Rail.Errorf("Proxy request failed, request timeout, original path: %v, actual path: %v, err: %v", r.URL.Path, path, tr.Err)
-				w.WriteHeader(http.StatusGatewayTimeout)
-				return
+			for k := range pr.Out.Header {
+				// the inbound request may contain headers that are one of our propagation keys
+				// this can be a security problem
+				if propagationKeys.Has(k) {
+					pr.Out.Header.Del(k)
+				}
 			}
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-		defer tr.Close()
+			pr.Out = TraceRequest(pc.Rail.Context(), pr.Out)
 
-		pc.Rail.Debugf("Proxy response headers: %v, status: %v", tr.RespHeader, tr.StatusCode)
-
-		// headers from proxied servers
-		for k, v := range tr.RespHeader {
-			for _, hv := range v {
-				w.Header().Add(k, hv)
+			if IsDebugLevel() {
+				pc.Rail.Debug(pr.Out.Header)
 			}
 		}
-
-		if IsDebugLevel() {
-			pc.Rail.Debug(w.Header())
+		rproxy.ModifyResponse = func(r *http.Response) error {
+			pc.Rail.Debugf("Proxy response headers: %v, status: %v", r.Header, r.StatusCode)
+			return nil
 		}
 
-		// write data from proxied to client
-		w.WriteHeader(tr.StatusCode)
-		if tr.Resp.Body != nil {
-			if _, err = io.Copy(w, tr.Resp.Body); err != nil {
-				pc.Rail.Warnf("Failed to write proxy response, %v", err)
-			}
-		}
+		rproxy.ServeHTTP(w, r)
 	}
 	pi := newProxyFilters(pc, h.filters, handler)
 	pi.next()
