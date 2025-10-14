@@ -402,7 +402,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		constant.WithCacheDir(miso.GetPropStr(PropNacosCacheDir)),
 		constant.WithUsername(un),
 		constant.WithPassword(miso.GetPropStr(PropNacosServerPassword)),
-		constant.WithCustomLogger(&nacosLogger{rail: miso.EmptyRail().WithCtxVal(miso.XTraceId, "").WithCtxVal(miso.XSpanId, "").SetGetCallFnUpN(2)}),
+		constant.WithCustomLogger(&nacosLogger{rail: miso.EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}),
 	)
 
 	port := miso.GetPropInt(PropNacosServerPort)

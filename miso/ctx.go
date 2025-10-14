@@ -18,6 +18,10 @@ type Rail struct {
 	upN int
 }
 
+func (r Rail) ZeroTrace() Rail {
+	return r.WithCtxVal(XTraceId, "").WithCtxVal(XSpanId, "")
+}
+
 func (r Rail) SetGetCallFnUpN(upN int) Rail {
 	r.upN = upN
 	if r.upN < 0 {
@@ -301,7 +305,7 @@ func (r Rail) Println(args ...interface{}) {
 
 func (r Rail) WithCtxVal(key string, val any) Rail {
 	ctx := context.WithValue(r.ctx, key, val) //lint:ignore SA1029 keys must be exposed for user to use
-	return NewRail(ctx)
+	return Rail{ctx: ctx}
 }
 
 func (r Rail) NewTrace() Rail {
@@ -328,13 +332,13 @@ func (r Rail) NewCtx() Rail {
 // Create new Rail with context's CancelFunc
 func (r Rail) WithCancel() (Rail, context.CancelFunc) {
 	cc, cancel := context.WithCancel(r.ctx)
-	return NewRail(cc), cancel
+	return Rail{ctx: cc}, cancel
 }
 
 // Create new Rail with timeout and context's CancelFunc
 func (r Rail) WithTimeout(timeout time.Duration) (Rail, context.CancelFunc) {
 	cc, cancel := context.WithTimeout(r.ctx, timeout)
-	return NewRail(cc), cancel
+	return Rail{ctx: cc}, cancel
 }
 
 // Create empty Rail.

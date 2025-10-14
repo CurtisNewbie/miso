@@ -30,7 +30,7 @@ var (
 )
 
 var (
-	zRail  = EmptyRail().WithCtxVal(XTraceId, "").WithCtxVal(XSpanId, "")
+	zRail  = EmptyRail().ZeroTrace()
 	Infof  = zRail.Infof
 	Tracef = zRail.Tracef
 	Debugf = zRail.Debugf
