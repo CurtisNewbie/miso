@@ -30,6 +30,21 @@ var (
 )
 
 var (
+	zRail  = EmptyRail().WithCtxVal(XTraceId, "").WithCtxVal(XSpanId, "")
+	Infof  = zRail.Infof
+	Tracef = zRail.Tracef
+	Debugf = zRail.Debugf
+	Warnf  = zRail.Warnf
+	Errorf = zRail.Errorf
+	Fatalf = zRail.Fatalf
+	Debug  = zRail.Debug
+	Info   = zRail.Info
+	Warn   = zRail.Warn
+	Error  = zRail.Error
+	Fatal  = zRail.Fatal
+)
+
+var (
 	logBufPool = util.NewByteBufferPool(128)
 )
 
@@ -228,97 +243,6 @@ func ParseLogLevel(logLevel string) (logrus.Level, bool) {
 		return logrus.PanicLevel, true
 	}
 	return logrus.InfoLevel, false
-}
-
-func Tracef(format string, args ...interface{}) {
-	logger.WithField(callerField, getCallerFn()).Tracef(format, args...)
-}
-
-func Debugf(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.DebugLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Debugf(format, args...)
-}
-
-func Infof(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.InfoLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Infof(format, args...)
-}
-
-func Warnf(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.WarnLevel) {
-		return
-	}
-	format = appendErrStack(true, format, args...)
-	logger.WithField(callerField, getCallerFn()).Warn(format)
-}
-
-func Errorf(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
-		return
-	}
-
-	format = appendErrStack(true, format, args...)
-	logger.WithField(callerField, getCallerFn()).Error(format)
-}
-
-func Fatalf(format string, args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.FatalLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Fatalf(format, args...)
-}
-
-func Debug(args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.DebugLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Debug(args...)
-}
-
-func Info(args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.InfoLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Info(args...)
-}
-
-func Warn(args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.WarnLevel) {
-		return
-	}
-	if len(args) == 1 {
-		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(false, v.Error(), v)
-			logger.WithField(callerField, getCallerFn()).Warn(msgWithStack)
-			return
-		}
-	}
-	logger.WithField(callerField, getCallerFn()).Warn(args...)
-}
-
-func Error(args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.ErrorLevel) {
-		return
-	}
-	if len(args) == 1 {
-		if v, ok := args[0].(*MisoErr); ok && v != nil {
-			msgWithStack := appendErrStack(false, v.Error(), v)
-			logger.WithField(callerField, getCallerFn()).Error(msgWithStack)
-			return
-		}
-	}
-	logger.WithField(callerField, getCallerFn()).Error(args...)
-}
-
-func Fatal(args ...interface{}) {
-	if !logger.IsLevelEnabled(logrus.FatalLevel) {
-		return
-	}
-	logger.WithField(callerField, getCallerFn()).Fatal(args...)
 }
 
 func SetLogLevel(level string) {
