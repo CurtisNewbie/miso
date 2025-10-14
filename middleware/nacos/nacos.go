@@ -520,34 +520,37 @@ type NacosServerList struct {
 }
 
 func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server {
-	s.wsmu.RLock()
-	if !s.watchedServices.Has(name) {
-		s.wsmu.RUnlock()
-
-		s.wsmu.Lock()
-		if s.watchedServices.Add(name) {
-			err := s.client.Subscribe(&vo.SubscribeParam{
-				ServiceName: name,
-				SubscribeCallback: func(services []model.SubscribeService, err error) {
-					rail.Infof("Service '%v' instances changed: %#v", name, services)
-				},
-			})
-			if err != nil {
-				rail.Errorf("Failed to subscribe service '%v', %v", name, err)
-				s.watchedServices.Del(name)
-			}
-		}
-		s.wsmu.Unlock()
-	} else {
-		s.wsmu.RUnlock()
-	}
-
 	inst, err := s.client.SelectAllInstances(vo.SelectAllInstancesParam{ServiceName: name})
 	if err != nil {
 		rail.Errorf("Failed to select instances for %v, %v", name, err)
 		return nil
 	}
 	rail.Debugf("ListServers: %v, instances: %#v", name, inst)
+
+	// make sure the service exists first and then we subscribe
+	if len(inst) > 0 {
+		s.wsmu.RLock()
+		if !s.watchedServices.Has(name) {
+			s.wsmu.RUnlock()
+
+			s.wsmu.Lock()
+			if s.watchedServices.Add(name) {
+				err := s.client.Subscribe(&vo.SubscribeParam{
+					ServiceName: name,
+					SubscribeCallback: func(services []model.SubscribeService, err error) {
+						rail.Infof("Service '%v' instances changed: %#v", name, services)
+					},
+				})
+				if err != nil {
+					rail.Errorf("Failed to subscribe service '%v', %v", name, err)
+					s.watchedServices.Del(name)
+				}
+			}
+			s.wsmu.Unlock()
+		} else {
+			s.wsmu.RUnlock()
+		}
+	}
 
 	return slutil.UpdateTransform(inst,
 		slutil.MapFunc(func(v model.Instance) miso.Server {
