@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"go/format"
@@ -10,7 +9,6 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -27,9 +25,9 @@ import (
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/goast"
 	"github.com/dave/dst/decorator/resolver/gopackages"
 	"github.com/dave/dst/dstutil"
-	"golang.org/x/tools/go/packages"
 )
 
 const (
@@ -152,15 +150,6 @@ func parseFiles(files []FsFile) error {
 		return err
 	}
 
-	var mainFiles []string
-
-	for _, f := range dstFiles {
-		cli.DebugPrintlnf(*Debug, "Found %v", f.Path)
-		if path.Base(f.Path) == "main.go" {
-			mainFiles = append(mainFiles, f.Path)
-		}
-	}
-
 	modName := ""
 	{
 		out, err := cli.Run(nil, "go", []string{"list", "-m"})
@@ -216,28 +205,31 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
-	var outPkgs []string
+	genPkgs := hash.NewSet[string]()
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
 		for _, ad := range v.Apis {
 			cli.DebugPrintlnf(*Debug, "%v (%v) => %#v", dir, v.Pkg, ad)
 		}
+
 		// check if package is imported in main
-		{
-			out, err := cli.Run(nil, "grep", []string{"-r", v.PkgPath, "--include", "*.go"})
-			if err != nil {
-				var extErr *exec.ExitError
-				if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
-					cli.Printlnf(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
+		/*
+			{
+				out, err := cli.Run(nil, "grep", []string{"-r", v.PkgPath, "--include", "*.go"})
+				if err != nil {
+					var extErr *exec.ExitError
+					if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
+						cli.Printlnf(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
+					} else {
+						cli.ErrorPrintlnf("check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
+					}
 				} else {
-					cli.ErrorPrintlnf("check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
-				}
-			} else {
-				if strings.TrimSpace(string(out)) == "" {
-					cli.Printlnf(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
+					if strings.TrimSpace(string(out)) == "" {
+						cli.Printlnf(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
+					}
 				}
 			}
-		}
+		*/
 
 		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
 		if err != nil {
@@ -275,12 +267,12 @@ ${code}
 			"code":        code,
 			"importStr":   importSb.String(),
 		})
-
-		outPkgs = append(outPkgs, v.PkgPath)
+		genPkgs.Add(v.PkgPath)
 
 		cli.DebugPrintlnf(*Debug, "%v (%v) => \n\n%v", dir, v.Pkg, out)
 		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
 
+		// if generated file already existed, check if the content is still the same
 		prev, err := os.ReadFile(outFile)
 		if err == nil {
 			prevs := util.UnsafeByt2Str(prev)
@@ -294,6 +286,7 @@ ${code}
 			}
 		}
 
+		// flush generated code
 		f, err := util.ReadWriteFile(outFile)
 		util.Must(err)
 		util.Must(f.Truncate(0))
@@ -303,10 +296,18 @@ ${code}
 		cli.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
 	}
 
-	cli.DebugPrintlnf(*Debug, "MainFiles: %v, OutPkgs: %v", mainFiles, outPkgs)
+	// add imports in main, make sure the misoapi_generated.go is imported
+	var mainFiles []string = slutil.Transform(dstFiles,
+		slutil.MapFunc(func(f DstFile) string {
+			return f.Path
+		}),
+		slutil.FilterFunc(func(p string) bool {
+			return path.Base(p) == "main.go"
+		}),
+	)
 	for _, m := range mainFiles {
-		if err := AddImportIfMissing(m, modName, outPkgs); err != nil {
-			miso.Errorf("AddImportIfMissing failed, %v", err)
+		if err := addBlankImports(m, "main", modName, genPkgs.CopyKeys()); err != nil {
+			miso.Errorf("Add imports in main.go failed, %v", err)
 			panic(err)
 		}
 	}
@@ -934,44 +935,21 @@ func parseRef(r string) (string, bool) {
 	return strings.TrimSpace(s[1]), true
 }
 
-func AddImportIfMissing(filePath string, modName string, importPath []string) error {
+func addBlankImports(filePath string, pkgName string, modName string, importPath []string) error {
 	dir := filepath.Dir(filePath)
 	cli.DebugPrintlnf(*Debug, "dir: %v, filePath: %v, modName: %v", dir, filePath, modName)
-	cfg := &packages.Config{
-		Mode: packages.LoadSyntax | packages.NeedImports,
-		Dir:  dir,
+
+	fset := token.NewFileSet()
+	dec := decorator.NewDecoratorWithImports(fset, pkgName, goast.New())
+
+	fc, err := util.ReadFileAll(filePath)
+	if err != nil {
+		return err
 	}
-	pkgs, err := packages.Load(cfg, dir)
+
+	f, err := dec.Parse(fc)
 	if err != nil {
 		return errs.WrapErr(err)
-	}
-	if len(pkgs) != 1 {
-		return nil // missing main
-	}
-	pkg := pkgs[0]
-
-	if len(pkg.Errors) > 0 {
-		for _, v := range pkg.Errors {
-			cli.ErrorPrintlnf("Parse pkg failed, %v", v)
-		}
-		return errs.NewErrf("parse packages failed")
-	}
-
-	dec := decorator.NewDecoratorFromPackage(pkg)
-
-	var f *dst.File
-	for _, sf := range pkg.Syntax {
-		if _, name := filepath.Split(pkg.Fset.File(sf.Pos()).Name()); name == "main.go" {
-			var err error
-			f, err = dec.DecorateFile(sf)
-			if err != nil {
-				return err
-			}
-			break
-		}
-	}
-	if f == nil {
-		return nil
 	}
 
 	var importDecl *dst.GenDecl
@@ -981,20 +959,32 @@ func AddImportIfMissing(filePath string, modName string, importPath []string) er
 			break
 		}
 	}
+
 	if importDecl == nil {
-		cli.DebugPrintlnf(*Debug, "ImportDecl not found")
-		return nil
+		importDecl = &dst.GenDecl{
+			Tok:   token.IMPORT,
+			Specs: []dst.Spec{},
+		}
+		newDecls := make([]dst.Decl, 0, len(f.Decls)+1)
+		newDecls = append(newDecls, importDecl)
+		newDecls = append(newDecls, f.Decls...)
+		f.Decls = newDecls
 	}
 
+	// filter already included imports
 	importPath = slutil.Filter(importPath, func(s string) bool {
 		for _, imp := range f.Imports {
-			if imp.Path.Value == fmt.Sprintf("%q", importPath) {
+			if imp.Path.Value == fmt.Sprintf("%q", s) {
 				return false
 			}
 		}
 		return true
 	})
+	if len(importPath) < 1 {
+		return nil
+	}
 
+	// insert import specs
 	for _, imp := range importPath {
 		newImport := &dst.ImportSpec{
 			Name: &dst.Ident{
@@ -1008,6 +998,7 @@ func AddImportIfMissing(filePath string, modName string, importPath []string) er
 		importDecl.Specs = append(importDecl.Specs, newImport)
 	}
 
+	// restore to *ast.File
 	r := decorator.NewRestorerWithImports(modName, gopackages.New(dir))
 	fr := r.FileRestorer()
 	rstf, err := fr.RestoreFile(f)
@@ -1015,6 +1006,7 @@ func AddImportIfMissing(filePath string, modName string, importPath []string) er
 		return errs.WrapErr(err)
 	}
 
+	// write file
 	buf := &bytes.Buffer{}
 	if err := format.Node(buf, fr.Fset, rstf); err != nil {
 		return errs.WrapErr(err)
@@ -1024,6 +1016,6 @@ func AddImportIfMissing(filePath string, modName string, importPath []string) er
 		return errs.WrapErr(err)
 	}
 
-	cli.DebugPrintlnf(*Debug, "Added import %q to %s\n", importPath, filePath)
+	cli.Printlnf("Added import %q to %s\n", importPath, filePath)
 	return nil
 }

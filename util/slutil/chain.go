@@ -17,9 +17,9 @@ func Update[T any](sl []T, fs ...func([]T) []T) []T {
 // Transform value to another type then perform optional value updates.
 //
 // See [FilterFunc], [MapFunc], [FilterEmptyStrFunc], [DistinctFunc].
-func Transform[T any, V any](sl []T, f func([]T) []V, fs ...func([]V) []V) []V {
-	v := f(sl)
-	for _, f := range fs {
+func Transform[T any, V any](sl []T, transform func([]T) []V, updates ...func([]V) []V) []V {
+	v := transform(sl)
+	for _, f := range updates {
 		v = f(v)
 	}
 	return v
@@ -28,11 +28,11 @@ func Transform[T any, V any](sl []T, f func([]T) []V, fs ...func([]V) []V) []V {
 // Update slice values then transform value to another type.
 //
 // See [FilterFunc], [MapFunc], [FilterEmptyStrFunc], [DistinctFunc].
-func UpdateTransform[T any, V any](sl []T, f func([]T) []V, fs ...func([]T) []T) []V {
-	for _, f := range fs {
+func UpdateTransform[T any, V any](sl []T, transform func([]T) []V, updates ...func([]T) []T) []V {
+	for _, f := range updates {
 		sl = f(sl)
 	}
-	v := f(sl)
+	v := transform(sl)
 	return v
 }
 
