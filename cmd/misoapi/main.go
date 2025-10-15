@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
+	"go/format"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -18,11 +22,14 @@ import (
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/gopackages"
 	"github.com/dave/dst/dstutil"
+	"golang.org/x/tools/go/packages"
 )
 
 const (
@@ -145,8 +152,13 @@ func parseFiles(files []FsFile) error {
 		return err
 	}
 
+	var mainFiles []string
+
 	for _, f := range dstFiles {
 		cli.DebugPrintlnf(*Debug, "Found %v", f.Path)
+		if path.Base(f.Path) == "main.go" {
+			mainFiles = append(mainFiles, f.Path)
+		}
 	}
 
 	modName := ""
@@ -204,6 +216,7 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
+	var outPkgs []string
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
 		for _, ad := range v.Apis {
@@ -263,6 +276,8 @@ ${code}
 			"importStr":   importSb.String(),
 		})
 
+		outPkgs = append(outPkgs, v.PkgPath)
+
 		cli.DebugPrintlnf(*Debug, "%v (%v) => \n\n%v", dir, v.Pkg, out)
 		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
 
@@ -286,6 +301,14 @@ ${code}
 		util.Must(err)
 		f.Close()
 		cli.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
+	}
+
+	cli.DebugPrintlnf(*Debug, "MainFiles: %v, OutPkgs: %v", mainFiles, outPkgs)
+	for _, m := range mainFiles {
+		if err := AddImportIfMissing(m, modName, outPkgs); err != nil {
+			miso.Errorf("AddImportIfMissing failed, %v", err)
+			panic(err)
+		}
 	}
 
 	return nil
@@ -909,4 +932,98 @@ func parseRef(r string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(s[1]), true
+}
+
+func AddImportIfMissing(filePath string, modName string, importPath []string) error {
+	dir := filepath.Dir(filePath)
+	cli.DebugPrintlnf(*Debug, "dir: %v, filePath: %v, modName: %v", dir, filePath, modName)
+	cfg := &packages.Config{
+		Mode: packages.LoadSyntax | packages.NeedImports,
+		Dir:  dir,
+	}
+	pkgs, err := packages.Load(cfg, dir)
+	if err != nil {
+		return errs.WrapErr(err)
+	}
+	if len(pkgs) != 1 {
+		return nil // missing main
+	}
+	pkg := pkgs[0]
+
+	if len(pkg.Errors) > 0 {
+		for _, v := range pkg.Errors {
+			cli.ErrorPrintlnf("Parse pkg failed, %v", v)
+		}
+		return errs.NewErrf("parse packages failed")
+	}
+
+	dec := decorator.NewDecoratorFromPackage(pkg)
+
+	var f *dst.File
+	for _, sf := range pkg.Syntax {
+		if _, name := filepath.Split(pkg.Fset.File(sf.Pos()).Name()); name == "main.go" {
+			var err error
+			f, err = dec.DecorateFile(sf)
+			if err != nil {
+				return err
+			}
+			break
+		}
+	}
+	if f == nil {
+		return nil
+	}
+
+	var importDecl *dst.GenDecl
+	for _, decl := range f.Decls {
+		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
+			importDecl = genDecl
+			break
+		}
+	}
+	if importDecl == nil {
+		cli.DebugPrintlnf(*Debug, "ImportDecl not found")
+		return nil
+	}
+
+	importPath = slutil.Filter(importPath, func(s string) bool {
+		for _, imp := range f.Imports {
+			if imp.Path.Value == fmt.Sprintf("%q", importPath) {
+				return false
+			}
+		}
+		return true
+	})
+
+	for _, imp := range importPath {
+		newImport := &dst.ImportSpec{
+			Name: &dst.Ident{
+				Name: "_",
+			},
+			Path: &dst.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", imp),
+			},
+		}
+		importDecl.Specs = append(importDecl.Specs, newImport)
+	}
+
+	r := decorator.NewRestorerWithImports(modName, gopackages.New(dir))
+	fr := r.FileRestorer()
+	rstf, err := fr.RestoreFile(f)
+	if err != nil {
+		return errs.WrapErr(err)
+	}
+
+	buf := &bytes.Buffer{}
+	if err := format.Node(buf, fr.Fset, rstf); err != nil {
+		return errs.WrapErr(err)
+	}
+
+	if err := os.WriteFile(filePath, buf.Bytes(), 0644); err != nil {
+		return errs.WrapErr(err)
+	}
+
+	cli.DebugPrintlnf(*Debug, "Added import %q to %s\n", importPath, filePath)
+	return nil
 }
