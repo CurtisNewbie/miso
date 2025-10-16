@@ -24,18 +24,15 @@ type gormLogger struct {
 
 func (l *gormLogger) UpdateConfig(config lg.Config) {
 	var (
-		infoStr      = "[info] "
-		warnStr      = "[warn] "
-		errStr       = "[error] "
+		infoStr      = ""
+		warnStr      = ""
+		errStr       = ""
 		traceStr     = "[%.3fms] [rows:%v] %s"
 		traceWarnStr = "%s [%.3fms] [rows:%v] %s"
 		traceErrStr  = "[%.3fms] [rows:%v] %s\n\t%v"
 	)
 
 	if config.Colorful {
-		infoStr = lg.Green + "[info] " + lg.Reset
-		warnStr = lg.Magenta + "[warn] " + lg.Reset
-		errStr = lg.Red + "[error] " + lg.Reset
 		traceStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s" + lg.Reset
 		traceWarnStr = lg.Yellow + "%s " + lg.RedBold + "[%.3fms] " + lg.Yellow + "[rows:%v]" + lg.Magenta + " %s" + lg.Reset
 		traceErrStr = lg.Yellow + "[%.3fms] " + lg.BlueBold + "[rows:%v]" + lg.Reset + " %s\n\t" + lg.RedBold + "%s" + lg.Reset
@@ -66,14 +63,14 @@ func (l gormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
 // Warn print warn messages
 func (l gormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= lg.Warn {
-		miso.NewRail(ctx).Warnf(l.infoStr+msg, data...)
+		miso.NewRail(ctx).Warnf(l.warnStr+msg, data...)
 	}
 }
 
 // Error print error messages
 func (l gormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= lg.Error {
-		miso.NewRail(ctx).Errorf(l.infoStr+msg, data...)
+		miso.NewRail(ctx).Errorf(l.errStr+msg, data...)
 	}
 }
 
