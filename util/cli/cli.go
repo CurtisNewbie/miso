@@ -28,6 +28,10 @@ func TermOpenUrl(url string) error {
 	return exec.Command(cmd, args...).Start()
 }
 
+func Printf(pat string, args ...any) {
+	fmt.Printf(pat, args...)
+}
+
 func Printlnf(pat string, args ...any) {
 	fmt.Printf(pat+"\n", args...)
 }

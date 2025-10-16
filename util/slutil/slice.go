@@ -189,6 +189,25 @@ func SliceRemove[T any](v []T, idx ...int) []T {
 	return cp
 }
 
+func Prepend[T any](v []T, ts ...T) []T {
+	if len(ts) == 0 {
+		return v
+	}
+
+	total := len(v) + len(ts)
+	if cap(v) >= total {
+		v = v[:total]
+		copy(v[len(ts):], v)
+		copy(v, ts)
+		return v
+	}
+
+	cp := make([]T, total)
+	copy(cp, ts)
+	copy(cp[len(ts):], v)
+	return cp
+}
+
 func QuoteStrSlice(sl []string) []string {
 	return MapTo(sl, func(s string) string { return "\"" + s + "\"" })
 }

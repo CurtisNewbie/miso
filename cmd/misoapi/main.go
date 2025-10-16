@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"go/format"
@@ -9,6 +10,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -118,6 +120,12 @@ func main() {
 		cli.Printlnf("  misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only")
 		cli.Printlnf("  misoapi-ignore                                                      // ignored by misoapi")
 		cli.Printlnf("")
+		cli.Printlnf("Important:\n")
+		cli.Printlnf(strutil.Spaces(2) + "By default, misoapi looks for `func PrepareWebServer(rail miso.Rail) error` in file './internal/web/web.go'.")
+		cli.Printlnf(strutil.Spaces(2) + "If file is not found, APIs are registered in init() func, however it's not recommended as it's implicit.")
+		cli.Printlnf(strutil.Spaces(2) + "If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should")
+		cli.Printlnf(strutil.Spaces(2) + "makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)")
+		cli.Printlnf("")
 	}
 	flag.Parse()
 
@@ -150,13 +158,9 @@ func parseFiles(files []FsFile) error {
 		return err
 	}
 
-	modName := ""
-	{
-		out, err := cli.Run(nil, "go", []string{"list", "-m"})
-		if err != nil {
-			panic(fmt.Errorf("%s, %v", out, err))
-		}
-		modName = strings.TrimSpace(string(out))
+	modName, err := guessModName()
+	if err != nil {
+		return err
 	}
 
 	pathApiDecls := make(map[string]GroupedApiDecl)
@@ -205,31 +209,28 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
-	genPkgs := hash.NewSet[string]()
+	regApiDstFiles := slutil.Transform(dstFiles,
+		slutil.MapFunc(func(f DstFile) string { return f.Path }),
+		slutil.FilterFunc(func(p string) bool {
+			// internal/web/web.go
+			dir := path.Dir(p)
+			return path.Base(dir) == "web" && path.Base(path.Dir(dir)) == "internal" && strutil.EqualAnyStr(path.Base(p), "web.go")
+		}),
+	)
+
+	// if internal/web/web.go is found, we call the registere func explicitly, if not, we register in init()
+	doInsertRegisterApiFunc := len(regApiDstFiles) > 0
+	misoapiFnName := "init"
+	if doInsertRegisterApiFunc {
+		misoapiFnName = "RegisterApi"
+	}
+
+	genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
 	baseIndent := 1
 	for dir, v := range pathApiDecls {
 		for _, ad := range v.Apis {
 			cli.DebugPrintlnf(*Debug, "%v (%v) => %#v", dir, v.Pkg, ad)
 		}
-
-		// check if package is imported in main
-		/*
-			{
-				out, err := cli.Run(nil, "grep", []string{"-r", v.PkgPath, "--include", "*.go"})
-				if err != nil {
-					var extErr *exec.ExitError
-					if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
-						cli.Printlnf(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
-					} else {
-						cli.ErrorPrintlnf("check package import failed, pkg: %v, out: %s, %v", v.PkgPath, out, err)
-					}
-				} else {
-					if strings.TrimSpace(string(out)) == "" {
-						cli.Printlnf(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, v.PkgPath)
-					}
-				}
-			}
-		*/
 
 		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
 		if err != nil {
@@ -257,15 +258,16 @@ import (
 ${importStr}
 )
 
-func init() {
+func ${misoapiFnName}() {
 ${code}
 }
 `, map[string]any{
-			"misoVersion": version.Version,
-			"nowTimeStr":  util.Now().FormatClassicLocale(),
-			"package":     v.Pkg,
-			"code":        code,
-			"importStr":   importSb.String(),
+			"misoapiFnName": misoapiFnName,
+			"misoVersion":   version.Version,
+			"nowTimeStr":    util.Now().FormatClassicLocale(),
+			"package":       v.Pkg,
+			"code":          code,
+			"importStr":     importSb.String(),
 		})
 		genPkgs.Add(v.PkgPath)
 
@@ -296,19 +298,12 @@ ${code}
 		cli.Printlnf("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
 	}
 
-	// add imports in main, make sure the misoapi_generated.go is imported
-	var mainFiles []string = slutil.Transform(dstFiles,
-		slutil.MapFunc(func(f DstFile) string {
-			return f.Path
-		}),
-		slutil.FilterFunc(func(p string) bool {
-			return path.Base(p) == "main.go"
-		}),
-	)
-	for _, m := range mainFiles {
-		if err := addBlankImports(m, "main", modName, genPkgs.CopyKeys()); err != nil {
-			miso.Errorf("Add imports in main.go failed, %v", err)
-			panic(err)
+	// insert func calls to register apis
+	if doInsertRegisterApiFunc {
+		sort.SliceStable(regApiDstFiles, func(i, j int) bool { return regApiDstFiles[i] < regApiDstFiles[j] })
+		if err := insertMisoApiRegisterFunc(regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
+			miso.Errorf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
+			return err
 		}
 	}
 
@@ -935,6 +930,23 @@ func parseRef(r string) (string, bool) {
 	return strings.TrimSpace(s[1]), true
 }
 
+// Add _ imports
+//
+// e.g.,
+//
+//	var restDstFiles []string = slutil.Transform(dstFiles,
+//			slutil.MapFunc(func(f DstFile) string { return f.Path }),
+//			slutil.FilterFunc(func(p string) bool {
+//				return path.Base(p) == "main.go"
+//			}),
+//		)
+//
+//	for _, m := range restDstFiles {
+//			if err := addBlankImports(m, "web", modName, genPkgs.CopyKeys()); err != nil {
+//				miso.Errorf("Add imports in main.go failed, %v", err)
+//				panic(err)
+//			}
+//	}
 func addBlankImports(filePath string, pkgName string, modName string, importPath []string) error {
 	dir := filepath.Dir(filePath)
 	cli.DebugPrintlnf(*Debug, "dir: %v, filePath: %v, modName: %v", dir, filePath, modName)
@@ -1018,4 +1030,236 @@ func addBlankImports(filePath string, pkgName string, modName string, importPath
 
 	cli.Printlnf("Added import %q to %s\n", importPath, filePath)
 	return nil
+}
+
+func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, importPath []string) error {
+	if len(importPath) < 1 {
+		return nil
+	}
+
+	dir := filepath.Dir(filePath)
+	cli.DebugPrintlnf(*Debug, "insertMisoApiRegisterFunc dir: %v, filePath: %v, modName: %v, importPath: %+v", dir, filePath, modName, importPath)
+
+	f, err := parseDstFile(filePath, pkgName)
+	if err != nil {
+		return err
+	}
+
+	// filter already included imports
+	var importDecl *dst.GenDecl
+	for _, decl := range f.Decls {
+		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
+			importDecl = genDecl
+			break
+		}
+	}
+
+	if importDecl == nil {
+		importDecl = &dst.GenDecl{
+			Tok:   token.IMPORT,
+			Specs: []dst.Spec{},
+		}
+		newDecls := make([]dst.Decl, 0, len(f.Decls)+1)
+		newDecls = append(newDecls, importDecl)
+		newDecls = append(newDecls, f.Decls...)
+		f.Decls = newDecls
+	}
+
+	// insert import specs
+	for _, imp := range slutil.Filter(append(importPath, importMiso), func(s string) bool {
+		for _, imp := range f.Imports {
+			if imp.Path.Value == fmt.Sprintf("%q", s) {
+				return false
+			}
+		}
+		return true
+	}) {
+		newImport := &dst.ImportSpec{
+			Path: &dst.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", imp),
+			},
+		}
+		importDecl.Specs = append(importDecl.Specs, newImport)
+	}
+
+	var targetFuncName = "PrepareWebServer"
+	var fdecl *dst.FuncDecl
+	for _, decl := range f.Decls {
+		funcDecl, ok := decl.(*dst.FuncDecl)
+		if !ok {
+			continue
+		}
+		if funcDecl.Name.Name != targetFuncName {
+			continue
+		}
+		if funcDecl.Recv != nil { // not function
+			continue
+		}
+		fdecl = funcDecl
+		break
+	}
+
+	if fdecl == nil {
+		cli.Printlnf("Func %v(..) missing in %v, writing new func declaration", filePath, targetFuncName)
+		fdecl = &dst.FuncDecl{
+			Name: &dst.Ident{
+				Name: targetFuncName,
+			},
+			Type: &dst.FuncType{
+				Params: &dst.FieldList{
+					List: []*dst.Field{
+						{
+							Names: []*dst.Ident{{
+								Name: "rail",
+							}},
+							Type: &dst.Ident{
+								Name: "Rail",
+								Path: importMiso,
+							},
+						},
+					},
+				},
+				Results: &dst.FieldList{
+					List: []*dst.Field{
+						{
+							Type: &dst.Ident{
+								Name: "error",
+							},
+						},
+					},
+				},
+			},
+			Body: &dst.BlockStmt{
+				List: []dst.Stmt{
+					&dst.ReturnStmt{
+						Results: []dst.Expr{
+							&dst.Ident{Name: "nil"},
+						},
+					},
+				},
+			},
+		}
+		fdecl.Decs.Before = dst.EmptyLine
+		fdecl.Decs.Start.Append("// Do not modify this if misoapi is used, misoapi may modify func body")
+		f.Decls = append(f.Decls, fdecl)
+	}
+
+	callFuncs := slutil.Transform(importPath,
+		slutil.MapFunc[string, Pair](func(imp string) Pair {
+			var p string
+			if !strings.HasSuffix(imp, path.Dir(filePath)) {
+				p = imp
+			}
+			return Pair{K: p, V: "RegisterApi"}
+		}),
+		slutil.FilterFunc[Pair](func(p Pair) bool {
+			for _, st := range fdecl.Body.List {
+				exprStmt, ok := st.(*dst.ExprStmt)
+				if !ok {
+					continue
+				}
+				callExpr, ok := exprStmt.X.(*dst.CallExpr)
+				if !ok {
+					continue
+				}
+				ident, ok := callExpr.Fun.(*dst.Ident)
+				if ok && ident.Name == p.V && ident.Path == p.K {
+					return false
+				}
+			}
+			return true
+		}))
+
+	if len(callFuncs) > 0 {
+
+		// Insert the new call at the beginning of the function body
+		// Create a new list with our call followed by existing statements
+		newBody := make([]dst.Stmt, 0, len(fdecl.Body.List)+len(callFuncs))
+		for _, cf := range callFuncs {
+			fun := &dst.Ident{Path: cf.K, Name: cf.V}
+			st := &dst.ExprStmt{X: &dst.CallExpr{Fun: fun}}
+			st.Decs.After = dst.NewLine
+			newBody = append(newBody, st)
+
+			pb := cf.K
+			if pb != "" {
+				pb = path.Base(pb) + "."
+			}
+			cli.Printlnf("Inserting %v%v() in %v.%v(..)", pb, cf.V, pkgName, targetFuncName)
+		}
+		newBody = append(newBody, fdecl.Body.List...)
+		fdecl.Body.List = newBody
+		cli.Printlnf("Inserted misoapi register func in %s", filePath)
+	}
+
+	if err := restoreDstFile(filePath, modName, f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func restoreDstFile(filePath string, modName string, f *dst.File) error {
+	// restore to *ast.File
+	r := decorator.NewRestorerWithImports(modName, gopackages.New(path.Dir(filePath)))
+	fr := r.FileRestorer()
+	rstf, err := fr.RestoreFile(f)
+	if err != nil {
+		return errs.WrapErr(err)
+	}
+
+	// write file
+	buf := &bytes.Buffer{}
+	if err := format.Node(buf, fr.Fset, rstf); err != nil {
+		return errs.WrapErr(err)
+	}
+
+	if err := os.WriteFile(filePath, buf.Bytes(), 0644); err != nil {
+		return errs.WrapErr(err)
+	}
+	return nil
+}
+
+// check if package is imported in main
+func checkImported(pkgPath string) {
+	out, err := cli.Run(nil, "grep", []string{"-r", pkgPath, "--include", "*.go"})
+	if err != nil {
+		var extErr *exec.ExitError
+		if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
+			cli.Printlnf(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, pkgPath)
+		} else {
+			cli.ErrorPrintlnf("check package import failed, pkg: %v, out: %s, %v", pkgPath, out, err)
+		}
+	} else {
+		if strings.TrimSpace(string(out)) == "" {
+			cli.Printlnf(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, pkgPath)
+		}
+	}
+}
+
+func guessModName() (string, error) {
+	modName := ""
+	out, err := cli.Run(nil, "go", []string{"list", "-m"})
+	if err != nil {
+		return "", errs.WrapErr(fmt.Errorf("%s, %v", out, err))
+	}
+	modName = strings.TrimSpace(string(out))
+	return modName, nil
+}
+
+func parseDstFile(fpath string, shortPkgName string) (*dst.File, error) {
+	fset := token.NewFileSet()
+	dec := decorator.NewDecoratorWithImports(fset, shortPkgName, goast.New())
+
+	fc, err := util.ReadFileAll(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := dec.Parse(fc)
+	if err != nil {
+		return nil, errs.WrapErr(err)
+	}
+	return f, nil
 }
