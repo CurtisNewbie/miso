@@ -302,7 +302,7 @@ ${code}
 	if doInsertRegisterApiFunc {
 		sort.SliceStable(regApiDstFiles, func(i, j int) bool { return regApiDstFiles[i] < regApiDstFiles[j] })
 		if err := insertMisoApiRegisterFunc(regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
-			miso.Errorf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
+			cli.ErrorPrintlnf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
 			return err
 		}
 	}
@@ -943,7 +943,7 @@ func parseRef(r string) (string, bool) {
 //
 //	for _, m := range restDstFiles {
 //			if err := addBlankImports(m, "web", modName, genPkgs.CopyKeys()); err != nil {
-//				miso.Errorf("Add imports in main.go failed, %v", err)
+//				cli.ErrorPrintlnf("Add imports in main.go failed, %v", err)
 //				panic(err)
 //			}
 //	}
