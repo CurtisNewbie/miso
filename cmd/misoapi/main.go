@@ -209,12 +209,11 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
+	webGoPath := "." + string(os.PathSeparator) + path.Join("internal", "web", "web.go")
 	regApiDstFiles := slutil.Transform(dstFiles,
 		slutil.MapFunc(func(f DstFile) string { return f.Path }),
 		slutil.FilterFunc(func(p string) bool {
-			// internal/web/web.go
-			dir := path.Dir(p)
-			return path.Base(dir) == "web" && path.Base(path.Dir(dir)) == "internal" && strutil.EqualAnyStr(path.Base(p), "web.go")
+			return webGoPath == p
 		}),
 	)
 
@@ -223,6 +222,8 @@ func parseFiles(files []FsFile) error {
 	misoapiFnName := "init"
 	if doInsertRegisterApiFunc {
 		misoapiFnName = "RegisterApi"
+	} else {
+		cli.Printlnf("File %v not found, register misoapi generated code in init()", webGoPath)
 	}
 
 	genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
@@ -1101,7 +1102,7 @@ func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, 
 	}
 
 	if fdecl == nil {
-		cli.Printlnf("Func %v(..) missing in %v, writing new func declaration", filePath, targetFuncName)
+		cli.Printlnf("Func %v(..) missing in %v, writing new func declaration", targetFuncName, filePath)
 		fdecl = &dst.FuncDecl{
 			Name: &dst.Ident{
 				Name: targetFuncName,
@@ -1186,7 +1187,7 @@ func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, 
 			if pb != "" {
 				pb = path.Base(pb) + "."
 			}
-			cli.Printlnf("Inserting %v%v() in %v.%v(..)", pb, cf.V, pkgName, targetFuncName)
+			cli.Printlnf("Inserting %v%v() call in %v.%v(..)", pb, cf.V, pkgName, targetFuncName)
 		}
 		newBody = append(newBody, fdecl.Body.List...)
 		fdecl.Body.List = newBody
