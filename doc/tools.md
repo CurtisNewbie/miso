@@ -66,6 +66,13 @@ $ misoapi -h
 #   misoapi-raw                                                         // raw endpoint without auto request/response json handling
 #   misoapi-json-resp-type: MyResp                                      // json response type (struct), for raw api only
 #   misoapi-ignore                                                      // ignored by misoapi
+#
+# Important:
+#
+#   By default, misoapi looks for `func PrepareWebServer(rail miso.Rail) error` in file './internal/web/web.go'.
+#   If file is not found, APIs are registered in init() func, however it's not recommended as it's implicit.
+#   If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should
+#   makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)
 ```
 
 ## `misocurl` - generate miso.TClient from curl
