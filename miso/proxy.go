@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -8,12 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 )
 
 var (
+	errPathNotFound                 = errs.NewErrf("Path not found")
 	defaultProxyClient *http.Client = newProxyClient()
 )
 
@@ -47,6 +50,8 @@ type HttpProxy struct {
 //	_ = miso.NewHttpProxy("/proxy", func(proxyPath string) (string, error) {
 //		return "http://localhost:8081" + proxyPath, nil
 //	})
+//
+// See [NewDynProxyTargetResolver].
 func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpProxy {
 	if targetResolver == nil {
 		panic("targetResolver cannot be nil")
@@ -256,4 +261,67 @@ func newProxyClient(opts ...func(*http.Transport)) *http.Client {
 		op(transport)
 	}
 	return c
+}
+
+// Resolve proxy target based on service discovery.
+func NewDynProxyTargetResolver() ProxyTargetResolver {
+	return func(rail Rail, proxyPath string) (string, error) {
+		// parse the request path, extract service name, and the relative url for the backend server
+		var sp ServicePath
+		var err error
+		if sp, err = parseServicePath(proxyPath); err != nil {
+			rail.Warnf("Invalid request, %v", err)
+			return "", GatewayError{StatusCode: 404}
+		}
+		rail.Debugf("Parsed service path: %#v", sp)
+		target, err := GetServiceRegistry().ResolveUrl(rail, sp.ServiceName, sp.Path)
+		if err != nil {
+			rail.Warnf("ServiceRegistry ResolveUrl failed, %v", err)
+			return "", GatewayError{StatusCode: 404}
+		}
+		return target, nil
+	}
+}
+
+type ServicePath struct {
+	ServiceName string
+	Path        string
+}
+
+func parseServicePath(url string) (ServicePath, error) {
+	rurl := []rune(url)[1:] // remove leading '/'
+
+	// root path, invalid request
+	if len(rurl) < 1 {
+		return ServicePath{}, errPathNotFound.New()
+	}
+
+	start := 0
+	for i := range rurl {
+		if rurl[i] == '/' && i > 0 {
+			start = i
+			break
+		}
+	}
+
+	if start < 1 {
+		return ServicePath{}, errPathNotFound.New()
+	}
+
+	return ServicePath{
+		ServiceName: string(rurl[0:start]),
+		Path:        string(rurl[start:]),
+	}, nil
+}
+
+type GatewayError struct {
+	StatusCode int
+}
+
+func (g GatewayError) Status() int {
+	return g.StatusCode
+}
+
+func (g GatewayError) Error() string {
+	return fmt.Sprintf("gateway error, %v", g.StatusCode)
 }
