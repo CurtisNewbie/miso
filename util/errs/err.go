@@ -232,7 +232,7 @@ func UnknownErr(err error) error {
 // If err is nil, nil is returned.
 //
 // If err is *MisoErr, err is returned directly.
-func WrapErr(err error) error {
+func Wrap(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -242,6 +242,17 @@ func WrapErr(err error) error {
 	me := &MisoErr{msg: "", internalMsg: "", err: err, code: ""}
 	me.withStack()
 	return me
+}
+
+// Wrap an error to create new *MisoErr with stacktrace.
+//
+// If err is nil, nil is returned.
+//
+// If err is *MisoErr, err is returned directly.
+//
+// Deprecated: since v0.3.5.
+func WrapErr(err error) error {
+	return Wrap(err)
 }
 
 // Wrap multi errors to create new *MisoErr with stacktrace.
@@ -277,7 +288,16 @@ func UnknownErrMsgf(msg string, args ...any) error {
 // Wrap an error to create new MisoErr with message.
 //
 // If the wrapped err is nil, nil is returned.
+//
+// Deprecated: since v0.3.5.
 func WrapErrf(err error, msg string, args ...any) error {
+	return Wrapf(err, msg, args...)
+}
+
+// Wrap an error to create new MisoErr with message.
+//
+// If the wrapped err is nil, nil is returned.
+func Wrapf(err error, msg string, args ...any) error {
 	if err == nil {
 		return nil
 	}

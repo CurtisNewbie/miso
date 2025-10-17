@@ -3,6 +3,8 @@ package llm
 import (
 	"regexp"
 	"strings"
+
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string {
@@ -18,12 +20,18 @@ func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string 
 }
 
 // Extract content in <tag>...</tag>.
-func WithTagExtracted(tag string, f func(original string, extracted string)) func(answer string) {
-	finalPat := regexp.MustCompile(`(?s)<` + tag + `>(.*)<\/` + tag + `>`)
-	halfPat := regexp.MustCompile(`(?s)<` + tag + `>(.*)`)
-	return func(answer string) {
-		f(answer, parseTag(finalPat, halfPat, answer))
+func TagExtractor(tag string) (func(answer string) (original string, extracted string), error) {
+	finalPat, err := regexp.Compile(`(?s)<` + tag + `>(.*)<\/` + tag + `>`)
+	if err != nil {
+		return nil, errs.Wrap(err)
 	}
+	halfPat, err := regexp.Compile(`(?s)<` + tag + `>(.*)`)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return func(answer string) (original string, extracted string) {
+		return answer, parseTag(finalPat, halfPat, answer)
+	}, nil
 }
 
 func NewMsgDelta() *MsgDelta {
