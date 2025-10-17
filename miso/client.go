@@ -646,7 +646,7 @@ func (t *Client) send(req *http.Request) *TResponse {
 	if IsDebugLevel() || t.logBody {
 		loggedBody := "***"
 		if req.Body != nil && req.GetBody != nil {
-			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && contentTypeLoggable(v[0]) {
+			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && ContentTypeLoggable(v[0]) {
 				if copy, err := req.GetBody(); err == nil && copy != nil {
 					if buf, e := io.ReadAll(copy); e == nil {
 						loggedBody = util.UnsafeByt2Str(buf)
@@ -692,7 +692,7 @@ func (t *Client) send(req *http.Request) *TResponse {
 	return tr
 }
 
-func contentTypeLoggable(contentType string) bool {
+func ContentTypeLoggable(contentType string) bool {
 	lct := strings.ToLower(contentType)
 	return strutil.ContainsAnyStr(lct, applicationJson, applicationXml, textPlain, textXml)
 }
