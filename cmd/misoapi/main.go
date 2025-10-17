@@ -223,7 +223,7 @@ func parseFiles(files []FsFile) error {
 	if doInsertRegisterApiFunc {
 		misoapiFnName = "RegisterApi"
 	} else {
-		cli.Printlnf("File %v not found, register misoapi generated code in init()", webGoPath)
+		cli.DebugPrintlnf(*Debug, "File %v not found, register misoapi generated code in init()", webGoPath)
 	}
 
 	genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
