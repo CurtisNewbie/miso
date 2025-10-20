@@ -16,6 +16,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/flags"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
@@ -49,16 +50,18 @@ const (
 var (
 	Debug = flag.Bool("debug", false, "Enable debug log")
 	Path  = flag.String("path", "", "Path to the generated markdown config table file")
+
+	log = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 )
 
 func main() {
-	flag.Usage = func() {
-		cli.Printlnf("\nmisoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
-		cli.Printlnf("  Supported miso version: %v\n", version.Version)
-		cli.Printlnf("Usage of %s:", os.Args[0])
-		flag.PrintDefaults()
-		cli.Printlnf("\nFor example:")
-		cli.Printlnf(`
+	flags.WithDescriptionBuilder(func(printlnf func(v string, args ...any)) {
+		printlnf("\nmisoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
+		printlnf("  Supported miso version: %v\n", version.Version)
+	})
+	flags.WithExtraBuilder(func(printlnf func(v string, args ...any)) {
+		printlnf("\nFor example:")
+		printlnf(`
 In prop.go:
 
   // misoconfig-section: Web Server Configuration
@@ -84,16 +87,16 @@ In ./doc/config.md:
   <!-- misoconfig-table-start -->
   <!-- misoconfig-table-end -->
 `)
-	}
-	flag.Parse()
+	})
+	flags.Parse()
 
 	files, err := walkDir(".", ".go")
 	if err != nil {
-		cli.Printlnf("[ERROR] walkDir failed, %v", err)
+		log.Errorf("walkDir failed, %v", err)
 		return
 	}
 	if err := parseFiles(files); err != nil {
-		cli.Printlnf("[ERROR] parseFiles failed, %v", err)
+		log.Errorf("parseFiles failed, %v", err)
 	}
 }
 
@@ -110,7 +113,7 @@ func parseFiles(files []FsFile) error {
 
 	if *Debug {
 		for _, f := range dstFiles {
-			cli.Printlnf("[DEBUG] Found %v", f.Path)
+			log.Debugf("Found %v", f.Path)
 		}
 	}
 
@@ -131,7 +134,7 @@ func parseFiles(files []FsFile) error {
 		)
 	}
 
-	cli.DebugPrintlnf(*Debug, "configs: %#v", configDecl)
+	log.Debugf("configs: %#v", configDecl)
 	flushConfigTable(configDecl)
 	return nil
 }
@@ -179,7 +182,7 @@ func parseMisoConfigTag(path string, start dst.Decorations) ([]MisoConfigTag, bo
 				pre := m[:pi]
 				m = m[pi+1:]
 				if *Debug {
-					cli.Printlnf("[DEBUG] parseMisoConfigTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
+					log.Debugf("parseMisoConfigTag() %v -> %v, command: %v, body: %v", path, s, pre, m)
 				}
 				pre = strings.TrimSpace(pre)
 				t = append(t, MisoConfigTag{
@@ -227,7 +230,7 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil {
-			cli.Printlnf("[ERROR] %v", err)
+			log.Errorf("%v", err)
 			continue
 		}
 		p := n + "/" + fi.Name()
@@ -320,7 +323,7 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 		if cd.Name == "" {
 			return section
 		}
-		cli.DebugPrintlnf(*Debug, "parseConfigDecl() %v: (%v) %v -> %#v", srcPath, section, constName, cd)
+		log.Debugf("%v: (%v) %v -> %#v", srcPath, section, constName, cd)
 		sec := section
 		if sec == "" {
 			sec = "General"
@@ -354,11 +357,11 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	// find file
 	f, err := findConfigTableFile()
 	if err != nil {
-		cli.Printlnf("Failed to find config table file, %v", err)
+		log.Infof("Failed to find config table file, %v", err)
 		return
 	}
 	if f == nil {
-		cli.Printlnf("Failed to find config table file")
+		log.Infof("Failed to find config table file")
 		return
 	}
 	defer f.Close()
@@ -429,9 +432,9 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	f.Seek(0, io.SeekStart)
 	f.Truncate(0)
 	if _, err := f.WriteString(out); err != nil {
-		cli.Printlnf("Failed to write config table file: %v, %v", f.Name(), err)
+		log.Infof("Failed to write config table file: %v, %v", f.Name(), err)
 	} else {
-		cli.Printlnf("Generated config table to %v", f.Name())
+		log.Infof("Generated config table to %v", f.Name())
 	}
 
 	// write default value in golang source code
@@ -448,7 +451,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 		path := src[0].Source
 		pkg := src[0].Package
-		cli.DebugPrintlnf(*Debug, "path: %v, pkg: %v", path, pkg)
+		log.Debugf("path: %v, pkg: %v", path, pkg)
 
 		f, err := util.ReadWriteFile(path)
 		if err != nil {
@@ -566,7 +569,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		if _, err := f.WriteString(content); err != nil {
 			panic(err)
 		}
-		cli.Printlnf("Generated default config code in %v", f.Name())
+		log.Infof("Generated default config code in %v", f.Name())
 	}
 }
 

@@ -101,7 +101,7 @@ var (
 
 var (
 	Debug = flag.Bool("debug", false, "Enable debug log")
-	log   = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(), cli.LogWithTime())
+	log   = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 )
 
 func main() {

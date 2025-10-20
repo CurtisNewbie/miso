@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
@@ -128,14 +129,16 @@ func NamedPrintlnf(pat string, p map[string]any) {
 }
 
 type cliLogger struct {
-	debug        *bool
-	timePrefix   bool
-	callerPrefix bool
+	debug          *bool
+	timePrefix     bool
+	timePrefixCond func(level string) bool
+	callerPrefix   bool
+	callerCond     func(level string) bool
 }
 
 func (l *cliLogger) Infof(pat string, args ...any) {
 	b := strings.Builder{}
-	l.applyExtra(&b)
+	l.applyExtra(&b, "INFO")
 	b.WriteString(fmt.Sprintf(pat+"\n", args...))
 	print(b.String())
 }
@@ -144,7 +147,7 @@ func (l *cliLogger) Debugf(pat string, args ...any) {
 	if *l.debug {
 		b := strings.Builder{}
 		b.WriteString("[DEBUG] ")
-		l.applyExtra(&b)
+		l.applyExtra(&b, "DEBUG")
 		b.WriteString(fmt.Sprintf(pat+"\n", args...))
 		print(b.String())
 	}
@@ -153,17 +156,17 @@ func (l *cliLogger) Debugf(pat string, args ...any) {
 func (l *cliLogger) Errorf(pat string, args ...any) {
 	b := strings.Builder{}
 	b.WriteString("[ERROR] ")
-	l.applyExtra(&b)
+	l.applyExtra(&b, "ERROR")
 	b.WriteString(fmt.Sprintf(pat+"\n", args...))
 	print(b.String())
 }
 
-func (l *cliLogger) applyExtra(b *strings.Builder) {
-	if l.timePrefix {
+func (l *cliLogger) applyExtra(b *strings.Builder, level string) {
+	if l.timePrefix && l.timePrefixCond(level) {
 		b.WriteString(time.Now().Format("2006-01-02 15:04:05.000"))
 		b.WriteRune(' ')
 	}
-	if l.callerPrefix {
+	if l.callerPrefix && l.callerCond(level) {
 		if l.timePrefix {
 			b.WriteRune(' ')
 		}
@@ -190,14 +193,24 @@ func LogWithDebug(debug *bool) func(*cliLogger) {
 	}
 }
 
-func LogWithTime() func(*cliLogger) {
+func LogWithTime(cond ...func(level string) bool) func(*cliLogger) {
 	return func(l *cliLogger) {
+		l.timePrefixCond = slutil.VarArgAny(cond, func() func(level string) bool {
+			return func(level string) bool {
+				return true
+			}
+		})
 		l.timePrefix = true
 	}
 }
 
-func LogWithCaller() func(*cliLogger) {
+func LogWithCaller(cond ...func(level string) bool) func(*cliLogger) {
 	return func(l *cliLogger) {
+		l.callerCond = slutil.VarArgAny(cond, func() func(level string) bool {
+			return func(level string) bool {
+				return true
+			}
+		})
 		l.callerPrefix = true
 	}
 }
