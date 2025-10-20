@@ -1,6 +1,8 @@
 package miso
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -85,6 +87,10 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	return p
 }
 
+func (h *HttpProxy) logErrWarn(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
 func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	_rail := inb.Rail()
 
@@ -123,7 +129,11 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		rproxy := &httputil.ReverseProxy{}
 		rproxy.Transport = h.client.Transport
 		rproxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			pc.Rail.Errorf("Failed to proxy request, %v", err)
+			if h.logErrWarn(err) {
+				pc.Rail.Warnf("Failed to proxy request, %v", err)
+			} else {
+				pc.Rail.Errorf("Failed to proxy request, %v", err)
+			}
 		}
 		rproxy.Rewrite = func(pr *httputil.ProxyRequest) {
 			targetUrl, _ := url.Parse(path)
