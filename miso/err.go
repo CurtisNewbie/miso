@@ -1,8 +1,6 @@
 package miso
 
-import (
-	"github.com/curtisnewbie/miso/util/errs"
-)
+import "github.com/curtisnewbie/miso/util/errs"
 
 var (
 	// Error that represents None or Nil.
@@ -34,11 +32,11 @@ var (
 	NewErrfCode     = errs.NewErrfCode
 	ErrfCode        = errs.NewErrfCode
 	UnknownErr      = errs.UnknownErr
-	WrapErr         = errs.WrapErr
+	WrapErr         = errs.Wrap
 	WrapErrMulti    = errs.WrapErrMulti
 	UnknownErrf     = errs.UnknownErrf
 	UnknownErrMsgf  = errs.UnknownErrMsgf
-	WrapErrf        = errs.WrapErrf
+	WrapErrf        = errs.Wrapf
 	WrapErrfCode    = errs.WrapErrfCode
 	UnwrapErrStack  = errs.UnwrapErrStack
 	ErrorStackTrace = errs.ErrorStackTrace

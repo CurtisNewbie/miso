@@ -49,7 +49,7 @@ func Run[T LuaRetTypes](script string, ops ...func(*glua.LState)) (T, error) {
 	}
 	if err := st.DoString(script); err != nil {
 		var t T
-		return t, errs.WrapErr(err)
+		return t, errs.Wrap(err)
 	}
 
 	var res glua.LValue
@@ -108,7 +108,7 @@ func RunReader[T LuaRetTypes](f io.Reader, ops ...func(*glua.LState)) (T, error)
 	byt, err := io.ReadAll(f)
 	if err != nil {
 		var t T
-		return t, errs.WrapErr(err)
+		return t, errs.Wrap(err)
 	}
 	return Run[T](string(byt), ops...)
 }
@@ -120,7 +120,7 @@ func RunFile[T LuaRetTypes](path string, ops ...func(*glua.LState)) (T, error) {
 	byt, err := os.ReadFile(path)
 	if err != nil {
 		var t T
-		return t, errs.WrapErr(err)
+		return t, errs.Wrap(err)
 	}
 	return Run[T](string(byt), ops...)
 }

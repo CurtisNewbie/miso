@@ -8,7 +8,7 @@ import (
 
 func Copy(from any, toPtr any) {
 	if err := copier.Copy(toPtr, from); err != nil {
-		utillog.ErrorLog("Failed to copy value, %v", errs.WrapErr(err))
+		utillog.ErrorLog("Failed to copy value, %v", errs.Wrap(err))
 	}
 }
 

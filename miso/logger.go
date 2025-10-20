@@ -3,12 +3,12 @@ package miso
 import (
 	"context"
 	"io"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	GetCallerFn    = getCallerFn
-	GetCallerFnUpN = getCallerFnUpN
+	GetCallerFn    = src.GetCallerFn
+	GetCallerFnUpN = src.GetCallerFnUpN
 )
 
 var (
@@ -251,130 +251,6 @@ func SetLogLevel(level string) {
 		return
 	}
 	logger.SetLevel(ll)
-}
-
-// reduce alloc, logger calls getCallerFn very frequently, we have to optimize it as much as possible.
-var callerUintptrPool = sync.Pool{
-	New: func() any {
-		p := make([]uintptr, 4)
-		return &p
-	},
-}
-
-func getCallerFn() string {
-	pcs := callerUintptrPool.Get().(*[]uintptr)
-	defer putCallerUintptrPool(pcs)
-
-	depth := runtime.Callers(3, *pcs)
-	frames := runtime.CallersFrames((*pcs)[:depth])
-
-	// we only need the first frame
-	for f, next := frames.Next(); next; {
-		return unsafeGetShortFnName(f.Function)
-	}
-	return ""
-}
-
-// type callerFileLine struct {
-// 	Func string
-// 	File string
-// 	Line int
-// }
-
-// func getCallerFileLine() callerFileLine {
-// 	pcs := callerUintptrPool.Get().(*[]uintptr)
-// 	defer putCallerUintptrPool(pcs)
-
-// 	depth := runtime.Callers(3, *pcs)
-// 	frames := runtime.CallersFrames((*pcs)[:depth])
-
-// 	// we only need the first frame
-// 	for f, next := frames.Next(); next; {
-// 		return callerFileLine{
-// 			Func: unsafeGetShortFnName(f.Function),
-// 			File: path.Base(f.File),
-// 			Line: f.Line,
-// 		}
-// 	}
-// 	return callerFileLine{}
-// }
-
-func getCallerFnUpN(n int) string {
-	pcs := callerUintptrPool.Get().(*[]uintptr)
-	defer putCallerUintptrPool(pcs)
-
-	depth := runtime.Callers(3+n, *pcs)
-	frames := runtime.CallersFrames((*pcs)[:depth])
-
-	// we only need the first frame
-	for f, next := frames.Next(); next; {
-		return unsafeGetShortFnName(f.Function)
-	}
-	return ""
-}
-
-func putCallerUintptrPool(pcs *[]uintptr) {
-	for i := range *pcs {
-		(*pcs)[i] = 0 // zero the values, just in case
-	}
-	callerUintptrPool.Put(pcs)
-}
-
-// func getCaller(level int) *runtime.Frame {
-// 	pcs := make([]uintptr, level+1) // we only need the first frame
-// 	depth := runtime.Callers(level, pcs)
-// 	frames := runtime.CallersFrames(pcs[:depth])
-
-// 	for f, next := frames.Next(); next; {
-// 		return &f //nolint:scopelint
-// 	}
-// 	return nil
-// }
-
-// func getShortFnName(fn string) string {
-// 	j := strings.LastIndex(fn, "/")
-// 	if j < 0 {
-// 		return fn
-// 	}
-// 	return string([]rune(fn)[j+1:])
-// }
-
-func unsafeGetShortFnName(fn string) string {
-	if fn == "" {
-		return fn
-	}
-
-	trimLengthyName := func(fnb []byte) string {
-		const maxDotCnt = 2
-		if len(fnb) > fnWidth {
-			dcnt := 0
-			for i := len(fnb) - 1; i >= 0; i-- {
-				ib := fnb[i]
-				if ib == '.' && (i-1 < 0 || fnb[i-1] != '.') {
-					dcnt += 1
-					if dcnt > maxDotCnt {
-						return util.UnsafeByt2Str(fnb[i+1:])
-					}
-				}
-			}
-		}
-		return util.UnsafeByt2Str(fnb)
-	}
-
-	fnb := util.UnsafeStr2Byt(fn)
-	for i := len(fnb) - 1; i >= 0; i-- {
-		ib := fnb[i]
-		switch ib {
-		case '/':
-			if i+1 < len(fnb) {
-				return trimLengthyName(fnb[i+1:])
-			}
-			return trimLengthyName(fnb[i:])
-		case '(':
-			return trimLengthyName(fnb[i:])
-		}
-	}
-	return fn
 }
 
 // Setup error log handler.

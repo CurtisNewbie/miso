@@ -13,7 +13,7 @@ type Expr[T any] struct {
 
 func (e *Expr[T]) Eval(env T) (any, error) {
 	r, err := expr.Run(e.p, env)
-	return r, errs.WrapErr(err)
+	return r, errs.Wrap(err)
 }
 
 // Compile Expr expression.
@@ -27,7 +27,7 @@ func Compile[T any](s string) (*Expr[T], error) {
 	var t T
 	program, err := expr.Compile(s, expr.Env(t))
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Expr[T]{
 		p: program,
@@ -44,7 +44,7 @@ func Compile[T any](s string) (*Expr[T], error) {
 func MustCompile[T any](s string) *Expr[T] {
 	x, err := Compile[T](s)
 	if err != nil {
-		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
+		panic(errs.Wrapf(err, "failed to compile expr: '%v", s))
 	}
 	return x
 }
@@ -57,7 +57,7 @@ func MustCompile[T any](s string) *Expr[T] {
 func CompileEnv[T any](s string, env T) (*Expr[T], error) {
 	program, err := expr.Compile(s, expr.Env(env))
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Expr[T]{
 		p: program,
@@ -72,7 +72,7 @@ func CompileEnv[T any](s string, env T) (*Expr[T], error) {
 func MustCompileEnv[T any](s string, env T) *Expr[T] {
 	x, err := CompileEnv[T](s, env)
 	if err != nil {
-		panic(errs.WrapErrf(err, "failed to compile expr: '%v", s))
+		panic(errs.Wrapf(err, "failed to compile expr: '%v", s))
 	}
 	return x
 }
@@ -82,7 +82,7 @@ func MustCompileEnv[T any](s string, env T) *Expr[T] {
 // See https://expr-lang.org/docs/language-definition.
 func Eval(s string, t any) (any, error) {
 	r, err := expr.Eval(s, t)
-	return r, errs.WrapErr(err)
+	return r, errs.Wrap(err)
 }
 
 type PooledExpr[T any] struct {

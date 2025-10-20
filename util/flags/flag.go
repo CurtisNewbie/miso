@@ -100,6 +100,22 @@ func visited() map[string]struct{} {
 	return m
 }
 
+func WithDescriptionBuilder(f func(printlnf func(v string, args ...any))) {
+	b := &strings.Builder{}
+	f(func(v string, args ...any) {
+		b.WriteString(fmt.Sprintf(v+"\n", args...))
+	})
+	WithDescription(b.String())
+}
+
+func WithExtraBuilder(f func(printlnf func(v string, args ...any))) {
+	b := &strings.Builder{}
+	f(func(v string, args ...any) {
+		b.WriteString(fmt.Sprintf(v+"\n", args...))
+	})
+	WithExtra(b.String())
+}
+
 func WithDescription(s string) {
 	description = s
 }

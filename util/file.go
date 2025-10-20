@@ -33,7 +33,7 @@ func FileExists(path string) (bool, error) {
 		return false, nil
 	}
 
-	return false, errs.WrapErr(e)
+	return false, errs.Wrap(e)
 }
 
 // Check if file exists without returning error.
@@ -51,12 +51,12 @@ func TryFileExists(path string) bool {
 func ReadFileAll(path string) ([]byte, error) {
 	f, err := ReadWriteFile(path)
 	if err != nil {
-		return nil, errs.WrapErrf(err, "failed to open file %v", path)
+		return nil, errs.Wrapf(err, "failed to open file %v", path)
 	}
 	defer f.Close()
 	buf, err := io.ReadAll(f)
 	if err != nil {
-		return nil, errs.WrapErrf(err, "failed to read from file %v", path)
+		return nil, errs.Wrapf(err, "failed to read from file %v", path)
 	}
 	return buf, nil
 }
@@ -64,7 +64,7 @@ func ReadFileAll(path string) ([]byte, error) {
 // Open file with 0666 permission.
 func OpenFile(name string, flag int) (*os.File, error) {
 	f, err := os.OpenFile(name, flag, DefFileMode)
-	return f, errs.WrapErr(err)
+	return f, errs.Wrap(err)
 }
 
 // Create appendable file with 0666 permission.
@@ -95,7 +95,7 @@ func OpenRWFile(name string, createIfAbsent bool) (*os.File, error) {
 
 // MkdirAll with 0755 perm.
 func MkdirAll(path string) error {
-	return errs.WrapErr(os.MkdirAll(path, 0755))
+	return errs.Wrap(os.MkdirAll(path, 0755))
 }
 
 // MkdirAll but only for the parent directory of the path, perm 0755 is used.
@@ -111,10 +111,10 @@ func MkdirParentAll(path string) error {
 func SaveTmpFile(tmpDir string, reader io.Reader) (string, error) {
 	f, err := os.CreateTemp(tmpDir, "temp_*")
 	if err != nil {
-		return "", errs.WrapErr(err)
+		return "", errs.Wrap(err)
 	}
 	if _, err := io.Copy(f, reader); err != nil {
-		return "", errs.WrapErr(err)
+		return "", errs.Wrap(err)
 	}
 	return f.Name(), nil
 }
@@ -183,7 +183,7 @@ func FileCutDotSuffix(name string) (s string, suffix string, ok bool) {
 func TempFilePath() (string, error) {
 	tmpFile, err := os.CreateTemp("/tmp", "temp_*")
 	if err != nil {
-		return "", errs.WrapErr(err)
+		return "", errs.Wrap(err)
 	}
 	defer tmpFile.Close()
 	return tmpFile.Name(), nil
@@ -192,7 +192,7 @@ func TempFilePath() (string, error) {
 func TempFile() (*os.File, error) {
 	tmpFile, err := os.CreateTemp("/tmp", "temp_*")
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	return tmpFile, nil
 }
@@ -200,7 +200,7 @@ func TempFile() (*os.File, error) {
 func TempFilePathSuffix(suffix string) (string, error) {
 	tmpFile, err := os.CreateTemp("/tmp", "temp_*."+suffix)
 	if err != nil {
-		return "", errs.WrapErr(err)
+		return "", errs.Wrap(err)
 	}
 	defer tmpFile.Close()
 	return tmpFile.Name(), nil
@@ -209,7 +209,7 @@ func TempFilePathSuffix(suffix string) (string, error) {
 func TempFileSuffix(suffix string) (*os.File, error) {
 	tmpFile, err := os.CreateTemp("/tmp", "temp_*."+suffix)
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	return tmpFile, nil
 }
@@ -222,13 +222,13 @@ type WalkFsFile struct {
 func WalkDir(n string, suffix ...string) ([]WalkFsFile, error) {
 	entries, err := os.ReadDir(n)
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	files := make([]WalkFsFile, 0, len(entries))
 	for _, et := range entries {
 		fi, err := et.Info()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return files, errs.WrapErr(err)
+			return files, errs.Wrap(err)
 		}
 		p := path.Join(n, fi.Name())
 		if et.IsDir() {

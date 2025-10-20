@@ -32,7 +32,7 @@ func (r *rateLimiter) Acquire() (bool, error) {
 		Period: r.period,
 	})
 	if err != nil {
-		return false, errs.WrapErr(err)
+		return false, errs.Wrap(err)
 	}
 	return res.Allowed > 0, nil
 }

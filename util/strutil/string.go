@@ -295,6 +295,9 @@ func FmtFloat(f float64, width int, precision int) string {
 	return fmt.Sprintf("%"+ws+"."+cast.ToString(ps)+"f", f)
 }
 
+// Pad spaces.
+//
+// if n > 0, pad left, else pad right.
 func PadSpace(n int, s string) string {
 	return PadToken(n, s, " ")
 }

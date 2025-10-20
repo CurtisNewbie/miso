@@ -101,7 +101,7 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 
 	cmd := rdb.Ping(rail.Context())
 	if cmd.Err() != nil {
-		return nil, errs.WrapErrf(cmd.Err(), "ping redis failed")
+		return nil, errs.Wrapf(cmd.Err(), "ping redis failed")
 	}
 
 	rail.Info("Redis connection initialized")
@@ -169,7 +169,7 @@ func InitRedis(rail miso.Rail, p RedisConnParam) (*redis.Client, error) {
 func redisBootstrap(rail miso.Rail) error {
 	m := module()
 	if _, e := m.initFromProp(rail); e != nil {
-		return errs.WrapErrf(e, "failed to establish connection to Redis")
+		return errs.Wrapf(e, "failed to establish connection to Redis")
 	}
 	m.addHealthIndicator()
 	redis.SetLogger(redisLogger{})
@@ -237,7 +237,7 @@ func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
 	if err != nil {
 		return err
 	}
-	return errs.WrapErr(GetRedis().Publish(rail.Context(), p.topic, ms).Err())
+	return errs.Wrap(GetRedis().Publish(rail.Context(), p.topic, ms).Err())
 }
 
 func NewTopic[T any](topic string) *rtopic[T] {

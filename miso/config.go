@@ -344,7 +344,7 @@ func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
 			// if viper.ReadConfig() failed, all configs are lost, we have to avoid that.
 			var tmp map[string]interface{}
 			if err := yaml.Unmarshal(util.UnsafeStr2Byt(c), &tmp); err != nil {
-				return errs.WrapErrf(err, "Failed reload nacos configs, invalid format")
+				return errs.Wrapf(err, "Failed reload nacos configs, invalid format")
 			}
 		}
 	}

@@ -74,7 +74,7 @@ func BootstrapConfigCenter(rail miso.Rail) error {
 
 	ok, err := module().initConfigCenter(rail)
 	if err != nil {
-		return errs.WrapErrf(err, "failed to initialize nacos module for config center")
+		return errs.Wrapf(err, "failed to initialize nacos module for config center")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
@@ -94,7 +94,7 @@ func BootstrapServiceDiscovery(rail miso.Rail) error {
 func bootServiceDiscovery(rail miso.Rail) error {
 	ok, err := module().initDiscovery(rail)
 	if err != nil {
-		return errs.WrapErrf(err, "failed to initialize nacos module for service discovery")
+		return errs.Wrapf(err, "failed to initialize nacos module for service discovery")
 	}
 	if !ok {
 		miso.Debug("nacos already initialized")
@@ -163,7 +163,7 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 		},
 	)
 	if err != nil {
-		return false, errs.WrapErrf(err, "failed to create nacos naming client")
+		return false, errs.Wrapf(err, "failed to create nacos naming client")
 	}
 	m.serverList.client = nc
 	rail.Infof("Created nacos naming client")
@@ -181,7 +181,7 @@ func (m *nacosModule) initDiscovery(rail miso.Rail) (bool, error) {
 	// register current instance
 	miso.OnAppReady(func(rail miso.Rail) error {
 		if err := registerNacosService(nc); err != nil {
-			return errs.WrapErrf(err, "failed to register on nacos")
+			return errs.Wrapf(err, "failed to register on nacos")
 		}
 		return nil
 	})
@@ -205,7 +205,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		}
 		contentByte, err := util.ReadFileAll(f)
 		if err != nil {
-			return false, errs.WrapErr(err)
+			return false, errs.Wrap(err)
 		}
 		content := strings.TrimSpace(string(contentByte))
 		if content != "" {
@@ -231,7 +231,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		},
 	)
 	if err != nil {
-		return false, errs.WrapErrf(err, "failed to create nacos config client")
+		return false, errs.Wrapf(err, "failed to create nacos config client")
 	}
 	m.configClient = cc
 
@@ -239,7 +239,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		p := vo.ConfigParam{DataId: w.DataId, Group: w.Group}
 		configStr, err := m.configClient.GetConfig(p)
 		if err != nil {
-			return "", errs.WrapErrf(err, "failed to fetch nacos config, param: %#v", p)
+			return "", errs.Wrapf(err, "failed to fetch nacos config, param: %#v", p)
 		}
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, desensitizeConfigContent(configStr))
@@ -615,7 +615,7 @@ func registerNacosService(nc naming_client.INamingClient) error {
 		Enable:      true,
 	})
 	if err != nil {
-		return errs.WrapErr(err)
+		return errs.Wrap(err)
 	}
 	if !ok {
 		return errs.NewErrf("Register nacos service failed")

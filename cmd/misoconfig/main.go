@@ -221,7 +221,7 @@ func parseFileAst(files []FsFile) ([]DstFile, error) {
 func walkDir(n string, suffix string) ([]FsFile, error) {
 	entries, err := os.ReadDir(n)
 	if err != nil {
-		return nil, errs.WrapErr(err)
+		return nil, errs.Wrap(err)
 	}
 	files := make([]FsFile, 0, len(entries))
 	for _, et := range entries {

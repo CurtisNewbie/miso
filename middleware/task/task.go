@@ -410,7 +410,7 @@ func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
 
 	ok, err := redis.SetNX(rail, m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
 	if err != nil {
-		rail.Errorf("Try to become master node %v", errs.WrapErr(err))
+		rail.Errorf("Try to become master node %v", errs.Wrap(err))
 		return false
 	}
 
@@ -438,7 +438,7 @@ func (m *taskModule) registerTasks(tasks []miso.Job) error {
 	}
 	for _, d := range tasks {
 		if err := miso.ScheduleCron(d); err != nil {
-			errs.WrapErrf(err, "failed to schedule cron job, %+v", d)
+			errs.Wrapf(err, "failed to schedule cron job, %+v", d)
 		}
 	}
 	return nil

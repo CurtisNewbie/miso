@@ -934,7 +934,7 @@ func (i *Inbound) MustBind(ptr any) {
 func (i *Inbound) ReadRawBytes() ([]byte, error) {
 	_, r := i.Unwrap()
 	by, err := io.ReadAll(r.Body)
-	return by, errs.WrapErr(err)
+	return by, errs.Wrap(err)
 }
 
 func (i *Inbound) WriteJson(v any) {
@@ -1415,7 +1415,7 @@ func HandleFlightRecorderRun(inb *Inbound) {
 	fr := flightRecorderOnce()
 	dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
 	if err != nil {
-		inb.HandleResult(nil, errs.WrapErrf(err, "Invalid duration expression"))
+		inb.HandleResult(nil, errs.Wrapf(err, "Invalid duration expression"))
 		return
 	}
 	if dur >= 30*time.Minute { // just in case

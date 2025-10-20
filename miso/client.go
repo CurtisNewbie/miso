@@ -213,7 +213,7 @@ func (tr *TResponse) Json(ptr any) error {
 
 	if e = json.ParseJson(body, ptr); e != nil {
 		s := util.UnsafeByt2Str(body)
-		return errs.WrapErrf(e, "failed to unmarshal json from response, body: %v", s)
+		return errs.Wrapf(e, "failed to unmarshal json from response, body: %v", s)
 	}
 
 	if v, ok := ptr.(TResponseJsonCheckErr); ok && v != nil {
@@ -511,17 +511,17 @@ func (t *Client) buildFormData(data map[string]io.Reader) (io.Reader, error) {
 			n := path.Base(f.Name())
 			iw, err = w.CreateFormFile(k, n)
 			if err != nil {
-				return nil, errs.WrapErrf(err, "failed to create form file")
+				return nil, errs.Wrapf(err, "failed to create form file")
 			}
 		} else {
 			iw, err = w.CreateFormField(k)
 			if err != nil {
-				return nil, errs.WrapErrf(err, "failed to create form field")
+				return nil, errs.Wrapf(err, "failed to create form field")
 			}
 		}
 
 		if _, err = io.Copy(iw, r); err != nil {
-			return nil, errs.WrapErrf(err, "failed to copy data to form field/file")
+			return nil, errs.Wrapf(err, "failed to copy data to form field/file")
 		}
 	}
 	w.Close()                                 // write boundary

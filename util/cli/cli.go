@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
 
@@ -124,4 +125,79 @@ func Run(rail CliRail, executable string, args []string, opts ...func(*exec.Cmd)
 
 func NamedPrintlnf(pat string, p map[string]any) {
 	println(strutil.NamedSprintf(pat, p))
+}
+
+type cliLogger struct {
+	debug        *bool
+	timePrefix   bool
+	callerPrefix bool
+}
+
+func (l *cliLogger) Infof(pat string, args ...any) {
+	b := strings.Builder{}
+	l.applyExtra(&b)
+	b.WriteString(fmt.Sprintf(pat+"\n", args...))
+	print(b.String())
+}
+
+func (l *cliLogger) Debugf(pat string, args ...any) {
+	if *l.debug {
+		b := strings.Builder{}
+		b.WriteString("[DEBUG] ")
+		l.applyExtra(&b)
+		b.WriteString(fmt.Sprintf(pat+"\n", args...))
+		print(b.String())
+	}
+}
+
+func (l *cliLogger) Errorf(pat string, args ...any) {
+	b := strings.Builder{}
+	b.WriteString("[ERROR] ")
+	l.applyExtra(&b)
+	b.WriteString(fmt.Sprintf(pat+"\n", args...))
+	print(b.String())
+}
+
+func (l *cliLogger) applyExtra(b *strings.Builder) {
+	if l.timePrefix {
+		b.WriteString(time.Now().Format("2006-01-02 15:04:05.000"))
+		b.WriteRune(' ')
+	}
+	if l.callerPrefix {
+		if l.timePrefix {
+			b.WriteRune(' ')
+		}
+		b.WriteString(strutil.PadSpace(-30, src.GetCallerFnUpN(1)))
+		b.WriteString(": ")
+	}
+}
+
+func NewLog(op ...func(l *cliLogger)) *cliLogger {
+	l := &cliLogger{}
+	for _, f := range op {
+		f(l)
+	}
+	if l.debug == nil {
+		var v bool = false
+		l.debug = &v
+	}
+	return l
+}
+
+func LogWithDebug(debug *bool) func(*cliLogger) {
+	return func(l *cliLogger) {
+		l.debug = debug
+	}
+}
+
+func LogWithTime() func(*cliLogger) {
+	return func(l *cliLogger) {
+		l.timePrefix = true
+	}
+}
+
+func LogWithCaller() func(*cliLogger) {
+	return func(l *cliLogger) {
+		l.callerPrefix = true
+	}
 }
