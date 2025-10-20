@@ -13,7 +13,7 @@ The overall target is to make it as small and simple as possible, backward compa
 Install a specific release of miso:
 
 ```
-go get github.com/curtisnewbie/miso@v0.3.4
+go get github.com/curtisnewbie/miso@v0.3.5
 ```
 
 Again, miso is an opinionated framework, it might not be suitable for mature codebase, but you are free to explore this framework in a new project.
