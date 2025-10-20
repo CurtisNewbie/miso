@@ -60,4 +60,4 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 - Since v0.3.0, a bunch of breaking changes are introduced, e.g., refactoring package structure, removing deprecated code and so on.
   Lots of methods and types are moved from `/util` pkg to pkgs such as `cli`, `csv`, `errs`, `expr`, `flags`, `hash`, `heap`, `pair`, `queue`, `rfutil`, `slutil`, `stack`, and `strutil`.
   Use [./patch/v0.3.0.patch](./patch/v0.3.0.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
-- Since v0.3.5, a few funcs in errs pkg are deprecated, Use [./patch/v0.3.0.patch](./patch/v0.3.0.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
+- Since v0.3.5, a few funcs in errs pkg are deprecated, Use [./patch/v0.3.5.patch](./patch/v0.3.5.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
