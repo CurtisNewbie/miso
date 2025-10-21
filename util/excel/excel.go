@@ -1,10 +1,7 @@
 package excel
 
 import (
-	"encoding/csv"
-
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
@@ -19,17 +16,6 @@ type ExcelSheet struct {
 
 func (e *ExcelSheet) Append(r []string) {
 	e.Records = append(e.Records, r)
-}
-
-// Write excel as csv.
-func (e *ExcelSheet) ToCSV(fpath string) error {
-	f, err := util.OpenRWFile(fpath, true)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	w := csv.NewWriter(f)
-	return w.WriteAll(e.Records)
 }
 
 // Present a merge cell in excel sheet.
