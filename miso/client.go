@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
 	"github.com/tmaxmax/go-sse"
@@ -126,7 +127,7 @@ func (tr *TResponse) WriteToFile(path string) (int64, error) {
 		return 0, NoneErr
 	}
 
-	f, err := util.OpenRWFile(path, true)
+	f, err := osutil.OpenRWFile(path, true)
 	if err != nil {
 		return 0, err
 	}

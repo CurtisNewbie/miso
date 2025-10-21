@@ -14,6 +14,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
@@ -264,7 +265,7 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 			continue
 		}
 
-		if ok, err := util.FileExists(f); err != nil || !ok {
+		if ok, err := osutil.FileExists(f); err != nil || !ok {
 			if err != nil {
 				Warnf("Failed to open extra config file, %v, %v", f, err)
 			}

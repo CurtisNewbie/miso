@@ -19,6 +19,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/curtisnewbie/miso/version"
@@ -493,7 +494,7 @@ func (a *MisoApp) configureLogging() error {
 		logFile := c.GetPropStr(PropLoggingRollingFile)
 
 		if logFile != "" && c.GetPropBool(PropLoggingRollingFileAppendIpSuffix) {
-			n, ok := util.FileCutSuffix(logFile, "log")
+			n, ok := osutil.FileCutSuffix(logFile, "log")
 			if ok {
 				logFile = n + "-" + util.GetLocalIPV4() + ".log"
 			}

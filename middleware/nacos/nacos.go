@@ -12,6 +12,7 @@ import (
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/nacos-group/nacos-sdk-go/clients"
@@ -203,7 +204,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		if f == "" {
 			continue
 		}
-		contentByte, err := util.ReadFileAll(f)
+		contentByte, err := osutil.ReadFileAll(f)
 		if err != nil {
 			return false, errs.Wrap(err)
 		}

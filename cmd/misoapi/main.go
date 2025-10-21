@@ -23,6 +23,7 @@ import (
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
@@ -292,7 +293,7 @@ ${code}
 		}
 
 		// flush generated code
-		f, err := util.ReadWriteFile(outFile)
+		f, err := osutil.OpenRWFile(outFile)
 		if err != nil {
 			return err
 		}
@@ -961,7 +962,7 @@ func addBlankImports(filePath string, pkgName string, modName string, importPath
 	fset := token.NewFileSet()
 	dec := decorator.NewDecoratorWithImports(fset, pkgName, goast.New())
 
-	fc, err := util.ReadFileAll(filePath)
+	fc, err := osutil.ReadFileAll(filePath)
 	if err != nil {
 		return err
 	}
@@ -1259,7 +1260,7 @@ func parseDstFile(fpath string, shortPkgName string) (*dst.File, error) {
 	fset := token.NewFileSet()
 	dec := decorator.NewDecoratorWithImports(fset, shortPkgName, goast.New())
 
-	fc, err := util.ReadFileAll(fpath)
+	fc, err := osutil.ReadFileAll(fpath)
 	if err != nil {
 		return nil, err
 	}

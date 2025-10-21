@@ -13,10 +13,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
@@ -453,7 +453,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		pkg := src[0].Package
 		log.Debugf("path: %v, pkg: %v", path, pkg)
 
-		f, err := util.ReadWriteFile(path)
+		f, err := osutil.OpenRWFile(path)
 		if err != nil {
 			panic(err)
 		}
@@ -575,10 +575,10 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 
 func findConfigTableFile() (*os.File, error) {
 	if *Path != "" {
-		return util.ReadWriteFile(*Path)
+		return osutil.OpenRWFile(*Path)
 	}
 
-	if err := util.MkdirAll("./doc"); err != nil {
+	if err := osutil.MkdirAll("./doc"); err != nil {
 		return nil, err
 	}
 
@@ -589,10 +589,10 @@ func findConfigTableFile() (*os.File, error) {
 
 	for _, f := range files {
 		if f.File.Name() == DefaultConfigurationFileName {
-			return util.ReadWriteFile(f.Path)
+			return osutil.OpenRWFile(f.Path)
 		}
 	}
-	return util.ReadWriteFile("./doc/" + DefaultConfigurationFileName)
+	return osutil.OpenRWFile("./doc/" + DefaultConfigurationFileName)
 }
 
 func parseEmbed(contents string, embedded string, start string, end string) (string, bool) {

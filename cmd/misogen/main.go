@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"
 )
@@ -39,7 +40,7 @@ func main() {
 		initName = strings.TrimSpace(initName)
 	}
 
-	if ok, err := util.FileExists(ModFile); err != nil || !ok {
+	if ok, err := osutil.FileExists(ModFile); err != nil || !ok {
 		if err != nil {
 			panic(err)
 		}
@@ -58,7 +59,7 @@ func main() {
 		}
 	}
 
-	ok, err := util.FileExists(MainFile)
+	ok, err := osutil.FileExists(MainFile)
 	if err != nil {
 		panic(fmt.Errorf("failed to open file %s, %v", MainFile, err))
 	}
@@ -68,7 +69,7 @@ func main() {
 
 	cpltModName := ""
 	modName := ""
-	modfCtn, err := util.ReadFileAll(ModFile)
+	modfCtn, err := osutil.ReadFileAll(ModFile)
 	if err != nil {
 		panic(fmt.Errorf("failed to read file %v, %v", ModFile, err))
 	}
@@ -107,7 +108,7 @@ func main() {
 	}
 
 	dirTree := buildDirTree(cpltModName, modName)
-	if err := util.MkdirTree(dirTree); err != nil {
+	if err := osutil.MkdirTree(dirTree); err != nil {
 		panic(err)
 	}
 
@@ -120,10 +121,10 @@ func main() {
 	}
 }
 
-func buildDirTree(cpltModName string, modName string) util.DirTree {
-	return util.DirTree{
+func buildDirTree(cpltModName string, modName string) osutil.DirTree {
+	return osutil.DirTree{
 		Name: ".",
-		Childs: []util.DirTree{
+		Childs: []osutil.DirTree{
 			{
 				Name:      "main.go",
 				IsFile:    true,
@@ -137,17 +138,17 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 			},
 			{
 				Name: "doc",
-				Childs: []util.DirTree{
+				Childs: []osutil.DirTree{
 					{Name: ".gitkeep", IsFile: true},
 				},
 			},
 			{
 				Name: "internal",
-				Childs: []util.DirTree{
+				Childs: []osutil.DirTree{
 					{
 						Name: "server",
 						Skip: *CliFlag,
-						Childs: []util.DirTree{
+						Childs: []osutil.DirTree{
 							{
 								Name:      "server.go",
 								IsFile:    true,
@@ -163,10 +164,10 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 					{
 						Name: "schema",
 						Skip: !*SvcFlag,
-						Childs: []util.DirTree{
+						Childs: []osutil.DirTree{
 							{
 								Name: "scripts",
-								Childs: []util.DirTree{
+								Childs: []osutil.DirTree{
 									{
 										Name:      "schema.sql",
 										IsFile:    true,
@@ -184,7 +185,7 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 					{
 						Name: "static",
 						Skip: !*StaticFlag,
-						Childs: []util.DirTree{
+						Childs: []osutil.DirTree{
 							{
 								Name:      "static.go",
 								IsFile:    true,
@@ -192,7 +193,7 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 							},
 							{
 								Name: "static",
-								Childs: []util.DirTree{
+								Childs: []osutil.DirTree{
 									{
 										Name:      "miso.html",
 										IsFile:    true,
@@ -205,7 +206,7 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 					{
 						Name: "config",
 						Skip: *CliFlag,
-						Childs: []util.DirTree{
+						Childs: []osutil.DirTree{
 							{
 								Name:      "prop.go",
 								IsFile:    true,
@@ -216,17 +217,17 @@ func buildDirTree(cpltModName string, modName string) util.DirTree {
 					{
 						Name:   "repo",
 						Skip:   *CliFlag,
-						Childs: []util.DirTree{{Name: ".gitkeep", IsFile: true}},
+						Childs: []osutil.DirTree{{Name: ".gitkeep", IsFile: true}},
 					},
 					{
 						Name:   "domain",
 						Skip:   *CliFlag,
-						Childs: []util.DirTree{{Name: ".gitkeep", IsFile: true}},
+						Childs: []osutil.DirTree{{Name: ".gitkeep", IsFile: true}},
 					},
 					{
 						Name: "web",
 						Skip: *DisableWebFlag || *CliFlag,
-						Childs: []util.DirTree{
+						Childs: []osutil.DirTree{
 							{
 								Name:      "web.go",
 								IsFile:    true,

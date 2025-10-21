@@ -17,8 +17,8 @@ import (
 	"golang.org/x/exp/trace"
 
 	"github.com/curtisnewbie/miso/encoding/json"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
@@ -1321,7 +1321,7 @@ func (f *flightRecorder) Stop() error {
 		return nil
 	}
 
-	fi, err := util.OpenRWFile(f.out, true)
+	fi, err := osutil.OpenRWFile(f.out, true)
 	if err != nil {
 		return err
 	}

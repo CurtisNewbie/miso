@@ -5,7 +5,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/osutil"
 )
 
 // Prepare Test Environment
@@ -50,7 +50,7 @@ func tryFindConfFile(rail Rail, t *testing.T) string {
 	mf := "go.mod"
 	for {
 		cpath := path.Join(dir, cf)
-		ok, err := util.FileExists(cpath)
+		ok, err := osutil.FileExists(cpath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +58,7 @@ func tryFindConfFile(rail Rail, t *testing.T) string {
 			return cpath
 		}
 		mpath := path.Join(dir, mf)
-		if util.TryFileExists(mpath) {
+		if osutil.TryFileExists(mpath) {
 			// already the top level in project directory, give up
 			break
 		}

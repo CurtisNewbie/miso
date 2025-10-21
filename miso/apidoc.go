@@ -15,6 +15,7 @@ import (
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -1899,7 +1900,7 @@ func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 
 func writeApiDocOpenApiSpec(rail Rail, docs httpRouteDocs) error {
 	if oapiFile := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecFile); oapiFile != "" {
-		f, err := util.ReadWriteFile(oapiFile)
+		f, err := osutil.OpenRWFile(oapiFile)
 		if err != nil {
 			rail.Errorf("Failed to openapi spec json file, %v, %v", oapiFile, err)
 			return nil // ignore
@@ -1917,8 +1918,8 @@ func writeApiDocOpenApiSpec(rail Rail, docs httpRouteDocs) error {
 func writeApiDocFile(rail Rail, routes []httpRouteDoc, pipelineDoc []PipelineDoc) error {
 	outf := GetPropStr(PropServerGenerateEndpointDocFile)
 	if outf != "" {
-		_ = util.MkdirParentAll(outf)
-		f, err := util.ReadWriteFile(outf)
+		_ = osutil.MkdirParentAll(outf)
+		f, err := osutil.OpenRWFile(outf)
 		if err != nil {
 			rail.Debugf("Failed to open API doc file, %v, %v", outf, err)
 			return nil // ignore
@@ -1953,8 +1954,8 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 	if fp == "" {
 		return nil
 	}
-	_ = util.MkdirParentAll(fp)
-	f, err := util.OpenRWFile(fp, true)
+	_ = osutil.MkdirParentAll(fp)
+	f, err := osutil.OpenRWFile(fp, true)
 	if err != nil {
 		return err
 	}
