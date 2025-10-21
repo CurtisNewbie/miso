@@ -4,8 +4,8 @@ import (
 	"encoding/csv"
 	"io"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/osutil"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
@@ -13,7 +13,7 @@ import (
 
 // Write csv.
 func Write(fpath string, records [][]string) error {
-	f, err := util.OpenRWFile(fpath, true)
+	f, err := osutil.OpenRWFile(fpath, true)
 	if err != nil {
 		return err
 	}

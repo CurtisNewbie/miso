@@ -1,0 +1,280 @@
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.DefFileMode
++osutil.DefFileMode
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.GbUnit
++osutil.GbUnit
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.MbUnit
++osutil.MbUnit
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.KbUnit
++osutil.KbUnit
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileExists
++osutil.FileExists
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.TryFileExists
++osutil.TryFileExists
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.ReadFileAll
++osutil.ReadFileAll
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.OpenFile
++osutil.OpenFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.AppendableFile
++osutil.OpenAppendFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.ReadWriteFile
++osutil.OpenRWFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.OpenRFile
++osutil.OpenRFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.OpenRWFile
++osutil.OpenRWFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.MkdirAll
++osutil.MkdirAll
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.MkdirParentAll
++osutil.MkdirParentAll
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.SaveTmpFile
++osutil.SaveTmpFile
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileHasSuffix
++osutil.FileHasSuffix
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileHasAnySuffix
++osutil.FileHasAnySuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileAddSuffix
++osutil.FileAddSuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileReplaceSuffix
++osutil.FileReplaceSuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileCutSuffix
++osutil.FileCutSuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileChangeSuffix
++osutil.FileChangeSuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.FileCutDotSuffix
++osutil.FileCutDotSuffix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.TempFilePath
++osutil.NewTmpFilePath
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.TempFile
++osutil.NewTmpFile
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.TempFilePathSuffix
++osutil.NewTmpFilePathWith
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.TempFileSuffix
++osutil.NewTmpFileWith
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.WalkDir
++osutil.WalkDir
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.MkdirTree
++osutil.MkdirTree
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.WalkFsFile
++osutil.WalkFsFile
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/osutil"
+
+-util.DirTree
++osutil.DirTree
