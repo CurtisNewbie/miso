@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -106,19 +107,14 @@ func RunPy(rail CliRail, pyExec string, pyContent string, args []string, opts ..
 //
 // rail can be nil.
 func Run(rail CliRail, executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
-	if rail == nil {
-		rail = nilCliRail()
-	}
-
-	cmd := exec.CommandContext(rail.Context(), executable, args...)
+	cmd := exec.CommandContext(context.Background(), executable, args...)
 	for _, op := range opts {
 		op(cmd)
 	}
 
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		rail.Infof("Failed to execute command, %s", out)
-		return out, err
+		return out, errs.Wrap(err)
 	}
 
 	return out, nil

@@ -143,3 +143,24 @@ $ misoconfig -h
 #   <!-- misoconfig-table-start -->
 #   <!-- misoconfig-table-end -->
 ```
+
+## `misopatch` - apply gopatch for code migration
+
+Install latest `misopatch` tool:
+
+```sh
+go install github.com/curtisnewbie/miso/cmd/misopatch@v0.3.6-beta.1
+```
+
+```sh
+$ misopatch -h
+
+# misopatch - automatically apply gopatch on current working directory
+#
+#   miso build version: v0.3.5
+#
+#
+# Usage of misopatch:
+#   -debug
+#         enable debug log
+```

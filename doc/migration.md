@@ -23,3 +23,24 @@ gopatch -p "$miso_home/patch/v0.3.0.patch" ./...
 ```
 
 Use git diff to see the changes and run your project to see if it still works.
+
+# misopatch
+
+You can also install `misopatch` tool (see [Tools](./tools.md)). It embeds the patch files in binary, install gopatch if missing, and applies all the patches for you.
+
+If you are upgrading miso to v0.3.6, then you should only install misopatch@v0.3.6, e.g.,
+
+```sh
+go install github.com/curtisnewbie/miso/cmd/misopatch@v0.3.6
+```
+
+And then run misopatch:
+
+```sh
+$ misopatch
+# gopatch not found, installing
+# Found 3 patches
+# Applied patch: v0.3.0.patch
+# Applied patch: v0.3.5.patch
+# Applied patch: v0.3.6.patch
+```

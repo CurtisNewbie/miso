@@ -107,7 +107,7 @@ var (
 
 func main() {
 	flags.WithDescriptionBuilder(func(printlnf func(v string, args ...any)) {
-		printlnf("\nmisoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
+		printlnf("misoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
 		printlnf("  Supported miso version: %v\n", version.Version)
 	})
 	flags.WithExtraBuilder(func(printlnf func(v string, args ...any)) {

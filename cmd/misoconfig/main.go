@@ -56,7 +56,7 @@ var (
 
 func main() {
 	flags.WithDescriptionBuilder(func(printlnf func(v string, args ...any)) {
-		printlnf("\nmisoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
+		printlnf("misoconfig - automatically generate configuration tables based on misoconfig-* comments\n")
 		printlnf("  Supported miso version: %v\n", version.Version)
 	})
 	flags.WithExtraBuilder(func(printlnf func(v string, args ...any)) {
