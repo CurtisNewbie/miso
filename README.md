@@ -56,8 +56,11 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 
 # Updates
 
+See [Upgrade & Migration](./doc/migration.md).
+
 - Since v0.2.0, 21 configuration properties are renamed, these property names are not backward compatible. If you specify values for these configuration, make sure you update the property name before you upgrade miso.
 - Since v0.3.0, a bunch of breaking changes are introduced, e.g., refactoring package structure, removing deprecated code and so on.
   Lots of methods and types are moved from `/util` pkg to pkgs such as `cli`, `csv`, `errs`, `expr`, `flags`, `hash`, `heap`, `pair`, `queue`, `rfutil`, `slutil`, `stack`, and `strutil`.
   Use [./patch/v0.3.0.patch](./patch/v0.3.0.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
-- Since v0.3.5, a few funcs in errs pkg are deprecated, Use [./patch/v0.3.5.patch](./patch/v0.3.5.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
+- Since v0.3.5, a few funcs in `errs` pkg are deprecated, use [./patch/v0.3.5.patch](./patch/v0.3.5.patch) for automatica migration.
+- Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`. Use [./patch/v0.3.6.patch](./patch/v0.3.6.patch) for automatic migration.
