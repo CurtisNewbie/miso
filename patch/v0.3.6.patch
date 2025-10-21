@@ -278,3 +278,13 @@
 
 -util.DirTree
 +osutil.DirTree
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/testutil"
+
+-util.FindTestdata
++testutil.FindTestdata

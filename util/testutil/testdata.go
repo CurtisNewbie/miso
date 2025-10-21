@@ -1,9 +1,11 @@
-package util
+package testutil
 
 import (
 	"os"
 	"path"
 	"testing"
+
+	"github.com/curtisnewbie/miso/util/osutil"
 )
 
 func FindTestdata(t *testing.T, relativePath string) string {
@@ -16,7 +18,7 @@ func FindTestdata(t *testing.T, relativePath string) string {
 	mf := "go.mod"
 	for {
 		cpath := path.Join(dir, td)
-		ok, err := FileExists(cpath)
+		ok, err := osutil.FileExists(cpath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -24,7 +26,7 @@ func FindTestdata(t *testing.T, relativePath string) string {
 			return path.Join(cpath, relativePath)
 		}
 		mpath := path.Join(dir, mf)
-		if TryFileExists(mpath) {
+		if osutil.TryFileExists(mpath) {
 			// already the top level in project directory, give up
 			break
 		}
