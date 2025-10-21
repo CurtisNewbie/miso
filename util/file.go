@@ -4,13 +4,12 @@ import (
 	"github.com/curtisnewbie/miso/util/osutil"
 )
 
+// Deprecated: since v0.3.6, see osutil pkg.
 const (
-	// Default File Mode
-	DefFileMode = osutil.DefFileMode
-
-	GbUnit uint64 = osutil.GbUnit
-	MbUnit uint64 = osutil.MbUnit
-	KbUnit uint64 = osutil.KbUnit
+	DefFileMode        = osutil.DefFileMode
+	GbUnit      uint64 = osutil.GbUnit
+	MbUnit      uint64 = osutil.MbUnit
+	KbUnit      uint64 = osutil.KbUnit
 )
 
 // Deprecated: since v0.3.6, see osutil pkg.
