@@ -269,7 +269,7 @@ func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 		}
 		newRail.Infof("Pulled task '%v' from task queue, producer: %v", qt.Name, qt.Producer)
 		if err := m.triggerWorker(newRail, qt.Name); err != nil {
-			newRail.Errorf("Failed to trigger worker, task: '%v'", qt.Name)
+			newRail.Errorf("Failed to trigger worker, task: '%v', %v", qt.Name, err)
 		}
 	}
 	return nil
@@ -284,9 +284,8 @@ func (m *taskModule) triggerWorker(rail miso.Rail, name string) error {
 	m.workerPool.Go(func() {
 		defer m.workerWg.Done()
 		rail = rail.NewCtx()
-		err := f(rail)
-		if err != nil {
-			rail.Errorf("Failed to run task '%v'", name)
+		if err := f(rail); err != nil {
+			rail.Errorf("Failed to run task '%v', %v", name, err)
 		}
 	})
 	return nil
