@@ -233,6 +233,7 @@ type queuedTask struct {
 	Name        string
 	ScheduledAt util.Time
 	Producer    string
+	TraceId     string
 }
 
 func (m *taskModule) produceTask(rail miso.Rail, name string) error {
@@ -240,6 +241,7 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 		Name:        name,
 		ScheduledAt: util.NowUTC(),
 		Producer:    producerOnce(),
+		TraceId:     rail.TraceId(),
 	}
 	return redis.LPushJson(rail, m.getTaskQueueKey(name), qt)
 }
@@ -262,7 +264,10 @@ func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 		}
 
 		newRail := miso.EmptyRail()
-		newRail.Infof("Pulled task '%v' from Task Queue, Producer: %v", qt.Name, qt.Producer)
+		if qt.TraceId != "" {
+			newRail = newRail.WithTraceId(qt.TraceId)
+		}
+		newRail.Infof("Pulled task '%v' from task queue, producer: %v", qt.Name, qt.Producer)
 		if err := m.triggerWorker(newRail, qt.Name); err != nil {
 			newRail.Errorf("Failed to trigger worker, task: '%v'", qt.Name)
 		}
@@ -437,6 +442,17 @@ func (m *taskModule) registerTasks(tasks []miso.Job) error {
 		return nil
 	}
 	for _, d := range tasks {
+		if d.TriggeredOnBoostrapped {
+			d.TriggeredOnBoostrapped = false
+			miso.OnAppReady(func(rail miso.Rail) error {
+				if err := m.produceTask(rail, d.Name); err != nil {
+					rail.Errorf("Failed to trigger immediately on server bootstrapped, task: %v, %v", d.Name, err)
+				} else {
+					rail.Infof("Task '%v' triggered on server bootstrapped", d.Name)
+				}
+				return nil
+			})
+		}
 		if err := miso.ScheduleCron(d); err != nil {
 			errs.Wrapf(err, "failed to schedule cron job, %+v", d)
 		}
@@ -505,6 +521,9 @@ func registerRouteForJobTriggers() {
 		rail := inb.Rail()
 		name := inb.Query("name")
 		err := module().produceTask(rail, name)
+		if err == nil {
+			rail.Infof("Triggered task %v through api", name)
+		}
 		inb.HandleResult(nil, err)
 	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
 }

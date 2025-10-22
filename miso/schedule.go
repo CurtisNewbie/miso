@@ -148,9 +148,9 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 		m.logNextRun(rail, job.Name, true)
 		if job.TriggeredOnBoostrapped {
 			if err := m.scheduler.RunByTag(job.Name); err != nil {
-				rail.Errorf("Failed to triggered immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
+				rail.Errorf("Failed to trigger immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
 			} else {
-				rail.Debugf("Job '%v' triggered on server bootstrapped", job.Name)
+				rail.Infof("Job '%v' triggered on server bootstrapped", job.Name)
 			}
 		}
 		return nil
@@ -345,6 +345,9 @@ func registerRouteForJobTriggers() {
 		rail := inb.Rail()
 		name := inb.Query("name")
 		err := TriggerJob(rail, name)
+		if err == nil {
+			rail.Infof("Triggered job %v through api", name)
+		}
 		inb.HandleResult(nil, err)
 	})).DocQueryParam("name", "job name").Desc("Manually Trigger Cron Job By Name")
 }
