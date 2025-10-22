@@ -135,10 +135,9 @@ func Parse() {
 			fmt.Printf("Usage of %s:\n", os.Args[0])
 			flag.PrintDefaults()
 			if extra != "" {
-				fmt.Printf("\n%s\n", strutil.TrimSpaceRight(extra))
-			} else {
-				fmt.Print("\n")
+				fmt.Printf("\n%s", strutil.TrimSpaceRight(extra))
 			}
+			fmt.Print("\n\n")
 		}
 	}
 
