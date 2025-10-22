@@ -39,6 +39,11 @@ type Future[T any] interface {
 	//
 	// Then callback should only be set once for every Future.
 	Then(tf func(T, error))
+
+	// Then callback to be invoked when the Future is completed.
+	//
+	// Then callback should only be set once for every Future.
+	ThenErr(tf func(error))
 }
 
 type completedFuture[T any] struct {
@@ -56,6 +61,12 @@ func (f *completedFuture[T]) TimedGet(timeout int) (T, error) {
 
 func (f *completedFuture[T]) Then(tf func(T, error)) {
 	tf(f.res, f.err)
+}
+
+func (f *completedFuture[T]) ThenErr(tf func(error)) {
+	f.Then(func(t T, err error) {
+		tf(err)
+	})
 }
 
 type future[T any] struct {
@@ -88,6 +99,12 @@ func (f *future[T]) Then(tf func(T, error)) {
 	} else {
 		f.thenMu.Unlock()
 	}
+}
+
+func (f *future[T]) ThenErr(tf func(error)) {
+	f.Then(func(t T, err error) {
+		tf(err)
+	})
 }
 
 // Get from Future indefinitively
