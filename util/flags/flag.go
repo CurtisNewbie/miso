@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 var (
@@ -133,7 +135,7 @@ func Parse() {
 			fmt.Printf("Usage of %s:\n", os.Args[0])
 			flag.PrintDefaults()
 			if extra != "" {
-				fmt.Printf("\n%s\n", extra)
+				fmt.Printf("\n%s\n", strutil.TrimSpaceRight(extra))
 			} else {
 				fmt.Print("\n")
 			}
