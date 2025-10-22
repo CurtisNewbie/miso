@@ -134,6 +134,8 @@ func Parse() {
 			flag.PrintDefaults()
 			if extra != "" {
 				fmt.Printf("\n%s\n", extra)
+			} else {
+				fmt.Print("\n")
 			}
 		}
 	}
