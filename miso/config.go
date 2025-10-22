@@ -17,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -211,10 +212,16 @@ func (a *AppConfig) GetPropStrTrimmed(prop string) string {
 	return strings.TrimSpace(v)
 }
 
+func (a *AppConfig) unmarshalMatchName(mapKey, fieldName string) bool {
+	return strings.EqualFold(strings.ReplaceAll(mapKey, "-", ""), fieldName)
+}
+
 // Unmarshal configuration.
 func (a *AppConfig) UnmarshalFromProp(ptr any) {
 	doWithReadLock(a, func() {
-		if err := a.vp.Unmarshal(ptr); err != nil {
+		if err := a.vp.Unmarshal(ptr, func(dc *mapstructure.DecoderConfig) {
+			dc.MatchName = a.unmarshalMatchName
+		}); err != nil {
 			Warnf("failed to UnmarshalFromProp, %v", err)
 		}
 	})
@@ -223,7 +230,9 @@ func (a *AppConfig) UnmarshalFromProp(ptr any) {
 // Unmarshal configuration from a speicific key.
 func (a *AppConfig) UnmarshalFromPropKey(key string, ptr any) {
 	doWithReadLock(a, func() {
-		if err := a.vp.UnmarshalKey(key, ptr); err != nil {
+		if err := a.vp.UnmarshalKey(key, ptr, func(dc *mapstructure.DecoderConfig) {
+			dc.MatchName = a.unmarshalMatchName
+		}); err != nil {
 			Warnf("failed to UnmarshalFromPropKey, %v", err)
 		}
 	})
