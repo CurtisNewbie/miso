@@ -57,7 +57,7 @@ func TestPooledExpr(t *testing.T) {
 		B string
 	}
 	p := P{A: "AAA", B: "BBB"}
-	pool := NewPooledExpr[P](100)
+	pool := NewPooledExpr[P](1)
 	v, err := pool.Eval(`A + B`, p)
 	if err != nil {
 		t.Fatal(err)
@@ -72,6 +72,24 @@ func TestPooledExpr(t *testing.T) {
 		t.Fatal(err)
 	}
 	if v != "AAABBB" {
+		t.Fatal("no right")
+	}
+	t.Log(v)
+
+	v, err = pool.Eval(`B + A`, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "BBBAAA" {
+		t.Fatal("no right")
+	}
+	t.Log(v)
+
+	v, err = pool.Eval(`A + A`, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "AAAAAA" {
 		t.Fatal("no right")
 	}
 	t.Log(v)

@@ -1,13 +1,10 @@
 package expr
 
 import (
-	"context"
-
-	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/lru"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
-	"github.com/maypok86/otter/v2"
 )
 
 type Expr[T any] struct {
@@ -90,7 +87,7 @@ func Eval(s string, t any) (any, error) {
 
 type PooledExpr[T any] struct {
 	threshold int
-	m         *otter.Cache[string, *Expr[T]]
+	m         lru.LRU[*Expr[T]]
 }
 
 func (e *PooledExpr[T]) Eval(s string, env T) (any, error) {
@@ -98,10 +95,9 @@ func (e *PooledExpr[T]) Eval(s string, env T) (any, error) {
 		return Eval(s, env)
 	}
 
-	ex, err := e.m.Get(context.Background(), s, otter.LoaderFunc[string, *Expr[T]](func(ctx context.Context, key string) (*Expr[T], error) {
-		miso.Debugf("Compiled: %v", s)
+	ex, err := e.m.GetElse(s, func() (*Expr[T], error) {
 		return Compile[T](s)
-	}))
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +112,12 @@ func (e *PooledExpr[T]) Eval(s string, env T) (any, error) {
 //
 // cacheSize: max number of *Expr in cache.
 func NewPooledExpr[T any](cacheSize int) *PooledExpr[T] {
+	c, err := lru.New[*Expr[T]](cacheSize)
+	if err != nil {
+		panic(err)
+	}
 	return &PooledExpr[T]{
 		threshold: 1024,
-		m:         otter.Must(&otter.Options[string, *Expr[T]]{MaximumSize: cacheSize}),
+		m:         c,
 	}
 }
