@@ -19,9 +19,9 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/gops v0.3.28
 	github.com/hashicorp/consul/api v1.15.3
-	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jinzhu/copier v0.4.0
 	github.com/json-iterator/go v1.1.12
+	github.com/maypok86/otter/v2 v2.2.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nacos-group/nacos-sdk-go v1.1.5
 	github.com/natefinch/lumberjack v2.0.0+incompatible

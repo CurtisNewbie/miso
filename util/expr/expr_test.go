@@ -2,6 +2,8 @@ package expr
 
 import (
 	"testing"
+
+	"github.com/curtisnewbie/miso/miso"
 )
 
 func BenchmarkPooledExpr(b *testing.B) {
@@ -14,9 +16,12 @@ func BenchmarkPooledExpr(b *testing.B) {
 
 	b.Run("pool.Eval", func(b *testing.B) {
 		for range b.N {
-			_, err := pool.Eval(`A + B`, p)
+			v, err := pool.Eval(`A + B`, p)
 			if err != nil {
 				b.Fatal(err)
+			}
+			if v != "AAABBB" {
+				b.Fatal("no right")
 			}
 		}
 	})
@@ -43,4 +48,31 @@ func BenchmarkPooledExpr(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestPooledExpr(t *testing.T) {
+	miso.SetLogLevel("debug")
+	type P struct {
+		A string
+		B string
+	}
+	p := P{A: "AAA", B: "BBB"}
+	pool := NewPooledExpr[P](100)
+	v, err := pool.Eval(`A + B`, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "AAABBB" {
+		t.Fatal("no right")
+	}
+	t.Log(v)
+
+	v, err = pool.Eval(`A + B`, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "AAABBB" {
+		t.Fatal("no right")
+	}
+	t.Log(v)
 }
