@@ -732,3 +732,25 @@ func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel fun
 	}()
 	return
 }
+
+func RunUntil[T any](wait time.Duration, f func() (stop bool, t T, e error)) (T, error) {
+	defer utillog.ErrorLog("exit")
+
+	ct, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	return RunAsync[T](func() (T, error) {
+		for {
+			select {
+			case <-ct.Done():
+				var t T
+				return t, nil
+			default:
+				stop, t, err := f()
+				if stop {
+					return t, err
+				}
+			}
+		}
+	}).Get()
+}

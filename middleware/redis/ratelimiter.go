@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/go-redis/redis_rate/v10"
 )
@@ -35,4 +36,18 @@ func (r *rateLimiter) Acquire() (bool, error) {
 		return false, errs.Wrap(err)
 	}
 	return res.Allowed > 0, nil
+}
+
+func (r *rateLimiter) AcquireWait(wait time.Duration) (bool, error) {
+	return util.RunUntil(wait, func() (bool, t bool, e error) {
+		ok, err := r.Acquire()
+		if err != nil {
+			return true, false, err
+		}
+		if ok {
+			return true, true, nil
+		}
+		time.Sleep(time.Millisecond * 30)
+		return false, false, nil
+	})
 }
