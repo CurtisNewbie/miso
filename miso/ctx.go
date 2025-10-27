@@ -19,7 +19,7 @@ type Rail struct {
 }
 
 func (r Rail) ZeroTrace() Rail {
-	return r.WithCtxVal(XTraceId, "").WithCtxVal(XSpanId, "")
+	return r.WithTraceId("").WithSpanId("")
 }
 
 func (r Rail) SetGetCallFnUpN(upN int) Rail {
@@ -317,12 +317,13 @@ func (r Rail) WithCtxVal(key string, val any) Rail {
 }
 
 func (r Rail) NewTrace() Rail {
-	return r.NewCtx().WithCtxVal(XTraceId, NewTraceId()).WithCtxVal(XSpanId, NewSpanId())
+	tid := NewTraceId()
+	return r.NewCtx().WithTraceId(tid).WithSpanId(tid)
 }
 
 // Create a new Rail with a new SpanId and a new Context
 func (r Rail) NextSpan() Rail {
-	return r.NewCtx().WithCtxVal(XSpanId, NewSpanId())
+	return r.NewCtx().WithSpanId(NewSpanId())
 }
 
 // Create a new Rail with a new Context
@@ -379,12 +380,22 @@ func NewSpanId() string {
 
 // Create new Rail from context.
 func NewRail(ctx context.Context) Rail {
-	if ctx.Value(XSpanId) == nil {
-		ctx = context.WithValue(ctx, XSpanId, NewSpanId()) //lint:ignore SA1029 keys must be exposed for user to use
-	}
+	var tid string
 	if ctx.Value(XTraceId) == nil {
-		ctx = context.WithValue(ctx, XTraceId, NewTraceId()) //lint:ignore SA1029 keys must be exposed for user to use
+		tid = NewTraceId()
+		ctx = context.WithValue(ctx, XTraceId, tid) //lint:ignore SA1029 keys must be exposed for user to use
 	}
+
+	if ctx.Value(XSpanId) == nil {
+		var sid string
+		if tid != "" {
+			sid = tid
+		} else {
+			sid = NewSpanId()
+		}
+		ctx = context.WithValue(ctx, XSpanId, sid) //lint:ignore SA1029 keys must be exposed for user to use
+	}
+
 	return Rail{ctx: ctx}
 }
 
