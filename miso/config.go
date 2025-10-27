@@ -583,9 +583,23 @@ func UnmarshalFromProp(ptr any) {
 	globalConfig().UnmarshalFromProp(ptr)
 }
 
+// Unmarshal configuration.
+func UnmarshalFromPropAs[T any](ptr any) T {
+	var t T
+	UnmarshalFromProp(&t)
+	return t
+}
+
 // Unmarshal configuration from a speicific key.
 func UnmarshalFromPropKey(key string, ptr any) {
 	globalConfig().UnmarshalFromPropKey(key, ptr)
+}
+
+// Unmarshal configuration from a speicific key.
+func UnmarshalFromPropKeyAs[T any](key string) T {
+	var t T
+	UnmarshalFromPropKey(key, &t)
+	return t
 }
 
 // Overwrite existing conf using environment and cli args.
