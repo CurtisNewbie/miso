@@ -638,6 +638,9 @@ func (t *Client) Options() *TResponse {
 
 // Send request
 func (t *Client) send(req *http.Request) *TResponse {
+	if t.Ctx != nil {
+		req = req.WithContext(t.Ctx)
+	}
 	if t.trace {
 		req = TraceRequest(t.Ctx, req)
 	}
