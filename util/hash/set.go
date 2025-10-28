@@ -1,7 +1,12 @@
 package hash
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
+	"reflect"
+
+	"github.com/curtisnewbie/miso/util/errs"
 )
 
 // Hash Set.
@@ -89,6 +94,54 @@ func (s *Set[T]) ForEach(f func(v T) (stop bool)) {
 		if f(k) {
 			return
 		}
+	}
+}
+
+// Implements encoding/json Marshaler
+func (s Set[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.CopyKeys())
+}
+
+// Implements encoding/json Unmarshaler.
+func (s *Set[T]) UnmarshalJSON(b []byte) error {
+	s.Keys = map[T]struct{}{}
+	if len(b) < 1 || string(b) == "null" {
+		return nil
+	}
+	var l []T
+	if err := json.Unmarshal(b, &l); err != nil {
+		return err
+	}
+	s.AddAll(l)
+	return nil
+}
+
+// Implements driver.Valuer in database/sql.
+func (s Set[T]) Value() (driver.Value, error) {
+	v, err := s.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return string(v), nil
+}
+
+// Implements sql.Scanner in database/sql.
+func (s *Set[T]) Scan(value interface{}) error {
+	if value == nil {
+		s.Keys = map[T]struct{}{}
+		return nil
+	}
+	switch v := value.(type) {
+	case string:
+		if v == "" {
+			s.Keys = map[T]struct{}{}
+			return nil
+		}
+		return s.UnmarshalJSON([]byte(v))
+	case []byte:
+		return s.UnmarshalJSON(v)
+	default:
+		return errs.NewErrf("invalid field type '%v' for Set, unable to convert, %#v", reflect.TypeOf(value), v)
 	}
 }
 
