@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func RunCancellable(f func()) (cancel func()) {
+func RunCancel(f func()) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
 	go func() {
@@ -21,7 +21,7 @@ func RunCancellable(f func()) (cancel func()) {
 	return
 }
 
-func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel func()) {
+func RunCancelChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
 	go func() {

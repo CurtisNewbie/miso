@@ -240,7 +240,7 @@
 +import "github.com/curtisnewbie/miso/util/async"
 
 -util.RunCancellable
-+async.RunCancellable
++async.RunCancel
 
 @@
 @@
@@ -249,7 +249,7 @@
 +import "github.com/curtisnewbie/miso/util/async"
 
 -util.RunCancellableChan
-+async.RunCancellableChan
++async.RunCancelChan
 
 @@
 @@
