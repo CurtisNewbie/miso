@@ -13,6 +13,8 @@ type Consumer[T any] func(t T) error
 type Transform[T any] func(t T) T
 
 // Transform t to another t
+//
+// Deprecated since v0.3.7.
 type TransformAsync[T any] func(t T) Future[T]
 
 // Supplier of T

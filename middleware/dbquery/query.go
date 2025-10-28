@@ -961,10 +961,10 @@ type ChainedPageQuery func(q *Query) *Query
 // Create param for page query.
 type PageQuery[V any] struct {
 	db          *gorm.DB
-	selectQuery ChainedPageQuery       // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
-	baseQuery   ChainedPageQuery       // Base query, e.g., return tx.Table(`myTable`).Where(...)
-	mapTo       util.Transform[V]      // callback triggered on each record, the value returned will overwrite the value passed in.
-	mapToAsync  util.TransformAsync[V] // callback triggered on each record, the value returned will overwrite the value passed in.
+	selectQuery ChainedPageQuery          // Add SELECT query and ORDER BY query, e.g., return tx.Select(`*`).
+	baseQuery   ChainedPageQuery          // Base query, e.g., return tx.Table(`myTable`).Where(...)
+	mapTo       func(t V) V               // callback triggered on each record, the value returned will overwrite the value passed in.
+	mapToAsync  func(t V) async.Future[V] // callback triggered on each record, the value returned will overwrite the value passed in.
 }
 
 func NewPagedQuery[V any](db *gorm.DB) *PageQuery[V] {
