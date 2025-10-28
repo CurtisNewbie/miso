@@ -1,0 +1,379 @@
+package async
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"runtime/debug"
+	"sync"
+	"time"
+
+	"github.com/curtisnewbie/miso/util/utillog"
+)
+
+var (
+	_ Future[any] = (*future[any])(nil)
+	_ Future[any] = (*completedFuture[any])(nil)
+)
+
+var (
+	ErrGetTimeout = errors.New("future.TimedGet timeout")
+)
+
+// Result of a asynchronous task.
+type Future[T any] interface {
+
+	// Get result without timeout.
+	Get() (T, error)
+
+	// Get result with timeout, returns ErrGetTimeout if timeout exceeded.
+	TimedGet(timeout int) (T, error)
+
+	// Then callback to be invoked when the Future is completed.
+	//
+	// Then callback should only be set once for every Future.
+	Then(tf func(T, error))
+
+	// Then callback to be invoked when the Future is completed.
+	//
+	// Then callback should only be set once for every Future.
+	ThenErr(tf func(error))
+}
+
+type future[T any] struct {
+	res  T
+	err  error
+	done *SignalOnce
+
+	// mutex mainly used to sync between .Then() and the task func
+	//
+	// the future's res, err doesn't really need mutex
+	thenMu *sync.Mutex
+	then   func(T, error)
+}
+
+func (f *future[T]) Then(tf func(T, error)) {
+	if tf == nil {
+		panic("Future.Then callback cannot be nil")
+	}
+
+	f.thenMu.Lock()
+	f.then = func(t T, err error) {
+		defer recoverPanic()
+		tf(t, err)
+	}
+
+	if f.done.Closed() {
+		doThen := f.then
+		f.thenMu.Unlock()
+		doThen(f.Get())
+	} else {
+		f.thenMu.Unlock()
+	}
+}
+
+func (f *future[T]) ThenErr(tf func(error)) {
+	f.Then(func(t T, err error) {
+		tf(err)
+	})
+}
+
+// Get from Future indefinitively
+func (f *future[T]) Get() (T, error) {
+	if err := f.wait(0); err != nil {
+		return f.res, err
+	}
+	return f.res, f.err
+}
+
+func (f *future[T]) wait(timeout int) error {
+	if f.done.TimedWait(time.Duration(timeout) * time.Millisecond) {
+		return ErrGetTimeout
+	}
+	return nil
+}
+
+// Get from Future with timeout (in milliseconds)
+func (f *future[T]) TimedGet(timeout int) (T, error) {
+	if err := f.wait(timeout); err != nil {
+		return f.res, err
+	}
+	return f.res, f.err
+}
+
+func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
+	sig := NewSignalOnce()
+	fut := future[T]{
+		thenMu: &sync.Mutex{},
+		done:   sig,
+	}
+	wrp := func() {
+		var t T
+		var err error
+
+		defer func() {
+
+			// task() panicked, change err
+			if v := recover(); v != nil {
+				utillog.ErrorLog("panic recovered, %v\n%v", v, string(debug.Stack()))
+				if verr, ok := v.(error); ok {
+					err = verr
+				} else {
+					err = fmt.Errorf("%v", v)
+				}
+			}
+
+			fut.thenMu.Lock()
+			fut.res = t
+			fut.err = err
+			sig.Notify()
+
+			if fut.then != nil {
+				doThen := fut.then
+				fut.thenMu.Unlock()
+				doThen(fut.res, fut.err)
+			} else {
+				fut.thenMu.Unlock()
+			}
+		}()
+
+		t, err = task()
+	}
+	return &fut, wrp
+}
+
+// Create Future, once the future is created, it starts running on a new goroutine.
+func RunAsync[T any](task func() (T, error)) Future[T] {
+	fut, wrp := buildFuture(task)
+	go wrp()
+	return fut
+}
+
+// Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
+func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
+	fut, wrp := buildFuture(task)
+	pool.Go(wrp)
+	return fut
+}
+
+// AwaitFutures represent tasks that are submitted to the pool asynchronously whose results are awaited together.
+//
+// AwaitFutures should only be used once for the same group of tasks.
+//
+// Use miso.NewAwaitFutures() to create one.
+type AwaitFutures[T any] struct {
+	pool    AsyncPoolItf
+	wg      sync.WaitGroup
+	futures []Future[T]
+}
+
+// Submit task to AwaitFutures.
+func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
+	a.wg.Add(1)
+	delegate := func() (T, error) {
+		defer a.wg.Done()
+		return task()
+	}
+	if a.pool != nil {
+		a.futures = append(a.futures, SubmitAsync[T](a.pool, delegate))
+	} else {
+		a.futures = append(a.futures, RunAsync[T](delegate))
+	}
+}
+
+// Await results of all tasks.
+func (a *AwaitFutures[T]) Await() []Future[T] {
+	a.wg.Wait()
+	return a.futures
+}
+
+// Await results of all tasks and return any error that is found in the task Futures.
+func (a *AwaitFutures[T]) AwaitAnyErr() error {
+	fut := a.Await()
+	for _, f := range fut {
+		_, err := f.Get()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Await results of all tasks and return any error that is found in the task Futures.
+func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
+	fut := a.Await()
+	res := make([]T, 0, len(fut))
+	for _, f := range fut {
+		v, err := f.Get()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, v)
+	}
+	return res, nil
+}
+
+// Create new AwaitFutures for a group of tasks.
+//
+// *AsyncPool is optional, provide nil if not needed.
+func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
+	return &AwaitFutures[T]{
+		pool:    pool,
+		futures: make([]Future[T], 0, 2),
+	}
+}
+
+// Create func that calls SubmitAsync(...) with the given pool.
+func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) Future[T] {
+	return func(task func() (T, error)) Future[T] {
+		return SubmitAsync[T](pool, task)
+	}
+}
+
+type BatchTask[T any, V any] struct {
+	parallel  int
+	taskPipe  chan T
+	workerWg  *sync.WaitGroup
+	doConsume func(T)
+	results   []BatchTaskResult[V]
+	resultsMu *sync.Mutex
+}
+
+// Wait until all generated tasks are completed and close pipeline channel.
+func (b *BatchTask[T, V]) Wait() []BatchTaskResult[V] {
+	b.workerWg.Wait()
+	defer close(b.taskPipe)
+	return b.results
+}
+
+// Close underlying pipeline channel without waiting.
+func (b *BatchTask[T, V]) Close() {
+	close(b.taskPipe)
+}
+
+func (b *BatchTask[T, V]) preHeat() {
+	for i := 0; i < b.parallel; i++ {
+		go func() {
+			for t := range b.taskPipe {
+				b.doConsume(t)
+			}
+		}()
+	}
+}
+
+// Generate task.
+func (b *BatchTask[T, V]) Generate(task T) {
+	b.workerWg.Add(1)
+	b.taskPipe <- task
+}
+
+type BatchTaskResult[V any] struct {
+	Result V
+	Err    error
+}
+
+// Create a batch of concurrent task for one time use.
+func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (V, error)) *BatchTask[T, V] {
+	bt := &BatchTask[T, V]{
+		parallel:  parallel,
+		taskPipe:  make(chan T, bufferSize),
+		workerWg:  &sync.WaitGroup{},
+		results:   make([]BatchTaskResult[V], 0, bufferSize),
+		resultsMu: &sync.Mutex{},
+	}
+	bt.doConsume = func(t T) {
+		defer bt.workerWg.Done()
+		v, err := consumer(t)
+		r := BatchTaskResult[V]{Result: v, Err: err}
+		bt.resultsMu.Lock()
+		defer bt.resultsMu.Unlock()
+		bt.results = append(bt.results, r)
+	}
+	bt.preHeat()
+	return bt
+}
+
+func NewCompletedFuture[T any](t T, err error) Future[T] {
+	return &completedFuture[T]{res: t, err: err}
+}
+
+type completedFuture[T any] struct {
+	res T
+	err error
+}
+
+func (f *completedFuture[T]) Get() (T, error) {
+	return f.res, f.err
+}
+
+func (f *completedFuture[T]) TimedGet(timeout int) (T, error) {
+	return f.res, f.err
+}
+
+func (f *completedFuture[T]) Then(tf func(T, error)) {
+	tf(f.res, f.err)
+}
+
+func (f *completedFuture[T]) ThenErr(tf func(error)) {
+	f.Then(func(t T, err error) {
+		tf(err)
+	})
+}
+
+func RunCancellable(f func()) (cancel func()) {
+	cr, c := context.WithCancel(context.Background())
+	cancel = c
+	go func() {
+		for {
+			select {
+			case <-cr.Done():
+				return
+			default:
+				PanicSafeRun(f)
+			}
+		}
+	}()
+	return
+}
+
+func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel func()) {
+	cr, c := context.WithCancel(context.Background())
+	cancel = c
+	go func() {
+		for {
+			select {
+			case <-cr.Done():
+				return
+			case t := <-ch:
+				stop := false
+				PanicSafeRun(func() {
+					stop = f(t)
+				})
+				if stop {
+					return
+				}
+			}
+		}
+	}()
+	return
+}
+
+func RunUntil[T any](wait time.Duration, f func() (stop bool, t T, e error)) (T, error) {
+	ct, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	return RunAsync[T](func() (T, error) {
+		for {
+			select {
+			case <-ct.Done():
+				var t T
+				return t, nil
+			default:
+				stop, t, err := f()
+				if stop {
+					return t, err
+				}
+			}
+		}
+	}).Get()
+}
