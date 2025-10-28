@@ -986,7 +986,7 @@ func (pq *PageQuery[V]) Transform(t util.Transform[V]) *PageQuery[V] {
 	return pq
 }
 
-func (pq *PageQuery[V]) TransformAsync(t util.TransformAsync[V]) *PageQuery[V] {
+func (pq *PageQuery[V]) TransformAsync(t func(t V) async.Future[V]) *PageQuery[V] {
 	pq.mapToAsync = t
 	return pq
 }
