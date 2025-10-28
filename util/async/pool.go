@@ -154,7 +154,7 @@ func (p *BoundedAsyncPool) isStopped() bool {
 }
 
 func (p *BoundedAsyncPool) Run(f func() error) Future[struct{}] {
-	return SubmitAsync(p, func() (struct{}, error) { return struct{}{}, f() })
+	return Submit(p, func() (struct{}, error) { return struct{}{}, f() })
 }
 
 // Submit task to the pool.
@@ -249,7 +249,7 @@ type AntsAsyncPool struct {
 }
 
 func (p *AntsAsyncPool) Run(f func() error) Future[struct{}] {
-	return SubmitAsync(p, func() (struct{}, error) { return struct{}{}, f() })
+	return Submit(p, func() (struct{}, error) { return struct{}{}, f() })
 }
 
 func (a *AntsAsyncPool) Go(f func()) {

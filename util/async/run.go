@@ -47,7 +47,7 @@ func RunUntil[T any](wait time.Duration, f func() (stop bool, t T, e error)) (T,
 	ct, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 
-	return RunAsync[T](func() (T, error) {
+	return Run[T](func() (T, error) {
 		for {
 			select {
 			case <-ct.Done():

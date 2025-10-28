@@ -266,7 +266,7 @@ func (a *MisoApp) triggerShutdownHook() {
 		}
 	}
 
-	f := async.RunAsync(func() (any, error) {
+	f := async.Run(func() (any, error) {
 		a.shmu.Lock()
 		defer a.shmu.Unlock()
 
@@ -326,7 +326,7 @@ func (a *MisoApp) AddOrderedAsyncShutdownHook(order int, hook func()) {
 	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
 		Order: order,
 		Hook: func() async.Future[any] {
-			return async.RunAsync(func() (any, error) {
+			return async.Run(func() (any, error) {
 				hook()
 				return nil, nil
 			})

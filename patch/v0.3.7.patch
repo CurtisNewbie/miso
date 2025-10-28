@@ -33,7 +33,7 @@
 +import "github.com/curtisnewbie/miso/util/async"
 
 -util.RunAsync
-+async.RunAsync
++async.Run
 
 @@
 @@
@@ -42,7 +42,7 @@
 +import "github.com/curtisnewbie/miso/util/async"
 
 -util.SubmitAsync
-+async.SubmitAsync
++async.Submit
 
 @@
 @@

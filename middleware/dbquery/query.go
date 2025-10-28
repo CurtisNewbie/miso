@@ -1105,14 +1105,14 @@ func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) 
 
 	var countFuture async.Future[int]
 	if doCount {
-		countFuture = async.RunAsync(func() (int, error) {
+		countFuture = async.Run(func() (int, error) {
 			var total int
 			_, err := newQuery().Select("COUNT(*)").Scan(&total)
 			return total, err
 		})
 	}
 
-	pageFuture := async.RunAsync(func() ([]V, error) {
+	pageFuture := async.Run(func() ([]V, error) {
 		var payload []V
 		qry := newQuery()
 		if pq.selectQuery != nil {

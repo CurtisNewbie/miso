@@ -18,7 +18,7 @@ func TestRunAsync(t *testing.T) {
 	n := 1000
 	for i := 1; i < n+1; i++ {
 		j := i
-		futures = append(futures, RunAsync(func() (int, error) {
+		futures = append(futures, Run(func() (int, error) {
 			// time.Sleep(50 * time.Millisecond)
 			t.Logf("%v is done", j)
 			return j, nil
@@ -49,7 +49,7 @@ func TestRunAsyncPool(t *testing.T) {
 
 	for i := 1; i < cnt+1; i++ {
 		j := i
-		futures = append(futures, SubmitAsync(pool, func() (int, error) {
+		futures = append(futures, Submit(pool, func() (int, error) {
 			time.Sleep(5 * time.Millisecond)
 			return j, nil
 		}))
@@ -71,7 +71,7 @@ func TestRunAsyncPool(t *testing.T) {
 }
 
 func TestRunAsyncWithPanic(t *testing.T) {
-	future := RunAsync[struct{}](panicFunc)
+	future := Run[struct{}](panicFunc)
 	_, err := future.Get()
 	if err == nil {
 		t.Fatal("should return err")
@@ -79,7 +79,7 @@ func TestRunAsyncWithPanic(t *testing.T) {
 	t.Log(err)
 
 	predefinedErr := errors.New("predefined panic error")
-	future = RunAsync[struct{}](func() (struct{}, error) {
+	future = Run[struct{}](func() (struct{}, error) {
 		t.Log("about to panic")
 		panic(predefinedErr)
 	})
@@ -207,7 +207,7 @@ func TestAsyncPoolStop(t *testing.T) {
 }
 
 func TestAsyncOnce(t *testing.T) {
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		fmt.Println("async ran")
 		time.Sleep(time.Millisecond * 500)
 		return 1, nil
@@ -239,7 +239,7 @@ func TestAsyncOnce(t *testing.T) {
 }
 
 func TestFutureBeforeThen(t *testing.T) {
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		t.Logf("async ran")
 		return 1, nil
 	})
@@ -258,7 +258,7 @@ func TestFutureBeforeThen(t *testing.T) {
 
 func TestFutureAfterThen(t *testing.T) {
 	var cnt int32 = 0
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		t.Logf("async ran start")
 		time.Sleep(time.Millisecond * 100)
 		t.Logf("async ran end")
@@ -281,7 +281,7 @@ func TestFutureAfterThen(t *testing.T) {
 
 func TestFutureThenAndGet(t *testing.T) {
 	var cnt int32 = 0
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		t.Logf("async ran")
 		return 1, nil
 	})
@@ -303,7 +303,7 @@ func TestFutureThenAndGet(t *testing.T) {
 
 func TestFutureGetAndThen(t *testing.T) {
 	var cnt int32 = 0
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		t.Logf("async ran")
 		return 1, nil
 	})
@@ -325,7 +325,7 @@ func TestFutureGetAndThen(t *testing.T) {
 
 func TestFutureThenPanic(t *testing.T) {
 	var cnt int32 = 0
-	f := RunAsync(func() (int, error) {
+	f := Run(func() (int, error) {
 		t.Logf("async ran")
 		return 1, nil
 	})

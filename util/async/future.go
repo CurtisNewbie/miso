@@ -40,14 +40,14 @@ type Future[T any] interface {
 }
 
 // Create Future, once the future is created, it starts running on a new goroutine.
-func RunAsync[T any](task func() (T, error)) Future[T] {
+func Run[T any](task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	go wrp()
 	return fut
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
-func SubmitAsync[T any](pool AsyncPool, task func() (T, error)) Future[T] {
+func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	pool.Go(wrp)
 	return fut
@@ -72,9 +72,9 @@ func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
 		return task()
 	}
 	if a.pool != nil {
-		a.futures = append(a.futures, SubmitAsync[T](a.pool, delegate))
+		a.futures = append(a.futures, Submit[T](a.pool, delegate))
 	} else {
-		a.futures = append(a.futures, RunAsync[T](delegate))
+		a.futures = append(a.futures, Run[T](delegate))
 	}
 }
 
@@ -123,7 +123,7 @@ func NewAwaitFutures[T any](pool AsyncPool) *AwaitFutures[T] {
 // Create func that calls SubmitAsync(...) with the given pool.
 func NewSubmitAsyncFunc[T any](pool AsyncPool) func(task func() (T, error)) Future[T] {
 	return func(task func() (T, error)) Future[T] {
-		return SubmitAsync[T](pool, task)
+		return Submit[T](pool, task)
 	}
 }
 
