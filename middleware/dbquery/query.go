@@ -11,7 +11,6 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
@@ -981,7 +980,7 @@ func (pq *PageQuery[V]) WithBaseQuery(qry ChainedPageQuery) *PageQuery[V] {
 	return pq
 }
 
-func (pq *PageQuery[V]) Transform(t util.Transform[V]) *PageQuery[V] {
+func (pq *PageQuery[V]) Transform(t func(t V) V) *PageQuery[V] {
 	pq.mapTo = t
 	return pq
 }
