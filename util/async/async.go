@@ -150,7 +150,7 @@ func RunAsync[T any](task func() (T, error)) Future[T] {
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
-func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
+func SubmitAsync[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	pool.Go(wrp)
 	return fut
@@ -162,7 +162,7 @@ func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
 //
 // Use miso.NewAwaitFutures() to create one.
 type AwaitFutures[T any] struct {
-	pool    AsyncPoolItf
+	pool    AsyncPool
 	wg      sync.WaitGroup
 	futures []Future[T]
 }
@@ -216,7 +216,7 @@ func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
 // Create new AwaitFutures for a group of tasks.
 //
 // *AsyncPool is optional, provide nil if not needed.
-func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
+func NewAwaitFutures[T any](pool AsyncPool) *AwaitFutures[T] {
 	return &AwaitFutures[T]{
 		pool:    pool,
 		futures: make([]Future[T], 0, 2),
@@ -224,7 +224,7 @@ func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
 }
 
 // Create func that calls SubmitAsync(...) with the given pool.
-func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) Future[T] {
+func NewSubmitAsyncFunc[T any](pool AsyncPool) func(task func() (T, error)) Future[T] {
 	return func(task func() (T, error)) Future[T] {
 		return SubmitAsync[T](pool, task)
 	}

@@ -42,7 +42,7 @@ func TestRunAsync(t *testing.T) {
 
 func TestRunAsyncPool(t *testing.T) {
 	cnt := 10000
-	pool := NewAsyncPool(300, 150)
+	pool := NewBoundedAsyncPool(300, 150)
 	// pool := NewAntsAsyncPool(150)
 	start := time.Now()
 	var futures []Future[int]
@@ -100,7 +100,7 @@ func panicFunc() (struct{}, error) {
 
 func TestAwaitFutures(t *testing.T) {
 	cnt := 1000
-	pool := NewAsyncPool(cnt+1, 100)
+	pool := NewBoundedAsyncPool(cnt+1, 100)
 	awaitFutures := NewAwaitFutures[int](pool)
 	start := time.Now()
 
@@ -130,7 +130,7 @@ func TestAwaitFutures(t *testing.T) {
 
 func TestAwaitResultAnyErr(t *testing.T) {
 	cnt := 1000
-	pool := NewAsyncPool(cnt+1, 100)
+	pool := NewBoundedAsyncPool(cnt+1, 100)
 	awaitFutures := NewAwaitFutures[int](pool)
 	start := time.Now()
 
@@ -158,7 +158,7 @@ func TestAwaitResultAnyErr(t *testing.T) {
 }
 
 func TestPoolPanic(t *testing.T) {
-	pool := NewAsyncPool(1, 10)
+	pool := NewBoundedAsyncPool(1, 10)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	pool.Go(func() {
@@ -181,7 +181,7 @@ func TestPoolPanic(t *testing.T) {
 }
 
 func TestAsyncPoolStop(t *testing.T) {
-	pool := NewAsyncPool(1, 10)
+	pool := NewBoundedAsyncPool(1, 10)
 	for i := 0; i < 10; i++ {
 		v := i
 		pool.Go(func() {
@@ -388,7 +388,7 @@ func TestBatchTask(t *testing.T) {
 
 func TestAyncPoolFull(t *testing.T) {
 	utillog.DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
-	ap := NewAsyncPool(0, 0, CallerRunTaskWhenPoolFull())
+	ap := NewBoundedAsyncPool(0, 0, CallerRunTaskWhenPoolFull())
 	v := &atomic.Int32{}
 	ap.Go(func() {
 		t.Log("task 1")
@@ -404,7 +404,7 @@ func TestAyncPoolFull(t *testing.T) {
 	ap.StopAndWait()
 	t.Log("---")
 
-	ap = NewAsyncPool(0, 1, DropTaskWhenPoolFull())
+	ap = NewBoundedAsyncPool(0, 1, DropTaskWhenPoolFull())
 	v.Store(0)
 	ap.Go(func() {
 		t.Log("2 - task 1")
