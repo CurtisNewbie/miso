@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
@@ -76,7 +76,7 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 	if job.concRunMutex == nil {
 		job.concRunMutex = &sync.Mutex{}
 	}
-	return util.PanicSafeFunc(func() {
+	return async.PanicSafeFunc(func() {
 		if ok := job.concRunMutex.TryLock(); !ok {
 			return
 		}

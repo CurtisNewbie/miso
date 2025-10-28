@@ -14,6 +14,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/rfutil"
@@ -1994,7 +1995,7 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 		return err
 	}
 
-	util.PanicSafeRun(func() { tools.RunGoImports(fp) })
+	async.PanicSafeRun(func() { tools.RunGoImports(fp) })
 	return nil
 }
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/redis/go-redis/v9"
 )
@@ -200,7 +200,7 @@ type rtopic[T any] struct {
 	topic string
 }
 
-func (p *rtopic[T]) Subscribe(pool util.AsyncPoolItf, handler func(rail miso.Rail, evt T) error) error {
+func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
 
 	pubsub := GetRedis().Subscribe(context.Background(), p.topic)
 	miso.AddShutdownHook(func() { pubsub.Close() })

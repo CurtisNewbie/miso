@@ -64,3 +64,4 @@ See [Upgrade & Migration](./doc/migration.md).
   Use [./patch/v0.3.0.patch](./patch/v0.3.0.patch) for automatica migration. See [Upgrade & Migration](./doc/migration.md).
 - Since v0.3.5, a few funcs in `errs` pkg are deprecated, use [./patch/v0.3.5.patch](./patch/v0.3.5.patch) for automatica migration.
 - Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`. Use [./patch/v0.3.6.patch](./patch/v0.3.6.patch) for automatic migration.
+- Since v0.3.7, async code in pkg `util` are deprecated and moved to `util/async`, while previous code may continue to work, it will be deleted in later release. Use [./patch/v0.3.7.patch](./patch/v0.3.7.patch) for automatic migration.

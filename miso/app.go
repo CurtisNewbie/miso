@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/osutil"
@@ -254,8 +255,8 @@ func (a *MisoApp) addBootstrapHealthIndicator() {
 func (a *MisoApp) triggerShutdownHook() {
 	Info("Triggering shutdown hooks")
 	timeout := a.Config().GetPropInt(PropServerGracefulShutdownTimeSec)
-	panicSafeFunc := func(op func() util.Future[any]) func() util.Future[any] {
-		return func() util.Future[any] {
+	panicSafeFunc := func(op func() async.Future[any]) func() async.Future[any] {
+		return func() async.Future[any] {
 			defer func() {
 				if v := recover(); v != nil {
 					Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
@@ -265,12 +266,12 @@ func (a *MisoApp) triggerShutdownHook() {
 		}
 	}
 
-	f := util.RunAsync(func() (any, error) {
+	f := async.RunAsync(func() (any, error) {
 		a.shmu.Lock()
 		defer a.shmu.Unlock()
 
 		sort.Slice(a.shutdownHook, func(i, j int) bool { return a.shutdownHook[i].Order < a.shutdownHook[j].Order })
-		futures := make([]util.Future[any], 0, len(a.shutdownHook))
+		futures := make([]async.Future[any], 0, len(a.shutdownHook))
 		for _, hook := range a.shutdownHook {
 			futures = append(futures, panicSafeFunc(hook.Hook)())
 		}
@@ -284,7 +285,7 @@ func (a *MisoApp) triggerShutdownHook() {
 		timeoutDur := time.Duration(timeout * int(time.Second))
 		_, err := f.TimedGet(int(timeoutDur / time.Millisecond))
 		if err != nil {
-			if errors.Is(err, util.ErrGetTimeout) {
+			if errors.Is(err, async.ErrGetTimeout) {
 				Warnf("Exceeded server graceful shutdown period (%v), stop waiting for shutdown hook execution", timeoutDur)
 			} else {
 				Errorf("Unexpected error occurred while executing shutdown hooks, %v", err)
@@ -324,8 +325,8 @@ func (a *MisoApp) AddOrderedAsyncShutdownHook(order int, hook func()) {
 	defer a.shmu.Unlock()
 	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
 		Order: order,
-		Hook: func() util.Future[any] {
-			return util.RunAsync(func() (any, error) {
+		Hook: func() async.Future[any] {
+			return async.RunAsync(func() (any, error) {
 				hook()
 				return nil, nil
 			})
@@ -338,9 +339,9 @@ func (a *MisoApp) AddOrderedShutdownHook(order int, hook func()) {
 	defer a.shmu.Unlock()
 	a.shutdownHook = append(a.shutdownHook, OrderedShutdownHook{
 		Order: order,
-		Hook: func() util.Future[any] {
+		Hook: func() async.Future[any] {
 			hook()
-			return util.NewCompletedFuture[any](nil, nil)
+			return async.NewCompletedFuture[any](nil, nil)
 		},
 	})
 }
@@ -637,7 +638,7 @@ func AddOrderedAsyncShutdownHook(order int, hook func()) {
 }
 
 type OrderedShutdownHook struct {
-	Hook  func() util.Future[any]
+	Hook  func() async.Future[any]
 	Order int
 }
 

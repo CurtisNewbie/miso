@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 )
 
@@ -18,7 +18,7 @@ func TestRateLimiter(t *testing.T) {
 	miso.SetLogLevel("debug")
 
 	rl := NewRateLimiter("abc", 3, time.Second*1)
-	aw := util.NewAwaitFutures[int](nil)
+	aw := async.NewAwaitFutures[int](nil)
 	for range 3 {
 		for i := range 30 {
 			aw.SubmitAsync(func() (int, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 )
@@ -46,7 +47,7 @@ var module = miso.InitAppModuleFunc(func() *taskModule {
 		dtaskMut:       &sync.Mutex{},
 		workerRegistry: hash.NewStrRWMap[func(miso.Rail) error](),
 		group:          "default",
-		workerPool:     util.NewAntsAsyncPool(500),
+		workerPool:     async.NewAntsAsyncPool(500),
 		workerWg:       &sync.WaitGroup{},
 	}
 })
@@ -74,7 +75,7 @@ type taskModule struct {
 	workerRegistry *hash.StrRWMap[func(miso.Rail) error]
 
 	// worker pool
-	workerPool util.AsyncPoolItf
+	workerPool async.AsyncPool
 	workerWg   *sync.WaitGroup
 }
 
@@ -100,8 +101,8 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	// queue per task to prevent old nodes attempting to run new tasks
 	for _, t := range tasks {
 		{
-			cancel := util.RunCancellable(func() {
-				if err := util.PanicSafeRunErr(func() error { return m.pullTasks(miso.EmptyRail(), t.Name) }); err != nil {
+			cancel := async.RunCancellable(func() {
+				if err := async.PanicSafeRunErr(func() error { return m.pullTasks(miso.EmptyRail(), t.Name) }); err != nil {
 					miso.Errorf("Pull tasks queue failed, %v", err)
 					time.Sleep(time.Millisecond * 500) // backoff from error
 				}
@@ -194,7 +195,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		}
 
 		start := time.Now()
-		err := util.PanicSafeRunErr(func() error {
+		err := async.PanicSafeRunErr(func() error {
 			return actualRun(rail)
 		})
 		took := time.Since(start)

@@ -12,6 +12,7 @@ import (
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/rfutil"
@@ -1102,16 +1103,16 @@ func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) 
 		return pq.baseQuery(NewQueryRail(rail, pq.db))
 	}
 
-	var countFuture util.Future[int]
+	var countFuture async.Future[int]
 	if doCount {
-		countFuture = util.RunAsync(func() (int, error) {
+		countFuture = async.RunAsync(func() (int, error) {
 			var total int
 			_, err := newQuery().Select("COUNT(*)").Scan(&total)
 			return total, err
 		})
 	}
 
-	pageFuture := util.RunAsync(func() ([]V, error) {
+	pageFuture := async.RunAsync(func() ([]V, error) {
 		var payload []V
 		qry := newQuery()
 		if pq.selectQuery != nil {
@@ -1131,7 +1132,7 @@ func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) 
 		}
 
 		if pq.mapToAsync != nil {
-			futures := make([]util.Future[V], 0, len(payload))
+			futures := make([]async.Future[V], 0, len(payload))
 			for _, p := range payload {
 				futures = append(futures, pq.mapToAsync(p))
 			}

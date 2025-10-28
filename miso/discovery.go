@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
@@ -82,7 +82,7 @@ func newModule() *discoveryModule {
 		dynamicServiceRegistry:   ServerListServiceRegistry{Rule: RandomServerSelector},
 		serverChangeListeners: ServerChangeListenerMap{
 			Listeners: map[string][]func(){},
-			Pool:      util.NewCpuAsyncPool(),
+			Pool:      async.NewCpuAsyncPool(),
 		},
 		getServerList: func() ServerList { return nil },
 	}
@@ -248,7 +248,7 @@ func (r hardcodedServiceRegistry) serverPortFromProp(name string) int {
 
 type ServerChangeListenerMap struct {
 	Listeners map[string][]func()
-	Pool      util.AsyncPoolItf
+	Pool      async.AsyncPool
 	sync.RWMutex
 }
 
