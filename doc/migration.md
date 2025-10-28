@@ -26,7 +26,7 @@ Use git diff to see the changes and run your project to see if it still works.
 
 # misopatch
 
-You can also install `misopatch` tool (see [Tools](./tools.md)). It embeds the patch files in binary, install gopatch if missing, and applies all the patches for you.
+You can also install `misopatch` tool (see [Tools](./tools.md)). It embeds the patch files in binary, installs gopatch if missing, and applies all the patches for you.
 
 If you are upgrading miso to v0.3.6, then you should only install misopatch@v0.3.6, e.g.,
 
