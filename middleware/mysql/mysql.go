@@ -30,7 +30,7 @@ func init() {
 }
 
 var (
-	slowThreshold = 500 * time.Millisecond
+	slowThreshold = 1000 * time.Millisecond
 	dbLogger      = dbquery.NewGormLogger(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn})
 	module        = miso.InitAppModuleFunc(func() *mysqlModule {
 		return &mysqlModule{
