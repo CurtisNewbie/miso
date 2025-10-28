@@ -101,7 +101,7 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	// queue per task to prevent old nodes attempting to run new tasks
 	for _, t := range tasks {
 		{
-			cancel := async.RunCancel(func() {
+			cancel := async.RunCancellable(func() {
 				if err := async.PanicSafeRunErr(func() error { return m.pullTasks(miso.EmptyRail(), t.Name) }); err != nil {
 					miso.Errorf("Pull tasks queue failed, %v", err)
 					time.Sleep(time.Millisecond * 500) // backoff from error
