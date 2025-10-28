@@ -23,10 +23,13 @@ var (
 )
 
 var (
+	// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 	ErrGetTimeout = errors.New("future.TimedGet timeout")
 )
 
 // Result of a asynchronous task.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type Future[T any] interface {
 
 	// Get result without timeout.
@@ -172,6 +175,8 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 }
 
 // Create Future, once the future is created, it starts running on a new goroutine.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func RunAsync[T any](task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	go wrp()
@@ -179,6 +184,8 @@ func RunAsync[T any](task func() (T, error)) Future[T] {
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
 	fut, wrp := buildFuture(task)
 	pool.Go(wrp)
@@ -190,6 +197,8 @@ func SubmitAsync[T any](pool AsyncPoolItf, task func() (T, error)) Future[T] {
 // AwaitFutures should only be used once for the same group of tasks.
 //
 // Use miso.NewAwaitFutures() to create one.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type AwaitFutures[T any] struct {
 	pool    AsyncPoolItf
 	wg      sync.WaitGroup
@@ -245,6 +254,8 @@ func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
 // Create new AwaitFutures for a group of tasks.
 //
 // *AsyncPool is optional, provide nil if not needed.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
 	return &AwaitFutures[T]{
 		pool:    pool,
@@ -253,6 +264,8 @@ func NewAwaitFutures[T any](pool AsyncPoolItf) *AwaitFutures[T] {
 }
 
 // Create func that calls SubmitAsync(...) with the given pool.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) Future[T] {
 	return func(task func() (T, error)) Future[T] {
 		return SubmitAsync[T](pool, task)
@@ -260,6 +273,8 @@ func NewSubmitAsyncFunc[T any](pool AsyncPoolItf) func(task func() (T, error)) F
 }
 
 // Async Pool Interface
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type AsyncPoolItf interface {
 	Go(f func())
 	Stop()
@@ -275,6 +290,8 @@ type AsyncPoolItf interface {
 //
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
 // You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type AsyncPool struct {
 	*asyncPoolCommon
 	stopped      int32
@@ -305,6 +322,8 @@ type asyncPoolOption func(a AsyncPoolItf)
 //
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
 // You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *AsyncPool {
 	if maxTasks < 0 {
 		maxTasks = 0
@@ -340,6 +359,7 @@ func unwrapAsyncPoolCommon(a AsyncPoolItf, f func(ap *asyncPoolCommon)) {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func DropTaskWhenPoolFull() asyncPoolOption {
 	return func(a AsyncPoolItf) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
@@ -352,6 +372,7 @@ func DropTaskWhenPoolFull() asyncPoolOption {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func CallerRunTaskWhenPoolFull() asyncPoolOption {
 	return func(a AsyncPoolItf) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
@@ -365,11 +386,15 @@ func CallerRunTaskWhenPoolFull() asyncPoolOption {
 }
 
 // Create AsyncPool with number of workers equals to 4 * num_cpu.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewCpuAsyncPool() AsyncPoolItf {
 	return NewAntsAsyncPool(runtime.NumCPU() * 4)
 }
 
 // Create AsyncPool with number of workers equals to 8 * num_cpu and a task queue of size 500.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewIOAsyncPool() AsyncPoolItf {
 	return NewAsyncPool(500, runtime.NumCPU()*8)
 }
@@ -485,6 +510,7 @@ func (p *AsyncPool) spawn(first func()) {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func PanicSafeFunc(op func()) func() {
 	return func() {
 		defer func() {
@@ -496,6 +522,7 @@ func PanicSafeFunc(op func()) func() {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func PanicSafeErrFunc(op func() error) func() error {
 	return func() (err error) {
 		defer func() {
@@ -513,10 +540,12 @@ func PanicSafeErrFunc(op func() error) func() error {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func PanicSafeRun(op func()) {
 	PanicSafeFunc(op)()
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func PanicSafeRunErr(op func() error) error {
 	return PanicSafeErrFunc(op)()
 }
@@ -527,6 +556,7 @@ func recoverPanic() {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type SignalOnce struct {
 	c      context.Context
 	cancel func()
@@ -559,6 +589,7 @@ func (s *SignalOnce) Notify() {
 	s.cancel()
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewSignalOnce() *SignalOnce {
 	c, f := context.WithCancel(context.Background())
 	return &SignalOnce{
@@ -567,6 +598,7 @@ func NewSignalOnce() *SignalOnce {
 	}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type BatchTask[T any, V any] struct {
 	parallel  int
 	taskPipe  chan T
@@ -604,12 +636,15 @@ func (b *BatchTask[T, V]) Generate(task T) {
 	b.taskPipe <- task
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type BatchTaskResult[V any] struct {
 	Result V
 	Err    error
 }
 
 // Create a batch of concurrent task for one time use.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (V, error)) *BatchTask[T, V] {
 	bt := &BatchTask[T, V]{
 		parallel:  parallel,
@@ -630,10 +665,12 @@ func NewBatchTask[T any, V any](parallel int, bufferSize int, consumer func(T) (
 	return bt
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewCompletedFuture[T any](t T, err error) Future[T] {
 	return &completedFuture[T]{res: t, err: err}
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 type AntsAsyncPool struct {
 	*asyncPoolCommon
 	p  *ants.Pool
@@ -675,6 +712,8 @@ func (a *AntsAsyncPool) StopAndWait() {
 //
 // By default, if the task queue is full and all workers are busy, the caller of [AsyncPoolItf].Go() is blocked indefinitively until the task can be processed.
 // You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+//
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPoolItf {
 	ap := &AntsAsyncPool{
 		asyncPoolCommon: &asyncPoolCommon{},
@@ -695,6 +734,7 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPoolItf {
 	return ap
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func RunCancellable(f func()) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
@@ -711,6 +751,7 @@ func RunCancellable(f func()) (cancel func()) {
 	return
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
@@ -733,6 +774,7 @@ func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel fun
 	return
 }
 
+// Deprecated: since v0.3.7, migrate to util/async pkg instead.
 func RunUntil[T any](wait time.Duration, f func() (stop bool, t T, e error)) (T, error) {
 	defer utillog.ErrorLog("exit")
 
