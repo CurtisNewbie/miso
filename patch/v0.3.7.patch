@@ -1,0 +1,261 @@
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.Future
++async.Future
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.AsyncPoolItf
++async.AsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.ErrGetTimeout
++async.ErrGetTimeout
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.RunAsync
++async.RunAsync
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.SubmitAsync
++async.SubmitAsync
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.AwaitFutures
++async.AwaitFutures
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewAwaitFutures
++async.NewAwaitFutures
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewSubmitAsyncFunc
++async.NewSubmitAsyncFunc
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.AsyncPool
++async.BoundedAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewAsyncPool
++async.NewAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.DropTaskWhenPoolFull
++async.FallbackDropTask
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.CallerRunTaskWhenPoolFull
++async.FallbackCallerRun
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewCpuAsyncPool
++async.NewCpuAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewIOAsyncPool
++async.NewIOAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.PanicSafeFunc
++async.PanicSafeFunc
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.PanicSafeErrFunc
++async.PanicSafeErrFunc
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.PanicSafeRun
++async.PanicSafeRun
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.PanicSafeRunErr
++async.PanicSafeRunErr
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.SignalOnce
++async.SignalOnce
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewSignalOnce
++async.NewSignalOnce
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.BatchTask
++async.BatchTask
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.BatchTaskResult
++async.BatchTaskResult
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewBatchTask
++async.NewBatchTask
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewCompletedFuture
++async.NewCompletedFuture
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.AntsAsyncPool
++async.AntsAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.NewAntsAsyncPool
++async.NewAntsAsyncPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.RunCancellable
++async.RunCancellable
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.RunCancellableChan
++async.RunCancellableChan
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/async"
+
+-util.RunUntil
++async.RunUntil

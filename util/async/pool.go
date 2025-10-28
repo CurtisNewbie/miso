@@ -30,7 +30,7 @@ type AsyncPool interface {
 // BoundedAsyncPool internally maintains a task queue with limited size and limited number of workers.
 //
 // By default, if the task queue is full and all workers are busy, the caller of *BoundedAsyncPool.Go is blocked indefinitively until the task can be processed.
-// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
 type BoundedAsyncPool struct {
 	*asyncPoolCommon
 	stopped      int32
@@ -60,7 +60,7 @@ type asyncPoolOption func(a AsyncPool)
 // The maxWorkers determines the max number of workers.
 //
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
-// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
 func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *BoundedAsyncPool {
 	if maxTasks < 0 {
 		maxTasks = 0
@@ -96,7 +96,7 @@ func unwrapAsyncPoolCommon(a AsyncPool, f func(ap *asyncPoolCommon)) {
 	}
 }
 
-func DropTaskWhenPoolFull() asyncPoolOption {
+func FallbackDropTask() asyncPoolOption {
 	return func(a AsyncPool) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
 			ap.doWhenPoolFull = func(task func()) {
@@ -108,7 +108,7 @@ func DropTaskWhenPoolFull() asyncPoolOption {
 	}
 }
 
-func CallerRunTaskWhenPoolFull() asyncPoolOption {
+func FallbackCallerRun() asyncPoolOption {
 	return func(a AsyncPool) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
 			ap.doWhenPoolFull = func(task func()) {
@@ -280,7 +280,7 @@ func (a *AntsAsyncPool) StopAndWait() {
 // The maxWorkers determines the max number of workers.
 //
 // By default, if the task queue is full and all workers are busy, the caller of [AsyncPool].Go() is blocked indefinitively until the task can be processed.
-// You can use [DropTaskWhenPoolFull] or [CallerRunTaskWhenPoolFull] to change this behaviour.
+// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
 func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPool {
 	ap := &AntsAsyncPool{
 		asyncPoolCommon: &asyncPoolCommon{},

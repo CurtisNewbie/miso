@@ -388,7 +388,7 @@ func TestBatchTask(t *testing.T) {
 
 func TestAyncPoolFull(t *testing.T) {
 	utillog.DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
-	ap := NewBoundedAsyncPool(0, 0, CallerRunTaskWhenPoolFull())
+	ap := NewBoundedAsyncPool(0, 0, FallbackCallerRun())
 	v := &atomic.Int32{}
 	ap.Go(func() {
 		t.Log("task 1")
@@ -404,7 +404,7 @@ func TestAyncPoolFull(t *testing.T) {
 	ap.StopAndWait()
 	t.Log("---")
 
-	ap = NewBoundedAsyncPool(0, 1, DropTaskWhenPoolFull())
+	ap = NewBoundedAsyncPool(0, 1, FallbackDropTask())
 	v.Store(0)
 	ap.Go(func() {
 		t.Log("2 - task 1")
@@ -425,7 +425,7 @@ func TestAyncPoolFull(t *testing.T) {
 
 func TestAntsAyncPoolFull(t *testing.T) {
 	utillog.DebugLog = func(pat string, args ...any) { t.Logf(pat, args...) }
-	ap := NewAntsAsyncPool(1, CallerRunTaskWhenPoolFull())
+	ap := NewAntsAsyncPool(1, FallbackCallerRun())
 	v := &atomic.Int32{}
 	var cnt int32 = 10
 	for i := range cnt {
