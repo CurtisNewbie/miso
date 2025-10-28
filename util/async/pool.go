@@ -122,14 +122,14 @@ func FallbackCallerRun() asyncPoolOption {
 	}
 }
 
-// Create AsyncPool with number of workers equals to 4 * num_cpu.
+// Create AsyncPool with number of workers equals to 4 * GOMAXPROCS.
 func NewCpuAsyncPool() AsyncPool {
-	return NewAntsAsyncPool(runtime.NumCPU() * 4)
+	return NewAntsAsyncPool(runtime.GOMAXPROCS(0) * 4)
 }
 
-// Create AsyncPool with number of workers equals to 8 * num_cpu and a task queue of size 500.
+// Create AsyncPool with number of workers equals to 8 * GOMAXPROCS and a task queue of size 100.
 func NewIOAsyncPool() AsyncPool {
-	return NewBoundedAsyncPool(500, runtime.NumCPU()*8)
+	return NewBoundedAsyncPool(100, runtime.GOMAXPROCS(0)*8)
 }
 
 // Stop the pool.
