@@ -2,12 +2,12 @@ package async
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
 
@@ -94,7 +94,7 @@ func TestRunAsyncWithPanic(t *testing.T) {
 }
 
 func panicFunc() (struct{}, error) {
-	cli.Printlnf("about to panic")
+	fmt.Println("about to panic")
 	panic("panic func panicked")
 }
 
@@ -187,19 +187,19 @@ func TestAsyncPoolStop(t *testing.T) {
 		pool.Go(func() {
 			start := time.Now().UnixMilli()
 			time.Sleep(time.Second)
-			cli.TPrintlnf("start: %v, v: %v", start, v)
+			fmt.Printf(time.Now().Format("2006-01-02 15:04:05.000")+" start: %v, v: %v\n", start, v)
 		})
 	}
-	cli.Printlnf("Test pre stop")
+	fmt.Println("Test pre stop")
 	pool.StopAndWait()
-	cli.Printlnf("Test post stop")
+	fmt.Println("Test post stop")
 
 	for i := 10; i < 15; i++ {
 		v := i
 		pool.Go(func() {
 			start := time.Now().UnixMilli()
 			time.Sleep(time.Second)
-			cli.TPrintlnf("start: %v, v: %v", start, v)
+			fmt.Printf(time.Now().Format("2006-01-02 15:04:05.000")+" start: %v, v: %v\n", start, v)
 		})
 	}
 
@@ -208,7 +208,7 @@ func TestAsyncPoolStop(t *testing.T) {
 
 func TestAsyncOnce(t *testing.T) {
 	f := RunAsync(func() (int, error) {
-		cli.Printlnf("async ran")
+		fmt.Println("async ran")
 		time.Sleep(time.Millisecond * 500)
 		return 1, nil
 	})
