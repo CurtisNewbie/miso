@@ -87,7 +87,7 @@
 +import "github.com/curtisnewbie/miso/util/async"
 
 -util.NewAsyncPool
-+async.NewAsyncPool
++async.NewBoundedAsyncPool
 
 @@
 @@
