@@ -169,7 +169,17 @@ func (r *RLock) Lock(op ...rLockOption) error {
 		RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(r.backoffWindow), r.backoffSteps),
 	})
 	if err != nil {
-		return errs.Wrapf(err, "failed to obtain lock, key: %v", r.key)
+		// in latest redislock release (e.g., 0.9.4), Obtain() can at most be blocked for lockLeaseTime,
+		// we may get DeadlineExceeded error if the total retry time >= lockLeaseTime.
+		//
+		// however, in previous release (e.g., 0.5.0), lockLeaseTime only affects each retry,
+		// in most cases, we won't see DeadlineExceeded at all, since time for each retry is almost always
+		// less than the lockLeaseTime.
+		werr := err
+		if errors.Is(err, context.DeadlineExceeded) {
+			werr = redislock.ErrNotObtained
+		}
+		return errs.Wrapf(werr, "failed to obtain lock, key: %v", r.key)
 	}
 	lockStart := time.Now()
 	r.lock = lock
