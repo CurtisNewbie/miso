@@ -96,6 +96,7 @@ func unwrapAsyncPoolCommon(a AsyncPool, f func(ap *asyncPoolCommon)) {
 	}
 }
 
+// Drop task when pool is full.
 func FallbackDropTask() asyncPoolOption {
 	return func(a AsyncPool) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
@@ -108,6 +109,7 @@ func FallbackDropTask() asyncPoolOption {
 	}
 }
 
+// Fallback to caller runs when pool is full.
 func FallbackCallerRun() asyncPoolOption {
 	return func(a AsyncPool) {
 		unwrapAsyncPoolCommon(a, func(ap *asyncPoolCommon) {
