@@ -24,6 +24,8 @@ import (
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
+	nblog "github.com/lesismal/nbio/logging"
+	"github.com/lesismal/nbio/nbhttp"
 	"github.com/spf13/cast"
 )
 
@@ -206,10 +208,24 @@ func prepHealthcheckRoutes() {
 	}
 }
 
-func startHttpServer(rail Rail, server *http.Server) {
+func startHttpServer(rail Rail, router http.Handler) error {
+	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
+	if GetPropBool(PropServerUseNbio) {
+		rail.Info("Using nbio for Http Server")
+		return startNbioHttpServer(rail, addr, router)
+	}
+	return startNetHttpServer(rail, addr, router)
+}
+
+func startNetHttpServer(rail Rail, addr string, router http.Handler) error {
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		panic(fmt.Errorf("http.Server Serve: %s", err))
+		return err
 	}
 	la := ln.Addr().(*net.TCPAddr)
 	rail.Infof("Serving HTTP on %s (actual port: %d)", server.Addr, la.Port)
@@ -220,15 +236,60 @@ func startHttpServer(rail Rail, server *http.Server) {
 			panic(fmt.Errorf("http.Server Serve: %s", err))
 		}
 	}()
+
+	AddAsyncShutdownHook(func() { shutdownNetHttpServer(server) })
+	return nil
 }
 
-func createHttpServer(router http.Handler) *http.Server {
-	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
-	server := &http.Server{
-		Addr:    addr,
+type nbioLogger struct {
+	r Rail
+}
+
+func (l *nbioLogger) Debug(format string, v ...interface{}) {
+	l.r.Debugf(format, v...)
+}
+
+func (l *nbioLogger) Info(format string, v ...interface{}) {
+	l.r.Infof(format, v...)
+}
+
+func (l *nbioLogger) Warn(format string, v ...interface{}) {
+	l.r.Warnf(format, v...)
+}
+
+func (l *nbioLogger) Error(format string, v ...interface{}) {
+	l.r.Errorf(format, v...)
+}
+
+func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
+	nblog.DefaultLogger = &nbioLogger{r: EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}
+	svr := nbhttp.NewEngine(nbhttp.Config{
+		Network: "tcp",
+		Addrs:   []string{addr},
 		Handler: router,
+		Listen: func(network, addr string) (net.Listener, error) {
+			ln, err := net.Listen(network, addr)
+			if err != nil {
+				return nil, err
+			}
+			la := ln.Addr().(*net.TCPAddr)
+			rail.Infof("Serving HTTP (nbio) on %s (actual port: %d)", addr, la.Port)
+			SetProp(PropServerActualPort, la.Port)
+			return ln, err
+		},
+	})
+
+	err := svr.Start()
+	if err != nil {
+		return err
 	}
-	return server
+
+	AddAsyncShutdownHook(func() {
+		Info("Shutting down http server")
+		defer Infof("Http server exited")
+		svr.Stop()
+	})
+	return nil
 }
 
 // Register http routes on gin.Engine
@@ -270,7 +331,7 @@ func registerServerRoutes(rail Rail, engine *gin.Engine) error {
 	return nil
 }
 
-func shutdownHttpServer(server *http.Server) {
+func shutdownNetHttpServer(server *http.Server) {
 	Info("Shutting down http server")
 	defer Infof("Http server exited")
 
@@ -557,11 +618,7 @@ func webServerBootstrap(rail Rail) error {
 	}
 
 	// start the http server
-	server := createHttpServer(engine)
-	startHttpServer(rail, server)
-
-	AddAsyncShutdownHook(func() { shutdownHttpServer(server) })
-	return nil
+	return startHttpServer(rail, engine)
 }
 
 type TreePath interface {
