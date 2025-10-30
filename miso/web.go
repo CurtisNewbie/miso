@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -263,10 +264,10 @@ func (l *nbioLogger) Error(format string, v ...interface{}) {
 
 func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
 	nblog.DefaultLogger = &nbioLogger{r: EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}
-	svr := nbhttp.NewEngine(nbhttp.Config{
+	svr := nbhttp.NewServer(nbhttp.Config{
 		Network: "tcp",
 		Addrs:   []string{addr},
-		Handler: router,
+		NPoller: runtime.GOMAXPROCS(0),
 		Listen: func(network, addr string) (net.Listener, error) {
 			ln, err := net.Listen(network, addr)
 			if err != nil {
@@ -277,7 +278,7 @@ func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
 			SetProp(PropServerActualPort, la.Port)
 			return ln, err
 		},
-	})
+	}, router)
 
 	err := svr.Start()
 	if err != nil {
