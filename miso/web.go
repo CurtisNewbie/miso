@@ -96,8 +96,6 @@ var (
 
 	// default health check handler disabled
 	defaultHealthCheckHandlerDisabled = false
-
-	useNbio = false
 )
 
 type ParamDoc struct {
@@ -214,7 +212,7 @@ func prepHealthcheckRoutes() {
 
 func startHttpServer(rail Rail, router http.Handler) error {
 	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
-	if useNbio {
+	if GetPropBool(PropServerUseNbio) {
 		rail.Info("Using nbio for Http Server")
 		return startNbioHttpServer(rail, addr, router)
 	}
@@ -269,6 +267,9 @@ func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
 	nblog.DefaultLogger = &nbioLogger{r: EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}
 	proc := runtime.GOMAXPROCS(0)
 	poolSize := proc * 256
+	if v := GetPropInt(PropServerNbioWorkerPoolSize); v > 0 {
+		poolSize = v
+	}
 	pool := async.NewAntsAsyncPool(poolSize)
 	npoller := proc / 4
 	if npoller < 1 {
@@ -1503,9 +1504,4 @@ func HandleFlightRecorderStop(inb *Inbound) {
 	fr := flightRecorderOnce()
 	err := fr.Stop()
 	inb.HandleResult(nil, err)
-}
-
-// Use nbio for http server (by default miso uses net/http), this is experimental, maybe removed in future release.
-func UseNbio() {
-	useNbio = true
 }
