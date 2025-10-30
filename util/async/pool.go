@@ -15,6 +15,10 @@ var (
 	_ AsyncPool = (*AntsAsyncPool)(nil)
 )
 
+const (
+	idleDur = 1 * time.Minute
+)
+
 // Async Pool Interface
 type AsyncPool interface {
 	Go(f func())
@@ -74,7 +78,7 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 		stopped:         0,
 		stopOnce:        &sync.Once{},
 		drainTasksWg:    &sync.WaitGroup{},
-		idleDur:         5 * time.Minute,
+		idleDur:         idleDur,
 		asyncPoolCommon: &asyncPoolCommon{},
 	}
 	ap.doWhenPoolFull = func(task func()) {
@@ -297,7 +301,7 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPool {
 		op(ap)
 	}
 	ap.p, _ = ants.NewPool(maxWorkers,
-		ants.WithExpiryDuration(5*time.Minute),
+		ants.WithExpiryDuration(idleDur),
 		ants.WithNonblocking(!ap.blockWhenPoolFull))
 
 	return ap
