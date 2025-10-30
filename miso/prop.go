@@ -33,7 +33,7 @@ const (
 	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
-	// misoconfig-prop: use nbio for http server (by default miso uses net/http) | false
+	// misoconfig-prop: use nbio for http server (by default miso uses net/http), this is experimental, maybe removed in future release | false
 	PropServerUseNbio = "server.use-nbio"
 
 	// misoconfig-prop: health check url | /health
