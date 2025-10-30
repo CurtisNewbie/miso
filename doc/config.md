@@ -231,7 +231,6 @@ The tables shown below list all configuration that you can tune. You can also re
 | server.enabled                            | enable http server                                                                                                        | true          |
 | server.host                               | http server host                                                                                                          | 127.0.0.1     |
 | server.port                               | http server port                                                                                                          | 8080          |
-| server.use-nbio                           | use nbio for http server (by default miso uses net/http), this is experimental, maybe removed in future release           | false         |
 | server.health-check-url                   | health check url                                                                                                          | /health       |
 | server.health-check-interval              | health check interval, it's only used for service discovery, e.g., Consul                                                 | 5s            |
 | server.health-check-timeout               | health check timeout, it's only used for service discovery, e.g., Consul                                                  | 3s            |

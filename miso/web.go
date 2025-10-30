@@ -18,6 +18,7 @@ import (
 	"golang.org/x/exp/trace"
 
 	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/pair"
@@ -95,6 +96,8 @@ var (
 
 	// default health check handler disabled
 	defaultHealthCheckHandlerDisabled = false
+
+	useNbio = false
 )
 
 type ParamDoc struct {
@@ -211,7 +214,7 @@ func prepHealthcheckRoutes() {
 
 func startHttpServer(rail Rail, router http.Handler) error {
 	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
-	if GetPropBool(PropServerUseNbio) {
+	if useNbio {
 		rail.Info("Using nbio for Http Server")
 		return startNbioHttpServer(rail, addr, router)
 	}
@@ -264,10 +267,18 @@ func (l *nbioLogger) Error(format string, v ...interface{}) {
 
 func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
 	nblog.DefaultLogger = &nbioLogger{r: EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}
+	proc := runtime.GOMAXPROCS(0)
+	poolSize := proc * 256
+	pool := async.NewAntsAsyncPool(poolSize)
+	npoller := proc / 4
+	if npoller < 1 {
+		npoller = 1
+	}
 	svr := nbhttp.NewServer(nbhttp.Config{
+		Name:    "nbio",
 		Network: "tcp",
 		Addrs:   []string{addr},
-		NPoller: runtime.GOMAXPROCS(0),
+		NPoller: npoller,
 		Listen: func(network, addr string) (net.Listener, error) {
 			ln, err := net.Listen(network, addr)
 			if err != nil {
@@ -278,7 +289,9 @@ func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
 			SetProp(PropServerActualPort, la.Port)
 			return ln, err
 		},
+		ServerExecutor: pool.Go,
 	}, router)
+	rail.Infof("NPoller: %v, ServerExecutor PoolSize: %v", npoller, poolSize)
 
 	err := svr.Start()
 	if err != nil {
@@ -1490,4 +1503,9 @@ func HandleFlightRecorderStop(inb *Inbound) {
 	fr := flightRecorderOnce()
 	err := fr.Stop()
 	inb.HandleResult(nil, err)
+}
+
+// Use nbio for http server (by default miso uses net/http), this is experimental, maybe removed in future release.
+func UseNbio() {
+	useNbio = true
 }
