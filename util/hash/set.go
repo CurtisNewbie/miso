@@ -2,9 +2,10 @@ package hash
 
 import (
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"github.com/curtisnewbie/miso/encoding/json"
 
 	"github.com/curtisnewbie/miso/util/errs"
 )
@@ -99,7 +100,7 @@ func (s *Set[T]) ForEach(f func(v T) (stop bool)) {
 
 // Implements encoding/json Marshaler
 func (s Set[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.CopyKeys())
+	return json.WriteJson(s.CopyKeys())
 }
 
 // Implements encoding/json Unmarshaler.
@@ -109,7 +110,7 @@ func (s *Set[T]) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var l []T
-	if err := json.Unmarshal(b, &l); err != nil {
+	if err := json.ParseJson(b, &l); err != nil {
 		return err
 	}
 	s.AddAll(l)

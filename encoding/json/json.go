@@ -7,7 +7,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/curtisnewbie/miso/util"
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -26,6 +25,11 @@ func ParseJson(body []byte, ptr any) error {
 	return e
 }
 
+// Write json as bytes.
+func Unmarshal(body []byte, ptr any) error {
+	return ParseJson(body, ptr)
+}
+
 // Parse json bytes.
 func ParseJsonAs[T any](body []byte) (T, error) {
 	var t T
@@ -40,7 +44,12 @@ func SParseJsonAs[T any](body string) (T, error) {
 
 // Parse json string.
 func SParseJson(body string, ptr any) error {
-	return ParseJson(util.UnsafeStr2Byt(body), ptr)
+	return ParseJson([]byte(body), ptr)
+}
+
+// Write json as bytes.
+func Marshal(body any) ([]byte, error) {
+	return WriteJson(body)
 }
 
 // Write json as bytes.
@@ -57,7 +66,7 @@ func SWriteJson(body any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return util.UnsafeByt2Str(buf), nil
+	return string(buf), nil
 }
 
 // Write json as string.
@@ -69,7 +78,7 @@ func TrySWriteJson(body any) string {
 	if err != nil {
 		return ""
 	}
-	return util.UnsafeByt2Str(buf)
+	return string(buf)
 }
 
 func SWriteIndent(body any) (string, error) {
@@ -80,7 +89,7 @@ func SWriteIndent(body any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return util.UnsafeByt2Str(buf), nil
+	return string(buf), nil
 }
 
 // Write json as string using customized jsoniter.Config.
@@ -92,7 +101,7 @@ func CustomSWriteJson(c jsoniter.API, body any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return util.UnsafeByt2Str(buf), nil
+	return string(buf), nil
 }
 
 // Decode json.
@@ -144,7 +153,7 @@ func IsValidJson(s []byte) bool {
 }
 
 func IsValidJsonStr(s string) bool {
-	return IsValidJson(util.UnsafeStr2Byt(s))
+	return IsValidJson([]byte(s))
 }
 
 func Indent(b []byte) string {
@@ -154,7 +163,7 @@ func Indent(b []byte) string {
 }
 
 func SIndent(b string) string {
-	return Indent(util.UnsafeStr2Byt(b))
+	return Indent([]byte(b))
 }
 
 func EscapeString(s string) string {
