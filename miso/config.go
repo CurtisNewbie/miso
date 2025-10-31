@@ -2,6 +2,7 @@ package miso
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +25,8 @@ import (
 )
 
 var (
+	defConfigFilename = "conf.yml"
+
 	// regex for arg expansion
 	resolveArgRegexp = regexp.MustCompile(`\${[a-zA-Z0-9\/\-\_\.: ]+}`)
 )
@@ -786,10 +789,12 @@ func GetEnvElse(key string, defVal string) string {
 //
 // It first looks for the arg that matches the pattern "configFile=/path/to/configFile".
 // If none is found, it's by default 'conf.yml'.
+//
+// See [ChangeDefaultConfigFilename].
 func GuessConfigFilePath(args []string) string {
 	path := ExtractArgValue(args, func(key string) bool { return key == "configFile" })
 	if strings.TrimSpace(path) == "" {
-		path = "conf.yml"
+		path = defConfigFilename
 	}
 	return path
 }
@@ -817,4 +822,13 @@ func ExtractArgValue(args []string, predicate func(t string) bool) string {
 
 func globalConfig() *AppConfig {
 	return App().Config()
+}
+
+// Change default config filename, by default it's conf.yml.
+func ChangeDefaultConfigFilename(f string) {
+	f = strings.TrimSpace(f)
+	if f == "" {
+		panic(errors.New("default config filename is empty"))
+	}
+	defConfigFilename = f
 }
