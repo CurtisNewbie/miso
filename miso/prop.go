@@ -33,7 +33,7 @@ const (
 	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
-	// misoconfig-prop: use nbio for http server (by default miso uses net/http), this is experimental, maybe removed in future release | false
+	// misoconfig-prop: http server use nbio engine (by default miso uses net/http), this is experimental, maybe removed in future release | false
 	PropServerUseNbio = "server.use-nbio"
 
 	// misoconfig-prop: http server nbio worker pool size, by default it's `GOMAXPROCS * 256`
