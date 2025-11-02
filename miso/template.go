@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -44,10 +46,18 @@ func ServeStatic(inb *Inbound, fs embed.FS, file string) {
 // If you are using Angular framework, you may add extra build param as follows. The idea is still the same for other frameworks.
 //
 //	ng build --baseHref=/static/
-func PrepareWebStaticFs(fs embed.FS, dir string) {
+func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 	serveStaticFile := func(c *gin.Context, fp string) {
 		Debugf("Serving static file: %v", fp)
 		c.FileFromFS(path.Join(dir, fp), http.FS(fs))
+	}
+
+	var hp string
+	if v, ok := slutil.SliceFirst(hostPrefix); ok {
+		hp = v
+	}
+	if hp != "" {
+		hp = "/" + hp
 	}
 
 	setNoRouteHandler(func(ctx *gin.Context, rail Rail) {
@@ -58,7 +68,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string) {
 		// https://github.com/gin-contrib/static/issues/19
 		if ctx.Request.Method == "GET" {
 			if ctx.Request.RequestURI == "/" || strings.HasPrefix(ctx.Request.RequestURI, "/static") {
-				ctx.Redirect(http.StatusTemporaryRedirect, "/static/index.htm")
+				ctx.Redirect(http.StatusTemporaryRedirect, hp+"/static/index.htm")
 				return
 			}
 		}
@@ -69,7 +79,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string) {
 		HttpGet("/static/*filepath", RawHandler(func(inb *Inbound) {
 			c := inb.Engine().(*gin.Context)
 			cp := c.Param("filepath")
-			if cp == "" || cp == "/static/" {
+			if strutil.EqualAnyStr(cp, "", "/static", "/static") {
 				cp = "index.htm"
 			}
 			serveStaticFile(c, cp)
