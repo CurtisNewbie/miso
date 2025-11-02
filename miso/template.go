@@ -11,7 +11,6 @@ import (
 
 	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/slutil"
-	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -79,7 +78,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 		HttpGet("/static/*filepath", RawHandler(func(inb *Inbound) {
 			c := inb.Engine().(*gin.Context)
 			cp := c.Param("filepath")
-			if strutil.EqualAnyStr(cp, "", "/static", "/static") {
+			if cp == "" {
 				cp = "index.htm"
 			}
 			serveStaticFile(c, cp)
