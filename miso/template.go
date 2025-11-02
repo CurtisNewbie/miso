@@ -55,7 +55,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 	if v, ok := slutil.SliceFirst(hostPrefix); ok {
 		hp = v
 	}
-	if hp != "" {
+	if hp != "" && !strings.HasPrefix(hp, "/") {
 		hp = "/" + hp
 	}
 
