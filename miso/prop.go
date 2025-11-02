@@ -33,12 +33,6 @@ const (
 	// misoconfig-prop: http server port | 8080
 	PropServerPort = "server.port"
 
-	// misoconfig-prop: http server use nbio engine (by default miso uses net/http), this is experimental, maybe removed in future release | false
-	PropServerUseNbio = "server.use-nbio"
-
-	// misoconfig-prop: http server nbio worker pool size, by default it's `GOMAXPROCS * 256`
-	PropServerNbioWorkerPoolSize = "server.nbio.worker-pool-size"
-
 	// misoconfig-prop: health check url | /health
 	// misoconfig-alias: consul.healthCheckUrl | v0.2.0
 	PropHealthCheckUrl = "server.health-check-url"
@@ -307,7 +301,6 @@ func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
-	SetDefProp(PropServerUseNbio, false)
 	SetDefProp(PropHealthCheckUrl, "/health")
 	SetDefProp(PropHealthCheckInterval, "5s")
 	SetDefProp(PropHealthcheckTimeout, "3s")

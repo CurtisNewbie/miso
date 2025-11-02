@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"golang.org/x/exp/trace"
 
 	"github.com/curtisnewbie/miso/encoding/json"
-	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/pair"
@@ -26,8 +24,6 @@ import (
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
-	nblog "github.com/lesismal/nbio/logging"
-	"github.com/lesismal/nbio/nbhttp"
 	"github.com/spf13/cast"
 )
 
@@ -212,10 +208,6 @@ func prepHealthcheckRoutes() {
 
 func startHttpServer(rail Rail, router http.Handler) error {
 	addr := fmt.Sprintf("%s:%s", GetPropStr(PropServerHost), GetPropStr(PropServerPort))
-	if GetPropBool(PropServerUseNbio) {
-		rail.Info("Using nbio for Http Server")
-		return startNbioHttpServer(rail, addr, router)
-	}
 	return startNetHttpServer(rail, addr, router)
 }
 
@@ -240,70 +232,6 @@ func startNetHttpServer(rail Rail, addr string, router http.Handler) error {
 	}()
 
 	AddAsyncShutdownHook(func() { shutdownNetHttpServer(server) })
-	return nil
-}
-
-type nbioLogger struct {
-	r Rail
-}
-
-func (l *nbioLogger) Debug(format string, v ...interface{}) {
-	l.r.Debugf(format, v...)
-}
-
-func (l *nbioLogger) Info(format string, v ...interface{}) {
-	l.r.Infof(format, v...)
-}
-
-func (l *nbioLogger) Warn(format string, v ...interface{}) {
-	l.r.Warnf(format, v...)
-}
-
-func (l *nbioLogger) Error(format string, v ...interface{}) {
-	l.r.Errorf(format, v...)
-}
-
-func startNbioHttpServer(rail Rail, addr string, router http.Handler) error {
-	nblog.DefaultLogger = &nbioLogger{r: EmptyRail().ZeroTrace().SetGetCallFnUpN(2)}
-	proc := runtime.GOMAXPROCS(0)
-	poolSize := proc * 256
-	if v := GetPropInt(PropServerNbioWorkerPoolSize); v > 0 {
-		poolSize = v
-	}
-	pool := async.NewAntsAsyncPool(poolSize)
-	npoller := proc / 4
-	if npoller < 1 {
-		npoller = 1
-	}
-	svr := nbhttp.NewServer(nbhttp.Config{
-		Name:    "nbio",
-		Network: "tcp",
-		Addrs:   []string{addr},
-		NPoller: npoller,
-		Listen: func(network, addr string) (net.Listener, error) {
-			ln, err := net.Listen(network, addr)
-			if err != nil {
-				return nil, err
-			}
-			la := ln.Addr().(*net.TCPAddr)
-			rail.Infof("Serving HTTP (nbio) on %s (actual port: %d)", addr, la.Port)
-			SetProp(PropServerActualPort, la.Port)
-			return ln, err
-		},
-		ServerExecutor: pool.Go,
-	}, router)
-	rail.Infof("NPoller: %v, ServerExecutor PoolSize: %v", npoller, poolSize)
-
-	err := svr.Start()
-	if err != nil {
-		return err
-	}
-
-	AddAsyncShutdownHook(func() {
-		Info("Shutting down http server")
-		defer Infof("Http server exited")
-		svr.Stop()
-	})
 	return nil
 }
 
