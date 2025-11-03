@@ -13,6 +13,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 )
@@ -176,6 +177,16 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 
 func (h *HttpProxy) AddFilter(f ProxyFilter) {
 	h.filters = append(h.filters, f)
+}
+
+func (h *HttpProxy) AddPathFilter(pathPatterns []string, f ProxyFilter) {
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		if _, ok := strutil.MatchPathAnyVal(pathPatterns, pc.ProxyPath); ok {
+			f(pc, next)
+			return
+		}
+		next()
+	})
 }
 
 func (h *HttpProxy) ChangeClient(c *http.Client) {
