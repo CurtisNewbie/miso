@@ -229,6 +229,8 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 
 		next()
 	})
+
+	Info("Registered Access Filter")
 }
 
 func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
@@ -262,7 +264,8 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 		}
 	}
 
-	h.AddPathFilter([]string{"/debug/pprof/**", "/debug/trace/**"}, func(pc *ProxyContext, _ func()) {
+	pat := []string{"/debug/pprof/**", "/debug/trace/**"}
+	h.AddPathFilter(pat, func(pc *ProxyContext, _ func()) {
 		w, r := pc.Inb.Unwrap()
 		p := pc.ProxyPath
 
@@ -302,6 +305,7 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 		}
 	})
 
+	Infof("Registered Debug Filter for %v", pat)
 	return nil
 }
 
@@ -325,6 +329,7 @@ func (h *HttpProxy) AddHealthcheckFilter() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 	})
+	Infof("Registered Healthcheck Filter for %v", hcUrl)
 }
 
 // Add Filter for metrics and prometheus.
@@ -335,9 +340,14 @@ func (h *HttpProxy) AddMetricsFilter(hiso prometheus.Histogram, exclPath func(pr
 		return
 	}
 
+	metricsEndpoint := GetPropStr(PropMetricsRoute)
+	if metricsEndpoint == "" {
+		return
+	}
+
 	h.AddFilter(func(pc *ProxyContext, next func()) {
-		metricsEndpoint := GetPropStr(PropMetricsRoute)
-		if metricsEndpoint != "" && pc.ProxyPath == metricsEndpoint {
+
+		if pc.ProxyPath == metricsEndpoint {
 			w, r := pc.Inb.Unwrap()
 			PrometheusHandler().ServeHTTP(w, r)
 			return
@@ -352,6 +362,7 @@ func (h *HttpProxy) AddMetricsFilter(hiso prometheus.Histogram, exclPath func(pr
 		defer timer.ObserveDuration()
 		next()
 	})
+	Infof("Registered Metrics Filter for %v", metricsEndpoint)
 }
 
 func (h *HttpProxy) ChangeClient(c *http.Client) {
