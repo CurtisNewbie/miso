@@ -176,7 +176,7 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 
 func (h *HttpProxy) AddPathFilter(pathPatterns []string, f ProxyFilter) {
 	h.AddFilter(func(pc *ProxyContext, next func()) {
-		if _, ok := strutil.MatchPathAnyVal(pathPatterns, pc.ProxyPath); ok {
+		if ok := strutil.MatchPathAny(pathPatterns, pc.ProxyPath); ok {
 			f(pc, next)
 			return
 		}
