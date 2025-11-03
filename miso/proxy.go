@@ -188,7 +188,7 @@ func (h *HttpProxy) isRootPath() bool {
 	return h.rootProxiedPath == "/"
 }
 
-func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool), f ProxyFilter) {
+func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool)) {
 
 	h.AddFilter(func(pc *ProxyContext, next func()) {
 		w, r := pc.Inb.Unwrap()
