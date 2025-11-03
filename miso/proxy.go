@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/http/pprof"
 	"net/url"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cast"
 )
 
@@ -35,9 +38,10 @@ type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 // HttpProxy by default use http.Client with 5s connect timeout and 30s response header timeout.
 // In terms of connection reuse, the IdleConnTimeout is 5min, MaxIdleConns is 5, MaxIdleConnsPerHost is 100 and MaxConnsPerHost is 500.
 type HttpProxy struct {
-	client        *http.Client
-	filters       []ProxyFilter
-	resolveTarget ProxyTargetResolver
+	client          *http.Client
+	filters         []ProxyFilter
+	resolveTarget   ProxyTargetResolver
+	rootProxiedPath string
 }
 
 // Create HTTP proxy for specific path.
@@ -79,6 +83,7 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	if proxiedPath != "/" {
 		HttpAny(proxiedPath, p.proxyRequestHandler)
 	}
+	p.rootProxiedPath = proxiedPath
 	wildcardPath := proxiedPath
 	if !strings.HasSuffix(wildcardPath, "/") {
 		wildcardPath += "/"
@@ -185,6 +190,183 @@ func (h *HttpProxy) AddPathFilter(pathPatterns []string, f ProxyFilter) {
 			f(pc, next)
 			return
 		}
+		next()
+	})
+}
+
+func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool), f ProxyFilter) {
+
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		w, r := pc.Inb.Unwrap()
+		rail := pc.Rail
+		proxyPath := pc.ProxyPath
+
+		valid := false
+
+		// whitelisted path patterns
+		if matched, ok := strutil.MatchPathAnyVal(whitelistPatterns(), proxyPath); ok {
+			rail.Infof("Matched whitelist path: %v", matched)
+			valid = true
+		}
+
+		invalidStatusCode := http.StatusUnauthorized
+
+		// check authentication/authorization
+		if !valid {
+			sc, ok := checkAuth(pc)
+			if ok {
+				valid = true
+			} else if sc != 0 {
+				invalidStatusCode = sc
+			}
+		}
+
+		if !valid {
+			var body string = "***"
+			if r.Body != nil && ContentTypeLoggable(r.Header.Get("content-type")) {
+				if buf, err := io.ReadAll(r.Body); err == nil {
+					body = "\n" + string(buf)
+				}
+			}
+			rail.Warnf("Request forbidden (resource access not authorized): %v %v, body: %v", r.Method, r.RequestURI, body)
+			w.WriteHeader(invalidStatusCode)
+			return
+		}
+
+		next()
+	})
+}
+
+func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		_, r := pc.Inb.Unwrap()
+
+		if exclPath(pc.ProxyPath) {
+			next()
+			return
+		}
+
+		start := time.Now()
+		pc.Rail.Infof("Receive '%v %v' [%v]", r.Method, r.RequestURI, r.RemoteAddr)
+		next()
+		pc.Rail.Infof("Processed '%v %v' [%v]", r.Method, r.RequestURI, time.Since(start))
+	})
+}
+
+// Add Filter for /debug/** paths.
+//
+// Only active when the proxied path is '/'.
+func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
+	if h.rootProxiedPath != "/" {
+		return nil
+	}
+
+	bearer := GetPropStr(PropServerPprofAuthBearer)
+	if mustAuthInProd && IsProdMode() {
+		if bearer == "" {
+			return errs.NewErrf("Configuration '%v' for pprof authentication is missing, but pprof authentication is enabled", PropServerPprofAuthBearer)
+		}
+	}
+
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		w, r := pc.Inb.Unwrap()
+
+		p := pc.ProxyPath
+
+		if bearer != "" && strutil.HasAnyPrefix(p, "/debug/pprof", "/debug/trace") {
+			token, ok := ParseBearer(r.Header.Get("Authorization"))
+			if !ok || token != bearer {
+				pc.Rail.Warnf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+
+		if strings.HasPrefix(p, "/debug/pprof") {
+			switch p {
+			case "/debug/pprof/cmdline":
+				pprof.Cmdline(w, r)
+				return
+			case "/debug/pprof/profile":
+				pprof.Profile(w, r)
+				return
+			case "/debug/pprof/symbol":
+				pprof.Symbol(w, r)
+				return
+			case "/debug/pprof/trace":
+				pprof.Trace(w, r)
+				return
+			default:
+				if name, found := strings.CutPrefix(p, "/debug/pprof/"); found && name != "" {
+					pprof.Handler(name).ServeHTTP(w, r)
+					return
+				}
+				pprof.Index(w, r)
+				return
+			}
+
+		} else if strings.HasPrefix(p, "/debug/trace") {
+			switch p {
+			case "/debug/trace/recorder/run":
+				HandleFlightRecorderRun(pc.Inb)
+				return
+			case "/debug/trace/recorder/stop":
+				HandleFlightRecorderStop(pc.Inb)
+				return
+			}
+		}
+
+		next()
+	})
+
+	return nil
+}
+
+// Add Filter for healthcheck.
+//
+// Only active when the proxied path is '/'.
+func (h *HttpProxy) AddHealthcheckFilter() {
+	if h.rootProxiedPath != "/" {
+		return
+	}
+	hcUrl := GetPropStr(PropHealthCheckUrl)
+	if hcUrl == "" {
+		return
+	}
+	h.AddPathFilter([]string{hcUrl}, func(pc *ProxyContext, next func()) {
+		// check if it's a healthcheck endpoint (for consul), we don't really return anything, so it's fine to expose it
+		w, _ := pc.Inb.Unwrap()
+		if IsHealthcheckPass(*pc.Rail) {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+	})
+}
+
+// Add Filter for metrics and prometheus.
+//
+// Only active when the proxied path is '/'.
+func (h *HttpProxy) AddMetricsFilter(hiso prometheus.Histogram, exclPath func(proxyPath string) bool) {
+	if h.rootProxiedPath != "/" {
+		return
+	}
+
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		metricsEndpoint := GetPropStr(PropMetricsRoute)
+		if metricsEndpoint != "" && pc.ProxyPath == metricsEndpoint {
+			w, r := pc.Inb.Unwrap()
+			PrometheusHandler().ServeHTTP(w, r)
+			return
+		}
+
+		if exclPath(pc.ProxyPath) {
+			next()
+			return
+		}
+
+		timer := NewHistTimer(hiso)
+		defer timer.ObserveDuration()
 		next()
 	})
 }
