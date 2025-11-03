@@ -256,6 +256,9 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 	if !h.isRootPath() {
 		return nil
 	}
+	if !GetPropBool(PropServerPprofEnabled) {
+		return nil
+	}
 
 	bearer := GetPropStr(PropServerPprofAuthBearer)
 	if mustAuthInProd && IsProdMode() {
