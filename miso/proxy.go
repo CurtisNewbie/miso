@@ -1,8 +1,6 @@
 package miso
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -36,7 +34,7 @@ type ProxyTargetResolver func(rail Rail, proxyPath string) (string, error)
 // Http Reverse Proxy.
 //
 // HttpProxy by default use http.Client with 5s connect timeout and 30s response header timeout.
-// In terms of connection reuse, the IdleConnTimeout is 5min, MaxIdleConns is 5, MaxIdleConnsPerHost is 100 and MaxConnsPerHost is 500.
+// In terms of connection reuse, the IdleConnTimeout is 1min, MaxIdleConns is 0, MaxIdleConnsPerHost is 100 and MaxConnsPerHost is 500.
 type HttpProxy struct {
 	client          *http.Client
 	filters         []ProxyFilter
@@ -93,10 +91,6 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	return p
 }
 
-func (h *HttpProxy) logErrWarn(err error) bool {
-	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
-}
-
 func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	_rail := inb.Rail()
 
@@ -135,11 +129,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 		rproxy := &httputil.ReverseProxy{}
 		rproxy.Transport = h.client.Transport
 		rproxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			if h.logErrWarn(err) {
-				pc.Rail.Warnf("Failed to proxy request, %v", err)
-			} else {
-				pc.Rail.Errorf("Failed to proxy request, %v", err)
-			}
+			pc.Rail.Warnf("Failed to proxy request, %v", err)
 		}
 		rproxy.Rewrite = func(pr *httputil.ProxyRequest) {
 			targetUrl, _ := url.Parse(path)
@@ -192,6 +182,10 @@ func (h *HttpProxy) AddPathFilter(pathPatterns []string, f ProxyFilter) {
 		}
 		next()
 	})
+}
+
+func (h *HttpProxy) isRootPath() bool {
+	return h.rootProxiedPath == "/"
 }
 
 func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool), f ProxyFilter) {
@@ -253,11 +247,11 @@ func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
 	})
 }
 
-// Add Filter for /debug/** paths.
+// Add Filter for /debug/pprof/** and /debug/trace/** paths.
 //
 // Only active when the proxied path is '/'.
 func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
-	if h.rootProxiedPath != "/" {
+	if !h.isRootPath() {
 		return nil
 	}
 
@@ -268,12 +262,11 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 		}
 	}
 
-	h.AddFilter(func(pc *ProxyContext, next func()) {
+	h.AddPathFilter([]string{"/debug/pprof/**", "/debug/trace/**"}, func(pc *ProxyContext, _ func()) {
 		w, r := pc.Inb.Unwrap()
-
 		p := pc.ProxyPath
 
-		if bearer != "" && strutil.HasAnyPrefix(p, "/debug/pprof", "/debug/trace") {
+		if bearer != "" {
 			token, ok := ParseBearer(r.Header.Get("Authorization"))
 			if !ok || token != bearer {
 				pc.Rail.Warnf("Bearer authorization failed, missing bearer token or token mismatch, %v %v", r.Method, r.RequestURI)
@@ -286,37 +279,27 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 			switch p {
 			case "/debug/pprof/cmdline":
 				pprof.Cmdline(w, r)
-				return
 			case "/debug/pprof/profile":
 				pprof.Profile(w, r)
-				return
 			case "/debug/pprof/symbol":
 				pprof.Symbol(w, r)
-				return
 			case "/debug/pprof/trace":
 				pprof.Trace(w, r)
-				return
 			default:
 				if name, found := strings.CutPrefix(p, "/debug/pprof/"); found && name != "" {
 					pprof.Handler(name).ServeHTTP(w, r)
 					return
 				}
 				pprof.Index(w, r)
-				return
 			}
-
 		} else if strings.HasPrefix(p, "/debug/trace") {
 			switch p {
 			case "/debug/trace/recorder/run":
 				HandleFlightRecorderRun(pc.Inb)
-				return
 			case "/debug/trace/recorder/stop":
 				HandleFlightRecorderStop(pc.Inb)
-				return
 			}
 		}
-
-		next()
 	})
 
 	return nil
@@ -326,7 +309,7 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 //
 // Only active when the proxied path is '/'.
 func (h *HttpProxy) AddHealthcheckFilter() {
-	if h.rootProxiedPath != "/" {
+	if !h.isRootPath() {
 		return
 	}
 	hcUrl := GetPropStr(PropHealthCheckUrl)
@@ -348,7 +331,7 @@ func (h *HttpProxy) AddHealthcheckFilter() {
 //
 // Only active when the proxied path is '/'.
 func (h *HttpProxy) AddMetricsFilter(hiso prometheus.Histogram, exclPath func(proxyPath string) bool) {
-	if h.rootProxiedPath != "/" {
+	if !h.isRootPath() {
 		return
 	}
 
@@ -453,7 +436,7 @@ func newProxyClient(opts ...func(*http.Transport)) *http.Client {
 	transport.MaxIdleConns = 0
 	transport.MaxIdleConnsPerHost = 100
 	transport.MaxConnsPerHost = 500
-	transport.IdleConnTimeout = time.Minute * 5
+	transport.IdleConnTimeout = time.Minute * 1
 	transport.DialContext = (&net.Dialer{
 		Timeout:   5 * time.Second,
 		KeepAlive: 15 * time.Second,
