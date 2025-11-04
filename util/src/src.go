@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
+
+	"github.com/curtisnewbie/miso/util/slutil"
 )
 
 var (
@@ -105,6 +107,7 @@ func unsafeGetShortFnName(fn string) string {
 	}
 
 	fnb := unsafeStr2Byt(fn)
+	var jb int = -1
 	for i := len(fnb) - 1; i >= 0; i-- {
 		ib := fnb[i]
 		switch ib {
@@ -114,7 +117,18 @@ func unsafeGetShortFnName(fn string) string {
 			}
 			return trimLengthyName(fnb[i:])
 		case '(':
+			if jb > -1 && i < len(fnb)-1 {
+				var lastTwo []byte
+				if i < len(fnb)-2 {
+					lastTwo = fnb[i+1 : i+3]
+				} else {
+					lastTwo = fnb[i+1 : i+2]
+				}
+				return trimLengthyName(slutil.Concat([]byte{'('}, lastTwo, []byte{')'}, fnb[jb+1:]))
+			}
 			return trimLengthyName(fnb[i:])
+		case ')':
+			jb = i
 		}
 	}
 	return fn

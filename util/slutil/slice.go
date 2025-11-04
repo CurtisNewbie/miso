@@ -239,3 +239,16 @@ func MergeVarargs[T any](fst T, args ...T) []T {
 	ar = append(ar, fst)
 	return append(ar, args...)
 }
+
+func Concat[T any](a []T, b ...[]T) []T {
+	var total int = len(a)
+	for _, v := range b {
+		total += len(v)
+	}
+	cp := make([]T, 0, total)
+	cp = append(cp, a...)
+	for _, v := range b {
+		cp = append(cp, v...)
+	}
+	return cp
+}

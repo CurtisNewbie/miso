@@ -19,23 +19,23 @@ func TestUnsafeGetShortFnName(t *testing.T) {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc"); v != "(*abc).shortFunc" {
+	if v := unsafeGetShortFnName("gggg/vvvv/pck.(*abc).shortFunc"); v != "(*abc).shortFunc" {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
+	if v := unsafeGetShortFnName("gggg/vvvv/pck.(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vv漢字vv/(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
+	if v := unsafeGetShortFnName("gggg/vvvv/(*abc).shortFunc.func2"); v != "(*abc).shortFunc.func2" {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.func2.func"); v != "(*abc).shortFunc.func2.func" {
+	if v := unsafeGetShortFnName("gggg/vvvv/pck.(*abc).shortFunc.func2.func"); v != "(*abc).shortFunc.func2.func" {
 		t.Fatal(v)
 	}
 
-	if v := unsafeGetShortFnName("gggg/vv漢字vv/pck.(*abc).shortFunc.funcA.funcB.do"); v != "funcA.funcB.do" {
+	if v := unsafeGetShortFnName("gggg/vvvv/pck.(*abc).shortFunc.funcA.funcB.do"); v != "(*a).shortFunc.funcA.funcB.do" {
 		t.Fatal(v)
 	}
 
@@ -51,6 +51,9 @@ func TestUnsafeGetShortFnName(t *testing.T) {
 		t.Fatal(v)
 	}
 
+	if v := unsafeGetShortFnName("abc.(*HttpProxy).AddHealthcheckFilter"); v != "(*H).AddHealthcheckFilter" {
+		t.Fatal(v)
+	}
 }
 func BenchmarkUnsafeGetShortFnName(b *testing.B) {
 	/*

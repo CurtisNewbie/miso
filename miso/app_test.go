@@ -96,7 +96,7 @@ func TestPreServerBootstrapCallback(t *testing.T) {
 	})
 
 	rail := EmptyRail()
-	App().callPreServerBoot(rail)
+	App().callPreServerBootstrap(rail)
 
 	if i != 3 {
 		t.Fatalf("i is not 3, but %v", i)

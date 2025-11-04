@@ -180,7 +180,7 @@ func (a *MisoApp) Bootstrap(args []string) {
 	a.addBootstrapHealthIndicator()
 
 	// invoke callbacks to setup server, sometime we need to setup stuff right after the configuration being loaded
-	if e := a.callPreServerBoot(rail); e != nil {
+	if e := a.callPreServerBootstrap(rail); e != nil {
 		rail.Errorf("Error occurred while trigger PreServerBootstrap callbacks, %v", e)
 		return
 	}
@@ -407,7 +407,7 @@ func (a *MisoApp) callConfigLoaders(rail Rail) error {
 	return nil
 }
 
-func (a *MisoApp) callPreServerBoot(rail Rail) error {
+func (a *MisoApp) callPreServerBootstrap(rail Rail) error {
 	rail.Infof("Triggering PreServerBootstrap")
 	start := time.Now()
 
