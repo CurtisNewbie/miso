@@ -231,7 +231,7 @@ func startNetHttpServer(rail Rail, addr string, router http.Handler) error {
 		}
 	}()
 
-	AddAsyncShutdownHook(func() { shutdownNetHttpServer(server) })
+	AddAsyncShutdownHook(func() { shutdownHttpServer(server) })
 	return nil
 }
 
@@ -274,7 +274,7 @@ func registerServerRoutes(rail Rail, engine *gin.Engine) error {
 	return nil
 }
 
-func shutdownNetHttpServer(server *http.Server) {
+func shutdownHttpServer(server *http.Server) {
 	Info("Shutting down http server")
 	defer Infof("Http server exited")
 
