@@ -117,7 +117,7 @@ func unsafeGetShortFnName(fn string) string {
 			}
 			return trimLengthyName(fnb[i:])
 		case '(':
-			if jb > -1 && i < len(fnb)-1 {
+			if jb > -1 && i < len(fnb)-1 && len(fnb)-i > fnWidth {
 				var lastTwo []byte
 				if i < len(fnb)-2 {
 					lastTwo = fnb[i+1 : i+3]
