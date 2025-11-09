@@ -192,8 +192,8 @@ func (r redisLogger) Printf(ctx context.Context, format string, v ...interface{}
 }
 
 type rtopicMessage[T any] struct {
-	Headers map[string]string
-	Payload T
+	Headers map[string]string `json:"headers"`
+	Payload T                 `json:"payload"`
 }
 
 type rtopic[T any] struct {

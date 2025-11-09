@@ -38,8 +38,8 @@ type Resource struct {
 }
 
 type ResourceInfoRes struct {
-	Resources []Resource
-	Paths     []Endpoint
+	Resources []Resource `json:"resources"`
+	Paths     []Endpoint `json:"paths"`
 }
 
 // Create endpoint to expose resources and endpoint paths to be collected by user-vault.

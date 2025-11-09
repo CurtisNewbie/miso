@@ -4,7 +4,7 @@ import "testing"
 
 func TestSWriteJson(t *testing.T) {
 	type dummy struct {
-		Name string
+		Name string `json:"name"`
 	}
 	d := dummy{Name: "aha"}
 	s, err := SWriteJson(d)
@@ -16,7 +16,7 @@ func TestSWriteJson(t *testing.T) {
 
 func TestSWriteIndent(t *testing.T) {
 	type dummy struct {
-		Name string
+		Name string `json:"name"`
 	}
 	d := dummy{Name: "aha"}
 	s, err := SWriteIndent(d)
@@ -28,7 +28,7 @@ func TestSWriteIndent(t *testing.T) {
 
 func TestSParseJsonAs(t *testing.T) {
 	type dummy struct {
-		Name string
+		Name string `json:"name"`
 	}
 	d, err := SParseJsonAs[dummy](`{ "name": "yes" }`)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestSParseJsonAs(t *testing.T) {
 
 func TestParseJsonAs(t *testing.T) {
 	type dummy struct {
-		Name string
+		Name string `json:"name"`
 	}
 	d, err := ParseJsonAs[dummy]([]byte(`{ "name": "yes" }`))
 	if err != nil {

@@ -5,10 +5,10 @@ import (
 )
 
 type User struct {
-	UserNo   string
-	Username string
-	RoleNo   string
-	IsNil    bool `json:"-"`
+	UserNo   string `json:"userNo"`
+	Username string `json:"username"`
+	RoleNo   string `json:"roleNo"`
+	IsNil    bool   `json:"-"`
 }
 
 const (

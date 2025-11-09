@@ -231,10 +231,10 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 }
 
 type queuedTask struct {
-	Name        string
-	ScheduledAt util.Time
-	Producer    string
-	TraceId     string
+	Name        string    `json:"name"`
+	ScheduledAt util.Time `json:"scheduledAt"`
+	Producer    string    `json:"producer"`
+	TraceId     string    `json:"traceId"`
 }
 
 func (m *taskModule) produceTask(rail miso.Rail, name string) error {
