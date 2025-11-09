@@ -67,3 +67,7 @@ See [Upgrade & Migration](./doc/migration.md).
 - Since v0.3.5, a few funcs in `errs` pkg are deprecated.
 - Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`.
 - Since v0.3.7, async code in pkg `util` is deprecated and moved to `util/async`, while previous code may continue to work, it will be deleted in later release.
+
+> [!WARNING]
+>
+> Since [Jsoniter](https://github.com/json-iterator/go) is nolonger actively maintained, last commit was 3 years ago. Jsoniter will be removed from this repository in v0.4.0 release. The default [json processing behaviour](./doc/json.md) will change once jsoniter is removed. Previously, all struct fields are by default serialized/deserialized using lowercase camel case style without needing to add any json tag. Before upgrade to v0.4.0, json tags must be added manually to maintain compatibility.
