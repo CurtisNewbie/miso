@@ -1,11 +1,47 @@
 package async
 
 import (
+	"fmt"
 	"runtime/debug"
 
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
+
+func CapturePanicErr(op func()) error {
+	var err error
+	func() {
+		defer func() {
+			if v := recover(); v != nil {
+				if ve, ok := v.(error); ok {
+					err = ve
+				} else {
+					err = fmt.Errorf("panic captured: %v", v)
+				}
+			}
+		}()
+		op()
+	}()
+	return err
+}
+
+func CapturePanic[T any](op func() (T, error)) (T, error) {
+	var err error
+	var t T
+	func() {
+		defer func() {
+			if v := recover(); v != nil {
+				if ve, ok := v.(error); ok {
+					err = ve
+				} else {
+					err = fmt.Errorf("panic captured: %v", v)
+				}
+			}
+		}()
+		t, err = op()
+	}()
+	return t, err
+}
 
 func PanicSafeFunc(op func()) func() {
 	return func() {

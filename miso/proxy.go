@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -164,7 +165,11 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			return nil
 		}
 
-		rproxy.ServeHTTP(w, r)
+		if err := async.CapturePanicErr(func() {
+			rproxy.ServeHTTP(w, r)
+		}); err != nil {
+			pc.Rail.Warnf("Proxy request failed, %v", err)
+		}
 	}
 	pi := newProxyFilters(pc, h.filters, handler)
 	pi.next()
