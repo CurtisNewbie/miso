@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/curtisnewbie/miso/tools"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
@@ -459,16 +461,11 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		}
 		defer f.Close()
 
-		n := 0
 		skipConfig := func(c ConfigDecl) bool { return (c.DefaultValue == "" && c.Alias == "") || c.DocOnly }
 		for _, c := range src {
 			if skipConfig(c) {
 				continue
 			}
-			n++
-		}
-		if n < 1 {
-			continue
 		}
 
 		b := strings.Builder{}
@@ -569,7 +566,10 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 		if _, err := f.WriteString(content); err != nil {
 			panic(err)
 		}
+
 		log.Infof("Generated default config code in %v", f.Name())
+		f.Close()
+		async.PanicSafeRun(func() { tools.RunGoImports(path) }) // fix imports
 	}
 }
 
