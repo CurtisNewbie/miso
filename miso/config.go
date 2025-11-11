@@ -587,7 +587,7 @@ func UnmarshalFromProp(ptr any) {
 }
 
 // Unmarshal configuration.
-func UnmarshalFromPropAs[T any](ptr any) T {
+func UnmarshalFromPropAs[T any]() T {
 	var t T
 	UnmarshalFromProp(&t)
 	return t
