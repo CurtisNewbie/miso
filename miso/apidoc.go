@@ -812,7 +812,13 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 			if v == "-" {
 				continue
 			}
-			jsonName = v
+
+			tokz := strings.TrimSpace(strings.Split(v, ",")[0])
+			if tokz == "" { // e.g., ',omitEmpty'
+				jsonName = json.NamingStrategyTranslate(f.Name)
+			} else {
+				jsonName = tokz
+			}
 		} else {
 			jsonName = json.NamingStrategyTranslate(f.Name)
 		}
