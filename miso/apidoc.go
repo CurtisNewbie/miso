@@ -814,7 +814,7 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 			}
 			jsonName = v
 		} else {
-			jsonName = json.LowercaseNamingStrategy(f.Name)
+			jsonName = json.NamingStrategyTranslate(f.Name)
 		}
 
 		originTypeName := rfutil.TypeName(f.Type)
