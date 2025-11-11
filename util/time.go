@@ -276,11 +276,11 @@ func AddETimeParseFormat(fmt ...string) {
 }
 
 // Implements sql.Scanner in database/sql.
-func (et *ETime) Scan(value interface{}) error {
+func (et *Time) Scan(value interface{}) error {
 	return et.ScanLoc(value, time.Local)
 }
 
-func (et *ETime) ScanLoc(value interface{}, loc *time.Location) error {
+func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 	if value == nil {
 		return nil
 	}
