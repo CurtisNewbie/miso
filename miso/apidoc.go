@@ -808,10 +808,12 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 		}
 
 		var jsonName string
+		var jsonTag string
 		if v := f.Tag.Get("json"); v != "" {
 			if v == "-" {
 				continue
 			}
+			jsonTag = v
 
 			tokz := strings.TrimSpace(strings.Split(v, ",")[0])
 			if tokz == "" { // e.g., ',omitEmpty'
@@ -826,7 +828,6 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 		originTypeName := rfutil.TypeName(f.Type)
 		typeName, typeAliasMatched := translateTypeAlias(originTypeName)
 
-		jsonTag := f.Tag.Get("json")
 		if jsonTag == "" {
 			jsonTag = jsonName
 		}
