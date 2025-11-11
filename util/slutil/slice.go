@@ -71,6 +71,24 @@ func Filter[T any](l []T, f func(T) bool) []T {
 	return cp
 }
 
+// Filter slice values in place.
+//
+// Be cautious that both slices are backed by the same array.
+func FilterIdx[T any](l []T, f func(int, T) bool) []T {
+	cp := l[:0]
+	for i := range l {
+		x := l[i]
+		if f(i, x) {
+			cp = append(cp, x)
+		}
+	}
+	for i := len(cp); i < len(l); i++ {
+		var tv T
+		l[i] = tv
+	}
+	return cp
+}
+
 // Filter slice value.
 //
 // The original slice is not modified only copied.
@@ -150,10 +168,15 @@ func MergeMapAs[T any, K comparable, V any](ts []T, keyFunc func(t T) K, valueFu
 	return m
 }
 
-func SliceCopy[T any](v []T) []T {
+func Copy[T any](v []T) []T {
 	cp := make([]T, len(v))
 	copy(cp, v)
 	return cp
+}
+
+// Deprecated: since v0.3.9
+func SliceCopy[T any](v []T) []T {
+	return Copy[T](v)
 }
 
 func SliceFirst[T any](v []T) (t T, ok bool) {
