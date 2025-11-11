@@ -487,3 +487,23 @@ func TrimSpaceLeft(s string) string {
 func TrimSpaceRight(s string) string {
 	return strings.TrimRightFunc(s, unicode.IsSpace)
 }
+
+func SplitStrAnyRune(s, runes string) []string {
+	st := map[rune]struct{}{}
+	for _, c := range runes {
+		st[c] = struct{}{}
+	}
+	tok := strings.FieldsFunc(s, func(r rune) bool {
+		_, ok := st[r]
+		return ok
+	})
+	cp := make([]string, 0, len(tok))
+	for _, v := range tok {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		cp = append(cp, v)
+	}
+	return cp
+}
