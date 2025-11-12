@@ -47,7 +47,7 @@ func TestMemProfileFunc(t *testing.T) {
 		},
 	}
 	var err error
-	if err := Memory("out.prof", func() {
+	if err := Heap("out.prof", func() {
 		for i := 0; i < 99999999; i++ {
 			err = rfutil.WalkTagShallow(&d, callback)
 			if err != nil {

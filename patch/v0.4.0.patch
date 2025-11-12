@@ -386,7 +386,7 @@
 +import "github.com/curtisnewbie/miso/util/profile"
 
 -util.MemoryProfileFunc
-+profile.Memory
++profile.Heap
 
 @@
 @@

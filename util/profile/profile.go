@@ -23,7 +23,7 @@ func Cpu(file string, fu func()) error {
 	return nil
 }
 
-func Memory(file string, fu func()) error {
+func Heap(file string, fu func()) error {
 	f, err := os.Create(file)
 	if err != nil {
 		return fmt.Errorf("failed to create file for profiling, file: %v, %w", file, err)
