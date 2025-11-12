@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/curtisnewbie/miso/util/strutil"
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -44,7 +45,7 @@ func SParseJsonAs[T any](body string) (T, error) {
 
 // Parse json string.
 func SParseJson(body string, ptr any) error {
-	return ParseJson([]byte(body), ptr)
+	return ParseJson(strutil.UnsafeStr2Byt(body), ptr)
 }
 
 // Write json as bytes.
@@ -153,7 +154,7 @@ func IsValidJson(s []byte) bool {
 }
 
 func IsValidJsonStr(s string) bool {
-	return IsValidJson([]byte(s))
+	return IsValidJson(strutil.UnsafeStr2Byt(s))
 }
 
 func Indent(b []byte) string {
@@ -163,7 +164,7 @@ func Indent(b []byte) string {
 }
 
 func SIndent(b string) string {
-	return Indent([]byte(b))
+	return Indent(strutil.UnsafeStr2Byt(b))
 }
 
 func EscapeString(s string) string {
