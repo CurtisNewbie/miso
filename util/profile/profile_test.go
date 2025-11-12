@@ -1,4 +1,4 @@
-package util
+package profile
 
 import (
 	"reflect"
@@ -21,7 +21,7 @@ func TestCpuProfileFunc(t *testing.T) {
 		},
 	}
 	var err error
-	if err := CpuProfileFunc("out.prof", func() {
+	if err := Cpu("out.prof", func() {
 		for i := 0; i < 9999999; i++ { // if func runs too fast, the profile will be empty
 			err = rfutil.WalkTagShallow(&d, callback)
 			if err != nil {
@@ -47,7 +47,7 @@ func TestMemProfileFunc(t *testing.T) {
 		},
 	}
 	var err error
-	if err := MemoryProfileFunc("out.prof", func() {
+	if err := Memory("out.prof", func() {
 		for i := 0; i < 99999999; i++ {
 			err = rfutil.WalkTagShallow(&d, callback)
 			if err != nil {

@@ -1,12 +1,14 @@
-package util
+package dbquery
+
+import "github.com/curtisnewbie/miso/util/strutil"
 
 // Escape String
 //
 // Acknowledgement: following code is copied from https://github.com/pingcap/tidb/blob/master/pkg/util/sqlescape/utils.go (Copyright 2021 PingCAP, Inc. Apache License)
 func EscapeString(s string) string {
 	obuf := make([]byte, 0, len(s))
-	sbuf := UnsafeStr2Byt(s)
-	return UnsafeByt2Str(escapeBytesBackslash(obuf, sbuf))
+	sbuf := strutil.UnsafeStr2Byt(s)
+	return strutil.UnsafeByt2Str(escapeBytesBackslash(obuf, sbuf))
 }
 
 // Acknowledgement: following code is copied from https://github.com/pingcap/tidb/blob/master/pkg/util/sqlescape/utils.go (Copyright 2021 PingCAP, Inc. Apache License)

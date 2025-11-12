@@ -1,0 +1,773 @@
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/middleware/dbquery"
+
+-util.EscapeString
++dbquery.EscapeString
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.UnsafeByt2Str
++strutil.UnsafeByt2Str
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.UnsafeStr2Byt
++strutil.UnsafeStr2Byt
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.StrByteLen
++strutil.StrByteLen
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/strutil"
+
+-util.StrByteLen
++strutil.StrByteLen
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/snowflake"
+
+-util.SetMachineCode
++snowflake.SetMachineCode
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/snowflake"
+
+-util.SnowflakeId
++snowflake.Id
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/snowflake"
+
+-util.GenId
++snowflake.Id
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/snowflake"
+
+-util.GenIdP
++snowflake.IdPrefix
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.DEFAULT_LEN
++randutil.DEFAULT_LEN
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.ShuffleStr
++randutil.ShuffleStr
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.ShuffleRunes
++randutil.ShuffleRunes
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandStr
++randutil.RandStr
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandNum
++randutil.RandNum
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandAlpha
++randutil.RandAlpha
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandUpperAlpha
++randutil.RandUpperAlpha
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandLowerAlpha
++randutil.RandLowerAlpha
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandUpperAlphaNumeric
++randutil.RandUpperAlphaNumeric
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandLowerAlphaNumeric
++randutil.RandLowerAlphaNumeric
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandLowerAlphaNumeric16
++randutil.RandLowerAlphaNumeric16
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandRune
++randutil.RandRune
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandOp
++randutil.RandOp
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.Pick
++randutil.Pick
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.GenNo
++randutil.GenNo
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.GenNoL
++randutil.GenNoL
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.ERand
++randutil.ERand
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.RandPick
++randutil.RandPick
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.WeightedRandPick
++randutil.WeightedRandPick
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/randutil"
+
+-util.WeightedItem
++randutil.WeightedItem
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/iputil"
+
+-util.GetLocalIPV4
++iputil.GetLocalIPV4
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/iputil"
+
+-util.IsLocalAddress
++iputil.IsLocalAddress
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/iputil"
+
+-util.LoopbackLocalHost
++iputil.LoopbackLocalHost
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/iputil"
+
+-util.Loopback127
++iputil.Loopback127
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/iputil"
+
+-util.LocalIpAny
++iputil.LocalIpAny
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.ByteBufPool
++pool.ByteBufPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.NewByteBufferPool
++pool.NewByteBufferPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.FixedPool
++pool.FixedPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.FixedPoolFilterFunc
++pool.FixedPoolFilterFunc
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.NewFixedPool
++pool.NewFixedPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.EphPool
++pool.EphPool
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/pool"
+
+-util.NewEphPool
++pool.NewEphPool
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/profile"
+
+-util.CpuProfileFunc
++profile.Cpu
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/profile"
+
+-util.MemoryProfileFunc
++profile.Memory
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/constraint"
+
+-util.Number
++constraint.Number
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/constraint"
+
+-util.Integer
++constraint.Integer
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/constraint"
+
+-util.Float
++constraint.Float
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/constraint"
+
+-util.Complex
++constraint.Complex
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/constraint"
+
+-util.BasicValue
++constraint.BasicValue
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ClassicDateTimeLocaleFormat
++atom.ClassicDateTimeLocaleFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ClassicDateTimeFormat
++atom.ClassicDateTimeFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.StdDateTimeFormat
++atom.StdDateTimeFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.StdDateTimeMilliFormat
++atom.StdDateTimeMilliFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.StdDateTimeLocaleFormat
++atom.StdDateTimeLocaleFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.SQLDateTimeFormat
++atom.SQLDateTimeFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.SQLDateTimeFormatWithT
++atom.SQLDateTimeFormatWithT
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.SQLDateFormat
++atom.SQLDateFormat
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ToETime
++atom.WrapTime
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ETime
++atom.Time
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.Time
++atom.Time
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.Now
++atom.Now
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.NowUTC
++atom.NowUTC
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.NowPtr
++atom.NowPtr
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.NowUTCPtr
++atom.NowUTCPtr
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.WrapTime
++atom.WrapTime
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.AddETimeParseFormat
++atom.AddTimeParseFormat
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.FuzzParseTime
++atom.FuzzParseTime
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.FuzzParseTimeLoc
++atom.FuzzParseTimeLoc
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ParseClassicDateTime
++atom.ParseClassicDateTime
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.SetETimeMarshalFormat
++atom.SetTimeMarshalFormat
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ParseETime
++atom.ParseTime
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.MayParseETime
++atom.MayParseTime
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.ParseETimeLoc
++atom.ParseTimeLoc
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/atom"
+
+-util.MayParseETimeLoc
++atom.MayParseTimeLoc
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/must"
+
+-util.Must
++must.Must
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/must"
+
+-util.MustGet
++must.MustGet
+
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/cmputil"
+
+-util.MinInt
++cmputil.MinInt
+
+@@
+@@
+
+-import "github.com/curtisnewbie/miso/util"
++import "github.com/curtisnewbie/miso/util/cmputil"
+
+-util.MaxInt
++cmputil.MaxInt
+
+@@
+@@
+
+-dbquery.NewQueryRail
++dbquery.NewQuery
+
+@@
+@@
+
+-miso.NewDynTClient
++miso.NewDynClient
+
+@@
+@@
+
+-miso.NewTClient
++miso.NewClient
+
+@@
+@@
+
+-errs.WrapErr
++errs.Wrap
+
+
+@@
+@@
+
+-errs.WrapErrf
++errs.Wrapf
+
+@@
+@@
+
+-slutil.SliceCopy
++slutil.Copy
+
+@@
+@@
+
+-slutil.SliceFirst
++slutil.First
+
+@@
+@@
+
+-slutil.SliceFilterFirst
++slutil.FirstMatch
+
+@@
+@@
+
+-slutil.SliceGetOne
++slutil.RandOne
+
+@@
+@@
+
+-slutil.SliceRemove
++slutil.Remove

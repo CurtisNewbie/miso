@@ -9,10 +9,12 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/async"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/iputil"
+	"github.com/curtisnewbie/miso/util/randutil"
 )
 
 const (
@@ -24,7 +26,7 @@ const (
 var (
 	staleTaskThreshold = 5 * time.Second
 	producerOnce       = sync.OnceValue(func() string {
-		return util.GetLocalIPV4() + "-" + miso.GetPropStr(miso.PropServerActualPort)
+		return iputil.GetLocalIPV4() + "-" + miso.GetPropStr(miso.PropServerActualPort)
 	})
 )
 
@@ -91,7 +93,7 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	if proposedGroup != "" {
 		m.group = proposedGroup
 	}
-	m.nodeId = util.ERand(30)
+	m.nodeId = randutil.ERand(30)
 
 	if err := m.registerTasks(tasks); err != nil {
 		return err
@@ -232,7 +234,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 
 type queuedTask struct {
 	Name        string    `json:"name"`
-	ScheduledAt util.Time `json:"scheduledAt"`
+	ScheduledAt atom.Time `json:"scheduledAt"`
 	Producer    string    `json:"producer"`
 	TraceId     string    `json:"traceId"`
 }
@@ -240,7 +242,7 @@ type queuedTask struct {
 func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 	qt := queuedTask{
 		Name:        name,
-		ScheduledAt: util.NowUTC(),
+		ScheduledAt: atom.NowUTC(),
 		Producer:    producerOnce(),
 		TraceId:     rail.TraceId(),
 	}
@@ -259,7 +261,7 @@ func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 	}
 
 	for _, qt := range v {
-		if qt.ScheduledAt.Before(util.NowUTC().Add(-staleTaskThreshold)) {
+		if qt.ScheduledAt.Before(atom.NowUTC().Add(-staleTaskThreshold)) {
 			rail.Warnf("Task was triggered %v ago, ignore, %v, scheduledAt: %v", staleTaskThreshold, qt.Name, qt.ScheduledAt)
 			continue
 		}

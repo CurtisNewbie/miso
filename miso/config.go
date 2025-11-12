@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/iputil"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -314,7 +314,7 @@ func (a *AppConfig) DefaultReadConfig(args []string) {
 }
 
 func (a *AppConfig) GetDefaultConfigFileLoaded() []string {
-	return slutil.SliceCopy(a.defaultConfigFileLoaded)
+	return slutil.Copy(a.defaultConfigFileLoaded)
 }
 
 // Load config from io Reader.
@@ -341,7 +341,7 @@ func (a *AppConfig) LoadConfigFromReader(reader io.Reader) error {
 //
 // Calling this method overides previously loaded config.
 func (a *AppConfig) LoadConfigFromStr(s string) error {
-	sr := bytes.NewReader(util.UnsafeStr2Byt(s))
+	sr := bytes.NewReader(strutil.UnsafeStr2Byt(s))
 	return a.LoadConfigFromReader(sr)
 }
 
@@ -356,7 +356,7 @@ func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
 			//
 			// if viper.ReadConfig() failed, all configs are lost, we have to avoid that.
 			var tmp map[string]interface{}
-			if err := yaml.Unmarshal(util.UnsafeStr2Byt(c), &tmp); err != nil {
+			if err := yaml.Unmarshal(strutil.UnsafeStr2Byt(c), &tmp); err != nil {
 				return errs.Wrapf(err, "Failed reload nacos configs, invalid format")
 			}
 		}
@@ -365,7 +365,7 @@ func (a *AppConfig) ReloadConfigFromStr(sl ...string) error {
 	var eo error
 	doWithWriteLock(a, func() {
 		for i, s := range sl {
-			sr := bytes.NewReader(util.UnsafeStr2Byt(s))
+			sr := bytes.NewReader(strutil.UnsafeStr2Byt(s))
 			if i == 0 {
 				if err := a.vp.ReadConfig(sr); err != nil {
 					eo = fmt.Errorf("failed to reload config: %w", err)
@@ -703,8 +703,8 @@ func doWithReadLock(a *AppConfig, f func()) {
 
 // Resolve server host, use IPV4 if the given address is empty or '0.0.0.0'
 func ResolveServerHost(address string) string {
-	if strutil.IsBlankStr(address) || address == util.LocalIpAny {
-		address = util.GetLocalIPV4()
+	if strutil.IsBlankStr(address) || address == iputil.LocalIpAny {
+		address = iputil.GetLocalIPV4()
 	}
 	return address
 }

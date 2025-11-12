@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/osutil"
@@ -603,7 +603,7 @@ func registerNacosService(nc naming_client.INamingClient) error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[miso.ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+	meta[miso.ServiceMetaRegisterTime] = cast.ToString(atom.Now().UnixMilli())
 
 	ok, err := nc.RegisterInstance(vo.RegisterInstanceParam{
 		ServiceName: registerName,
@@ -646,7 +646,7 @@ func deregisterNacosService(nc naming_client.INamingClient) error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[miso.ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+	meta[miso.ServiceMetaRegisterTime] = cast.ToString(atom.Now().UnixMilli())
 
 	_, err := nc.DeregisterInstance(vo.DeregisterInstanceParam{
 		ServiceName: registerName,

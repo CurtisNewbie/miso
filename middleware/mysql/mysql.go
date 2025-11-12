@@ -384,7 +384,7 @@ func logSql() bool {
 
 func ShowGrants(rail miso.Rail, db *gorm.DB) ([]string, error) {
 	var grants []string
-	_, err := dbquery.NewQueryRail(rail, db).Raw(`SHOW GRANTS`).Scan(&grants)
+	_, err := dbquery.NewQuery(rail, db).Raw(`SHOW GRANTS`).Scan(&grants)
 	if err != nil {
 		return nil, err
 	}

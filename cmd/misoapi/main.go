@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
@@ -268,7 +268,7 @@ ${code}
 `, map[string]any{
 			"misoapiFnName": misoapiFnName,
 			"misoVersion":   version.Version,
-			"nowTimeStr":    util.Now().FormatClassicLocale(),
+			"nowTimeStr":    atom.Now().FormatClassicLocale(),
 			"package":       v.Pkg,
 			"code":          code,
 			"importStr":     importSb.String(),
@@ -281,7 +281,7 @@ ${code}
 		// if generated file already existed, check if the content is still the same
 		prev, err := os.ReadFile(outFile)
 		if err == nil {
-			prevs := util.UnsafeByt2Str(prev)
+			prevs := strutil.UnsafeByt2Str(prev)
 			if i := strings.Index(prevs, "\n"); i > -1 && i+1 < len(prevs) {
 				prevs = prevs[i+1:]
 			}

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/encoding/json"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -39,12 +38,6 @@ var (
 	httpProtoRegex = regexp.MustCompile(`(?i)https?://`)
 
 	MisoDefaultClient *http.Client
-)
-
-// Deprecated: since v0.1.17.
-var (
-	NewDynTClient = NewDynClient
-	NewTClient    = NewClient
 )
 
 func init() {
@@ -176,7 +169,7 @@ func (tr *TResponse) Str() (string, error) {
 	if e != nil {
 		return "", WrapErr(e)
 	}
-	s := util.UnsafeByt2Str(b)
+	s := strutil.UnsafeByt2Str(b)
 
 	tr.logRespBody(s)
 	return s, nil
@@ -213,7 +206,7 @@ func (tr *TResponse) Json(ptr any) error {
 	tr.logRespBody(body)
 
 	if e = json.ParseJson(body, ptr); e != nil {
-		s := util.UnsafeByt2Str(body)
+		s := strutil.UnsafeByt2Str(body)
 		return errs.Wrapf(e, "failed to unmarshal json from response, body: %v", s)
 	}
 
@@ -287,7 +280,7 @@ func (tr *TResponse) Require2xx() error {
 		var body string
 		byt, err := tr.Bytes()
 		if err == nil {
-			body = util.UnsafeByt2Str(byt)
+			body = strutil.UnsafeByt2Str(byt)
 		}
 		return WrapErr(HttpError{StatusCode: tr.StatusCode, Body: body})
 	}
@@ -653,7 +646,7 @@ func (t *Client) send(req *http.Request) *TResponse {
 			if v, ok := t.Headers[contentType]; ok && len(v) > 0 && ContentTypeLoggable(v[0]) {
 				if copy, err := req.GetBody(); err == nil && copy != nil {
 					if buf, e := io.ReadAll(copy); e == nil {
-						loggedBody = util.UnsafeByt2Str(buf)
+						loggedBody = strutil.UnsafeByt2Str(buf)
 					}
 				}
 			}
@@ -803,7 +796,7 @@ func AddHeaders(req *http.Request, headers map[string][]string) {
 
 // Send POST request
 func PostJson(url string, json string) (*http.Response, error) {
-	body := bytes.NewBuffer(util.UnsafeStr2Byt(json))
+	body := bytes.NewBuffer(strutil.UnsafeStr2Byt(json))
 	return SendPost(url, body)
 }
 

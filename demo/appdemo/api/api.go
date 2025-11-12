@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/atom"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +11,7 @@ type PostReq struct {
 }
 type PostRes struct {
 	ResultId string
-	Time     util.ETime
+	Time     atom.Time
 }
 
 type ApiReq struct {

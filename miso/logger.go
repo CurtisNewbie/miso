@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/pool"
 	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/natefinch/lumberjack"
@@ -45,7 +45,7 @@ var (
 )
 
 var (
-	logBufPool = util.NewByteBufferPool(128)
+	logBufPool = pool.NewByteBufferPool(128)
 )
 
 var (

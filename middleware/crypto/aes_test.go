@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/randutil"
 )
 
 func TestAesEcbPkc(t *testing.T) {
-	s := []byte(util.RandAlpha(aes.BlockSize))
+	s := []byte(randutil.RandAlpha(aes.BlockSize))
 
 	plain := strings.Repeat("we are banana!", 10)
 	t.Logf("plain: %v", plain)

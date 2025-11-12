@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"
 	"golang.org/x/text/currency"
@@ -252,7 +251,7 @@ func (a Amt) MarshalJSON() ([]byte, error) {
 	if marshalAsString {
 		v = strutil.QuoteStr(v)
 	}
-	return util.UnsafeStr2Byt(v), nil
+	return strutil.UnsafeStr2Byt(v), nil
 }
 
 // Implements encoding/json Unmarshaler.

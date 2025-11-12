@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/ChimeraCoder/gojson"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/stack"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -35,7 +35,7 @@ func main() {
 	if err == nil {
 		txt := clipboard.Read(clipboard.FmtText)
 		if txt != nil {
-			s := util.UnsafeByt2Str(txt)
+			s := strutil.UnsafeByt2Str(txt)
 			if strings.Contains(strings.ToLower(s), "curl") {
 				curl = s
 			}
@@ -104,7 +104,7 @@ func GenRequests(inst Instruction) string {
 
 	headersb := strings.Builder{}
 	for k, v := range inst.Headers {
-		headersb.WriteString(fmt.Sprintf("\n\t\tAddHeader(\"%v\", \"%v\").", k, util.EscapeString(v)))
+		headersb.WriteString(fmt.Sprintf("\n\t\tAddHeader(\"%v\", \"%v\").", k, json.EscapeString(v)))
 	}
 	headers = headersb.String()
 

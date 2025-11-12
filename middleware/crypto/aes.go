@@ -4,7 +4,7 @@ import (
 	"crypto/aes"
 	"encoding/hex"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 // AES/ECB/PKCSPadding encrypt and encoded as hex string.
@@ -39,5 +39,5 @@ func AesEcbDecrypt(secret []byte, s string) (string, error) {
 	dec := NewECBDecrypter(ci)
 	dec.CryptBlocks(decrypted, encrypted)
 	decrypted = PKCSTrimming(decrypted)
-	return util.UnsafeByt2Str(decrypted), nil
+	return strutil.UnsafeByt2Str(decrypted), nil
 }

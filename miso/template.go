@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -52,7 +52,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 	}
 
 	var hp string
-	if v, ok := slutil.SliceFirst(hostPrefix); ok {
+	if v, ok := slutil.First(hostPrefix); ok {
 		hp = v
 	}
 	if hp != "" && !strings.HasPrefix(hp, "/") {
@@ -105,7 +105,7 @@ func MustCompile(fs embed.FS, s string) *template.Template {
 		panic(err)
 	}
 
-	t, err := template.New("").Parse(util.UnsafeByt2Str(b))
+	t, err := template.New("").Parse(strutil.UnsafeByt2Str(b))
 	if err != nil {
 		panic(err)
 	}

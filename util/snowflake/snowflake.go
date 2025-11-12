@@ -1,4 +1,4 @@
-package util
+package snowflake
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/randutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
 
@@ -13,7 +14,7 @@ var (
 	/* 1 January 2022 00:00:00 */
 	startTime int64 = 1640995200000
 	/* Machine Code for current instance */
-	machineCode string = RandNum(6)
+	machineCode string = randutil.RandNum(6)
 	/* Max number of bits for sequenceNo (0~16383) */
 	maxSeqNoBits int64 = 14
 	/* Mask for seqNo, 1|1 -> 1|100000000000000 -> 0|011111111111111 */
@@ -47,7 +48,7 @@ The 64 bits long consists of: [sign bit (1 bit)] + [timestamp (49 bits, ~1487.58
 
 This func is thread-safe
 */
-func SnowflakeId() (id string) {
+func Id() (id string) {
 	_idMu.Lock()
 	defer _idMu.Unlock()
 
@@ -79,4 +80,8 @@ func resetSeqNo(currTimestamp int64) {
 
 func fmtId() (id string) {
 	return strconv.FormatInt((((timestamp-startTime)<<maxSeqNoBits)|seqNo), 10) + machineCode
+}
+
+func IdPrefix(prefix string) (id string) {
+	return prefix + Id()
 }

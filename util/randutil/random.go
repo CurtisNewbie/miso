@@ -1,4 +1,4 @@
-package util
+package randutil
 
 import (
 	cr "crypto/rand"

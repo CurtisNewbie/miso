@@ -1,4 +1,4 @@
-package util
+package atom
 
 import (
 	"database/sql/driver"
@@ -27,10 +27,7 @@ const (
 
 var (
 	etimeMarshalFormat = ""
-	ToETime            = WrapTime
 )
-
-type ETime = Time
 
 // Enhanced wrapper of time.Time.
 //
@@ -51,17 +48,17 @@ type ETime = Time
 //   - millseconds since unix epoch
 //   - seconds since unix epoch
 //
-// By default, Time is marshaled as millseconds since unix epoch. You can change this behaviour though [SetETimeMarshalFormat].
+// By default, Time is marshaled as millseconds since unix epoch. You can change this behaviour though [SetTimeMarshalFormat].
 type Time struct {
 	time.Time
 }
 
 func Now() Time {
-	return ToETime(time.Now())
+	return WrapTime(time.Now())
 }
 
 func NowUTC() Time {
-	return ToETime(time.Now().UTC())
+	return WrapTime(time.Now().UTC())
 }
 
 func NowPtr() *Time {
@@ -166,7 +163,7 @@ func (t Time) Before(u Time) bool {
 }
 
 func (t Time) In(z *time.Location) Time {
-	return ToETime(t.Unwrap().In(z))
+	return WrapTime(t.Unwrap().In(z))
 }
 
 func (t Time) InZone(diffInHours int) Time {
@@ -237,7 +234,7 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	} else {
 		v = fmt.Sprintf("%d", t.UnixMilli()) // epoch milli by default
 	}
-	return UnsafeStr2Byt(v), nil
+	return strutil.UnsafeStr2Byt(v), nil
 }
 
 // Implements encoding/json Unmarshaler.
@@ -258,21 +255,8 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	}
 
 	pt := time.UnixMilli(millisec)
-	*t = ToETime(pt)
+	*t = WrapTime(pt)
 	return nil
-}
-
-var jsonParseTimeFormats = []string{
-	time.RFC3339Nano,
-	SQLDateTimeFormat,
-	SQLDateFormat,
-	SQLDateTimeFormatWithT,
-}
-
-func AddETimeParseFormat(fmt ...string) {
-	m := hash.NewSet[string](jsonParseTimeFormats...)
-	m.AddAll(fmt)
-	jsonParseTimeFormats = m.CopyKeys()
 }
 
 // Implements sql.Scanner in database/sql.
@@ -287,7 +271,7 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 
 	switch v := value.(type) {
 	case time.Time:
-		*et = ToETime(v.In(loc))
+		*et = WrapTime(v.In(loc))
 	case []byte:
 		sv := string(v)
 		var t time.Time
@@ -295,33 +279,46 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 		if err != nil {
 			return err
 		}
-		*et = ToETime(t)
+		*et = WrapTime(t)
 	case string:
 		var t time.Time
 		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, v, loc)
 		if err != nil {
 			return err
 		}
-		*et = ToETime(t)
+		*et = WrapTime(t)
 	case *string:
 		var t time.Time
 		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, *v, loc)
 		if err != nil {
 			return err
 		}
-		*et = ToETime(t)
+		*et = WrapTime(t)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
 		if val > unixSecPersudoMax {
-			*et = ToETime(time.UnixMilli(val).In(loc)) // in milli-sec
+			*et = WrapTime(time.UnixMilli(val).In(loc)) // in milli-sec
 		} else {
-			*et = ToETime(time.Unix(val, 0).In(loc)) // in sec
+			*et = WrapTime(time.Unix(val, 0).In(loc)) // in sec
 		}
 	default:
-		err := fmt.Errorf("invalid field type '%v' for ETime, unable to convert, %#v", reflect.TypeOf(value), v)
+		err := fmt.Errorf("invalid field type '%v' for Time, unable to convert, %#v", reflect.TypeOf(value), v)
 		return err
 	}
 	return nil
+}
+
+var jsonParseTimeFormats = []string{
+	time.RFC3339Nano,
+	SQLDateTimeFormat,
+	SQLDateFormat,
+	SQLDateTimeFormatWithT,
+}
+
+func AddTimeParseFormat(fmt ...string) {
+	m := hash.NewSet[string](jsonParseTimeFormats...)
+	m.AddAll(fmt)
+	jsonParseTimeFormats = m.CopyKeys()
 }
 
 func FuzzParseTime(formats []string, value string) (time.Time, error) {
@@ -354,28 +351,28 @@ func ParseClassicDateTime(val string, loc *time.Location) (time.Time, error) {
 	return FuzzParseTimeLoc(classicDateTimeFmt, val, loc)
 }
 
-func SetETimeMarshalFormat(fmt string) {
+func SetTimeMarshalFormat(fmt string) {
 	etimeMarshalFormat = fmt
 }
 
-func ParseETime(v any) (ETime, error) {
-	var t ETime
+func ParseTime(v any) (Time, error) {
+	var t Time
 	return t, t.Scan(v)
 }
 
-func MayParseETime(v any) ETime {
-	var t ETime
+func MayParseTime(v any) Time {
+	var t Time
 	t.Scan(v)
 	return t
 }
 
-func ParseETimeLoc(v any, loc *time.Location) (ETime, error) {
-	var t ETime
+func ParseTimeLoc(v any, loc *time.Location) (Time, error) {
+	var t Time
 	return t, t.ScanLoc(v, loc)
 }
 
-func MayParseETimeLoc(v any, loc *time.Location) ETime {
-	var t ETime
+func MayParseTimeLoc(v any, loc *time.Location) Time {
+	var t Time
 	t.ScanLoc(v, loc)
 	return t
 }

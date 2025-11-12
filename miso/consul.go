@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/hashicorp/consul/api"
@@ -289,7 +289,7 @@ func RegisterConsulService() error {
 	if meta == nil {
 		meta = map[string]string{}
 	}
-	meta[ServiceMetaRegisterTime] = cast.ToString(util.Now().UnixMilli())
+	meta[ServiceMetaRegisterTime] = cast.ToString(atom.Now().UnixMilli())
 
 	completeHealthCheckUrl := fmt.Sprintf("http://%s:%v%s", registerAddress, serverPort, healthCheckUrl)
 	proposedServiceId := fmt.Sprintf("%s-%d", registerName, serverPort)

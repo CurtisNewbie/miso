@@ -59,14 +59,17 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 
 # Updates
 
-See [Upgrade & Migration](./doc/migration.md).
+> [!IMPORTANT]
+>
+> See [Upgrade & Migration](./doc/migration.md) for automatic migration.
 
 - Since v0.2.0, 21 configuration properties are renamed, these property names are not backward compatible. If you are using deprecated configuration names, error log are printed as a warning.
 - Since v0.3.0, a bunch of breaking changes are introduced, e.g., refactoring package structure, removing deprecated code and so on.
-  Lots of methods and types are moved from `/util` pkg to pkgs such as `cli`, `csv`, `errs`, `expr`, `flags`, `hash`, `heap`, `pair`, `queue`, `rfutil`, `slutil`, `stack`, and `strutil`.
+  Lots of methods and types are moved from `util` pkg to pkgs such as `cli`, `csv`, `errs`, `expr`, `flags`, `hash`, `heap`, `pair`, `queue`, `rfutil`, `slutil`, `stack`, and `strutil`.
 - Since v0.3.5, a few funcs in `errs` pkg are deprecated.
 - Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`.
 - Since v0.3.7, async code in pkg `util` is deprecated and moved to `util/async`, while previous code may continue to work, it will be deleted in later release.
+- Since v0.4.0, a lot of deprecated code is removed. All code directly under `util` pkg is moved to more dedicated pkgs: `util/strutil`, `util/snowflake`, `util/randutil`, `util/iputil`, `util/pool`, `util/profile`, `util/constraint`, `util/atom`, `util/must`, `util/cmputil`.
 
 > [!WARNING]
 >

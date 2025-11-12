@@ -1041,7 +1041,7 @@ func (it *interceptor) next() {
 }
 
 func newInterceptor(c *gin.Context, handler func(c *gin.Context)) *interceptor {
-	copy := slutil.SliceCopy(interceptors)
+	copy := slutil.Copy(interceptors)
 	return &interceptor{
 		idx:          -1,
 		c:            c,

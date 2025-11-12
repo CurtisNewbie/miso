@@ -6,7 +6,7 @@ import (
 )
 
 // Select one from the slice that matches the condition.
-func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
+func FirstMatch[T any](items []T, f func(T) bool) (T, bool) {
 	for i := range items {
 		t := items[i]
 		if f(t) {
@@ -18,7 +18,7 @@ func SliceFilterFirst[T any](items []T, f func(T) bool) (T, bool) {
 }
 
 // Select random one from the slice
-func SliceGetOne[T any](items []*T) *T {
+func RandOne[T any](items []*T) *T {
 	l := len(items)
 	if l < 1 {
 		return nil
@@ -174,12 +174,7 @@ func Copy[T any](v []T) []T {
 	return cp
 }
 
-// Deprecated: since v0.3.9
-func SliceCopy[T any](v []T) []T {
-	return Copy[T](v)
-}
-
-func SliceFirst[T any](v []T) (t T, ok bool) {
+func First[T any](v []T) (t T, ok bool) {
 	if len(v) > 0 {
 		t = v[0]
 		ok = true
@@ -190,14 +185,14 @@ func SliceFirst[T any](v []T) (t T, ok bool) {
 }
 
 func VarArgAny[T any](v []T, defVal func() T) (t T) {
-	f, ok := SliceFirst(v)
+	f, ok := First(v)
 	if ok {
 		return f
 	}
 	return defVal()
 }
 
-func SliceRemove[T any](v []T, idx ...int) []T {
+func Remove[T any](v []T, idx ...int) []T {
 	cp := make([]T, 0, len(v)-len(idx))
 	idSet := map[int]struct{}{}
 	for _, v := range idx {

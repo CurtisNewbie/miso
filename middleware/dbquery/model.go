@@ -45,7 +45,7 @@ type UpdateModel struct {
 //
 // Call this func before miso bootstraps.
 func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
-	fn, ok := slutil.SliceFirst(optionalFn)
+	fn, ok := slutil.First(optionalFn)
 	if !ok {
 		fn = func(_ string) (ok bool) { return true }
 	}
@@ -103,7 +103,7 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 //
 // Call this func before miso bootstraps.
 func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) {
-	fn, ok := slutil.SliceFirst(optionalFn)
+	fn, ok := slutil.First(optionalFn)
 	if !ok {
 		fn = func(_ string) (ok bool) { return true }
 	}

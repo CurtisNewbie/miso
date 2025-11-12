@@ -16,12 +16,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/iputil"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/rfutil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/curtisnewbie/miso/version"
 	"github.com/google/gops/agent"
@@ -259,7 +260,7 @@ func (a *MisoApp) triggerShutdownHook() {
 		return func() async.Future[any] {
 			defer func() {
 				if v := recover(); v != nil {
-					Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+					Errorf("panic recovered, %v\n%v", v, strutil.UnsafeByt2Str(debug.Stack()))
 				}
 			}()
 			return op()
@@ -497,7 +498,7 @@ func (a *MisoApp) configureLogging() error {
 		if logFile != "" && c.GetPropBool(PropLoggingRollingFileAppendIpSuffix) {
 			n, ok := osutil.FileCutSuffix(logFile, "log")
 			if ok {
-				logFile = n + "-" + util.GetLocalIPV4() + ".log"
+				logFile = n + "-" + iputil.GetLocalIPV4() + ".log"
 			}
 		}
 

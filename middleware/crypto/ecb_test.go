@@ -4,11 +4,11 @@ import (
 	"crypto/aes"
 	"testing"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/randutil"
 )
 
 func TestEcb(t *testing.T) {
-	s := []byte(util.RandAlpha(aes.BlockSize))
+	s := []byte(randutil.RandAlpha(aes.BlockSize))
 	t.Logf("s: %v, len(s): %v", s, len(s))
 	ci, err := aes.NewCipher(s)
 	if err != nil {

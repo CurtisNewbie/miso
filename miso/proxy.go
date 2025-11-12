@@ -441,7 +441,7 @@ func (it *proxyFilters) next() {
 }
 
 func newProxyFilters(c *ProxyContext, pi []ProxyFilter, handler func(pc *ProxyContext)) *proxyFilters {
-	copy := slutil.SliceCopy(pi)
+	copy := slutil.Copy(pi)
 	return &proxyFilters{
 		idx:     -1,
 		c:       c,

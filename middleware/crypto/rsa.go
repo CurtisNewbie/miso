@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 const (
@@ -41,7 +41,7 @@ func LoadPrivKey(content string) (*rsa.PrivateKey, error) {
 		content = content + "\n" + PrivPemEnd
 	}
 
-	decodedPem, _ := pem.Decode(util.UnsafeStr2Byt(content))
+	decodedPem, _ := pem.Decode(strutil.UnsafeStr2Byt(content))
 	if decodedPem == nil {
 		return nil, ErrDecodePemFailed
 	}
@@ -70,7 +70,7 @@ func LoadPubKey(content string) (*rsa.PublicKey, error) {
 		content = content + "\n" + pubPemEnd
 	}
 
-	decodedPem, _ := pem.Decode(util.UnsafeStr2Byt(content))
+	decodedPem, _ := pem.Decode(strutil.UnsafeStr2Byt(content))
 	if decodedPem == nil {
 		return nil, ErrDecodePemFailed
 	}

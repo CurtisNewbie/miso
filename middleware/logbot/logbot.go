@@ -7,13 +7,14 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/rabbit"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/atom"
+	"github.com/curtisnewbie/miso/util/iputil"
 )
 
 type errorLog struct {
 	Node     string
 	App      string
-	Time     util.ETime
+	Time     atom.Time
 	TraceId  string
 	SpanId   string
 	FuncName string
@@ -33,7 +34,7 @@ var (
 func EnableLogbotErrLogReport() {
 	miso.PreServerBootstrap(func(rail miso.Rail) error {
 		app := miso.GetPropStr(miso.PropAppName)
-		node := fmt.Sprintf("%v-%v", app, util.GetLocalIPV4())
+		node := fmt.Sprintf("%v-%v", app, iputil.GetLocalIPV4())
 
 		ok := miso.SetErrLogHandler(func(el *miso.ErrorLog) {
 
@@ -54,7 +55,7 @@ func sendErrLog(rail miso.Rail, node string, app string, el *miso.ErrorLog) {
 	err := reportLogPipeline.Send(rail, errorLog{
 		Node:     node,
 		App:      app,
-		Time:     util.ToETime(el.Time),
+		Time:     atom.WrapTime(el.Time),
 		TraceId:  el.TraceId,
 		SpanId:   el.SpanId,
 		FuncName: el.FuncName,

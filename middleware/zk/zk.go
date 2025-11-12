@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/iputil"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-zookeeper/zk"
 )
 
@@ -91,7 +92,7 @@ func NewLeaderElection(rootPath string) *LeaderElection {
 		mu:         &sync.Mutex{},
 		rootPath:   rootPath,
 		leaderPath: rootPath + "/leader",
-		nodeIdFunc: func() string { return util.GetLocalIPV4() },
+		nodeIdFunc: func() string { return iputil.GetLocalIPV4() },
 	}
 }
 
@@ -121,7 +122,7 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 		rail.Debugf("Create parent path failed (expected), %v", err)
 	}
 
-	err := CreateEphNode(l.leaderPath, util.UnsafeStr2Byt(nodeId))
+	err := CreateEphNode(l.leaderPath, strutil.UnsafeStr2Byt(nodeId))
 
 	// we are the leader
 	if err == nil {
@@ -152,7 +153,7 @@ func electLeader(rail miso.Rail, l *LeaderElection, nodeId string, hook func()) 
 				if e.Path == l.leaderPath && e.Type == zk.EventNodeDeleted {
 					rail.Infof("received zknode event, %#v", e)
 
-					if err := CreateEphNode(l.leaderPath, util.UnsafeStr2Byt(nodeId)); err != nil {
+					if err := CreateEphNode(l.leaderPath, strutil.UnsafeStr2Byt(nodeId)); err != nil {
 						rail.Errorf("received EventNodeDeleted but failed to elect leader, %v", err)
 						if errors.Is(err, zk.ErrConnectionClosed) {
 							return false, errs.Wrapf(err, "zk connection closed")

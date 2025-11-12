@@ -889,7 +889,7 @@ func (q *Query) DB() *gorm.DB {
 
 func RunTransaction(rail miso.Rail, db *gorm.DB, callback func(qry func() *Query) error) error {
 	return db.Transaction(func(db *gorm.DB) error {
-		nq := func() *Query { return NewQueryRail(rail, db) }
+		nq := func() *Query { return NewQuery(rail, db) }
 		return callback(nq)
 	})
 }
@@ -940,14 +940,9 @@ func NewQuery(opts ...any) *Query {
 	return q
 }
 
-// Deprecated: Since v0.3.3. Use [NewQuery] instead.
-func NewQueryRail(r miso.Rail, db *gorm.DB) *Query {
-	return NewQuery(r, db)
-}
-
 func NewQueryFunc(table string, ops ...func(q *Query) *Query) func(r miso.Rail, db *gorm.DB) *Query {
 	return func(r miso.Rail, db *gorm.DB) *Query {
-		q := NewQueryRail(r, db).Table(table)
+		q := NewQuery(r, db).Table(table)
 		for _, op := range ops {
 			q = op(q)
 		}
@@ -1099,7 +1094,7 @@ func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[
 
 func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) (miso.PageRes[V], error) {
 	newQuery := func() *Query {
-		return pq.baseQuery(NewQueryRail(rail, pq.db))
+		return pq.baseQuery(NewQuery(rail, pq.db))
 	}
 
 	var countFuture async.Future[int]

@@ -1,4 +1,4 @@
-package util
+package cmputil
 
 func MinInt(a int, b int) int {
 	if a < b {

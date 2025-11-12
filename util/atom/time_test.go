@@ -1,4 +1,4 @@
-package util
+package atom
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ func TestETimeScan(t *testing.T) {
 	now := time.Now()
 	t.Logf("now: %v", now)
 
-	var et ETime
+	var et Time
 	et.Scan(now.UnixMilli())
 	t.Logf("MS: %v", et)
 	if now.Unix() != et.Unix() {
@@ -71,7 +71,7 @@ func TestTimeAddDate(t *testing.T) {
 }
 
 func TestUnmarshalJSON(t *testing.T) {
-	var et ETime
+	var et Time
 	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 
 func TestEndOfDay(t *testing.T) {
-	var et ETime
+	var et Time
 	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestEndOfDay(t *testing.T) {
 
 func TestTimeGoStringer(t *testing.T) {
 	type dummy struct {
-		Time ETime
+		Time Time
 	}
 
 	d := dummy{Time: Now()}

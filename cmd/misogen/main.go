@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -52,7 +51,7 @@ func main() {
 			}
 			out, err := exec.Command("go", "mod", "init", initName).CombinedOutput()
 			if err != nil {
-				fmt.Println(util.UnsafeByt2Str(out))
+				fmt.Println(strutil.UnsafeByt2Str(out))
 				panic(err)
 			}
 			fmt.Printf("Initialized module '%s'\n", initName)
@@ -82,7 +81,7 @@ func main() {
 					i = j + 1
 					continue
 				}
-				line := util.UnsafeByt2Str(modfCtn[i:j])
+				line := strutil.UnsafeByt2Str(modfCtn[i:j])
 				line = strings.TrimSpace(line)
 				if n, ok := strings.CutPrefix(line, "module"); ok {
 					modName = strings.TrimSpace(n)
@@ -103,7 +102,7 @@ func main() {
 
 	out, err := exec.Command("go", "get", "-x", pkg).CombinedOutput()
 	if err != nil {
-		fmt.Println(util.UnsafeByt2Str(out))
+		fmt.Println(strutil.UnsafeByt2Str(out))
 		panic(fmt.Errorf("failed to install miso, %v", err))
 	}
 

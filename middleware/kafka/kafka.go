@@ -10,8 +10,8 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/protocol"
 )
@@ -163,7 +163,7 @@ func bootstrapKafka(rail miso.Rail) error {
 		listen := func(rail miso.Rail, m Message) (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					miso.Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+					miso.Errorf("panic recovered, %v\n%v", v, strutil.UnsafeByt2Str(debug.Stack()))
 					err = errs.NewErrf("kafka listener panic recovered, %v", v)
 				}
 			}()

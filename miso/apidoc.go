@@ -13,7 +13,6 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/tools"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/osutil"
@@ -448,7 +447,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 			QueryParams: r.QueryParams,
 		}
 
-		if v, ok := slutil.SliceFirst(r.Extra[ExtraName]); ok {
+		if v, ok := slutil.First(r.Extra[ExtraName]); ok {
 			if s, ok := v.(string); ok {
 				d.Name = s
 			}
@@ -792,9 +791,6 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 	jds := make([]FieldDesc, 0, 5)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		if util.IsVoid(f.Type) {
-			continue
-		}
 
 		skipped := false
 		for _, it := range ignoredJsonDocTag {
@@ -1000,9 +996,6 @@ func parseQueryDoc(t reflect.Type) []ParamDoc {
 	pds := []ParamDoc{}
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		if util.IsVoid(f.Type) {
-			continue
-		}
 
 		query := f.Tag.Get(TagQueryParam)
 		if query == "" {
@@ -1027,9 +1020,6 @@ func parseHeaderDoc(t reflect.Type) []ParamDoc {
 	pds := []ParamDoc{}
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		if util.IsVoid(f.Type) {
-			continue
-		}
 
 		header := f.Tag.Get(TagHeaderParam)
 		if header == "" {
@@ -1402,11 +1392,11 @@ func genNgTableDemo(d httpRouteDoc) string {
 
 		// Resp.Data -> PageRes -> PageRes.Payload
 		if respTypeName == "Resp" {
-			pl, hasData := slutil.SliceFilterFirst(d.JsonResponseDesc.Fields, func(j FieldDesc) bool {
+			pl, hasData := slutil.FirstMatch(d.JsonResponseDesc.Fields, func(j FieldDesc) bool {
 				return j.GoFieldName == "Data"
 			})
 			if hasData {
-				pl, hasPayload := slutil.SliceFilterFirst(pl.Fields, func(j FieldDesc) bool {
+				pl, hasPayload := slutil.FirstMatch(pl.Fields, func(j FieldDesc) bool {
 					return j.GoFieldName == "Payload"
 				})
 				if hasPayload {
@@ -1560,7 +1550,7 @@ func genNgHttpClientDemo(d httpRouteDoc) string {
 			sl.Println(strutil.Spaces(8) + "return;")
 			sl.Println(strutil.Spaces(6) + "}")
 			if hasData {
-				if dataField, ok := slutil.SliceFilterFirst(d.JsonResponseDesc.Fields,
+				if dataField, ok := slutil.FirstMatch(d.JsonResponseDesc.Fields,
 					func(d FieldDesc) bool { return d.GoFieldName == "Data" }); ok {
 					sl.Printlnf(strutil.Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
 				}

@@ -1,4 +1,4 @@
-package util
+package profile
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"runtime/pprof"
 )
 
-func CpuProfileFunc(file string, fu func()) error {
+func Cpu(file string, fu func()) error {
 	f, err := os.Create(file)
 	if err != nil {
 		return fmt.Errorf("failed to create file for profiling, file: %v, %w", file, err)
@@ -23,7 +23,7 @@ func CpuProfileFunc(file string, fu func()) error {
 	return nil
 }
 
-func MemoryProfileFunc(file string, fu func()) error {
+func Memory(file string, fu func()) error {
 	f, err := os.Create(file)
 	if err != nil {
 		return fmt.Errorf("failed to create file for profiling, file: %v, %w", file, err)

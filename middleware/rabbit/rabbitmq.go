@@ -10,10 +10,11 @@ import (
 
 	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/idutil"
+	"github.com/curtisnewbie/miso/util/pool"
 	"github.com/curtisnewbie/miso/util/retry"
+	"github.com/curtisnewbie/miso/util/strutil"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/cast"
 )
@@ -124,7 +125,7 @@ func (m JsonMsgListener[T]) Queue() string {
 
 func (m JsonMsgListener[T]) Handle(rail miso.Rail, payload string) error {
 	var t T
-	if e := json.ParseJson(util.UnsafeStr2Byt(payload), &t); e != nil {
+	if e := json.ParseJson(strutil.UnsafeStr2Byt(payload), &t); e != nil {
 		return e
 	}
 	return m.Handler(rail, t)
@@ -195,7 +196,7 @@ func (m *rabbitMqModule) publishJsonHeaders(c miso.Rail, obj any, exchange strin
 }
 
 func (m *rabbitMqModule) publishText(c miso.Rail, msg string, exchange string, routingKey string) error {
-	return m.publishMsg(c, util.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
+	return m.publishMsg(c, strutil.UnsafeStr2Byt(msg), exchange, routingKey, "text/plain", nil)
 }
 
 func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
@@ -521,7 +522,7 @@ func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, conn *amqp.Connect
 	}
 	rail.Infof("RabbitMQ publisher channel pool size: %v", n)
 	pub := rabbitManagedPublisher{
-		EphPool: util.NewEphPool(
+		EphPool: pool.NewEphPool(
 			func(c *amqp.Channel) (dropped bool) { return c.IsClosed() },
 		),
 	}
@@ -561,7 +562,7 @@ func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delive
 			}
 
 			// message body, we only support text
-			payload := util.UnsafeByt2Str(msg.Body)
+			payload := strutil.UnsafeByt2Str(msg.Body)
 
 			// listener handling the message payload
 			e := listener.Handle(rail, payload)
@@ -727,7 +728,7 @@ func (w wrappingListener) Queue() string {
 func (w wrappingListener) Handle(rail miso.Rail, payload string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
-			miso.Errorf("panic recovered, %v\n%v", v, util.UnsafeByt2Str(debug.Stack()))
+			miso.Errorf("panic recovered, %v\n%v", v, strutil.UnsafeByt2Str(debug.Stack()))
 			err = errs.NewErrf("rabbitmq listener panic recovered, %v", v)
 		}
 	}()
@@ -884,7 +885,7 @@ func (r *rabbitManagedChannel) retryStart(rail miso.Rail) {
 }
 
 type rabbitManagedPublisher struct {
-	*util.EphPool[*amqp.Channel]
+	*pool.EphPool[*amqp.Channel]
 }
 
 func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {

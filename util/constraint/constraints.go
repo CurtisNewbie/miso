@@ -1,4 +1,4 @@
-package util
+package constraint
 
 type Number interface {
 	Float | Integer

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/curtisnewbie/miso/encoding/json"
-	"github.com/curtisnewbie/miso/util"
+	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 // Value serializer / deserializer.
@@ -25,7 +25,7 @@ func (j JsonSerializer) Serialize(t any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to marshal value to string, %v", err)
 	}
-	return util.UnsafeByt2Str(b), nil
+	return strutil.UnsafeByt2Str(b), nil
 }
 
 func (j JsonSerializer) Deserialize(ptr any, v string) error {
@@ -34,7 +34,7 @@ func (j JsonSerializer) Deserialize(ptr any, v string) error {
 		return nil
 	}
 
-	err := json.ParseJson(util.UnsafeStr2Byt(v), ptr)
+	err := json.ParseJson(strutil.UnsafeStr2Byt(v), ptr)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal from string, %v", err)
 	}

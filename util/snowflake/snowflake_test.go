@@ -1,4 +1,4 @@
-package util
+package snowflake
 
 import (
 	"sync"
@@ -6,18 +6,6 @@ import (
 
 	"github.com/curtisnewbie/miso/util/hash"
 )
-
-func BenchmarkGetIdPerf(b *testing.B) {
-	// SnowflakeId
-	// BenchmarkGetIdPerf-8    16170626                73.32 ns/op           40 B/op          2 allocs/op
-	//
-	// ulid
-	// BenchmarkGetIdPerf-8    12000014                99.03 ns/op           48 B/op          2 allocs/op
-	b.SetBytes(int64(len(GenId())))
-	for range b.N {
-		_ = GenId()
-	}
-}
 
 func TestGetId(t *testing.T) {
 	var set hash.Set[string] = hash.NewSet[string]()
@@ -32,7 +20,7 @@ func TestGetId(t *testing.T) {
 		go func(idSet *hash.Set[string], threadId int) {
 			defer wg.Done()
 			for i := 0; i < loopCnt; i++ {
-				id := SnowflakeId()
+				id := Id()
 
 				mu.Lock()
 				if idSet.Has(id) {
