@@ -7,6 +7,7 @@ import (
 	"runtime/pprof"
 )
 
+// Create CPU Profile for `fu` and write profile to file.
 func Cpu(file string, fu func()) error {
 	f, err := os.Create(file)
 	if err != nil {
@@ -23,6 +24,9 @@ func Cpu(file string, fu func()) error {
 	return nil
 }
 
+// Create heap profile for `fu` and write profile to file.
+//
+// [runtime.GC] will be called before `fu` to obtain an accurate profile.
 func Heap(file string, fu func()) error {
 	f, err := os.Create(file)
 	if err != nil {
