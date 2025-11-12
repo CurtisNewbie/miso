@@ -35,7 +35,6 @@ You can generate a new project using `misogen` (see [CLI Tools](./doc/tools.md))
 - [Cron Scheduler & Distributed Task Scheduling](./doc/dtask.md)
 - [Validation](./doc/validate.md)
 - [Service Healthcheck](./doc/health.md)
-- [Json Processing Behaviour](./doc/json.md)
 - [Rabbitmq and Event Bus](./doc/rabbitmq.md)
 - [Kafka](./doc/kafka.md)
 - [API Documentation Generation](./doc/api_doc_gen.md)
@@ -69,7 +68,9 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 - Since v0.3.5, a few funcs in `errs` pkg are deprecated.
 - Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`.
 - Since v0.3.7, async code in pkg `util` is deprecated and moved to `util/async`, while previous code may continue to work, it will be deleted in later release.
-- Since v0.4.0, a lot of deprecated code is removed. All code directly under `util` pkg is moved to more dedicated pkgs: `util/strutil`, `util/snowflake`, `util/randutil`, `util/iputil`, `util/pool`, `util/profile`, `util/constraint`, `util/atom`, `util/must`, `util/cmputil`.
+- Since v0.4.0,
+  - The default lowercase camel case json field naming strategy has been removed.
+  - a lot of deprecated code is removed. All code directly under `util` pkg is moved to more dedicated pkgs: `util/strutil`, `util/snowflake`, `util/randutil`, `util/iputil`, `util/pool`, `util/profile`, `util/constraint`, `util/atom`, `util/must`, `util/cmputil`.
 
 > [!WARNING]
 >

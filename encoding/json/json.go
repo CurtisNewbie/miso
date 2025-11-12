@@ -12,7 +12,7 @@ import (
 
 var (
 	config                  = jsoniter.Config{EscapeHTML: true}.Froze()
-	NamingStrategyTranslate = LowercaseNamingStrategy
+	NamingStrategyTranslate = func(v string) string { return v }
 )
 
 func init() {
