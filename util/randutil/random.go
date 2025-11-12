@@ -152,7 +152,7 @@ func ERand(len int) string {
 	}
 
 	// each base64 character represent 6 bits of data
-	c := len * 3 / 4 // wihtout padding
+	c := len * 3 / 4 // without padding
 	b := make([]byte, c)
 	_, err := cr.Read(b)
 
