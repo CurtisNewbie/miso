@@ -74,4 +74,4 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 
 > [!WARNING]
 >
-> Since [Jsoniter](https://github.com/json-iterator/go) is nolonger actively maintained, last commit was 3 years ago. Jsoniter will be removed from this repository in v0.4.0 release. The default [json processing behaviour](./doc/json.md) will change once jsoniter is removed. Previously, all struct fields are by default serialized/deserialized using lowercase camel case style without needing to add any json tag. Since v0.4.0, json tags must be added manually to maintain compatibility.
+> Since [Jsoniter](https://github.com/json-iterator/go) is nolonger actively maintained, last commit was 3 years ago. Jsoniter will be removed from this repository in later release. The default [json processing behaviour](./doc/json.md) has been removed. Previously, all struct fields are by default serialized/deserialized using lowercase camel case style without needing to add any json tag. **Since v0.4.0**, json tags must be added manually to maintain compatibility.
