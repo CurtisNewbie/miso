@@ -47,7 +47,7 @@ func init() {
 var module = miso.InitAppModuleFunc(func() *taskModule {
 	return &taskModule{
 		dtaskMut:       &sync.Mutex{},
-		workerRegistry: hash.NewStrRWMap[func(miso.Rail) error](),
+		workerRegistry: hash.NewStrRWMap[*worker](),
 		group:          "default",
 		workerPool:     async.NewAntsAsyncPool(500),
 		workerWg:       &sync.WaitGroup{},
@@ -74,7 +74,7 @@ type taskModule struct {
 	cancelPullTaskRunner []func()
 
 	// task workerRegistry
-	workerRegistry *hash.StrRWMap[func(miso.Rail) error]
+	workerRegistry *hash.StrRWMap[*worker]
 
 	// worker pool
 	workerPool async.AsyncPool
@@ -174,40 +174,43 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	actualRun := t.Run
 
 	// worker
-	m.workerRegistry.Put(t.Name, func(rail miso.Rail) error {
-		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
-			rail.Infof("Task '%v' disabled, skipped", t.Name)
-			return nil
-		}
-
-		lock := redis.NewRLockf(rail, "dtask:%v:%v", m.group, t.Name)
-		if ok, err := lock.TryLock(redis.WithBackoff(time.Second * 1)); err != nil || !ok {
-			if err != nil {
-				return err
+	m.workerRegistry.Put(t.Name, &worker{
+		f: func(rail miso.Rail) error {
+			if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
+				rail.Infof("Task '%v' disabled, skipped", t.Name)
+				return nil
 			}
 
-			// happens when producer out runs workers
-			rail.Infof("'%v' is running by other nodes, abort", t.Name)
-			return nil
-		}
-		defer lock.Unlock()
+			lock := redis.NewRLockf(rail, "dtask:%v:%v", m.group, t.Name)
+			if ok, err := lock.TryLock(redis.WithBackoff(time.Second * 1)); err != nil || !ok {
+				if err != nil {
+					return err
+				}
 
-		if logJobExec {
-			rail.Infof("Running task '%s'", t.Name)
-		}
+				// happens when producer out runs workers
+				rail.Infof("'%v' is running by other nodes, abort", t.Name)
+				return nil
+			}
+			defer lock.Unlock()
 
-		start := time.Now()
-		err := async.PanicSafeRunErr(func() error {
-			return actualRun(rail)
-		})
-		took := time.Since(start)
+			if logJobExec {
+				rail.Infof("Running task '%s'", t.Name)
+			}
 
-		if logJobExec {
-			rail.Infof("Task '%s' finished, took: %s", t.Name, took)
-			miso.LogJobNextRun(rail, t.Name)
-		}
+			start := time.Now()
+			err := async.PanicSafeRunErr(func() error {
+				return actualRun(rail)
+			})
+			took := time.Since(start)
 
-		return err
+			if logJobExec {
+				rail.Infof("Task '%s' finished, took: %s", t.Name, took)
+				miso.LogJobNextRun(rail, t.Name)
+			}
+
+			return err
+		},
+		LogErrWarnLevel: t.LogErrWarnLevel,
 	})
 
 	// producer
@@ -287,8 +290,13 @@ func (m *taskModule) triggerWorker(rail miso.Rail, name string) error {
 	m.workerPool.Go(func() {
 		defer m.workerWg.Done()
 		rail = rail.NewCtx()
-		if err := f(rail); err != nil {
-			rail.Errorf("Failed to run task '%v', %v", name, err)
+		if err := f.Run(rail); err != nil {
+			logWarn := f.LogErrWarnLevel || errors.Is(err, miso.ErrServerShuttingDown)
+			if logWarn {
+				rail.Warnf("Failed to run task '%v', %v", name, err)
+			} else {
+				rail.Errorf("Failed to run task '%v', %v", name, err)
+			}
 		}
 	})
 	return nil
@@ -528,4 +536,14 @@ func registerRouteForJobTriggers() {
 		}
 		inb.HandleResult(nil, err)
 	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
+}
+
+type worker struct {
+	f func(miso.Rail) error
+
+	LogErrWarnLevel bool
+}
+
+func (w *worker) Run(r miso.Rail) error {
+	return w.f(r)
 }

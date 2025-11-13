@@ -40,6 +40,7 @@ type Job struct {
 	Run                    func(rail Rail) error // actual job execution logic.
 	LogJobExec             bool                  // should job execution be logged, error msg is always logged regardless.
 	TriggeredOnBoostrapped bool                  // should job be triggered when server is fully bootstrapped
+	LogErrWarnLevel        bool                  // print WARN level log when job failed, by default log is printed in ERROR level.
 
 	concRunMutex *sync.Mutex
 }
@@ -108,7 +109,8 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 				m.logNextRun(rail, job.Name, false)
 			}
 		} else {
-			if errors.Is(errRun, ErrServerShuttingDown) {
+			logWarn := job.LogErrWarnLevel || errors.Is(errRun, ErrServerShuttingDown)
+			if logWarn {
 				rail.Warnf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
 			} else {
 				rail.Errorf("Job '%s' failed, took: %s, %v", job.Name, took, errRun)
