@@ -77,7 +77,7 @@ type asyncPoolOption func(a *asyncPoolOptions)
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
 // You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
 //
-// Since v0.3.10, migrate to [NewAsyncPool] if possible.
+// Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *BoundedAsyncPool {
 	if maxTasks < 0 {
 		maxTasks = 0
@@ -335,7 +335,7 @@ func (a *AntsAsyncPool) StopAndWait() {
 //
 // In cases where you want to have an extra queue of tasks that do not always block task producers, use [NewBoundedAsyncPool] intead.
 //
-// Since v0.3.10, migrate to [NewAsyncPool] if possible.
+// Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 	ap := &AntsAsyncPool{
 		asyncPoolCommon: &asyncPoolCommon{
