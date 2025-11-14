@@ -368,11 +368,9 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 // This is good for cases where you want back pressure, i.e., stop producing tasks when all workers are busy.
 //
 // In cases where you want an extra task queue, e.g., so that the task producers won't block so frequently when pool is
-// exhausted, use [WithTaskQueue] to specify the task queue size.
+// exhausted, use [WithTaskQueue] to specify the task queue size. Decide whether you need a task queue based on your use case.
 //
-// You can also use [FallbackDropTask] or [FallbackCallerRun] to change default behaviours.
-//
-// Decide whether you need a task queue based on your use case.
+// You can also use [FallbackDropTask] or [FallbackCallerRun] to customize fallback behaviour.
 //
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N might be 10; in web server connection pool, N can be 258 and so on.
 //
