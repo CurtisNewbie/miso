@@ -268,7 +268,7 @@ func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 		if qt.TraceId != "" {
 			newRail = newRail.WithTraceId(qt.TraceId)
 		}
-		newRail.Infof("Pulled task '%v' from task queue, producer: %v", qt.Name, qt.Producer)
+		newRail.Debugf("Pulled task '%v' from task queue, producer: %v", qt.Name, qt.Producer)
 		if err := m.triggerWorker(newRail, qt.Name); err != nil {
 			newRail.Errorf("Failed to trigger worker, task: '%v', %v", qt.Name, err)
 		}
