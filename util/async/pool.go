@@ -142,6 +142,7 @@ func WithTaskQueue(queueSize int) asyncPoolOption {
 	}
 }
 
+// Return runtime.GOMAXPROCS(0)
 func MaxProcs() int {
 	return runtime.GOMAXPROCS(0)
 }
@@ -164,7 +165,7 @@ func CalcPoolSize(multi int, min int) int {
 // Pick [NewAntsAsyncPool] or [NewBoundedAsyncPool] based on your use case.
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N is 10, in web server connection pool, N can be 258.
 func NewCpuAsyncPool() AsyncPool {
-	return NewAntsAsyncPool(MaxProcs() * 4)
+	return NewAntsAsyncPool(CalcPoolSize(4, 8))
 }
 
 // Create AsyncPool with number of workers equals to 8 * GOMAXPROCS and a task queue of size 100.
@@ -173,7 +174,7 @@ func NewCpuAsyncPool() AsyncPool {
 // Pick [NewAntsAsyncPool] or [NewBoundedAsyncPool] based on your use case.
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N is 10, in web server connection pool, N can be 258.
 func NewIOAsyncPool() AsyncPool {
-	return NewBoundedAsyncPool(100, MaxProcs()*8)
+	return NewBoundedAsyncPool(100, CalcPoolSize(8, 16))
 }
 
 // Stop the pool.
