@@ -161,6 +161,8 @@ $ misopatch -h
 #
 #
 # Usage of misopatch:
+#  -all
+#        apply all patches
 #   -debug
 #         enable debug log
 ```
