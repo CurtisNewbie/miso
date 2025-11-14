@@ -541,6 +541,7 @@ func (s *NacosServerList) ListServers(rail miso.Rail, name string) []miso.Server
 					ServiceName: name,
 					SubscribeCallback: func(services []model.SubscribeService, err error) {
 						rail.Infof("Service '%v' instances changed: %#v", name, services)
+						miso.TriggerServerChangeListeners(name)
 					},
 				})
 				if err != nil {
