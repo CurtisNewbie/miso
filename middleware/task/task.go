@@ -47,7 +47,7 @@ var module = miso.InitAppModuleFunc(func() *taskModule {
 		dtaskMut:       &sync.Mutex{},
 		workerRegistry: hash.NewStrRWMap[func(miso.Rail) error](),
 		group:          "default",
-		workerPool:     async.NewAsyncPool(async.CalcPoolSize(64, 128)),
+		workerPool:     async.NewAsyncPool(async.CalcPoolSize(12, 128, 1024)),
 		workerWg:       &sync.WaitGroup{},
 	}
 })
