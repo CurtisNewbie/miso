@@ -128,28 +128,56 @@ func (t Time) EndOfMin() Time {
 	return Time{tt}
 }
 
+func (t Time) StartOfWeek(start time.Weekday) Time {
+	curr := t.Weekday()
+	if curr == start {
+		return t.StartOfDay()
+	}
+	return t.estmLastWeekday(curr, start).StartOfDay()
+}
+
+func (t Time) EndOfWeek(start time.Weekday) Time {
+	curr := t.Weekday()
+	end := start
+	if end == time.Sunday {
+		end = time.Saturday
+	} else {
+		end -= end
+	}
+	if curr == end {
+		return t.EndOfDay()
+	}
+	return t.estmNextWeekday(curr, end).EndOfDay()
+}
+
 func (t Time) LastWeekday(w time.Weekday) Time {
-	wkd := t.Weekday()
+	return t.estmLastWeekday(t.Weekday(), w)
+}
+
+func (t Time) estmLastWeekday(curr time.Weekday, w time.Weekday) Time {
 	diff := 0
-	if wkd < w {
-		diff = 7 - int(w-wkd)
-	} else if wkd == w {
+	if curr < w {
+		diff = 7 - int(w-curr)
+	} else if curr == w {
 		diff = 7
 	} else {
-		diff = int(wkd - w)
+		diff = int(curr - w)
 	}
 	return t.AddDate(0, 0, -diff)
 }
 
 func (t Time) NextWeekday(w time.Weekday) Time {
-	wkd := t.Weekday()
+	return t.estmNextWeekday(t.Weekday(), w)
+}
+
+func (t Time) estmNextWeekday(curr time.Weekday, w time.Weekday) Time {
 	diff := 0
-	if wkd < w {
-		diff = int(w - wkd)
-	} else if wkd == w {
+	if curr < w {
+		diff = int(w - curr)
+	} else if curr == w {
 		diff = 7
 	} else {
-		diff = 7 - int(wkd-w)
+		diff = 7 - int(curr-w)
 	}
 	return t.AddDate(0, 0, diff)
 }

@@ -141,4 +141,8 @@ func TestStartEndOfMonth(t *testing.T) {
 	t.Log(now.EndOfHour())
 	t.Log(now.StartOfMin())
 	t.Log(now.EndOfMin())
+	t.Log(now.StartOfWeek(time.Monday))
+	t.Log(now.EndOfWeek(time.Monday))
+	t.Log(now.StartOfWeek(time.Sunday))
+	t.Log(now.EndOfWeek(time.Sunday))
 }
