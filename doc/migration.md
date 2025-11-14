@@ -28,7 +28,7 @@ Use git diff to see the changes and run your project to see if it still works.
 
 You can also install `misopatch` tool (see [Tools](./tools.md)). It embeds the patch files in binary, installs gopatch if missing, and applies all the patches for you.
 
-If you are upgrading miso to v0.3.6, then you should only install misopatch@v0.3.6, e.g.,
+Always install the latest misopatch version using tags (do not use `go get -u`), e.g.,
 
 ```sh
 go install github.com/curtisnewbie/miso/cmd/misopatch@v0.3.6
