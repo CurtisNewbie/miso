@@ -1105,10 +1105,12 @@ func AddBearerAuthInterceptor(doIntercept func(method string, url string) bool, 
 func AddCorsAny() {
 	PreProcessGin(func(rail Rail, engine *gin.Engine) {
 		engine.Use(func(c *gin.Context) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, HEAD")
+			h := c.Writer.Header()
+			h.Set("Access-Control-Allow-Origin", "*")
+			h.Set("Access-Control-Allow-Credentials", "false")
+			h.Set("Access-Control-Allow-Headers", "*")
+			h.Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, HEAD")
+			h.Set("Access-Control-Max-Age", "3600")
 
 			if c.Request.Method == "OPTIONS" {
 				c.AbortWithStatus(204)
