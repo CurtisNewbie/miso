@@ -70,8 +70,8 @@ func applyPatches() error {
 	}
 	currVer = strings.TrimSpace(currVer)
 
-	if tok := strings.SplitN(currVer, "-", 3); len(tok) == 3 {
-		log.Infof("miso imported based on commit hash, parsed %v as %v", currVer, tok[0])
+	if tok := strings.SplitN(currVer, "-", 3); len(tok) > 1 {
+		log.Infof("miso imported as beta version or based on commit hash, parsed %v as %v", currVer, tok[0])
 		currVer = tok[0]
 	}
 
