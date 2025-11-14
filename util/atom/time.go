@@ -79,6 +79,13 @@ func (t Time) GoString() string {
 	return t.String()
 }
 
+// At 00:00:00.000000.
+func (t Time) StartOfDay() Time {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
+	return Time{tt}
+}
+
 // At 23:59:59.999999.
 func (t Time) EndOfDay() Time {
 	yyyy, mm, dd := t.Date()
@@ -86,10 +93,9 @@ func (t Time) EndOfDay() Time {
 	return Time{tt}
 }
 
-// At 00:00:00.000000.
-func (t Time) StartOfDay() Time {
-	yyyy, mm, dd := t.Date()
-	tt := time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
+func (t Time) StartOfMonth() Time {
+	yyyy, mm, _ := t.Date()
+	tt := time.Date(yyyy, mm, 1, 0, 0, 0, 0, t.Location())
 	return Time{tt}
 }
 
@@ -99,9 +105,26 @@ func (t Time) EndOfMonth() Time {
 	return Time{tt}
 }
 
-func (t Time) StartOfMonth() Time {
-	yyyy, mm, _ := t.Date()
-	tt := time.Date(yyyy, mm, 1, 0, 0, 0, 0, t.Location())
+func (t Time) StartOfHour() Time {
+	yyyy, mm, dd := t.Date()
+	return Time{time.Date(yyyy, mm, dd, t.Time.Hour(), 0, 0, 0, t.Time.Location())}
+}
+
+func (t Time) EndOfHour() Time {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, t.Time.Hour(), 59, 59, 999_999000, t.Location())
+	return Time{tt}
+}
+
+func (t Time) StartOfMin() Time {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, t.Hour(), t.Minute(), 0, 0, t.Location())
+	return Time{tt}
+}
+
+func (t Time) EndOfMin() Time {
+	yyyy, mm, dd := t.Date()
+	tt := time.Date(yyyy, mm, dd, t.Hour(), t.Minute(), 59, 999_999000, t.Location())
 	return Time{tt}
 }
 
