@@ -82,7 +82,7 @@ func newModule() *discoveryModule {
 		dynamicServiceRegistry:   ServerListServiceRegistry{Rule: RandomServerSelector},
 		serverChangeListeners: ServerChangeListenerMap{
 			Listeners: map[string][]func(){},
-			Pool:      async.NewCpuAsyncPool(),
+			Pool:      async.NewAsyncPool(async.CalcPoolSize(4, 12)),
 		},
 		getServerList: func() ServerList { return nil },
 	}
