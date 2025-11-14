@@ -367,9 +367,14 @@ var jsonParseTimeFormats = []string{
 }
 
 func AddTimeParseFormat(fmt ...string) {
-	m := hash.NewSet[string](jsonParseTimeFormats...)
+	m := hash.NewSet(jsonParseTimeFormats...)
 	m.AddAll(fmt)
 	jsonParseTimeFormats = m.CopyKeys()
+}
+
+func SetTimeParseFormat(fmt ...string) {
+	s := hash.NewSet(fmt...)
+	jsonParseTimeFormats = s.CopyKeys()
 }
 
 func FuzzParseTime(formats []string, value string) (time.Time, error) {

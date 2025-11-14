@@ -20,5 +20,5 @@
 //   - `millseconds since unix epoch`
 //   - `seconds since unix epoch`
 //
-// You can add extra unmarshalling formats using [AddTimeParseFormat].
+// You can add extra unmarshalling formats using [AddTimeParseFormat], or overwrite the unmarshalling formats entirely using [SetTimeParseFormat].
 package atom
