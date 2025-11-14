@@ -375,6 +375,8 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N might be 10; in web server connection pool, N can be 258 and so on.
 //
 // When the tasks are CPU intensive, N should be relatively small, e.g., N=1 or N=2.
+//
+// See [CalcPoolSize].
 func NewAsyncPool(maxWorkers int, opts ...asyncPoolOption) AsyncPool {
 	ops := &asyncPoolOptions{}
 	for _, op := range opts {
