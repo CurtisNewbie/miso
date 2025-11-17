@@ -98,6 +98,15 @@ func (s *Set[T]) ForEach(f func(v T) (stop bool)) {
 	}
 }
 
+func (s *Set[T]) ForEachErr(f func(v T) (stop bool, err error)) error {
+	for k := range s.Keys {
+		if st, err := f(k); st || err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Implements encoding/json Marshaler
 func (s Set[T]) MarshalJSON() ([]byte, error) {
 	return json.WriteJson(s.CopyKeys())
