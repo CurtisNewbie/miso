@@ -1479,3 +1479,7 @@ func HandleFlightRecorderSnapshot(inb *Inbound) {
 	err := fr.Snapshot()
 	inb.HandleResult(nil, err)
 }
+
+func FlightRecorder() *flightRecorder {
+	return flightRecorderOnce()
+}
