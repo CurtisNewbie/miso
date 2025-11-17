@@ -226,39 +226,39 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Web Server Configuration
 
-| property                                  | description                                                                                                               | default value |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| server.enabled                            | enable http server                                                                                                        | true          |
-| server.host                               | http server host                                                                                                          | 127.0.0.1     |
-| server.port                               | http server port                                                                                                          | 8080          |
-| server.health-check-url                   | health check url                                                                                                          | /health       |
-| server.health-check-interval              | health check interval, it's only used for service discovery, e.g., Consul                                                 | 5s            |
-| server.health-check-timeout               | health check timeout, it's only used for service discovery, e.g., Consul                                                  | 3s            |
-| server.log-routes                         | log all http server routes in INFO level                                                                                  | true          |
-| server.auth.bearer                        | http server bearer authorization token for all endpoints                                                                  |               |
-| server.graceful-shutdown-time-sec         | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server) | 30            |
-| server.perf.enabled                       | logs time duration for each inbound http request                                                                          | false         |
-| server.trace.inbound.propagate            | propagate trace info from inbound requests                                                                                | true          |
-| server.validate.request.enabled           | enable inbound request parameter validation                                                                               | true          |
-| server.request-log.enabled                | enable server request log                                                                                                 | true          |
-| server.pprof.enabled                      | enable apis for pprof (`/debug/pprof/**`) and trace (`/debug/trace/**`); in non-prod mode, it's always enabled            | false         |
-| server.pprof.auth.bearer                  | bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.    |               |
-| server.api-doc.enabled                    | generate api doc                                                                                                          | true          |
-| server.api-doc.web.enabled                | build webpage for the generated api doc                                                                                   | true          |
-| server.api-doc.file                       | generate markdown api doc to the specified file                                                                           |               |
-| server.api-doc.file-excl-tclient-demo     | the generated markdown api doc should exclude miso.TClient demo                                                           | false         |
-| server.api-doc.file-excl-ngclient-demo    | the generated markdown api doc should exclude Angular HttpClient demo                                                     | false         |
-| server.api-doc.file-excl-openapi-spec     | the generated markdown api doc should exclude openapi json for each endpoint                                              | true          |
-| server.api-doc.path-prefix-app            | the generated endpoint documentation should include app name as the path prefix                                           | true          |
-| server.api-doc.openapi-spec.server        | server address specified in openapi json doc                                                                              |               |
-| server.api-doc.openapi-spec.file          | path to generated openapi json for all endpoints                                                                          |               |
-| server.api-doc.openapi-spec.path-patterns | path patterns for endpoints in openapi json (`slice of string`)                                                           |               |
-| server.api-doc.go.file                    | file that contains the generated api doc golang demo                                                                      |               |
-| server.api-doc.go.compile-file            | whether the generated api-doc golang demo file should compile                                                             | false         |
-| server.api-doc.go.path-patterns           | path patterns for endpoints that are written to api doc golang demo file                                                  |               |
-| server.api-doc.go.excl-path-patterns      | path patterns excluding for endpoints that should not be written to api doc golang demo file                              |               |
-| server.request.mapping.header             | automatically map header values to request struct                                                                         | true          |
-| server.gin.validation.disabled            | disable gin's builtin validation                                                                                          | true          |
+| property                                  | description                                                                                                                                                                              | default value |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| server.enabled                            | enable http server                                                                                                                                                                       | true          |
+| server.host                               | http server host                                                                                                                                                                         | 127.0.0.1     |
+| server.port                               | http server port                                                                                                                                                                         | 8080          |
+| server.health-check-url                   | health check url                                                                                                                                                                         | /health       |
+| server.health-check-interval              | health check interval, it's only used for service discovery, e.g., Consul                                                                                                                | 5s            |
+| server.health-check-timeout               | health check timeout, it's only used for service discovery, e.g., Consul                                                                                                                 | 3s            |
+| server.log-routes                         | log all http server routes in INFO level                                                                                                                                                 | true          |
+| server.auth.bearer                        | http server bearer authorization token for all endpoints                                                                                                                                 |               |
+| server.graceful-shutdown-time-sec         | time wait (in second) before whole app server shutdown (previously, before `v0.1.12`, it only applies to the http server)                                                                | 30            |
+| server.perf.enabled                       | logs time duration for each inbound http request                                                                                                                                         | false         |
+| server.trace.inbound.propagate            | propagate trace info from inbound requests                                                                                                                                               | true          |
+| server.validate.request.enabled           | enable inbound request parameter validation                                                                                                                                              | true          |
+| server.request-log.enabled                | enable server request log                                                                                                                                                                | true          |
+| server.pprof.enabled                      | enable apis for pprof (`/debug/pprof/**`) and flight recorder (`/debug/trace/**`), see [FlightRecorder Blog](https://go.dev/blog/flight-recorder); in non-prod mode, it's always enabled | false         |
+| server.pprof.auth.bearer                  | bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.                                                                   |               |
+| server.api-doc.enabled                    | generate api doc                                                                                                                                                                         | true          |
+| server.api-doc.web.enabled                | build webpage for the generated api doc                                                                                                                                                  | true          |
+| server.api-doc.file                       | generate markdown api doc to the specified file                                                                                                                                          |               |
+| server.api-doc.file-excl-tclient-demo     | the generated markdown api doc should exclude miso.TClient demo                                                                                                                          | false         |
+| server.api-doc.file-excl-ngclient-demo    | the generated markdown api doc should exclude Angular HttpClient demo                                                                                                                    | false         |
+| server.api-doc.file-excl-openapi-spec     | the generated markdown api doc should exclude openapi json for each endpoint                                                                                                             | true          |
+| server.api-doc.path-prefix-app            | the generated endpoint documentation should include app name as the path prefix                                                                                                          | true          |
+| server.api-doc.openapi-spec.server        | server address specified in openapi json doc                                                                                                                                             |               |
+| server.api-doc.openapi-spec.file          | path to generated openapi json for all endpoints                                                                                                                                         |               |
+| server.api-doc.openapi-spec.path-patterns | path patterns for endpoints in openapi json (`slice of string`)                                                                                                                          |               |
+| server.api-doc.go.file                    | file that contains the generated api doc golang demo                                                                                                                                     |               |
+| server.api-doc.go.compile-file            | whether the generated api-doc golang demo file should compile                                                                                                                            | false         |
+| server.api-doc.go.path-patterns           | path patterns for endpoints that are written to api doc golang demo file                                                                                                                 |               |
+| server.api-doc.go.excl-path-patterns      | path patterns excluding for endpoints that should not be written to api doc golang demo file                                                                                             |               |
+| server.request.mapping.header             | automatically map header values to request struct                                                                                                                                        | true          |
+| server.gin.validation.disabled            | disable gin's builtin validation                                                                                                                                                         | true          |
 
 ## Zookeeper Configuration
 

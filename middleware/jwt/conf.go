@@ -14,4 +14,7 @@ const (
 )
 
 // misoconfig-default-start
+func init() {
+}
+
 // misoconfig-default-end

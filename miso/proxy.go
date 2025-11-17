@@ -309,6 +309,10 @@ func (h *HttpProxy) AddDebugFilter(mustAuthInProd bool) error {
 				HandleFlightRecorderRun(pc.Inb)
 			case "/debug/trace/recorder/stop":
 				HandleFlightRecorderStop(pc.Inb)
+			case "/debug/trace/recorder/snapshot":
+				HandleFlightRecorderSnapshot(pc.Inb)
+			default:
+				pc.Inb.Status(404)
 			}
 		}
 	})

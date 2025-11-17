@@ -46,6 +46,10 @@ const (
 )
 
 var (
+	ErrFlightRecorderNotRunning = errs.NewErrfCode("FLIGHT_RECORDER_NOT_RUNNING", "FlightRecorder not running")
+)
+
+var (
 	flightRecorderOnce = sync.OnceValue(func() *flightRecorder { return newFlightRecorder("trace.out") })
 
 	beforeRouteRegister = slutil.NewSyncSlice[func(Rail) error](2)
@@ -1305,12 +1309,15 @@ func (f *flightRecorder) Start(dur time.Duration) error {
 		return err
 	}
 
-	Infof("FlightRecorder started, dur: %v", dur)
-
-	go func() {
-		<-time.After(dur)
-		f.Stop()
-	}()
+	if dur != time.Duration(0) {
+		Infof("FlightRecorder started, with duration set: %v", dur)
+		go func() {
+			<-time.After(dur)
+			f.Stop()
+		}()
+	} else {
+		Infof("FlightRecorder started without limited duration")
+	}
 
 	return nil
 }
@@ -1320,14 +1327,14 @@ func (f *flightRecorder) Stop() error {
 	defer f.mu.Unlock()
 
 	if !f.fr.Enabled() {
-		return nil
+		return ErrFlightRecorderNotRunning.New()
 	}
 
 	fi, err := osutil.OpenRWFile(f.out, true)
 	if err != nil {
 		return err
 	}
-
+	defer fi.Close()
 	_ = fi.Truncate(0)
 
 	if _, err := f.fr.WriteTo(fi); err != nil {
@@ -1339,6 +1346,29 @@ func (f *flightRecorder) Stop() error {
 	}
 
 	Infof("FlightRecorder stopped, output written to %v", f.out)
+	return nil
+}
+
+func (f *flightRecorder) Snapshot() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if !f.fr.Enabled() {
+		return ErrFlightRecorderNotRunning.New()
+	}
+
+	fi, err := osutil.OpenRWFile(f.out, true)
+	if err != nil {
+		return err
+	}
+	defer fi.Close()
+	_ = fi.Truncate(0)
+
+	if _, err := f.fr.WriteTo(fi); err != nil {
+		return err
+	}
+
+	Infof("FlightRecorder took snapshot, output written to %v", f.out)
 	return nil
 }
 
@@ -1365,6 +1395,9 @@ func prepDebugRoutes(rail Rail) {
 		HttpGet("/debug/trace/recorder/run", RawHandler(HandleFlightRecorderRun)).
 			DocQueryParam("duration", "Duration of the flight recording. Required. Duration cannot exceed 30 min.").
 			Desc("Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.")
+
+		HttpGet("/debug/trace/recorder/snapshot", RawHandler(HandleFlightRecorderSnapshot)).
+			Desc("FlightRecorder take snapshot. Recorded result is written to trace.out.")
 
 		HttpGet("/debug/trace/recorder/stop", RawHandler(HandleFlightRecorderStop)).
 			Desc("Stop existing FlightRecorder session.")
@@ -1415,14 +1448,19 @@ func prepAuthInterceptors(rail Rail) {
 
 func HandleFlightRecorderRun(inb *Inbound) {
 	fr := flightRecorderOnce()
-	dur, err := time.ParseDuration(strings.TrimSpace(inb.Query("duration")))
-	if err != nil {
-		inb.HandleResult(nil, errs.Wrapf(err, "Invalid duration expression"))
-		return
-	}
-	if dur >= 30*time.Minute { // just in case
-		inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
-		return
+	dur := time.Duration(0)
+	qdur := strings.TrimSpace(inb.Query("duration"))
+	if qdur != "" {
+		d, err := time.ParseDuration(qdur)
+		if err != nil {
+			inb.HandleResult(nil, errs.Wrapf(err, "Invalid duration expression"))
+			return
+		}
+		dur = d
+		if dur >= 30*time.Minute { // just in case
+			inb.HandleResult(nil, ErrIllegalArgument.WithMsg("Flight recording cannot proceed for over 30 min"))
+			return
+		}
 	}
 	if err := fr.Start(dur); err != nil {
 		inb.HandleResult(nil, err)
@@ -1433,5 +1471,11 @@ func HandleFlightRecorderRun(inb *Inbound) {
 func HandleFlightRecorderStop(inb *Inbound) {
 	fr := flightRecorderOnce()
 	err := fr.Stop()
+	inb.HandleResult(nil, err)
+}
+
+func HandleFlightRecorderSnapshot(inb *Inbound) {
+	fr := flightRecorderOnce()
+	err := fr.Snapshot()
 	inb.HandleResult(nil, err)
 }

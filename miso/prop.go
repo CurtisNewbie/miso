@@ -67,7 +67,7 @@ const (
 	// misoconfig-prop: enable server request log | true
 	PropServerRequestLogEnabled = "server.request-log.enabled"
 
-	// misoconfig-prop: enable apis for pprof (`/debug/pprof/**`) and trace (`/debug/trace/**`); in non-prod mode, it's always enabled | false
+	// misoconfig-prop: enable apis for pprof (`/debug/pprof/**`) and flight recorder (`/debug/trace/**`), see [FlightRecorder Blog](https://go.dev/blog/flight-recorder); in non-prod mode, it's always enabled | false
 	PropServerPprofEnabled = "server.pprof.enabled"
 
 	// misoconfig-prop: bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.
