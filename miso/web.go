@@ -1297,6 +1297,9 @@ type flightRecorder struct {
 	out string
 }
 
+// Start FlightRecorder.
+//
+// If dur == 0, FlightRecorder will continue to run until stopped. Otherwise, FlightRecorder will automatically stop after dur.
 func (f *flightRecorder) Start(dur time.Duration) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -1322,6 +1325,7 @@ func (f *flightRecorder) Start(dur time.Duration) error {
 	return nil
 }
 
+// Stop FlightRecorder.
 func (f *flightRecorder) Stop() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -1349,6 +1353,7 @@ func (f *flightRecorder) Stop() error {
 	return nil
 }
 
+// Take a snapshot without stopping the FlightRecorder.
 func (f *flightRecorder) Snapshot() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
