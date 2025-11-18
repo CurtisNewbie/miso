@@ -81,6 +81,11 @@ func (s Set[T]) String() string {
 	return st
 }
 
+// To string
+func (s Set[T]) GoString() string {
+	return s.String()
+}
+
 // Copy keys in set
 func (s *Set[T]) CopyKeys() []T {
 	var keys []T = make([]T, 0, len(s.Keys))
