@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -9,10 +10,18 @@ import (
 )
 
 func FindTestdata(t *testing.T, relativePath string) string {
+	p, err := FindTestdataPath(relativePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func FindTestdataPath(relativePath string) (string, error) {
 	td := "testdata"
 	wdir, err := os.Getwd()
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	dir := wdir
 	mf := "go.mod"
@@ -20,10 +29,10 @@ func FindTestdata(t *testing.T, relativePath string) string {
 		cpath := path.Join(dir, td)
 		ok, err := osutil.FileExists(cpath)
 		if err != nil {
-			t.Fatal(err)
+			return "", err
 		}
 		if ok {
-			return path.Join(cpath, relativePath)
+			return path.Join(cpath, relativePath), nil
 		}
 		mpath := path.Join(dir, mf)
 		if osutil.TryFileExists(mpath) {
@@ -32,6 +41,5 @@ func FindTestdata(t *testing.T, relativePath string) string {
 		}
 		dir = path.Dir(dir) // go up one level
 	}
-	t.Fatalf("testdata file: '**/%v' not found", path.Join(td, relativePath))
-	return ""
+	return "", fmt.Errorf("testdata file: '**/%v' not found", path.Join(td, relativePath))
 }
