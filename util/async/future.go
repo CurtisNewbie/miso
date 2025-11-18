@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
 
@@ -57,7 +58,7 @@ func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 //
 // AwaitFutures should only be used once for the same group of tasks.
 //
-// Use miso.NewAwaitFutures() to create one.
+// Use [NewAwaitFutures] to create one.
 type AwaitFutures[T any] struct {
 	pool    AsyncPool
 	wg      sync.WaitGroup
@@ -108,6 +109,17 @@ func (a *AwaitFutures[T]) AwaitResultAnyErr() ([]T, error) {
 		res = append(res, v)
 	}
 	return res, nil
+}
+
+// Await results of all tasks.
+func (a *AwaitFutures[T]) AwaitResultAll() []pair.Pair[T, error] {
+	fut := a.Await()
+	res := make([]pair.Pair[T, error], 0, len(fut))
+	for _, f := range fut {
+		v, err := f.Get()
+		res = append(res, pair.New(v, err))
+	}
+	return res
 }
 
 // Create new AwaitFutures for a group of tasks.

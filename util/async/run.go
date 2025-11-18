@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Keep running until cancelled.
 func RunCancellable(f func()) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
@@ -21,6 +22,7 @@ func RunCancellable(f func()) (cancel func()) {
 	return
 }
 
+// Keep consuming from ch until cancelled.
 func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel func()) {
 	cr, c := context.WithCancel(context.Background())
 	cancel = c
@@ -43,8 +45,9 @@ func RunCancellableChan[T any](ch <-chan T, f func(t T) (stop bool)) (cancel fun
 	return
 }
 
-func RunUntil[T any](wait time.Duration, f func() (stop bool, t T, e error)) (T, error) {
-	ct, cancel := context.WithTimeout(context.Background(), wait)
+// Keep running f until dur pass.
+func RunUntil[T any](dur time.Duration, f func() (stop bool, t T, e error)) (T, error) {
+	ct, cancel := context.WithTimeout(context.Background(), dur)
 	defer cancel()
 
 	return Run[T](func() (T, error) {
