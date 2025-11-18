@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/curtisnewbie/miso/encoding/json"
+	"encoding/json"
 
 	"github.com/curtisnewbie/miso/util/errs"
 )
@@ -109,7 +109,7 @@ func (s *Set[T]) ForEachErr(f func(v T) (stop bool, err error)) error {
 
 // Implements encoding/json Marshaler
 func (s Set[T]) MarshalJSON() ([]byte, error) {
-	return json.WriteJson(s.CopyKeys())
+	return json.Marshal(s.CopyKeys())
 }
 
 // Implements encoding/json Unmarshaler.
@@ -119,7 +119,7 @@ func (s *Set[T]) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var l []T
-	if err := json.ParseJson(b, &l); err != nil {
+	if err := json.Unmarshal(b, &l); err != nil {
 		return err
 	}
 	s.AddAll(l)

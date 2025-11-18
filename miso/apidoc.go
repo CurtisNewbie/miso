@@ -11,10 +11,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"

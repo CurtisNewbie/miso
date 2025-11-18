@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/curtisnewbie/miso/encoding/json"
+	"github.com/curtisnewbie/miso/util/json"
 	"gorm.io/gorm/schema"
 )
 

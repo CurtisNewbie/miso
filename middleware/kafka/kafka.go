@@ -8,9 +8,9 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/protocol"

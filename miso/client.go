@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/spf13/cast"

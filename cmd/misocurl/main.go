@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/ChimeraCoder/gojson"
-	"github.com/curtisnewbie/miso/encoding/json"
 	"github.com/curtisnewbie/miso/util/cli"
+	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/stack"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/curtisnewbie/miso/version"

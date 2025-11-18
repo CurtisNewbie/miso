@@ -779,3 +779,12 @@
 
 -util.Void
 +any
+
+@@
+var x identifier
+@@
+
+-import "github.com/curtisnewbie/miso/encoding/json"
++import "github.com/curtisnewbie/miso/util/json"
+
+json.x
