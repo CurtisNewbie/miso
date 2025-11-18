@@ -1,0 +1,2 @@
+// SQLite integration.
+package sqlite

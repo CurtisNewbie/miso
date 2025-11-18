@@ -1,0 +1,2 @@
+// RabbitMQ integration.
+package rabbit

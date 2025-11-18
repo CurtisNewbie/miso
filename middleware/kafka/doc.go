@@ -1,0 +1,2 @@
+// Kafka integration.
+package kafka

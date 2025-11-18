@@ -1,0 +1,2 @@
+// Money representation.
+package money
