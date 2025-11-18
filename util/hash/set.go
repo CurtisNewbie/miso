@@ -158,8 +158,16 @@ func (s *Set[T]) Scan(value interface{}) error {
 // Create new Set
 func NewSet[T comparable](keys ...T) Set[T] {
 	s := Set[T]{Keys: map[T]struct{}{}}
-	for _, k := range keys {
-		s.Add(k)
+	s.AddAll(keys)
+	return s
+}
+
+// Create new Set with capacity.
+func NewSetWithCap[T comparable](cap int, keys ...T) Set[T] {
+	if cap < 1 {
+		cap = 1
 	}
+	s := Set[T]{Keys: make(map[T]struct{}, cap)}
+	s.AddAll(keys)
 	return s
 }
