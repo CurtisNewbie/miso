@@ -1,2 +1,2 @@
-// CSV processing.
+// csv processing.
 package csv

@@ -1,2 +1,2 @@
-// IP Utilities.
+// package for IP processing.
 package iputil

@@ -1,2 +1,2 @@
-// Errors with stacktrace.
+// errors with stacktrace.
 package errs

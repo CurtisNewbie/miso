@@ -1,2 +1,2 @@
-// Type constraints
+// type constraints
 package constraint

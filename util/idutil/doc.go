@@ -1,2 +1,2 @@
-// Generate ID based on ulid.
+// ID generator based on ulid.
 package idutil

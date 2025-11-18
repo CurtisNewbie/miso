@@ -1,2 +1,2 @@
-// Package for CLI operations.
+// package for CLI operations.
 package cli

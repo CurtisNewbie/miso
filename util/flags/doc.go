@@ -1,2 +1,2 @@
-// Extension of flag pkg.
+// flag pkg extension.
 package flags

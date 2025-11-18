@@ -1,2 +1,2 @@
-// Heap data structure.
+// heap data structure.
 package heap

@@ -1,4 +1,4 @@
-// Hash based data structures and tool set.
+// hash based data structures and tool set.
 //
 // [RWMap] is map with [sync.RWMutex] embedded.
 //
