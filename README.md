@@ -69,7 +69,7 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
 - Since v0.3.6, file (os) related funcs in pkg `util` are deprecated and moved to `util/osutil`; and `FindTestdata(..)` func in pkg `util` is deprecated and moved to `util/testutil`.
 - Since v0.3.7, async code in pkg `util` is deprecated and moved to `util/async`, while previous code may continue to work, it will be deleted in later release.
 - Since v0.4.0,
-  - The default lowercase camel case json field naming strategy has been removed.
+  - The default lowercase camel case json field naming strategy has been removed. Package `encoding/json` is moved to `util/json`.
   - A lot of deprecated code is removed. All code directly under `util` pkg is moved to dedicated pkgs: `util/strutil`, `util/snowflake`, `util/randutil`, `util/iputil`, `util/pool`, `util/profile`, `util/constraint`, `util/atom`, `util/must`, `util/cmputil`.
 
 > [!WARNING]
