@@ -1,4 +1,4 @@
-// package for async task processing.
+// Package for async task processing.
 //
 // Core types in this package are: [AsyncPool], [Future], [AwaitFutures].
 //

@@ -1,4 +1,4 @@
-// package for time processing.
+// Package for time processing.
 //
 // The core type in this package is [Time]. [Time] is an enhanced wrapper of [time.Time]. You can use [Time] directly in your codebase
 // or only use it as a tool for [time.Time] processing, e.g.,
