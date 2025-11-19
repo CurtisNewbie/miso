@@ -23,7 +23,7 @@ const (
 	// misoconfig-prop: database | 0
 	PropRedisDatabase = "redis.database"
 
-	// misoconfig-prop: max connection pool size (Default is 10 connections per every available CPU as reported by runtime.GOMAXPROCS or 64 connections if the calculated one is less then 64) | 0
+	// misoconfig-prop: max connection pool size (default to `10 * runtime.GOMAXPROCS` or `64` whichever is greater). | 0
 	PropRedisMaxPoolSize = "redis.max-pool-size"
 )
 

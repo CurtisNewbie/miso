@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
@@ -85,10 +84,7 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 	}
 
 	if p.MaxConnPoolSize == 0 {
-		p.MaxConnPoolSize = 10 * runtime.GOMAXPROCS(0)
-		if p.MaxConnPoolSize < 64 {
-			p.MaxConnPoolSize = 64
-		}
+		p.MaxConnPoolSize = async.CalcPoolSize(10, 64, -1)
 	}
 
 	rail.Infof("Connecting to redis '%v:%v', database: %v, pool_size: %v", p.Address, p.Port, p.Db, p.MaxConnPoolSize)
