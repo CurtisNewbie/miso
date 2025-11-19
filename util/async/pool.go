@@ -115,6 +115,8 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 		} else {
 			ap.wg = &sync.WaitGroup{}
 		}
+	} else {
+		ap.wg = &sync.WaitGroup{}
 	}
 	return ap
 }
@@ -332,6 +334,9 @@ func (a *AntsAsyncPool) Stop() {
 
 func (a *AntsAsyncPool) StopAndWait() {
 	a.p.Release()
+	if a.wg == nil {
+		panic("missing wg")
+	}
 	a.wg.Wait()
 }
 
@@ -373,6 +378,8 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 		} else {
 			ap.wg = &sync.WaitGroup{}
 		}
+	} else {
+		ap.wg = &sync.WaitGroup{}
 	}
 	ap.p, _ = ants.NewPool(maxWorkers,
 		ants.WithExpiryDuration(idleDur),
