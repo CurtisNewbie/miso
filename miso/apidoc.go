@@ -32,13 +32,9 @@ var (
 	golangMapGenericRexp = regexp.MustCompile(`map\[(.*)\](.*)`)
 
 	ApiDocTypeAlias = map[string]string{
-		"ETime":       "int64",
-		"*ETime":      "int64",
-		"Time":        "int64",
-		"*util.ETime": "int64",
-		"util.ETime":  "int64",
-		"*util.Time":  "int64",
-		"util.Time":   "int64",
+		"Time":       "int64",
+		"*atom.Time": "int64",
+		"atom.Time":  "int64",
 	}
 	apiDocEndpointDisabled = false
 
