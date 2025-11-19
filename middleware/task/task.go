@@ -255,7 +255,7 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 	rail.Debugf("Pullling tasks: %v", name)
 
-	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second*2, m.getTaskQueueKey(name))
+	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second, m.getTaskQueueKey(name))
 	if err != nil {
 		return err
 	}

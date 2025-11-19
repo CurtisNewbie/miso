@@ -239,7 +239,7 @@ func BRPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, e
 }
 
 func BLPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, error) {
-	c := GetRedis().BRPop(rail.Context(), timeout, key)
+	c := GetRedis().BLPop(rail.Context(), timeout, key)
 	v, err := c.Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -270,7 +270,7 @@ func BLPopJson[T any](rail miso.Rail, timeout time.Duration, key string) ([]T, b
 }
 
 func BRPopJson[T any](rail miso.Rail, timeout time.Duration, key string) ([]T, bool, error) {
-	s, ok, err := BLPop(rail, timeout, key)
+	s, ok, err := BRPop(rail, timeout, key)
 	if err != nil || !ok {
 		return nil, ok, err
 	}
