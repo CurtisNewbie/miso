@@ -37,6 +37,7 @@ type Query struct {
 	_db           *gorm.DB
 	tx            *gorm.DB
 	updateColumns map[string]any
+	omitedColumns hash.Set[string]
 
 	rail      *miso.Rail
 	notLogSQL bool
@@ -767,10 +768,24 @@ func (q *Query) CreateInsertRowMaps(v any) []map[string]any {
 }
 
 func (q *Query) setInsertRowMap(m map[string]any, ft reflect.StructField, fv reflect.Value) {
+	if q.omitedColumns.Has(ft.Name) { // MyField
+		return
+	}
+
 	fname := q.ColumnName(ft.Name)
+	if q.omitedColumns.Has(fname) { // my_field
+		return
+	}
 
 	tagSet := schema.ParseTagSetting(ft.Tag.Get("gorm"), ";")
 	if v, ok := tagSet["-"]; ok && strings.TrimSpace(v) == "-" {
+		return
+	}
+
+	if c, ok := tagSet["COLUMN"]; ok {
+		fname = c
+	}
+	if q.omitedColumns.Has(fname) { // my_field_alias
 		return
 	}
 
@@ -798,10 +813,6 @@ func (q *Query) setInsertRowMap(m map[string]any, ft reflect.StructField, fv ref
 		if v, ok := q.serializeValueWithTagSet(tagSet, fv, val); ok {
 			val = v
 		}
-	}
-
-	if c, ok := tagSet["COLUMN"]; ok {
-		fname = c
 	}
 
 	m[fname] = val
@@ -879,6 +890,7 @@ func (q *Query) DeleteAny() error {
 // Omit columns.
 func (q *Query) Omit(col ...string) *Query {
 	q.tx = q.tx.Omit(col...)
+	q.omitedColumns.AddAll(col)
 	return q
 }
 
@@ -936,7 +948,7 @@ func NewQuery(opts ...any) *Query {
 	} else if c != nil {
 		db = db.WithContext(c)
 	}
-	q := &Query{tx: db, _db: db, rail: r, updateColumns: map[string]any{}}
+	q := &Query{tx: db, _db: db, rail: r, updateColumns: map[string]any{}, omitedColumns: hash.NewSet[string]()}
 	return q
 }
 
