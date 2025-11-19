@@ -102,16 +102,15 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 
 	// queue per task to prevent old nodes attempting to run new tasks
 	for _, t := range tasks {
-		{
-			cancel := async.RunCancellable(func() {
-				if err := async.PanicSafeRunErr(func() error { return m.pullTasks(miso.EmptyRail(), t.Name) }); err != nil {
-					miso.Errorf("Pull tasks queue failed, %v", err)
-					time.Sleep(time.Millisecond * 500) // backoff from error
-				}
-			})
-			m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
-			rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey(t.Name))
-		}
+		cancel := async.RunCancellable(func() {
+			nrail := miso.EmptyRail()
+			if err := async.PanicSafeRunErr(func() error { return m.pullTasks(nrail, t.Name) }); err != nil {
+				nrail.Errorf("Pull tasks queue failed, %v", err)
+				time.Sleep(time.Millisecond * 200) // backoff from error
+			}
+		})
+		m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
+		rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey(t.Name))
 	}
 
 	rail.Infof("Scheduled %d distributed tasks, current node id: '%s', group: '%s'", len(tasks), m.nodeId, m.group)
