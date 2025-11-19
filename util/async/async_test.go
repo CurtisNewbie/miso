@@ -436,8 +436,8 @@ func TestAntsAyncPoolFull(t *testing.T) {
 			v.Add(1)
 		})
 	}
+	ap.StopAndWait()
 	if av := v.Load(); av != cnt {
 		t.Fatalf("task 1 and task 2 should be run, %v", av)
 	}
-	ap.StopAndWait()
 }

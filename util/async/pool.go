@@ -38,22 +38,23 @@ type AsyncPool interface {
 // You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
 type BoundedAsyncPool struct {
 	*asyncPoolCommon
-	stopped      int32
-	stopOnce     *sync.Once
-	drainTasksWg *sync.WaitGroup
-	tasks        chan func()
-	workers      chan struct{}
-	idleDur      time.Duration
+	stopped  int32
+	stopOnce *sync.Once
+	tasks    chan func()
+	workers  chan struct{}
+	idleDur  time.Duration
 }
 
 type asyncPoolCommon struct {
 	doWhenPoolFull    func(task func())
 	blockWhenPoolFull bool
+	wg                *sync.WaitGroup
 }
 
 type asyncPoolOptions struct {
 	doWhenPoolFull    func(task func())
 	blockWhenPoolFull *bool
+	wg                *sync.WaitGroup
 
 	taskQueueSize *int // used by [NewAsyncPool] only.
 }
@@ -63,6 +64,7 @@ func withAsyncPoolOptions(a *asyncPoolOptions) asyncPoolOption {
 		cp.blockWhenPoolFull = a.blockWhenPoolFull
 		cp.doWhenPoolFull = a.doWhenPoolFull
 		cp.taskQueueSize = a.taskQueueSize
+		cp.wg = a.wg
 	}
 }
 
@@ -86,12 +88,11 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 		maxWorkers = 0
 	}
 	ap := &BoundedAsyncPool{
-		tasks:        make(chan func(), maxTasks),
-		workers:      make(chan struct{}, maxWorkers),
-		stopped:      0,
-		stopOnce:     &sync.Once{},
-		drainTasksWg: &sync.WaitGroup{},
-		idleDur:      idleDur,
+		tasks:    make(chan func(), maxTasks),
+		workers:  make(chan struct{}, maxWorkers),
+		stopped:  0,
+		stopOnce: &sync.Once{},
+		idleDur:  idleDur,
 		asyncPoolCommon: &asyncPoolCommon{
 			doWhenPoolFull:    func(task func()) {},
 			blockWhenPoolFull: true,
@@ -109,16 +110,33 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 		if ops.doWhenPoolFull != nil {
 			ap.doWhenPoolFull = ops.doWhenPoolFull
 		}
+		if ops.wg != nil {
+			ap.wg = ops.wg
+		} else {
+			ap.wg = &sync.WaitGroup{}
+		}
 	}
 	return ap
+}
+
+// Create new Goroutine to run the task when pool is full.
+func FallbackNewGorotuine() asyncPoolOption {
+	return func(ap *asyncPoolOptions) {
+		ap.doWhenPoolFull = func(task func()) {
+			utillog.DebugLog("Pool is full, run in new Goroutine")
+			go task()
+		}
+		ap.blockWhenPoolFull = ptr.BoolPtr(false)
+	}
 }
 
 // Drop task when pool is full.
 func FallbackDropTask() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
+		ap.wg = &sync.WaitGroup{}
 		ap.doWhenPoolFull = func(task func()) {
 			utillog.DebugLog("Pool is full, task dropped")
-			// drop task
+			ap.wg.Done()
 		}
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
 	}
@@ -189,7 +207,7 @@ func (p *BoundedAsyncPool) Stop() {
 // Once the pool is stopped, new tasks submitted are executed directly by the caller.
 func (p *BoundedAsyncPool) StopAndWait() {
 	p.Stop()
-	p.drainTasksWg.Wait()
+	p.wg.Wait()
 }
 
 func (p *BoundedAsyncPool) isStopped() bool {
@@ -214,9 +232,9 @@ func (p *BoundedAsyncPool) Go(f func()) {
 		return
 	}
 
-	p.drainTasksWg.Add(1)
+	p.wg.Add(1)
 	wrp := func() {
-		defer p.drainTasksWg.Done()
+		defer p.wg.Done()
 		f()
 	}
 
@@ -253,7 +271,7 @@ func (p *BoundedAsyncPool) Go(f func()) {
 			return
 		default:
 			// when workers are all busy and queue is full
-			defer p.drainTasksWg.Done()
+			defer p.wg.Done()
 			p.doWhenPoolFull(PanicSafeFunc(f))
 		}
 	}
@@ -287,8 +305,7 @@ func (p *BoundedAsyncPool) spawn(first func()) {
 
 type AntsAsyncPool struct {
 	*asyncPoolCommon
-	p  *ants.Pool
-	wg *sync.WaitGroup
+	p *ants.Pool
 }
 
 func (p *AntsAsyncPool) Run(f func() error) Future[struct{}] {
@@ -338,7 +355,6 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 			doWhenPoolFull:    func(task func()) {},
 			blockWhenPoolFull: true,
 		},
-		wg: &sync.WaitGroup{},
 	}
 
 	if len(opts) > 0 {
@@ -351,6 +367,11 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 		}
 		if ops.doWhenPoolFull != nil {
 			ap.doWhenPoolFull = ops.doWhenPoolFull
+		}
+		if ops.wg != nil {
+			ap.wg = ops.wg
+		} else {
+			ap.wg = &sync.WaitGroup{}
 		}
 	}
 	ap.p, _ = ants.NewPool(maxWorkers,
