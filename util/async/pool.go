@@ -122,7 +122,7 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 }
 
 // Create new Goroutine to run the task when pool is full.
-func FallbackNewGorotuine() asyncPoolOption {
+func FallbackNewGoroutine() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
 		ap.doWhenPoolFull = func(task func()) {
 			utillog.DebugLog("Pool is full, run in new Goroutine")

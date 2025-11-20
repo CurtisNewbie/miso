@@ -3,7 +3,7 @@
 // Core types in this package are: [AsyncPool], [Future], [AwaitFutures].
 //
 // [AsyncPool] internally maintain a pool of goroutines. Use [NewAsyncPool] create a new [AsyncPool],
-// customize the pool with options like [WithTaskQueue], [FallbackCallerRun], [FallbackDropTask] and [FallbackNewGorotuine].
+// customize the pool with options like [WithTaskQueue], [FallbackCallerRun], [FallbackDropTask] and [FallbackNewGoroutine].
 //
 // Use [CalcPoolSize] to estimate optimal worker count in the pool.
 //
