@@ -1399,7 +1399,7 @@ func genNgTableDemo(d httpRouteDoc) string {
 					for _, f := range pl.Fields {
 						sl.Printlnf(strutil.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.JsonName)
 						sl.Printlnf(strutil.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.GoFieldName)
-						if f.OriginTypeName == "ETime" || f.OriginTypeName == "*ETime" || f.OriginTypeName == "util.ETime" || f.OriginTypeName == "*util.ETime" {
+						if f.OriginTypeName == "Time" || f.OriginTypeName == "*Time" || f.OriginTypeName == "atom.Time" || f.OriginTypeName == "*atom.Time" {
 							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.JsonName)
 						} else {
 							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
