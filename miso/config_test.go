@@ -173,10 +173,17 @@ test: "TestLoadConfigFromReader"
 func TestPropSlice(t *testing.T) {
 	SetProp("test", "apple,  orange, juice")
 	v := GetPropStrSlice("test")
-	t.Logf("%#v", v)
+	t.Logf("1. %#v", v)
 	if len(v) != 3 {
 		t.Fatal("len != 3")
 	}
+
+	SetProp("test", []string{"apple", "orange", "juice"})
+	v = GetPropStrSlice("test")
+	t.Logf("2. %#v", v)
+	v[0] = "ah"
+	t.Logf("3. %#v", v)
+	t.Logf("4. %#v", GetPropStrSlice("test"))
 }
 
 /*
@@ -282,7 +289,11 @@ test:
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%+v", GetPropAny("test"))
+	m := GetPropAny("test")
+	t.Logf("< %+v", m)
+	m.(map[string]any)["node-a"] = "wut"
+	t.Logf("> %+v", m)
+	t.Logf("<> %+v", GetPropAny("test"))
 	for i, v := range GetPropChild("test") {
 		t.Logf("%v, %v", i, v)
 	}

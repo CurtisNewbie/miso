@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"reflect"
 	"regexp"
@@ -16,6 +17,7 @@ import (
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/iputil"
 	"github.com/curtisnewbie/miso/util/osutil"
+	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/mitchellh/mapstructure"
@@ -149,7 +151,12 @@ func (a *AppConfig) GetPropStrSlice(prop string) []string {
 		if s, ok := v.(string); ok {
 			return strutil.SplitStr(s, ",")
 		}
-		return cast.ToStringSlice(v)
+		switch vs := v.(type) {
+		case []string:
+			return slutil.Copy(vs)
+		default:
+			return cast.ToStringSlice(v)
+		}
 	})
 }
 
@@ -160,7 +167,9 @@ func (a *AppConfig) GetPropInt(prop string) int {
 
 // Get prop as string based map.
 func (a *AppConfig) GetPropStrMap(prop string) map[string]string {
-	return returnWithReadLock(a, func() map[string]string { return a.vp.GetStringMapString(prop) })
+	return returnWithReadLock(a, func() map[string]string {
+		return maps.Clone(a.vp.GetStringMapString(prop))
+	})
 }
 
 // Get prop as time.Duration
@@ -178,7 +187,11 @@ func (a *AppConfig) GetPropDuration(prop string) time.Duration {
 // Get prop as any
 func (a *AppConfig) GetPropAny(prop string) any {
 	return returnWithReadLock(a, func() any {
-		return a.vp.Get(prop)
+		nv := a.vp.Get(prop)
+		if cp, ok := rfutil.Clone(reflect.ValueOf(nv)); ok {
+			return cp
+		}
+		return nv
 	})
 }
 
