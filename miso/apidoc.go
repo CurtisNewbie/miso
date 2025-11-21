@@ -1960,7 +1960,8 @@ func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) er
 	b.WriteString("\npackage " + path.Base(path.Dir(fp)))
 	b.WriteString("\nimport (")
 	b.WriteString("\n\t\"github.com/curtisnewbie/miso/miso\"")
-	b.WriteString("\n\t\"github.com/curtisnewbie/miso/util\"")
+	b.WriteString("\n\t\"github.com/curtisnewbie/miso/util/atom\"")
+	b.WriteString("\n\t\"github.com/curtisnewbie/miso/util/hash\"")
 	b.WriteString("\n)")
 
 	for _, td := range goTypeDefs {
