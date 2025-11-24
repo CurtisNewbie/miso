@@ -19,5 +19,6 @@ func NewDoneWatcher(interval time.Duration, onEveryCheck func(), onFinished func
 		onEveryCheck = func() {}
 	}
 	tr := NewTickRuner(interval, onEveryCheck)
+	tr.Start()
 	return &DoneWatcher{tr: tr}
 }
