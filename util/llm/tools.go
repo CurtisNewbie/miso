@@ -60,3 +60,20 @@ func (m *MsgDelta) Delta(s string) string {
 func (m *MsgDelta) Complete() string {
 	return m.prev
 }
+
+var thinkEnd = "</think>"
+var thinkLen = len(thinkEnd)
+
+// Parse </think> tag.
+//
+// thought contains anything before the </think> tag, including the </think> tag itself.
+//
+// answer contains anything after the </think> tag.
+func ParseThink(m string) (thought string, answer string) {
+	i := strings.LastIndex(m, thinkEnd)
+	if i < 0 {
+		return "", m
+	}
+
+	return strings.TrimSpace(m[:i]), strings.TrimSpace(m[i+thinkLen:])
+}
