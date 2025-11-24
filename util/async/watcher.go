@@ -11,7 +11,9 @@ type DoneWatcher struct {
 
 func (w *DoneWatcher) Done() {
 	w.tr.Stop()
-	w.onFinished()
+	if w.onFinished != nil {
+		w.onFinished()
+	}
 }
 
 func NewDoneWatcher(interval time.Duration, onEveryCheck func(), onFinished func()) *DoneWatcher {
@@ -20,5 +22,5 @@ func NewDoneWatcher(interval time.Duration, onEveryCheck func(), onFinished func
 	}
 	tr := NewTickRuner(interval, onEveryCheck)
 	tr.Start()
-	return &DoneWatcher{tr: tr}
+	return &DoneWatcher{tr: tr, onFinished: onFinished}
 }
