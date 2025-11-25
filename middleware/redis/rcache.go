@@ -7,6 +7,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/redis/go-redis/v9"
 )
@@ -267,5 +268,26 @@ func NewRCache[T any](name string, conf RCacheConfig) RCache[T] {
 		name:            name,
 		sync:            !conf.NoSync,
 		ValueSerializer: JsonSerializer{},
+	}
+}
+
+type GroupCache[K comparable, V any] struct {
+	c         *hash.StrRWMap[*RCacheV2[K, V]]
+	cacheName func(k string) string
+	conf      RCacheConfig
+}
+
+func (g *GroupCache[K, V]) Get(k string) *RCacheV2[K, V] {
+	v, _ := g.c.GetElse(k, func(k string) *RCacheV2[K, V] {
+		return NewRCacheV2[K, V](g.cacheName(k), g.conf)
+	})
+	return v
+}
+
+func NewGroupCache[K comparable, V any](conf RCacheConfig, cacheName func(k string) string) *GroupCache[K, V] {
+	return &GroupCache[K, V]{
+		c:         hash.NewStrRWMap[*RCacheV2[K, V]](),
+		cacheName: cacheName,
+		conf:      conf,
 	}
 }
