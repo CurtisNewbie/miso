@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/hash"
@@ -26,12 +27,13 @@ import (
 
 var module = miso.InitAppModuleFunc(func() *nacosModule {
 	return &nacosModule{
-		logDebugToInfoMu: &sync.RWMutex{},
-		logDebugToInfo:   []string{},
-		mut:              &sync.RWMutex{},
-		configContent:    hash.NewStrRWMap[string](),
-		watchedConfigs:   make([]watchingConfig, 0, 1),
-		reloadMut:        &sync.Mutex{},
+		logDebugToInfoMu:   &sync.RWMutex{},
+		logDebugToInfo:     []string{},
+		onConfigChangePool: async.NewAsyncPool(async.CalcPoolSize(10, 100, -1)),
+		mut:                &sync.RWMutex{},
+		configContent:      hash.NewStrRWMap[string](),
+		watchedConfigs:     make([]watchingConfig, 0, 1),
+		reloadMut:          &sync.Mutex{},
 		serverList: &NacosServerList{
 			watchedServices: hash.NewSet[string](),
 			wsmu:            &sync.RWMutex{},
@@ -114,6 +116,7 @@ type nacosModule struct {
 	configInitialized    bool
 	discoveryInitialized bool
 	configClient         config_client.IConfigClient
+	onConfigChangePool   async.AsyncPool
 	onConfigChange       []func()
 	configContent        *hash.StrRWMap[string]
 	preloadedFiles       []string
@@ -352,7 +355,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 				m.mut.RLock()
 				defer m.mut.RUnlock()
 				for _, cbk := range m.onConfigChange {
-					go cbk()
+					m.onConfigChangePool.Go(cbk)
 				}
 			},
 		})
