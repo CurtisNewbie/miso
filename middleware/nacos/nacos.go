@@ -337,7 +337,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 			Group:  w.Group,
 			OnChange: func(namespace, group, dataId, data string) {
 				rail := miso.EmptyRail()
-				rail.Infof("nacos config changed, %v-%v", group, dataId)
+				rail.Infof("Nacos config changed, %v-%v", group, dataId)
 				w := watchingConfig{DataId: dataId, Group: group}
 				if completeReload.Load() {
 					m.configContent.Put(w.Key(), data)
@@ -372,15 +372,16 @@ func (m *nacosModule) reloadLdti() {
 
 	// logger nolonger print debug log in info level
 	prev := m.logDebugToInfo
+	prevSet := hash.NewSet(prev...)
 	if len(prev) > 0 {
-		prevSet := hash.NewSet(prev...)
-		for name := range prevSet.NotInSet(&currSet) {
+		for name := range prevSet.NotInSet(currSet) {
 			miso.ConfigDebugLogToInfo(name, false)
 		}
 	}
 
 	// logger should be debug log in info level
-	for name := range currSet.Keys {
+	for name := range currSet.NotInSet(prevSet) {
+		miso.Infof("Configured logger '%v' to write DEBUG log in INFO level", name)
 		miso.ConfigDebugLogToInfo(name, true)
 	}
 	m.logDebugToInfo = ldti

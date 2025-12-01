@@ -166,7 +166,7 @@ func (s *Set[T]) Clear() {
 }
 
 // Find keys that are in s but not in b.
-func (s *Set[T]) NotInSet(b *Set[T]) iter.Seq[T] {
+func (s *Set[T]) NotInSet(b Set[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for k := range s.Keys {
 			if !b.Has(k) {
@@ -179,7 +179,7 @@ func (s *Set[T]) NotInSet(b *Set[T]) iter.Seq[T] {
 }
 
 // Find keys that are in s and b.
-func (s *Set[T]) InSet(b *Set[T]) iter.Seq[T] {
+func (s *Set[T]) InSet(b Set[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for k := range s.Keys {
 			if b.Has(k) {
