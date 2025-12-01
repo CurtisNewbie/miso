@@ -6,28 +6,59 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
 
+var (
+	loggerDebugMap = sync.Map{}
+)
+
+func ConfigDebugLogToInfo(loggerName string, doRewrite bool) {
+	if doRewrite {
+		loggerDebugMap.Store(loggerName, struct{}{})
+	} else {
+		loggerDebugMap.Delete(loggerName)
+	}
+}
+
+func rewriteDebugLevel(name string) bool {
+	if name == "" {
+		return false
+	}
+	_, ok := loggerDebugMap.Load(name)
+	return ok
+}
+
 // Rail, an object that carries trace infromation along with the execution.
 type Rail struct {
-	ctx context.Context
-	upN int
+	name string
+	ctx  context.Context
+	upN  int
+}
+
+func (r Rail) WithName(name string) Rail {
+	r.name = name
+	return r
 }
 
 func (r Rail) ZeroTrace() Rail {
 	return r.WithTraceId("").WithSpanId("")
 }
 
-func (r Rail) SetGetCallFnUpN(upN int) Rail {
+func (r Rail) WithGetCallFnUpN(upN int) Rail {
 	r.upN = upN
 	if r.upN < 0 {
 		r.upN = 0
 	}
 	return r
+}
+
+func (r Rail) SetGetCallFnUpN(upN int) Rail {
+	return r.WithGetCallFnUpN(upN)
 }
 
 func (r Rail) ErrorIf(err error, op string, args ...any) {
@@ -106,6 +137,9 @@ func (r Rail) Tracef(format string, args ...interface{}) {
 
 func (r Rail) Debugf(format string, args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.DebugLevel) {
+		if rewriteDebugLevel(r.name) {
+			r.WithGetCallFnUpN(1).Infof(format, args...)
+		}
 		return
 	}
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: GetCallerFnUpN(r.upN)}).
@@ -185,6 +219,9 @@ func (r Rail) Printf(format string, args ...interface{}) {
 
 func (r Rail) Debug(args ...interface{}) {
 	if !logger.IsLevelEnabled(logrus.DebugLevel) {
+		if rewriteDebugLevel(r.name) {
+			r.WithGetCallFnUpN(1).Info(args...)
+		}
 		return
 	}
 	logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: GetCallerFnUpN(r.upN)}).

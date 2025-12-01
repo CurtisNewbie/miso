@@ -2,18 +2,24 @@ package slutil
 
 import "sync"
 
-type syncSlice[T any] struct {
+type SyncSlice[T any] struct {
 	sl *[]T
 	mu *sync.RWMutex
 }
 
-func (s *syncSlice[T]) Append(t ...T) {
+func (s *SyncSlice[T]) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	clear(*s.sl)
+}
+
+func (s *SyncSlice[T]) Append(t ...T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	*s.sl = append(*s.sl, t...)
 }
 
-func (s *syncSlice[T]) ForEachErr(f func(t T) (stop bool, err error)) error {
+func (s *SyncSlice[T]) ForEachErr(f func(t T) (stop bool, err error)) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, v := range *s.sl {
@@ -28,7 +34,7 @@ func (s *syncSlice[T]) ForEachErr(f func(t T) (stop bool, err error)) error {
 	return nil
 }
 
-func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
+func (s *SyncSlice[T]) ForEach(f func(t T) (stop bool)) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, v := range *s.sl {
@@ -38,9 +44,16 @@ func (s *syncSlice[T]) ForEach(f func(t T) (stop bool)) {
 	}
 }
 
-func NewSyncSlice[T any](initCap int) *syncSlice[T] {
+func (s *SyncSlice[T]) Copy() []T {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	cp := Copy(*s.sl)
+	return cp
+}
+
+func NewSyncSlice[T any](initCap int) *SyncSlice[T] {
 	sl := make([]T, 0, initCap)
-	v := &syncSlice[T]{
+	v := &SyncSlice[T]{
 		sl: &sl,
 		mu: &sync.RWMutex{},
 	}

@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -74,4 +75,16 @@ func TestErrorStackTrace(t *testing.T) {
 	Error((*MisoErr)(nil))
 	EmptyRail().Warn((*MisoErr)(nil))
 	Warn((*MisoErr)(nil))
+}
+
+func TestDebug(t *testing.T) {
+	r := NewRail(context.Background())
+	r = r.WithName("abc")
+	r.Debug("debug-1")
+
+	ConfigDebugLogToInfo("abc", true)
+	r.Debug("debug-2")
+
+	ConfigDebugLogToInfo("abc", false)
+	r.Debug("debug-3")
 }

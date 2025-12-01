@@ -290,10 +290,10 @@ func (m *taskModule) triggerWorker(rail miso.Rail, name string) error {
 	if !ok {
 		return errs.NewErrf("Task no found")
 	}
+	rail = rail.NewCtx().WithName(name)
 	m.workerWg.Add(1)
 	m.workerPool.Go(func() {
 		defer m.workerWg.Done()
-		rail = rail.NewCtx()
 		if err := f.Run(rail); err != nil {
 			logWarn := f.LogErrWarnLevel || errors.Is(err, miso.ErrServerShuttingDown)
 			if logWarn {

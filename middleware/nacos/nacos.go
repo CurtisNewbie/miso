@@ -26,10 +26,12 @@ import (
 
 var module = miso.InitAppModuleFunc(func() *nacosModule {
 	return &nacosModule{
-		mut:            &sync.RWMutex{},
-		configContent:  hash.NewStrRWMap[string](),
-		watchedConfigs: make([]watchingConfig, 0, 1),
-		reloadMut:      &sync.Mutex{},
+		logDebugToInfoMu: &sync.RWMutex{},
+		logDebugToInfo:   []string{},
+		mut:              &sync.RWMutex{},
+		configContent:    hash.NewStrRWMap[string](),
+		watchedConfigs:   make([]watchingConfig, 0, 1),
+		reloadMut:        &sync.Mutex{},
 		serverList: &NacosServerList{
 			watchedServices: hash.NewSet[string](),
 			wsmu:            &sync.RWMutex{},
@@ -106,6 +108,8 @@ func bootServiceDiscovery(rail miso.Rail) error {
 }
 
 type nacosModule struct {
+	logDebugToInfoMu     *sync.RWMutex
+	logDebugToInfo       []string
 	mut                  *sync.RWMutex
 	configInitialized    bool
 	discoveryInitialized bool
@@ -318,6 +322,11 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", appConfig.Group, appConfig.DataId, desensitizeConfigContent(appConfigStr))
 	}
 
+	m.onConfigChange = append(m.onConfigChange, func() {
+		miso.SetLogLevel(miso.GetPropStr(miso.PropLoggingLevel))
+		m.reloadLdti()
+	})
+
 	// subscribe changes
 	// app's config is always placed at the end (it can override other configs)
 	m.watchedConfigs = append(m.watchedConfigs, appConfig)
@@ -349,12 +358,32 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		})
 	}
 
-	m.onConfigChange = append(m.onConfigChange, func() {
-		miso.SetLogLevel(miso.GetPropStr(miso.PropLoggingLevel))
-	})
-
+	m.reloadLdti()
 	m.configInitialized = true
 	return true, nil
+}
+
+func (m *nacosModule) reloadLdti() {
+	m.logDebugToInfoMu.Lock()
+	defer m.logDebugToInfoMu.Unlock()
+
+	ldti := miso.GetPropStrSlice(miso.PropLoggingLoggerDebugToInfo)
+	currSet := hash.NewSet(ldti...)
+
+	// logger nolonger print debug log in info level
+	prev := m.logDebugToInfo
+	if len(prev) > 0 {
+		prevSet := hash.NewSet(prev...)
+		for name := range prevSet.NotInSet(&currSet) {
+			miso.ConfigDebugLogToInfo(name, false)
+		}
+	}
+
+	// logger should be debug log in info level
+	for name := range currSet.Keys {
+		miso.ConfigDebugLogToInfo(name, true)
+	}
+	m.logDebugToInfo = ldti
 }
 
 func (m *nacosModule) reloadConfigs(rail miso.Rail) {

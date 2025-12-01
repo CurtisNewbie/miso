@@ -3,6 +3,7 @@ package hash
 import (
 	"database/sql/driver"
 	"fmt"
+	"iter"
 	"reflect"
 
 	"encoding/json"
@@ -157,6 +158,36 @@ func (s *Set[T]) Scan(value interface{}) error {
 		return s.UnmarshalJSON(v)
 	default:
 		return errs.NewErrf("invalid field type '%v' for Set, unable to convert, %#v", reflect.TypeOf(value), v)
+	}
+}
+
+func (s *Set[T]) Clear() {
+	clear(s.Keys)
+}
+
+// Find keys that are in s but not in b.
+func (s *Set[T]) NotInSet(b *Set[T]) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for k := range s.Keys {
+			if !b.Has(k) {
+				if !yield(k) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// Find keys that are in s and b.
+func (s *Set[T]) InSet(b *Set[T]) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for k := range s.Keys {
+			if b.Has(k) {
+				if !yield(k) {
+					return
+				}
+			}
+		}
 	}
 }
 

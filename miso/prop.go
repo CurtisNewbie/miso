@@ -234,6 +234,10 @@ const (
 
 	// misoconfig-prop: rotate log file at every day 00:00 (local) | true
 	PropLoggingRollingFileRotateDaily = "logging.file.rotate-daily"
+
+	// misoconfig-prop: list of logger name that rewrite DEBUG log to INFO log
+	// misoconfig-doc-only
+	PropLoggingLoggerDebugToInfo = "logging.logger.debug-to-info"
 )
 
 // misoconfig-section: Job Scheduler Configuration
