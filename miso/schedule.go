@@ -89,7 +89,7 @@ func (m *scheduleMdoule) wrapJob(job Job) func() {
 		}
 		defer job.concRunMutex.Unlock()
 
-		rail := EmptyRail()
+		rail := EmptyRail().WithName(job.Name)
 
 		inf := JobInf{
 			Name: job.Name,
