@@ -51,10 +51,12 @@ func PrepareCreateModelHook(optionalFn ...func(table string) (ok bool)) {
 	}
 
 	AddCreateHooks(func(table string, q *Query, insertRows []map[string]any) {
+		if q.notInsertModelFields {
+			return
+		}
 		if len(insertRows) < 1 {
 			return
 		}
-
 		if !fn(table) {
 			return
 		}
@@ -109,6 +111,9 @@ func PrepareUpdateModelHook(optionalFn ...func(table string) (ok bool)) {
 	}
 
 	AddUpdateHooks(func(table string, q *Query) {
+		if q.notInsertModelFields {
+			return
+		}
 		if !fn(table) {
 			return
 		}

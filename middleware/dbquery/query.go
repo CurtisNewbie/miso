@@ -39,8 +39,9 @@ type Query struct {
 	updateColumns map[string]any
 	omitedColumns hash.Set[string]
 
-	rail      *miso.Rail
-	notLogSQL bool
+	rail                 *miso.Rail
+	notLogSQL            bool
+	notInsertModelFields bool
 }
 
 func (q *Query) copyNew() *Query {
@@ -54,6 +55,7 @@ func (q *Query) copyNew() *Query {
 	if q.notLogSQL {
 		cp = cp.NotLogSQL()
 	}
+	cp.notInsertModelFields = q.notInsertModelFields
 	return cp
 }
 
@@ -65,6 +67,14 @@ func (q *Query) NotLogSQL() *Query {
 	if q.tx.Statement != nil && q.tx.Statement.Context != nil {
 		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyNotLogSQL, true) //lint:ignore SA1029 added a prefix already, should be fine
 	}
+	return q
+}
+
+// Do not automatically insert model fields.
+//
+// See [PrepareCreateModelHook] and [PrepareUpdateModelHook].
+func (q *Query) NotInsertModelFields() *Query {
+	q.notInsertModelFields = true
 	return q
 }
 
