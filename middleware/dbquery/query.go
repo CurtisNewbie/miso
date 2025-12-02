@@ -1072,7 +1072,7 @@ func (pq *PageQuery[V]) IterateAllPages(rail miso.Rail, param IteratePageParam, 
 }
 
 type IterateByOffsetParam[V, T any] struct {
-	Limit         int
+	Limit         int // deprecated: limit value is not used at all, it's a bug.
 	InitialOffset T
 	FetchPage     func(rail miso.Rail, db *gorm.DB, offset T) ([]V, error)
 	GetOffset     func(v V) T
@@ -1084,9 +1084,6 @@ func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOf
 	caller := miso.GetCallerFn()
 	rail.Debugf("IterateAllByOffset '%v' start", caller)
 	defer rail.Debugf("IterateAllByOffset '%v' finished", caller)
-	if p.Limit < 1 {
-		p.Limit = 1
-	}
 	offset := p.InitialOffset
 	for {
 		rail.Debugf("IterateAllByOffset '%v', offset: %v", caller, offset)
