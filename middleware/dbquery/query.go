@@ -1077,6 +1077,7 @@ type IterateByOffsetParam[V, T any] struct {
 	FetchPage     func(rail miso.Rail, db *gorm.DB, offset T) ([]V, error)
 	GetOffset     func(v V) T
 	ForEach       func(v V) (stop bool, err error)
+	ForEachPage   func(p []V) (stop bool, err error)
 }
 
 func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOffsetParam[V, T]) error {
@@ -1093,10 +1094,17 @@ func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOf
 		if err != nil {
 			return errs.Wrap(err)
 		}
-		for _, l := range l {
-			stop, err := p.ForEach(l)
+		if p.ForEachPage != nil {
+			stop, err := p.ForEachPage(l)
 			if err != nil || stop {
 				return err
+			}
+		} else {
+			for _, v := range l {
+				stop, err := p.ForEach(v)
+				if err != nil || stop {
+					return err
+				}
 			}
 		}
 		if len(l) < 1 {
