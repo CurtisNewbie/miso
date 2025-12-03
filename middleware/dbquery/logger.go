@@ -69,11 +69,11 @@ func (l gormLogger) Error(ctx context.Context, msg string, data ...interface{}) 
 
 // Trace print sql message
 func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	if l.LogLevel <= lg.Silent {
+	if l.LogLevel <= lg.Silent && ctx.Value(contextKeyLogSQL) == nil {
 		return
 	}
 
-	if ctx.Value(contextKeyNotLogSQL) != nil {
+	if l.LogLevel > lg.Silent && ctx.Value(contextKeyNotLogSQL) != nil {
 		return
 	}
 

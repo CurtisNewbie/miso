@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	contextKeyLogSQL    = "dbquery:log-sql"
 	contextKeyNotLogSQL = "dbquery:not-log-sql"
 )
 
@@ -40,6 +41,7 @@ type Query struct {
 	omitedColumns hash.Set[string]
 
 	rail                 *miso.Rail
+	logSQL               bool
 	notLogSQL            bool
 	notInsertModelFields bool
 }
@@ -55,6 +57,9 @@ func (q *Query) copyNew() *Query {
 	if q.notLogSQL {
 		cp = cp.NotLogSQL()
 	}
+	if q.logSQL {
+		cp = cp.LogSQL()
+	}
 	cp.notInsertModelFields = q.notInsertModelFields
 	return cp
 }
@@ -66,6 +71,19 @@ func (q *Query) NotLogSQL() *Query {
 	// statement is never nil, but just in case
 	if q.tx.Statement != nil && q.tx.Statement.Context != nil {
 		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyNotLogSQL, true) //lint:ignore SA1029 added a prefix already, should be fine
+	}
+	return q
+}
+
+// Log current SQL statement.
+//
+// [Query.LogSQL] has higher precedence over [Query.NotLogSQL].
+func (q *Query) LogSQL() *Query {
+	q.logSQL = true
+
+	// statement is never nil, but just in case
+	if q.tx.Statement != nil && q.tx.Statement.Context != nil {
+		q.tx.Statement.Context = context.WithValue(q.tx.Statement.Context, contextKeyLogSQL, true) //lint:ignore SA1029 added a prefix already, should be fine
 	}
 	return q
 }
