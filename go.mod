@@ -36,6 +36,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.14.0
+	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
 	github.com/tmaxmax/go-sse v0.10.0
 	github.com/xuri/excelize/v2 v2.10.0
 	github.com/yuin/gopher-lua v1.1.1
