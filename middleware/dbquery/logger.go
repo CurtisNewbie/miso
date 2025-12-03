@@ -69,24 +69,28 @@ func (l gormLogger) Error(ctx context.Context, msg string, data ...interface{}) 
 
 // Trace print sql message
 func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	if l.LogLevel <= lg.Silent && ctx.Value(contextKeyLogSQL) == nil {
+	ll := l.LogLevel
+	forceLog := ctx.Value(contextKeyLogSQL) != nil
+	if forceLog {
+		ll = lg.Info
+	}
+	if ll <= lg.Silent {
 		return
 	}
-
-	if l.LogLevel > lg.Silent && ctx.Value(contextKeyNotLogSQL) != nil {
+	if !forceLog && ctx.Value(contextKeyNotLogSQL) != nil {
 		return
 	}
 
 	elapsed := time.Since(begin)
 	switch {
-	case err != nil && l.LogLevel >= lg.Error && (!errors.Is(err, lg.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
+	case err != nil && ll >= lg.Error && (!errors.Is(err, lg.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		sql, rows := fc()
 		if rows == -1 {
 			miso.NewRail(ctx).Errorf(l.traceErrStr, float64(elapsed.Nanoseconds())/1e6, "-", sql, err)
 		} else {
 			miso.NewRail(ctx).Errorf(l.traceErrStr, float64(elapsed.Nanoseconds())/1e6, rows, sql, err)
 		}
-	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= lg.Warn:
+	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && ll >= lg.Warn:
 		sql, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
@@ -94,7 +98,7 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		} else {
 			miso.NewRail(ctx).Warnf(l.traceWarnStr, slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
-	case l.LogLevel == lg.Info:
+	case ll == lg.Info:
 		sql, rows := fc()
 		if rows == -1 {
 			miso.NewRail(ctx).Infof(l.traceStr, float64(elapsed.Nanoseconds())/1e6, "-", sql)

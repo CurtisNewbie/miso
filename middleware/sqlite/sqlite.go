@@ -121,13 +121,16 @@ func NewConn(path string, wal bool) (*gorm.DB, error) {
 func sqliteBootstrap(rail miso.Rail) error {
 	module().initOnce()
 
-	if logSql() {
-		colorful := false
-		if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
-			colorful = true
-		}
-		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
+	colorful := false
+	if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+		colorful = true
 	}
+	if logSQL() {
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
+	} else {
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: colorful})
+	}
+
 	return nil
 }
 
@@ -135,6 +138,6 @@ func sqliteBootstrapCondition(rail miso.Rail) (bool, error) {
 	return !strutil.IsBlankStr(miso.GetPropStr(PropSqliteFile)), nil
 }
 
-func logSql() bool {
+func logSQL() bool {
 	return miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropSqliteLogSQL)
 }

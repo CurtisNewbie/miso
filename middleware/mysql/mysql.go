@@ -359,12 +359,14 @@ func mysqlBootstrap(rail miso.Rail) error {
 
 	dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetMySQL() })
 
-	if logSql() {
-		colorful := false
-		if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
-			colorful = true
-		}
+	colorful := false
+	if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+		colorful = true
+	}
+	if logSQL() {
 		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
+	} else {
+		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: colorful})
 	}
 
 	return nil
@@ -378,7 +380,7 @@ func AddMySQLBootstrapCallback(cbk MySQLBootstrapCallback) {
 	module().addMySQLBootstrapCallback(cbk)
 }
 
-func logSql() bool {
+func logSQL() bool {
 	return miso.IsDebugLevel() || !miso.IsProdMode() || miso.GetPropBool(PropMySQLLogSQL)
 }
 
