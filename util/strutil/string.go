@@ -516,3 +516,17 @@ func SplitStrAnyRune(s, runes string) []string {
 	}
 	return cp
 }
+
+func TrimSpaceAnd(s string, extraRunes string) string {
+	return strings.TrimFunc(s, func(r rune) bool {
+		if unicode.IsSpace(r) {
+			return true
+		}
+		for _, ru := range extraRunes {
+			if ru == r {
+				return true
+			}
+		}
+		return false
+	})
+}
