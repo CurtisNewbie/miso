@@ -5,7 +5,7 @@
 Install latest `misogen` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misogen@v0.4.4
+go install github.com/curtisnewbie/miso/cmd/misogen@v0.4.5
 ```
 
 Use `misogen` to generate new projects, e.g.,
@@ -40,7 +40,7 @@ $ mkdir myapp && cd myapp && misogen -name "myapp"
 Install latest `misoapi` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misoapi@v0.4.4
+go install github.com/curtisnewbie/miso/cmd/misoapi@v0.4.5
 ```
 
 ```sh
@@ -80,7 +80,7 @@ $ misoapi -h
 Install latest `misocurl` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misocurl@v0.4.4
+go install github.com/curtisnewbie/miso/cmd/misocurl@v0.4.5
 ```
 
 ```sh
@@ -100,7 +100,7 @@ $ misocurl -h
 Install latest `misoconfig` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misoconfig@v0.4.4
+go install github.com/curtisnewbie/miso/cmd/misoconfig@v0.4.5
 ```
 
 ```sh
@@ -149,7 +149,7 @@ $ misoconfig -h
 Install latest `misopatch` tool:
 
 ```sh
-go install github.com/curtisnewbie/miso/cmd/misopatch@v0.4.4
+go install github.com/curtisnewbie/miso/cmd/misopatch@v0.4.5
 ```
 
 ```sh
