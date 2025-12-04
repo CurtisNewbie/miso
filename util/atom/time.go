@@ -312,7 +312,7 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 
 // Implements sql.Scanner in database/sql.
 func (et *Time) Scan(value interface{}) error {
-	return et.ScanLoc(value, time.Local)
+	return et.ScanLoc(value, nil)
 }
 
 func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
@@ -322,7 +322,10 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 
 	switch v := value.(type) {
 	case time.Time:
-		*et = WrapTime(v.In(loc))
+		if loc != nil {
+			v = v.In(loc)
+		}
+		*et = WrapTime(v)
 	case []byte:
 		sv := string(v)
 		var t time.Time
