@@ -327,6 +327,9 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 		}
 		*et = WrapTime(v)
 	case []byte:
+		if loc == nil {
+			loc = time.Local
+		}
 		sv := string(v)
 		var t time.Time
 		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, sv, loc)
@@ -335,6 +338,9 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 		}
 		*et = WrapTime(t)
 	case string:
+		if loc == nil {
+			loc = time.Local
+		}
 		var t time.Time
 		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, v, loc)
 		if err != nil {
@@ -342,6 +348,9 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 		}
 		*et = WrapTime(t)
 	case *string:
+		if loc == nil {
+			loc = time.Local
+		}
 		var t time.Time
 		t, err := FuzzParseTimeLoc(jsonParseTimeFormats, *v, loc)
 		if err != nil {
@@ -349,6 +358,9 @@ func (et *Time) ScanLoc(value interface{}, loc *time.Location) error {
 		}
 		*et = WrapTime(t)
 	case int64, int, uint, uint64, int32, uint32, int16, uint16, *int64, *int, *uint, *uint64, *int32, *uint32, *int16, *uint16:
+		if loc == nil {
+			loc = time.Local
+		}
 		val := reflect.Indirect(reflect.ValueOf(v)).Int()
 		if val > unixSecPersudoMax {
 			*et = WrapTime(time.UnixMilli(val).In(loc)) // in milli-sec
