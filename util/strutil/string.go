@@ -489,12 +489,49 @@ func SplitStr(s, sep string) []string {
 	return cp
 }
 
-func TrimSpaceLeft(s string) string {
-	return strings.TrimLeftFunc(s, unicode.IsSpace)
+func TrimSpace(s string, extra ...rune) string {
+	if len(extra) < 1 {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimFunc(s, func(r rune) bool {
+		if unicode.IsSpace(r) {
+			return true
+		}
+		for _, ru := range extra {
+			if ru == r {
+				return true
+			}
+		}
+		return false
+	})
 }
 
-func TrimSpaceRight(s string) string {
-	return strings.TrimRightFunc(s, unicode.IsSpace)
+func TrimSpaceLeft(s string, extra ...rune) string {
+	return strings.TrimLeftFunc(s, func(r rune) bool {
+		if unicode.IsSpace(r) {
+			return true
+		}
+		for _, ru := range extra {
+			if ru == r {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func TrimSpaceRight(s string, extra ...rune) string {
+	return strings.TrimRightFunc(s, func(r rune) bool {
+		if unicode.IsSpace(r) {
+			return true
+		}
+		for _, ru := range extra {
+			if ru == r {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 func SplitStrAnyRune(s, runes string) []string {
@@ -517,6 +554,7 @@ func SplitStrAnyRune(s, runes string) []string {
 	return cp
 }
 
+// Deprecated: since v0.4.4, use [TrimSpace] instead.
 func TrimSpaceAnd(s string, extraRunes string) string {
 	return strings.TrimFunc(s, func(r rune) bool {
 		if unicode.IsSpace(r) {
