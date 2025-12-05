@@ -1162,6 +1162,146 @@ func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) 
 	return res, nil
 }
 
+type IterateByOffset1Param[V, Offset any] struct {
+	Limit       int    // limit, by default 100
+	OffsetCol   string // col name in ORDER BY (col)
+	BuildQuery  func(rail miso.Rail, q *Query) *Query
+	GetOffset   func(v V) Offset
+	ForEachPage func(p []V) (stop bool, err error)
+}
+
+// Iterate all matched records ordered by column (OffsetCol).
+//
+// E.g.,
+//
+//	func ListRecords(rail miso.Rail, forEachPage func(v []Record) (err error)) error {
+//		return dbquery.IterateAllByOffset1(rail, GetBI(), dbquery.IterateByOffset2Param[Record, atom.Time]{
+//			OffsetCol: "rec_time",
+//			Limit:      100,
+//			BuildQuery: func(rail miso.Rail, q *dbquery.Query) *dbquery.Query {
+//				return q.Table("my_table").
+//					Eq("my_col", "").
+//					SelectCols(Record{})
+//			},
+//			ForEachPage: func(p []Record) (stop bool, err error) {
+//				return false, forEachPage(p)
+//			},
+//			GetOffset: func(v Record) (atom.Time) {
+//				return v.RecTime
+//			},
+//		})
+//	}
+func IterateAllByOffset1[V any, Offset any](rail miso.Rail, db *gorm.DB, p IterateByOffset1Param[V, Offset]) error {
+	caller := miso.GetCallerFn()
+	rail.Infof("IterateAllByOffset1 '%v' start", caller)
+	defer rail.Infof("IterateAllByOffset1 '%v' finished", caller)
+	if p.Limit < 1 {
+		p.Limit = 100
+	}
+
+	var offset Offset
+	firstPage := true
+	for {
+		rail.Infof("IterateAllByOffset1 '%v', offset: (%v, %v)", caller, offset)
+
+		q := p.BuildQuery(rail, NewQuery(rail, db)).OrderAsc(p.OffsetCol).Limit(p.Limit)
+		if firstPage {
+			firstPage = false
+		} else {
+			q = q.Gt(p.OffsetCol)
+		}
+		var l []V
+		err := q.ScanVal(&l)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		if len(l) < 1 {
+			return nil
+		}
+		stop, err := p.ForEachPage(l)
+		if err != nil || stop {
+			return err
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown.New()
+		}
+
+		offset = p.GetOffset(l[len(l)-1])
+	}
+}
+
+type IterateByOffset2Param[V, Offset1, Offset2 any] struct {
+	Limit       int    // limit, by default 100
+	OffsetCol1  string // col1 name in ORDER BY (col1, col2)
+	OffsetCol2  string // col2 name in ORDER BY (col1, col2)
+	BuildQuery  func(rail miso.Rail, q *Query) *Query
+	GetOffset   func(v V) (Offset1, Offset2)
+	ForEachPage func(p []V) (stop bool, err error)
+}
+
+// Iterate all matched records ordered by columns (OffsetCol1, OffsetCol2).
+//
+// E.g.,
+//
+//	func ListRecords(rail miso.Rail, forEachPage func(v []Record) (err error)) error {
+//		return dbquery.IterateAllByOffset2(rail, GetBI(), dbquery.IterateByOffset2Param[Record, atom.Time, string]{
+//			OffsetCol1: "rec_time",
+//			OffsetCol2: "rec_id",
+//			Limit:      100,
+//			BuildQuery: func(rail miso.Rail, q *dbquery.Query) *dbquery.Query {
+//				return q.Table("my_table").
+//					Eq("my_col", "").
+//					SelectCols(Record{})
+//			},
+//			ForEachPage: func(p []Record) (stop bool, err error) {
+//				return false, forEachPage(p)
+//			},
+//			GetOffset: func(v Record) (atom.Time, string) {
+//				return v.RecTime, v.RecId
+//			},
+//		})
+//	}
+func IterateAllByOffset2[V any, Offset1, Offset2 any](rail miso.Rail, db *gorm.DB, p IterateByOffset2Param[V, Offset1, Offset2]) error {
+	caller := miso.GetCallerFn()
+	rail.Infof("IterateAllByOffset2 '%v' start", caller)
+	defer rail.Infof("IterateAllByOffset2 '%v' finished", caller)
+	if p.Limit < 1 {
+		p.Limit = 100
+	}
+
+	var offset1 Offset1
+	var offset2 Offset2
+	firstPage := true
+	for {
+		rail.Infof("IterateAllByOffset2 '%v', offset: (%v, %v)", caller, offset1, offset2)
+
+		q := p.BuildQuery(rail, NewQuery(rail, db)).OrderAsc(p.OffsetCol1 + ", " + p.OffsetCol2).Limit(p.Limit)
+		if firstPage {
+			firstPage = false
+		} else {
+			q = q.Ge(p.OffsetCol1, offset1).
+				Gt(p.OffsetCol2, offset2)
+		}
+		var l []V
+		err := q.ScanVal(&l)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		if len(l) < 1 {
+			return nil
+		}
+		stop, err := p.ForEachPage(l)
+		if err != nil || stop {
+			return err
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown.New()
+		}
+
+		offset1, offset2 = p.GetOffset(l[len(l)-1])
+	}
+}
+
 type IterateByOffsetParam[V, Offset any] struct {
 	InitialOffset Offset
 	FetchPage     func(rail miso.Rail, db *gorm.DB, offset Offset) ([]V, error)
