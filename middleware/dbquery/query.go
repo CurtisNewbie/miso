@@ -1202,7 +1202,7 @@ func IterateAllByOffset1[V any, Offset any](rail miso.Rail, db *gorm.DB, p Itera
 	var offset Offset
 	firstPage := true
 	for {
-		rail.Infof("IterateAllByOffset1 '%v', offset: (%v, %v)", caller, offset)
+		rail.Infof("IterateAllByOffset1 '%v', offset: %v", caller, offset)
 
 		q := p.BuildQuery(rail, NewQuery(rail, db)).OrderAsc(p.OffsetCol).Limit(p.Limit)
 		if firstPage {
