@@ -432,7 +432,7 @@ func (m *nacosModule) buildConfig(rail miso.Rail) (constant.ClientConfig, []cons
 		constant.WithNamespaceId(ns),
 		constant.WithTimeoutMs(5000),
 		constant.WithNotLoadCacheAtStart(true),
-		constant.WithUpdateCacheWhenEmpty(true),
+		constant.WithUpdateCacheWhenEmpty(false),
 		constant.WithCacheDir(miso.GetPropStr(PropNacosCacheDir)),
 		constant.WithUsername(un),
 		constant.WithPassword(miso.GetPropStr(PropNacosServerPassword)),

@@ -45,10 +45,10 @@ func init() {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 500
 	transport.MaxIdleConnsPerHost = 50
-	transport.IdleConnTimeout = time.Minute * 5
+	transport.IdleConnTimeout = 90 * time.Second
 	transport.DialContext = (&net.Dialer{
 		Timeout:   5 * time.Second,
-		KeepAlive: 15 * time.Second,
+		KeepAlive: 30 * time.Second,
 	}).DialContext
 	transport.ResponseHeaderTimeout = 0
 	MisoDefaultClient.Transport = transport
