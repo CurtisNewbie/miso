@@ -1208,7 +1208,7 @@ func IterateAllByOffset1[V any, Offset any](rail miso.Rail, db *gorm.DB, p Itera
 		if firstPage {
 			firstPage = false
 		} else {
-			q = q.Gt(p.OffsetCol)
+			q = q.Gt(p.OffsetCol, offset)
 		}
 		var l []V
 		err := q.ScanVal(&l)
