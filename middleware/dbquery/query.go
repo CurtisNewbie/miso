@@ -1089,50 +1089,6 @@ func (pq *PageQuery[V]) IterateAllPages(rail miso.Rail, param IteratePageParam, 
 	}
 }
 
-type IterateByOffsetParam[V, T any] struct {
-	Limit         int // deprecated: limit value is not used at all, it's a bug.
-	InitialOffset T
-	FetchPage     func(rail miso.Rail, db *gorm.DB, offset T) ([]V, error)
-	GetOffset     func(v V) T
-	ForEach       func(v V) (stop bool, err error)
-	ForEachPage   func(p []V) (stop bool, err error)
-}
-
-func IterateAllByOffset[V any, T any](rail miso.Rail, db *gorm.DB, p IterateByOffsetParam[V, T]) error {
-	caller := miso.GetCallerFn()
-	rail.Debugf("IterateAllByOffset '%v' start", caller)
-	defer rail.Debugf("IterateAllByOffset '%v' finished", caller)
-	offset := p.InitialOffset
-	for {
-		rail.Debugf("IterateAllByOffset '%v', offset: %v", caller, offset)
-		l, err := p.FetchPage(rail, db, offset)
-		if err != nil {
-			return errs.Wrap(err)
-		}
-		if p.ForEachPage != nil {
-			stop, err := p.ForEachPage(l)
-			if err != nil || stop {
-				return err
-			}
-		} else {
-			for _, v := range l {
-				stop, err := p.ForEach(v)
-				if err != nil || stop {
-					return err
-				}
-			}
-		}
-		if len(l) < 1 {
-			return nil
-		}
-		if miso.IsShuttingDown() {
-			return miso.ErrServerShuttingDown.New()
-		}
-
-		offset = p.GetOffset(l[len(l)-1])
-	}
-}
-
 func (pq *PageQuery[V]) Scan(rail miso.Rail, reqPage miso.Paging) (miso.PageRes[V], error) {
 	return pq.scan(rail, reqPage, true)
 }
@@ -1204,6 +1160,99 @@ func (pq *PageQuery[V]) scan(rail miso.Rail, reqPage miso.Paging, doCount bool) 
 
 	res = miso.PageRes[V]{Payload: payload, Page: miso.RespPage(reqPage, total)}
 	return res, nil
+}
+
+type IterateByOffsetParam[V, Offset any] struct {
+	InitialOffset Offset
+	FetchPage     func(rail miso.Rail, db *gorm.DB, offset Offset) ([]V, error)
+	GetOffset     func(v V) Offset
+	ForEach       func(v V) (stop bool, err error)
+	ForEachPage   func(p []V) (stop bool, err error)
+}
+
+func IterateAllByOffset[V any, Offset any](rail miso.Rail, db *gorm.DB, p IterateByOffsetParam[V, Offset]) error {
+	caller := miso.GetCallerFn()
+	rail.Debugf("IterateAllByOffset '%v' start", caller)
+	defer rail.Debugf("IterateAllByOffset '%v' finished", caller)
+	offset := p.InitialOffset
+	for {
+		rail.Debugf("IterateAllByOffset '%v', offset: %v", caller, offset)
+		l, err := p.FetchPage(rail, db, offset)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		if p.ForEachPage != nil {
+			stop, err := p.ForEachPage(l)
+			if err != nil || stop {
+				return err
+			}
+		} else {
+			for _, v := range l {
+				stop, err := p.ForEach(v)
+				if err != nil || stop {
+					return err
+				}
+			}
+		}
+		if len(l) < 1 {
+			return nil
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown.New()
+		}
+
+		offset = p.GetOffset(l[len(l)-1])
+	}
+}
+
+type IterateAllParam[V any] struct {
+	Limit       int
+	BuildQuery  func(rail miso.Rail, q *Query) *Query
+	ForEachPage func(p []V) (stop bool, err error)
+}
+
+func (i *IterateAllParam[V]) scan(rail miso.Rail, db *gorm.DB) ([]V, error) {
+	var l []V
+	return l, i.BuildQuery(rail, NewQuery(rail, db)).Limit(i.Limit).ScanVal(&l)
+}
+
+func (i *IterateAllParam[V]) count(rail miso.Rail, db *gorm.DB) (int64, error) {
+	return i.BuildQuery(rail, NewQuery(rail, db)).Count()
+}
+
+// Iterate all records until none left.
+//
+// Before looping pages, total count of records matched is checked to prevent infinite loop.
+func IterateAll[V any](rail miso.Rail, db *gorm.DB, p IterateAllParam[V]) error {
+	caller := miso.GetCallerFn()
+	rail.Infof("IterateAll '%v' start", caller)
+	defer rail.Infof("IterateAll '%v' finished", caller)
+	cnt, err := p.count(rail, db)
+	if err != nil {
+		return err
+	}
+	if p.Limit < 1 {
+		p.Limit = 100
+	}
+	maxRound := (cnt / int64(p.Limit)) + 1
+	for i := range maxRound {
+		rail.Infof("IterateAll '%v', curr_round: %v, max_round: %v", caller, i+1, maxRound)
+		l, err := p.scan(rail, db)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		if len(l) < 1 {
+			return nil
+		}
+		stop, err := p.ForEachPage(l)
+		if err != nil || stop {
+			return err
+		}
+		if miso.IsShuttingDown() {
+			return miso.ErrServerShuttingDown.New()
+		}
+	}
+	return nil
 }
 
 type Nilable interface {
