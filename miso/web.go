@@ -359,7 +359,12 @@ func BuildRail(c *gin.Context) Rail {
 		c.Keys = map[string]any{}
 	}
 
-	ctx := c.Request.Context()
+	var ctx context.Context
+	if GetPropBool(PropServerHandlerWithNewContext) {
+		ctx = context.Background()
+	} else {
+		ctx = c.Request.Context()
+	}
 
 	// it's possible that the spanId and traceId have been created already
 	// if we call BuildRail() for the second time, we should read from the *gin.Context

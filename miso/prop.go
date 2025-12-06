@@ -9,7 +9,7 @@ const (
 	// misoconfig-prop: profile name, it's only a flag used to identify which environment we are in
 	PropAppProfile = "app.profile"
 
-	// misoconfig-prop: warning threshold for slow ComponentBootstrap | 5s
+	// misoconfig-prop: warning threshold for slow ComponentBootstrap | 1s
 	PropAppSlowBoostrapThresohold = "app.slow-bootstrap-threshold"
 
 	// misoconfig-prop: whether production mode is turned on | true
@@ -30,8 +30,15 @@ const (
 	// misoconfig-prop: http server host | 127.0.0.1
 	PropServerHost = "server.host"
 
-	// misoconfig-prop: http server port | 8080
+	// misoconfig-prop: http server port, '0' means select any port that can be used | 8080
 	PropServerPort = "server.port"
+
+	// misoconfig-prop: http server actual port used, read-only, do not overwrite it.
+	// misoconfig-doc-only
+	PropServerActualPort = "server.actual-port"
+
+	// misoconfig-prop: http server route handler receives new context, i.e., if client disconnects, handler's context is not cancelled. | true
+	PropServerHandlerWithNewContext = "server.handler.with-new-context"
 
 	// misoconfig-prop: health check url | /health
 	// misoconfig-alias: consul.healthCheckUrl | v0.2.0
@@ -130,8 +137,6 @@ const (
 
 	// misoconfig-prop: disable gin's builtin validation | true
 	PropServerGinValidationDisabled = "server.gin.validation.disabled"
-
-	PropServerActualPort = "server.actual-port"
 )
 
 // misoconfig-section: Consul Configuration
@@ -279,7 +284,7 @@ func init() {
 		return nil
 	})
 
-	SetDefProp(PropAppSlowBoostrapThresohold, "5s")
+	SetDefProp(PropAppSlowBoostrapThresohold, "1s")
 	SetDefProp(PropProdMode, true)
 	SetDefProp(PropConsulEnabled, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")
@@ -305,6 +310,7 @@ func init() {
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
+	SetDefProp(PropServerHandlerWithNewContext, true)
 	SetDefProp(PropHealthCheckUrl, "/health")
 	SetDefProp(PropHealthCheckInterval, "5s")
 	SetDefProp(PropHealthcheckTimeout, "3s")

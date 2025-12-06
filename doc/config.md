@@ -60,7 +60,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | ---------------------------- | --------------------------------------------------------------------------- | ------------- |
 | app.name                     | name of the application                                                     |               |
 | app.profile                  | profile name, it's only a flag used to identify which environment we are in |               |
-| app.slow-bootstrap-threshold | warning threshold for slow ComponentBootstrap                               | 5s            |
+| app.slow-bootstrap-threshold | warning threshold for slow ComponentBootstrap                               | 1s            |
 | mode.production              | whether production mode is turned on                                        | true          |
 | config.extra.files           | extra config files that should be loaded                                    |               |
 
@@ -231,7 +231,9 @@ The tables shown below list all configuration that you can tune. You can also re
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | server.enabled                            | enable http server                                                                                                                                                                       | true          |
 | server.host                               | http server host                                                                                                                                                                         | 127.0.0.1     |
-| server.port                               | http server port                                                                                                                                                                         | 8080          |
+| server.port                               | http server port, '0' means select any port that can be used                                                                                                                             | 8080          |
+| server.actual-port                        | http server actual port used, read-only, do not overwrite it.                                                                                                                            |               |
+| server.handler.with-new-context           | http server route handler receives new context, i.e., if client disconnects, handler's context is not cancelled.                                                                         | true          |
 | server.health-check-url                   | health check url                                                                                                                                                                         | /health       |
 | server.health-check-interval              | health check interval, it's only used for service discovery, e.g., Consul                                                                                                                | 5s            |
 | server.health-check-timeout               | health check timeout, it's only used for service discovery, e.g., Consul                                                                                                                 | 3s            |
