@@ -359,12 +359,7 @@ func BuildRail(c *gin.Context) Rail {
 		c.Keys = map[string]any{}
 	}
 
-	var ctx context.Context
-	if GetPropBool(PropServerHandlerWithNewContext) {
-		ctx = context.Background()
-	} else {
-		ctx = c.Request.Context()
-	}
+	ctx := c.Request.Context()
 
 	// it's possible that the spanId and traceId have been created already
 	// if we call BuildRail() for the second time, we should read from the *gin.Context
@@ -413,7 +408,8 @@ type MappedTRouteHandler[Req any, Res any] func(inb *Inbound, req Req) (Res, err
 // value and error returned by handler are automically wrapped in a Resp object
 func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		rail := BuildRail(c)
+		inb := newInbound(c)
+		rail := inb.Rail()
 
 		// bind to payload boject
 		var req Req
@@ -450,7 +446,7 @@ func newMappedTRouteHandler[Req any, Res any](handler MappedTRouteHandler[Req, R
 		}
 
 		// handle the requests
-		res, err := handler(newInbound(c), req)
+		res, err := handler(inb, req)
 
 		// wrap result and error
 		endpointResultHandler(c, rail, res, err)
@@ -481,9 +477,9 @@ type TRouteHandler[Res any] func(inb *Inbound) (Res, error)
 // value and error returned by handler are automically wrapped in a Resp object
 func newTRouteHandler[Res any](handler TRouteHandler[Res]) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		rail := BuildRail(c)
-		r, e := handler(newInbound(c))
-		endpointResultHandler(c, rail, r, e)
+		inb := newInbound(c)
+		r, e := handler(inb)
+		endpointResultHandler(c, inb.Rail(), r, e)
 	}
 }
 
@@ -841,8 +837,12 @@ type Inbound struct {
 }
 
 func newInbound(c *gin.Context) *Inbound {
+	rail := BuildRail(c)
+	if GetPropBool(PropServerHandlerWithNewContext) {
+		rail = rail.NewCtx()
+	}
 	return &Inbound{
-		erail:  BuildRail(c),
+		erail:  rail,
 		engine: c,
 		w:      c.Writer,
 		r:      c.Request,
