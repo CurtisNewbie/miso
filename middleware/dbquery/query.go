@@ -1375,7 +1375,10 @@ func IterateAll[V any](rail miso.Rail, db *gorm.DB, p IterateAllParam[V]) error 
 	if p.Limit < 1 {
 		p.Limit = 100
 	}
-	maxRound := (cnt / int64(p.Limit)) + 1
+	maxRound := (cnt / int64(p.Limit))
+	if cnt%int64(p.Limit) > 0 {
+		maxRound += 1
+	}
 	for i := range maxRound {
 		rail.Infof("IterateAll '%v', curr_round: %v, max_round: %v", caller, i+1, maxRound)
 		l, err := p.scan(rail, db)
