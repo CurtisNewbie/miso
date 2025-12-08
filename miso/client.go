@@ -235,6 +235,12 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options
 
 	onEvent := sse.Read(tr.Resp.Body, &sse.ReadConfig{MaxEventSize: conf.MaxEventSize})
 	onEvent(func(ev sse.Event, err error) bool {
+		if tr.Rail.IsDone() {
+			tr.Err = errs.Wrap(context.Canceled)
+			tr.Rail.Errorf("Parse SSE events failed, %v", tr.Err)
+			return true
+		}
+
 		if tr.logBody {
 			tr.Rail.Infof("Received sse event: %#v", ev)
 		} else {
@@ -251,9 +257,8 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options
 		if err != nil {
 			tr.Err = WrapErr(err)
 			tr.Rail.Errorf("Parse SSE events failed, %v", tr.Err)
-			return false
+			return errs.IsAny(err, errs.ErrServerShuttingDown)
 		}
-
 		return !stop
 	})
 
