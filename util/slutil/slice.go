@@ -270,3 +270,15 @@ func Concat[T any](a []T, b ...[]T) []T {
 	}
 	return cp
 }
+
+func Flatten[T any](t [][]T) []T {
+	cap := 0
+	for _, v := range t {
+		cap += len(v)
+	}
+	flat := make([]T, 0, cap)
+	for _, v := range t {
+		flat = append(flat, v...)
+	}
+	return flat
+}
