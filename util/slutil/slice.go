@@ -56,7 +56,7 @@ func FastDistinct(l []string) []string {
 // Filter slice values in place.
 //
 // Be cautious that both slices are backed by the same array.
-func Filter[T any](l []T, f func(T) bool) []T {
+func Filter[T any](l []T, f func(T) (incl bool)) []T {
 	cp := l[:0]
 	for i := range l {
 		x := l[i]
@@ -74,7 +74,7 @@ func Filter[T any](l []T, f func(T) bool) []T {
 // Filter slice values in place.
 //
 // Be cautious that both slices are backed by the same array.
-func FilterIdx[T any](l []T, f func(int, T) bool) []T {
+func FilterIdx[T any](l []T, f func(int, T) (incl bool)) []T {
 	cp := l[:0]
 	for i := range l {
 		x := l[i]
@@ -92,7 +92,7 @@ func FilterIdx[T any](l []T, f func(int, T) bool) []T {
 // Filter slice value.
 //
 // The original slice is not modified only copied.
-func CopyFilter[T any](l []T, f func(T) bool) []T {
+func CopyFilter[T any](l []T, f func(T) (incl bool)) []T {
 	ln := len(l)
 	if ln > 10 {
 		ln = ln / 2 // 50%?
