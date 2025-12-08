@@ -1,6 +1,8 @@
 package retry
 
-import "time"
+import (
+	"time"
+)
 
 func GetOne[T any](retryCount int, f func() (T, error), doRetryFuncs ...func(err error) bool) (T, error) {
 	var (
