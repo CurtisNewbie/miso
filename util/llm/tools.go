@@ -4,7 +4,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/curtisnewbie/miso/util/csv"
 	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/util/osutil"
+	"github.com/curtisnewbie/miso/util/slutil"
 )
 
 func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string {
@@ -76,4 +79,29 @@ func ParseThink(m string) (thought string, answer string) {
 	}
 
 	return strings.TrimSpace(m[:i]), strings.TrimSpace(m[i+thinkLen:])
+}
+
+// Rewrite CSV content in text. Filter blank columns and rows. Make the content more readable.
+func ToCsvTxt(srcPath string, separator ...string) (string, error) {
+	sep := slutil.VarArgAny(separator, func() string { return " | " })
+
+	f, err := osutil.OpenRWFile(srcPath)
+	if err != nil {
+		return "", errs.Wrap(err)
+	}
+	defer f.Close()
+
+	records, err := csv.ReadAllIgnoreEmpty(f)
+	if err != nil {
+		return "", errs.Wrap(err)
+	}
+
+	b := strings.Builder{}
+	for _, r := range records {
+		l := strings.Join(slutil.FilterEmptyStr()(r), sep)
+		l = strings.ReplaceAll(l, "\n", " ")
+		b.WriteString(l + "\n")
+	}
+
+	return b.String(), nil
 }
