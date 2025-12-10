@@ -42,14 +42,22 @@ type RCache[T any] struct {
 	sync            bool                 // synchronize operation
 }
 
+func (r *RCache[T]) wrapErr(err error, key string) error {
+	if err == nil {
+		return nil
+	}
+	return errs.Wrapf(err, "rcache: %v, key: %v", r.name, key)
+}
+
 func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 	cacheKey := r.cacheKey(key)
 	val, err := r.ValueSerializer.Serialize(t)
 	if err != nil {
-		return errs.Wrapf(err, "failed to serialze value")
+		return r.wrapErr(err, key)
 	}
 	op := func() error {
-		return errs.Wrap(r.getClient().Set(rail.Context(), cacheKey, val, r.exp).Err())
+		err := r.getClient().Set(rail.Context(), cacheKey, val, r.exp).Err()
+		return r.wrapErr(err, key)
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -60,7 +68,8 @@ func (r *RCache[T]) Put(rail miso.Rail, key string, t T) error {
 func (r *RCache[T]) RefreshTTL(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
-		return errs.Wrap(r.getClient().Expire(rail.Context(), cacheKey, r.exp).Err())
+		err := r.getClient().Expire(rail.Context(), cacheKey, r.exp).Err()
+		return r.wrapErr(err, key)
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -71,7 +80,7 @@ func (r *RCache[T]) RefreshTTL(rail miso.Rail, key string) error {
 func (r *RCache[T]) Del(rail miso.Rail, key string) error {
 	cacheKey := r.cacheKey(key)
 	op := func() error {
-		return errs.Wrap(r.getClient().Del(rail.Context(), cacheKey).Err())
+		return r.wrapErr(r.getClient().Del(rail.Context(), cacheKey).Err(), key)
 	}
 	if r.sync {
 		return RLockExec(rail, r.lockKey(key), op)
@@ -125,22 +134,22 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (T, bool
 
 		cmd := r.getClient().Get(rail.Context(), cacheKey)
 		if cmd.Err() == nil {
-			return t, errs.Wrap(r.ValueSerializer.Deserialize(&t, cmd.Val())) // key found
+			return t, r.wrapErr(r.ValueSerializer.Deserialize(&t, cmd.Val()), key) // key found
 		}
 
 		if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
-			return t, errs.Wrapf(cmd.Err(), "failed to get value from redis")
+			return t, r.wrapErr(cmd.Err(), key)
 		}
 
 		// nothing to supply, give up
 		if supplier == nil {
-			return t, miso.NoneErr
+			return t, miso.NoneErr.New()
 		}
 
 		// call supplier and cache the supplied value
 		supplied, ok, err := supplier()
 		if err != nil {
-			return t, errs.Wrap(err)
+			return t, r.wrapErr(err, key)
 		}
 		if !ok {
 			return t, miso.NoneErr
@@ -149,13 +158,13 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (T, bool
 		// serialize supplied value
 		v, err := r.ValueSerializer.Serialize(supplied)
 		if err != nil {
-			return t, errs.Wrapf(err, "failed to serialize the supplied value")
+			return t, r.wrapErr(err, key)
 		}
 
 		// cache the serialized value
 		scmd := r.getClient().Set(rail.Context(), cacheKey, v, r.exp)
 		if scmd.Err() != nil {
-			return t, errs.Wrap(scmd.Err())
+			return t, r.wrapErr(scmd.Err(), key)
 		}
 		return supplied, nil
 	}
@@ -184,7 +193,7 @@ func (r *RCache[T]) Exists(rail miso.Rail, key string) (bool, error) {
 			return cmd.Val() > 0, nil
 		}
 		if !errors.Is(cmd.Err(), redis.Nil) { // cmd failed
-			return false, errs.Wrapf(cmd.Err(), "failed to get value from redis, unknown error")
+			return false, r.wrapErr(cmd.Err(), key)
 		}
 		return false, nil
 	}
@@ -205,7 +214,7 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 func (r *RCache[T]) ScanAll(rail miso.Rail, f func(keys []string) error) error {
 	prefix := r.cacheKeyPrefix()
 	return r.doScanAll(rail, func(keys []string) error {
-		slutil.UpdateSliceValue[string](keys, func(t string) string {
+		slutil.UpdateSliceValue(keys, func(t string) string {
 			t, _ = strings.CutPrefix(t, prefix)
 			return t
 		})
