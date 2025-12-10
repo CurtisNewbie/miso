@@ -183,7 +183,7 @@ func (r *RLock) Lock(op ...rLockOption) error {
 	}
 	lockStart := time.Now()
 	r.lock = lock
-	r.rail.Tracef("Obtained lock for key '%s'", r.key)
+	r.rail.Infof("Obtained lock for key '%s'", r.key)
 
 	refreshCtx, cancel := context.WithCancel(context.Background())
 	r.cancelRefresher = cancel
@@ -230,7 +230,7 @@ func (r *RLock) Unlock() error {
 			r.rail.Errorf("Failed to release lock for key '%s', err: %v", r.key, err)
 			return err
 		} else {
-			r.rail.Tracef("Released lock for key '%s'", r.key)
+			r.rail.Infof("Released lock for key '%s'", r.key)
 		}
 		r.lock = nil
 	}
