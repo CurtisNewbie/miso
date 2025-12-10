@@ -1363,7 +1363,9 @@ func (i *IterateAllParam[V]) count(rail miso.Rail, db *gorm.DB) (int64, error) {
 
 // Iterate all records until none left.
 //
-// Before looping pages, total count of records matched is checked to prevent infinite loop.
+// Records should not be matched again in the next iteration once they are processed.
+//
+// Before looping pages, total count of records matched is checked to prevent infinite loop (just in case some records are never processed properly).
 func IterateAll[V any](rail miso.Rail, db *gorm.DB, p IterateAllParam[V]) error {
 	caller := miso.GetCallerFn()
 	rail.Infof("IterateAll '%v' start", caller)
