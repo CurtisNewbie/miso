@@ -234,9 +234,6 @@ func (r *RCache[T]) doScanAll(rail miso.Rail, f func(keys []string) error) error
 	const batchSize = 30
 	buk := make([]string, 0, batchSize)
 	for iter.Next(rail.Context()) {
-		if iter.Err() != nil {
-			return errs.Wrapf(iter.Err(), "failed to iterate using scan, pattern: '%v'", pat)
-		}
 		key := iter.Val()
 		buk = append(buk, key)
 		if len(buk) == batchSize {
@@ -246,6 +243,9 @@ func (r *RCache[T]) doScanAll(rail miso.Rail, f func(keys []string) error) error
 			}
 			buk = buk[:0]
 		}
+	}
+	if iter.Err() != nil {
+		return errs.Wrapf(iter.Err(), "failed to iterate using scan, '%v', pattern: '%v'", r.name, pat)
 	}
 	if len(buk) > 0 {
 		return f(buk)
