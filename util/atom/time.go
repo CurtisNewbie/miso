@@ -213,15 +213,17 @@ func (t Time) Before(u Time) bool {
 	return t.Time.Before(u.Time)
 }
 
-func (t Time) In(z *time.Location) Time {
+func (t Time) InLoc(z *time.Location) Time {
+	// gorm relies on signature `In(time.Location) time.Time` to explain SQL.
+	// we have to rename the func to something like InLoc(..). :(
 	return WrapTime(t.Unwrap().In(z))
 }
 
 func (t Time) InZone(diffInHours int) Time {
 	if diffInHours == 0 {
-		return t.In(time.UTC)
+		return t.InLoc(time.UTC)
 	}
-	return t.In(time.FixedZone("", diffInHours*60*60))
+	return t.InLoc(time.FixedZone("", diffInHours*60*60))
 }
 
 // Format as 2006-01-02
