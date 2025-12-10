@@ -60,10 +60,14 @@ func (r *RWMap[K, V]) PutIfAbsentErr(k K, f func() (V, error)) error {
 	return nil
 }
 
-func (r *RWMap[K, V]) Del(k K) {
+func (r *RWMap[K, V]) Del(k K) (prev V, hasPrev bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.storage, k)
+	v, ok := r.storage[k]
+	if ok {
+		delete(r.storage, k)
+	}
+	return v, ok
 }
 
 func (r *RWMap[K, V]) Clear() {

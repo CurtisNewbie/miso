@@ -46,11 +46,12 @@ func init() {
 
 var module = miso.InitAppModuleFunc(func() *taskModule {
 	return &taskModule{
-		dtaskMut:       &sync.Mutex{},
-		workerRegistry: hash.NewStrRWMap[*worker](),
-		group:          "default",
-		workerPool:     async.NewAsyncPool(async.CalcPoolSize(12, 128, 1024)),
-		workerWg:       &sync.WaitGroup{},
+		dtaskMut:             &sync.Mutex{},
+		workerRegistry:       hash.NewStrRWMap[*worker](),
+		group:                "default",
+		workerPool:           async.NewAsyncPool(async.CalcPoolSize(12, 128, 1024)),
+		workerWg:             &sync.WaitGroup{},
+		refreshMasterTickers: hash.NewStrRWMap[*time.Ticker](),
 	}
 })
 
@@ -68,7 +69,7 @@ type taskModule struct {
 	dtasks []miso.Job
 
 	// ticker for refreshing master node lock
-	refreshMasterTicker *time.Ticker
+	refreshMasterTickers *hash.StrRWMap[*time.Ticker]
 
 	// ticker for pulling tasks from task queue
 	cancelPullTaskRunner []func()
@@ -135,14 +136,14 @@ func (m *taskModule) setScheduleGroup(groupName string) {
 }
 
 // Check if current node is master
-func (m *taskModule) isTaskMaster(rail miso.Rail) bool {
-	key := m.getTaskMasterKey()
+func (m *taskModule) isTaskMaster(rail miso.Rail, job string) bool {
+	key := m.getTaskMasterKey(job)
 	val, e := redis.GetStr(key)
 	if e != nil {
-		rail.Errorf("Check is master failed: %v", e)
+		rail.Errorf("Check is %v, %v master failed: %v", m.group, job, e)
 		return false
 	}
-	rail.Debugf("Check is master node, key: %v, onRedis: %v, nodeId: %v", key, val, m.nodeId)
+	rail.Debugf("Check is %v, %v master node, key: %v, onRedis: %v, nodeId: %v", m.group, job, key, val, m.nodeId)
 	return val == m.nodeId
 }
 
@@ -150,8 +151,8 @@ func (m *taskModule) isTaskMaster(rail miso.Rail) bool {
 //
 // Applications are grouped together as a cluster (each cluster is differentiated by its appGroup name
 // we only try to become the master node in our cluster
-func (m *taskModule) getTaskMasterKey() string {
-	return "task:master:group:" + m.group
+func (m *taskModule) getTaskMasterKey(name string) string {
+	return "task:master:group:" + m.group + ":" + name
 }
 
 func (m *taskModule) getTaskQueueKey(name string) string {
@@ -225,7 +226,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		}
 
 		m.dtaskMut.Lock()
-		if !m.tryTaskMaster(rail) {
+		if !m.tryTaskMaster(rail, t.Name) {
 			m.dtaskMut.Unlock()
 			rail.Debugf("Not master node, skip scheduled task '%v'", t.Name)
 			return nil
@@ -349,30 +350,34 @@ func (m *taskModule) stop() {
 	defer m.dtaskMut.Unlock()
 
 	miso.StopScheduler()
-	m.releaseMaster(rail)
 	for _, cancel := range m.cancelPullTaskRunner {
 		cancel()
 	}
+
+	for _, tsk := range m.dtasks {
+		m.releaseMaster(rail, tsk.Name)
+	}
+
 	m.workerWg.Wait()
 }
 
 // Start refreshing master lock ticker
-func (m *taskModule) startTaskMasterLockTicker() {
-	if m.refreshMasterTicker != nil {
+func (m *taskModule) startTaskMasterLockTicker(job string) {
+	if _, ok := m.refreshMasterTickers.Get(job); ok {
 		return
 	}
 	tk := time.NewTicker(5 * time.Second)
-	m.refreshMasterTicker = tk
+	m.refreshMasterTickers.Put(job, tk)
 	go func(c <-chan time.Time) {
 		for {
 			rail := miso.EmptyRail()
-			_ = m.refreshTaskMasterLock(rail)
+			_ = m.refreshTaskMasterLock(rail, job)
 			<-c
 		}
 	}(tk.C)
 }
 
-func (m *taskModule) releaseMasterNodeLock() {
+func (m *taskModule) releaseMasterNodeLock(job string) {
 	v, err := redis.Eval(miso.EmptyRail(), `
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
@@ -382,72 +387,71 @@ func (m *taskModule) releaseMasterNodeLock() {
 		redis.call('DEL', KEYS[1])
 		return 1;
 	end;
-	return 0;`, []string{m.getTaskMasterKey()}, m.nodeId)
+	return 0;`, []string{m.getTaskMasterKey(job)}, m.nodeId)
 	if err != nil {
-		miso.Errorf("Failed to release master node lock, %v", err)
+		miso.Errorf("Failed to release master node lock for %v, %v", job, err)
 		return
 	}
-	miso.Debugf("Release master node lock, released? %v", v == int64(1))
+	miso.Debugf("Release master node lock for %v, released? %v", job, v == int64(1))
 }
 
 // Stop refreshing master lock ticker
-func (m *taskModule) stopTaskMasterLockTicker() {
-	if m.refreshMasterTicker == nil {
+func (m *taskModule) stopTaskMasterLockTicker(job string) {
+	if _, ok := m.refreshMasterTickers.Get(job); !ok {
 		return
 	}
-
-	m.refreshMasterTicker.Stop()
-	m.refreshMasterTicker = nil
+	prev, _ := m.refreshMasterTickers.Del(job)
+	prev.Stop()
 }
 
 // Refresh master lock key ttl
-func (m *taskModule) refreshTaskMasterLock(rail miso.Rail) error {
+func (m *taskModule) refreshTaskMasterLock(rail miso.Rail, job string) error {
 	_, err := redis.Eval(rail, `
 	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
 		redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
 		return 1;
 	end;
 	return 0;
-	`, []string{m.getTaskMasterKey()}, m.nodeId, defMstLockTtlSec)
+	`, []string{m.getTaskMasterKey(job)}, m.nodeId, defMstLockTtlSec)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			rail.Debugf("Failed to refreshTaskMasterLock, masterLock not obtained")
+			rail.Debugf("Failed to refreshTaskMasterLock for %v, masterLock not obtained", job)
 			return nil
 		}
-		rail.Errorf("Failed to refreshTaskMasterLock, %v", err)
+		rail.Errorf("Failed to refreshTaskMasterLock for %v, %v", job, err)
 	} else {
-		rail.Debugf("Did refreshTaskMasterLock")
+		rail.Debugf("Did refreshTaskMasterLock for %v", job)
 	}
 	return err
 }
 
 // Try to become master node
-func (m *taskModule) tryTaskMaster(rail miso.Rail) bool {
-	if m.isTaskMaster(rail) {
+func (m *taskModule) tryTaskMaster(rail miso.Rail, job string) bool {
+	if m.isTaskMaster(rail, job) {
 		return true
 	}
 
-	ok, err := redis.SetNX(rail, m.getTaskMasterKey(), m.nodeId, defMstLockTtl)
+	ok, err := redis.SetNX(rail, m.getTaskMasterKey(job), m.nodeId, defMstLockTtl)
 	if err != nil {
-		rail.Errorf("Try to become master node %v", errs.Wrap(err))
+		rail.Errorf("Try to become %v master node %v", job, errs.Wrap(err))
 		return false
 	}
 
 	isMaster := ok
 	if isMaster {
-		rail.Infof("Elected to be the master node for group: '%s'", m.group)
-		m.startTaskMasterLockTicker()
+		rail.Infof("Elected to be the master node for %s, %v", m.group, job)
+		m.startTaskMasterLockTicker(job)
 	} else {
-		m.stopTaskMasterLockTicker()
+		m.stopTaskMasterLockTicker(job)
 	}
 	return isMaster
 }
 
-func (m *taskModule) releaseMaster(rail miso.Rail) {
-	if m.isTaskMaster(rail) {
-		rail.Infof("Releasing master node")
-		m.stopTaskMasterLockTicker()
-		m.releaseMasterNodeLock()
+func (m *taskModule) releaseMaster(rail miso.Rail, job string) {
+	if m.isTaskMaster(rail, job) {
+		rail.Infof("Releasing master node for %v, %v", m.group, job)
+		m.stopTaskMasterLockTicker(job)
+		m.releaseMasterNodeLock(job)
 	}
 }
 

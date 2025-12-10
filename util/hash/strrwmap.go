@@ -44,8 +44,8 @@ func (r *StrRWMap[V]) PutIfAbsentErr(k string, f func() (V, error)) {
 	r.shard(k).PutIfAbsentErr(k, f)
 }
 
-func (r *StrRWMap[V]) Del(k string) {
-	r.shard(k).Del(k)
+func (r *StrRWMap[V]) Del(k string) (V, bool) {
+	return r.shard(k).Del(k)
 }
 
 func (r *StrRWMap[V]) GetElse(k string, elseFunc func(k string) V) (V, bool) {
