@@ -379,3 +379,8 @@ func As[T error](err error) (T, bool) {
 	}
 	return t, false
 }
+
+func IsType[T error](err error) bool {
+	var t T
+	return errors.As(err, &t)
+}
