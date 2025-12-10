@@ -15,10 +15,11 @@ var (
 	// Error that represents None or Nil.
 	//
 	// Use miso.IsNoneErr(err) to check if an error represents None.
-	NoneErr *MisoErr = NewErrf("none")
+	NoneErr *MisoErr = NewErrfCode("none", ErrCodeNone)
 )
 
 const (
+	ErrCodeNone               string = "MISO_NONE"
 	ErrCodeGeneric            string = "XXXX"
 	ErrCodeUnknownError       string = "UNKNOWN_ERROR"
 	ErrCodeNotPermitted       string = "NOT_PERMITTED"

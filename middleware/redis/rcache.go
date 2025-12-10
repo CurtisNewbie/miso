@@ -143,7 +143,7 @@ func (r *RCache[T]) GetElse(rail miso.Rail, key string, supplier func() (T, bool
 
 		// nothing to supply, give up
 		if supplier == nil {
-			return t, miso.NoneErr.New()
+			return t, miso.NoneErr
 		}
 
 		// call supplier and cache the supplied value
