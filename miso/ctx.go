@@ -14,6 +14,10 @@ import (
 )
 
 var (
+	_ context.Context = Rail{}
+)
+
+var (
 	loggerDebugMap = sync.Map{}
 )
 
@@ -34,10 +38,24 @@ func rewriteDebugLevel(name string) bool {
 }
 
 // Rail, an object that carries trace infromation along with the execution.
+//
+// It's essentially a thin wrapper of [context.Context].
 type Rail struct {
 	name string
 	ctx  context.Context
 	upN  int
+}
+
+func (r Rail) Deadline() (deadline time.Time, ok bool) {
+	return r.ctx.Deadline()
+}
+
+func (r Rail) Err() error {
+	return r.ctx.Err()
+}
+
+func (r Rail) Value(key any) any {
+	return r.ctx.Value(key)
 }
 
 func (r Rail) WithName(name string) Rail {
