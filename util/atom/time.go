@@ -269,8 +269,8 @@ func (t Time) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
-	// some db (e.g., Aliyun ADB) only supports .999999, we have to manully trim the precision
-	return t.Format(SQLDateTimeFormat), nil
+	// some db (e.g., Aliyun ADB) only supports .999999, we have to manully truncate the precision down to microsecond
+	return t.Truncate(time.Microsecond), nil
 }
 
 func (t Time) String() string {
