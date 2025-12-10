@@ -1,4 +1,4 @@
-package miso
+package flow
 
 import (
 	"context"
@@ -71,10 +71,10 @@ func TestErrorStackTrace(t *testing.T) {
 	Error(errs.NewErrf("oh no"))
 	EmptyRail().Warn(errs.NewErrf("oh no"))
 	Warn(errs.NewErrf("oh no"))
-	EmptyRail().Error((*MisoErr)(nil))
-	Error((*MisoErr)(nil))
-	EmptyRail().Warn((*MisoErr)(nil))
-	Warn((*MisoErr)(nil))
+	EmptyRail().Error((*errs.MisoErr)(nil))
+	Error((*errs.MisoErr)(nil))
+	EmptyRail().Warn((*errs.MisoErr)(nil))
+	Warn((*errs.MisoErr)(nil))
 }
 
 func TestDebug(t *testing.T) {

@@ -1,11 +1,9 @@
-package miso
+package flow
 
 import (
 	"context"
 	"io"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/curtisnewbie/miso/util/pool"
 	"github.com/curtisnewbie/miso/util/src"
@@ -49,29 +47,13 @@ var (
 )
 
 var (
-	errLogHandlerOnce sync.Once
-	errLogPipe        chan *ErrorLog = nil
-	errLogPool                       = sync.Pool{
-		New: func() any { return new(ErrorLog) },
-	}
-	errLogRoutineCancel func()         = nil
-	logger              *logrus.Logger = logrus.New()
+	logger *logrus.Logger = logrus.New()
 )
 
 func init() {
 	logger.SetReportCaller(false) // caller is handled by CTFormatter
 	logger.SetFormatter(CustomFormatter())
 }
-
-type ErrorLog struct {
-	Time     time.Time
-	TraceId  string
-	SpanId   string
-	FuncName string
-	Message  string
-}
-
-type ErrorLogHandler func(el *ErrorLog)
 
 type CTFormatter struct {
 }
@@ -132,20 +114,6 @@ func (c *CTFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(" : ")
 	b.WriteString(entry.Message)
 	b.WriteByte('\n')
-
-	if entry.Level == logrus.ErrorLevel && errLogPipe != nil {
-		el := errLogPool.Get().(*ErrorLog)
-		el.Time = entry.Time
-		el.FuncName = fn
-		el.Message = entry.Message
-		el.SpanId = spanId
-		el.TraceId = traceId
-
-		select {
-		case errLogPipe <- el:
-		default: // just in case the pipe is blocked
-		}
-	}
 
 	return b.Bytes(), nil
 }
@@ -251,37 +219,6 @@ func SetLogLevel(level string) {
 		return
 	}
 	logger.SetLevel(ll)
-}
-
-// Setup error log handler.
-//
-// ErrorLogHnadler is invoked when ERROR level log is printed, the log messages passed to handler
-// are buffered, but handler should never block for a long time (i.e., process as fast as possible).
-// If the buffer is full, latest error log messages are simply dropped.
-//
-// ErrorLogHandler can only be set once.
-func SetErrLogHandler(handler ErrorLogHandler) bool {
-	set := false
-	errLogHandlerOnce.Do(func() {
-		errLogPipe = make(chan *ErrorLog, 1024)
-		c, cancel := context.WithCancel(context.Background())
-		errLogRoutineCancel = cancel
-		AddShutdownHook(errLogRoutineCancel)
-
-		go func() {
-			for {
-				select {
-				case <-c.Done():
-					return
-				case el := <-errLogPipe:
-					handler(el)
-					errLogPool.Put(el)
-				}
-			}
-		}()
-		set = true
-	})
-	return set
 }
 
 func SetLogOutput(out io.Writer) {

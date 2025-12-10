@@ -144,7 +144,7 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 				// this can be a security problem
 				pr.Out.Header.Del(key)
 
-				v := pc.Rail.ctx.Value(key)
+				v := pc.Rail.Value(key)
 				if v != nil {
 					if key == XSpanId {
 						pr.Out.Header.Set(key, NewSpanId())

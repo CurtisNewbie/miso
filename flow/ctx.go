@@ -1,4 +1,4 @@
-package miso
+package flow
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
@@ -185,7 +186,7 @@ func appendErrStack(dofmt bool, format string, args ...any) string {
 		}
 	}
 	if err != nil {
-		stackTrace, withStack := UnwrapErrStack(err)
+		stackTrace, withStack := errs.UnwrapErrStack(err)
 		if withStack {
 			format += stackTrace
 		}
@@ -259,7 +260,7 @@ func (r Rail) Warn(args ...interface{}) {
 		return
 	}
 	if len(args) == 1 {
-		if v, ok := args[0].(*MisoErr); ok && v != nil {
+		if v, ok := args[0].(*errs.MisoErr); ok && v != nil {
 			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: GetCallerFnUpN(r.upN)}).
 				Warn(msgWithStack)
@@ -275,7 +276,7 @@ func (r Rail) Error(args ...interface{}) {
 		return
 	}
 	if len(args) == 1 {
-		if v, ok := args[0].(*MisoErr); ok && v != nil {
+		if v, ok := args[0].(*errs.MisoErr); ok && v != nil {
 			msgWithStack := appendErrStack(false, v.Error(), v)
 			logger.WithFields(logrus.Fields{XSpanId: r.ctx.Value(XSpanId), XTraceId: r.ctx.Value(XTraceId), callerField: GetCallerFnUpN(r.upN)}).
 				Error(msgWithStack)
