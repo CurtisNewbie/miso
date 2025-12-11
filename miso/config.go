@@ -613,6 +613,10 @@ func UnmarshalFromPropKey(key string, ptr any) {
 
 // Unmarshal configuration from a speicific key.
 func UnmarshalFromPropKeyAs[T any](key string) T {
+	if key == "" {
+		return UnmarshalFromPropAs[T]()
+	}
+
 	var t T
 	UnmarshalFromPropKey(key, &t)
 	return t
