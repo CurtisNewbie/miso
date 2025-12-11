@@ -53,6 +53,10 @@ type Time struct {
 	time.Time
 }
 
+func NowIn(zoneOffset int) Time {
+	return WrapTime(time.Now()).InZone(zoneOffset)
+}
+
 func Now() Time {
 	return WrapTime(time.Now())
 }
@@ -77,6 +81,10 @@ func WrapTime(t time.Time) Time {
 
 func (t Time) GoString() string {
 	return t.String()
+}
+
+func (t Time) Compare(u Time) int {
+	return t.Unwrap().Compare(u.Unwrap())
 }
 
 // At 00:00:00.000000.
@@ -219,11 +227,11 @@ func (t Time) InLoc(z *time.Location) Time {
 	return WrapTime(t.Unwrap().In(z))
 }
 
-func (t Time) InZone(diffInHours int) Time {
-	if diffInHours == 0 {
+func (t Time) InZone(zoneOffset int) Time {
+	if zoneOffset == 0 {
 		return t.InLoc(time.UTC)
 	}
-	return t.InLoc(time.FixedZone("", diffInHours*60*60))
+	return t.InLoc(time.FixedZone("", zoneOffset*60*60))
 }
 
 // Format as 2006-01-02
