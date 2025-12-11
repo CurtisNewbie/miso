@@ -103,7 +103,7 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 
 	redisPoolSize := redis.GetRedis().Options().PoolSize
 	if len(tasks) > redisPoolSize/2 {
-		rail.Warnf("Number of tasks registered: %v, current Redis connection pool size: %v, increase max-pool-size to avoid exhausting the pool!", len(tasks), redisPoolSize)
+		rail.Errorf("Number of tasks registered: %v, current Redis connection pool size: %v, increase max-pool-size to avoid exhausting the pool!", len(tasks), redisPoolSize)
 	}
 
 	// queue per task to prevent old nodes attempting to run new tasks
