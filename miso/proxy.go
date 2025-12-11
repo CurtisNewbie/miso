@@ -193,6 +193,9 @@ func (h *HttpProxy) isRootPath() bool {
 	return h.rootProxiedPath == "/"
 }
 
+// Add Access Filter.
+//
+// See [HttpProxy.WithBearerAuthCheck].
 func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool)) {
 
 	h.AddFilter(func(pc *ProxyContext, next func()) {
@@ -236,6 +239,33 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 	})
 
 	Info("Registered Access Filter")
+}
+
+type BearerAuthRoute struct {
+	Name         string
+	Bearer       string
+	PathPatterns []string
+}
+
+func (h *HttpProxy) WithBearerAuthCheck(bars []BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
+	return func(pc *ProxyContext) (statusCode int, ok bool) {
+		authHeader := pc.Inb.Header("Authorization")
+		provided, ok := ParseBearer(authHeader)
+		if !ok {
+			return 0, false
+		}
+		for _, bar := range bars {
+			if provided != bar.Bearer {
+				continue
+			}
+			matched, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath)
+			if ok {
+				pc.Inb.Infof("Matched Bearer Authrization Path Pattern: %v - %v", bar.Name, matched)
+				return 0, true
+			}
+		}
+		return 0, false
+	}
 }
 
 func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
