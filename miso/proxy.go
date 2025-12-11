@@ -247,7 +247,7 @@ type BearerAuthRoute struct {
 	PathPatterns []string
 }
 
-func (h *HttpProxy) WithBearerAuthCheck(bars []BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
+func (h *HttpProxy) WithBearerAuthCheck(bars ...BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
 	return func(pc *ProxyContext) (statusCode int, ok bool) {
 		authHeader := pc.Inb.Header("Authorization")
 		provided, ok := ParseBearer(authHeader)
