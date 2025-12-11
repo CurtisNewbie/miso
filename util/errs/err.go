@@ -19,7 +19,11 @@ var (
 )
 
 const (
-	ErrCodeNone               string = "MISO_NONE"
+	ErrCodeNone           string = "MISO_NONE"
+	ErrCodeRecordNotFound string = "RECORD_NOT_FOUND"
+)
+
+const (
 	ErrCodeGeneric            string = "XXXX"
 	ErrCodeUnknownError       string = "UNKNOWN_ERROR"
 	ErrCodeNotPermitted       string = "NOT_PERMITTED"
@@ -32,6 +36,7 @@ var (
 	ErrNotPermitted       *MisoErr = NewErrfCode(ErrCodeNotPermitted, "Not Permitted")
 	ErrIllegalArgument    *MisoErr = NewErrfCode(ErrCodeIllegalArgument, "Illegal Argument")
 	ErrServerShuttingDown *MisoErr = NewErrfCode(ErrCodeServerShuttingDown, "Server Shutting Down")
+	ErrRecordNotFound     *MisoErr = NewErrfCode(ErrCodeRecordNotFound, "Record Not Found")
 )
 
 var (
