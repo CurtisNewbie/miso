@@ -218,19 +218,19 @@ func (q *Query) HasAny() (bool, error) {
 	return n > 0, err
 }
 
-// =
+// Equal to.
 func (q *Query) Eq(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" = ?", args...)
 	return q
 }
 
-// !=
+// Not equal to.
 func (q *Query) Ne(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" != ?", args...)
 	return q
 }
 
-// !=
+// Not equal to if true.
 func (q *Query) NeIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		q.tx = q.tx.Where(col+" != ?", args...)
@@ -238,7 +238,7 @@ func (q *Query) NeIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
-// =
+// Equal to if true.
 func (q *Query) EqIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		return q.Eq(col, args...)
@@ -246,7 +246,7 @@ func (q *Query) EqIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
-// =
+// Equal to if v is not empty string.
 func (q *Query) EqNotEmpty(col string, v any) *Query {
 	var cond bool = true
 	switch vs := v.(type) {
@@ -262,13 +262,13 @@ func (q *Query) EqNotEmpty(col string, v any) *Query {
 	return q.EqIf(cond, col, v)
 }
 
-// <=
+// Less than or equal to.
 func (q *Query) Le(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" <= ?", args...)
 	return q
 }
 
-// <=
+// Less than or equal to if true.
 func (q *Query) LeIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		return q.Le(col, args...)
@@ -276,13 +276,13 @@ func (q *Query) LeIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
-// <
+// Less than.
 func (q *Query) Lt(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" < ?", args...)
 	return q
 }
 
-// <
+// Less than if true.
 func (q *Query) LtIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		return q.Lt(col, args...)
@@ -290,13 +290,13 @@ func (q *Query) LtIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
-// >=
+// Greater than or equal to.
 func (q *Query) Ge(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" >= ?", args...)
 	return q
 }
 
-// >=
+// Greater than or equal to if true.
 func (q *Query) GeIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		return q.Ge(col, args...)
@@ -304,13 +304,13 @@ func (q *Query) GeIf(cond bool, col string, args ...any) *Query {
 	return q
 }
 
-// >
+// Greater than.
 func (q *Query) Gt(col string, args ...any) *Query {
 	q.tx = q.tx.Where(col+" > ?", args...)
 	return q
 }
 
-// >
+// Greater than if true.
 func (q *Query) GtIf(cond bool, col string, args ...any) *Query {
 	if cond {
 		return q.Gt(col, args...)
