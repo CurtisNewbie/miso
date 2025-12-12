@@ -1,5 +1,7 @@
 package pair
 
+import "iter"
+
 // Pair data structure
 type Pair[T any, V any] struct {
 	Left  T
@@ -21,4 +23,15 @@ func MergeStrPairs[T any](p ...Pair[string, T]) map[string][]T {
 		}
 	}
 	return merged
+}
+
+// Create iterator from Pairs.
+func All[T, V any](pairs []Pair[T, V]) iter.Seq2[T, V] {
+	return func(yield func(T, V) bool) {
+		for _, p := range pairs {
+			if !yield(p.Left, p.Right) {
+				return
+			}
+		}
+	}
 }
