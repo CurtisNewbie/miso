@@ -96,9 +96,10 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Job Scheduler Configuration
 
-| property                          | description                                                     | default value |
-| --------------------------------- | --------------------------------------------------------------- | ------------- |
-| scheduler.api.trigger-job.enabled | enable API to manually trigger jobs (and tasks on current node) | false         |
+| property                          | description                                                                        | default value |
+| --------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
+| scheduler.api.trigger-job.enabled | enable API to manually trigger jobs (and tasks on current node)                    | false         |
+| scheduler.timezone.offset-hour    | cron scheduler timezone offset hours, e.g., `8` means `UTC+8`, `-8` means `UTC-8`. | Local         |
 
 ## Kafka Configuration
 

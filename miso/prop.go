@@ -249,6 +249,10 @@ const (
 const (
 	// misoconfig-prop: enable API to manually trigger jobs (and tasks on current node) | false
 	PropSchedApiTriggerJobEnabled = "scheduler.api.trigger-job.enabled"
+
+	// misoconfig-prop: cron scheduler timezone offset hours, e.g., `8` means `UTC+8`, `-8` means `UTC-8`. | Local
+	// misoconfig-doc-only
+	PropSchedTimezoneOffsetHour = "scheduler.timezone.offset-hour"
 )
 
 // misoconfig-default-start

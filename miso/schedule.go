@@ -11,6 +11,7 @@ import (
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
 	"github.com/robfig/cron"
+	"github.com/spf13/cast"
 )
 
 type TickRunner = async.TickRunner
@@ -21,7 +22,24 @@ var (
 
 var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
 	return &scheduleMdoule{
-		scheduler: gocron.NewScheduler(time.Local),
+		scheduler: sync.OnceValue(func() *gocron.Scheduler {
+			var name string = "Local"
+			var tz *time.Location = time.Local
+			if HasProp(PropSchedTimezoneOffsetHour) {
+				zoneOffset := GetPropInt(PropSchedTimezoneOffsetHour)
+				zoneOffsetStr := cast.ToString(zoneOffset)
+				name = "UTC"
+				if zoneOffset > 0 {
+					name += "+" + zoneOffsetStr
+				} else if zoneOffset == 0 {
+				} else {
+					name += "-" + zoneOffsetStr
+				}
+				tz = time.FixedZone("", zoneOffset*60*60)
+			}
+			Infof("Created gocron.Scheduler with timezone: %v", name)
+			return gocron.NewScheduler(tz)
+		}),
 	}
 })
 var (
@@ -69,14 +87,14 @@ type JobInf struct {
 }
 
 type scheduleMdoule struct {
-	scheduler *gocron.Scheduler
+	scheduler func() *gocron.Scheduler
 
 	preJobHooks  []PreJobHook
 	postJobHooks []PostJobHook
 }
 
 func (m *scheduleMdoule) stop() {
-	m.scheduler.Stop()
+	m.scheduler().Stop()
 }
 
 func (m *scheduleMdoule) wrapJob(job Job) func() {
@@ -141,7 +159,7 @@ func (m *scheduleMdoule) guessCronWithSceond(cronExpr string) bool {
 
 func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	var err error
-	s := m.scheduler
+	s := m.scheduler()
 	wrappedJob := m.wrapJob(job)
 	if m.guessCronWithSceond(job.Cron) {
 		_, err = s.CronWithSeconds(job.Cron).Tag(job.Name).Do(wrappedJob)
@@ -155,7 +173,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 	OnAppReady(func(rail Rail) error {
 		m.logNextRun(rail, job.Name, true)
 		if job.TriggeredOnBoostrapped {
-			if err := m.scheduler.RunByTag(job.Name); err != nil {
+			if err := m.scheduler().RunByTag(job.Name); err != nil {
 				rail.Errorf("Failed to trigger immediately on server bootstrapped, jobName: %v, %v", job.Name, err)
 			} else {
 				rail.Infof("Job '%v' triggered on server bootstrapped", job.Name)
@@ -168,7 +186,7 @@ func (m *scheduleMdoule) doScheduleCron(job Job) error {
 }
 
 func (m *scheduleMdoule) logNextRun(rail Rail, jobName string, debug bool) {
-	taggedJobs, _ := m.scheduler.FindJobsByTag(jobName)
+	taggedJobs, _ := m.scheduler().FindJobsByTag(jobName)
 	for _, j := range taggedJobs {
 		if debug {
 			rail.Debugf("Job '%v' next run scheduled at: %v", jobName, j.NextRun())
@@ -180,21 +198,21 @@ func (m *scheduleMdoule) logNextRun(rail Rail, jobName string, debug bool) {
 
 // Start scheduler and block current routine
 func (m *scheduleMdoule) startBlocking() {
-	m.scheduler.StartBlocking()
+	m.scheduler().StartBlocking()
 }
 
 func (m *scheduleMdoule) startAsync() {
-	m.scheduler.StartAsync()
+	m.scheduler().StartAsync()
 }
 func (m *scheduleMdoule) preJobExec(hook PreJobHook) {
-	if m.scheduler.IsRunning() {
+	if m.scheduler().IsRunning() {
 		Warn("Ignored PreJobHook, cron scheduler is already running")
 		return
 	}
 	m.preJobHooks = append(m.preJobHooks, hook)
 }
 func (m *scheduleMdoule) postJobExec(hook PostJobHook) {
-	if m.scheduler.IsRunning() {
+	if m.scheduler().IsRunning() {
 		Warn("Ignored PostJobHook, cron scheduler is already running")
 		return
 	}
@@ -202,7 +220,7 @@ func (m *scheduleMdoule) postJobExec(hook PostJobHook) {
 }
 
 func (m *scheduleMdoule) hasScheduledJobs() bool {
-	return m.scheduler.Len() > 0
+	return m.scheduler().Len() > 0
 }
 
 func LogJobNextRun(rail Rail, jobName string) {
@@ -292,7 +310,7 @@ func TriggerJob(rail Rail, name string) error {
 	}
 
 	m := scheduleModule()
-	if err := m.scheduler.RunByTag(name); err != nil {
+	if err := m.scheduler().RunByTag(name); err != nil {
 		rail.Errorf("Failed to triggered job, jobName: %v, %v", name, err)
 		return err
 	} else {
