@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/curtisnewbie/miso/util/async"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
@@ -21,12 +23,15 @@ var (
 )
 
 var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
+	tzv := &atomic.Value{}
+	tzv.Store("Local") // default value
 	return &scheduleMdoule{
+		tz: tzv,
 		scheduler: sync.OnceValue(func() *gocron.Scheduler {
 			var name string = "Local"
 			var tz *time.Location = time.Local
 			if HasProp(PropSchedTimezoneOffsetHour) {
-				zoneOffset := GetPropInt(PropSchedTimezoneOffsetHour)
+				zoneOffset := GetPropFloat(PropSchedTimezoneOffsetHour)
 				zoneOffsetStr := cast.ToString(zoneOffset)
 				name = "UTC"
 				if zoneOffset > 0 {
@@ -35,10 +40,12 @@ var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
 				} else {
 					name += "-" + zoneOffsetStr
 				}
-				tz = time.FixedZone("", zoneOffset*60*60)
+				tz = atom.NewLoc(zoneOffset)
 			}
+			tzv.Store(name) // default value
 			Infof("Created gocron.Scheduler with timezone: %v", name)
-			return gocron.NewScheduler(tz)
+			sched := gocron.NewScheduler(tz)
+			return sched
 		}),
 	}
 })
@@ -88,6 +95,7 @@ type JobInf struct {
 
 type scheduleMdoule struct {
 	scheduler func() *gocron.Scheduler
+	tz        *atomic.Value
 
 	preJobHooks  []PreJobHook
 	postJobHooks []PostJobHook
@@ -279,7 +287,7 @@ func schedulerBootstrapCondition(rail Rail) (bool, error) {
 func schedulerBootstrap(rail Rail) error {
 	m := scheduleModule()
 	PostServerBootstrap(func(rail Rail) error {
-		rail.Info("Cron Scheduler started")
+		rail.Infof("Cron Scheduler started, %s", m.tz.Load())
 		m.startAsync()
 		AddAsyncShutdownHook(func() { m.stop() })
 		return nil

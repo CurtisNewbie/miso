@@ -53,8 +53,8 @@ type Time struct {
 	time.Time
 }
 
-func NowIn(zoneOffset int) Time {
-	return WrapTime(time.Now()).InZone(zoneOffset)
+func NowIn(offsetHours float64) Time {
+	return WrapTime(time.Now()).InLoc(NewLoc(offsetHours))
 }
 
 func Now() Time {
@@ -227,6 +227,9 @@ func (t Time) InLoc(z *time.Location) Time {
 	return WrapTime(t.Unwrap().In(z))
 }
 
+// Change to time zone offset in hours
+//
+// Deprecated, Use [NewLoc] instead, as offsets are not always one hour apart.
 func (t Time) InZone(zoneOffset int) Time {
 	if zoneOffset == 0 {
 		return t.InLoc(time.UTC)
@@ -456,4 +459,11 @@ func MayParseTimeLoc(v any, loc *time.Location) Time {
 	var t Time
 	t.ScanLoc(v, loc)
 	return t
+}
+
+func NewLoc(offsetHours float64) *time.Location {
+	if offsetHours == 0 {
+		return time.UTC
+	}
+	return time.FixedZone("", int(offsetHours*float64(60)*float64(60)))
 }

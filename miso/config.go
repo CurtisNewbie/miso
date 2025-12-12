@@ -165,6 +165,11 @@ func (a *AppConfig) GetPropInt(prop string) int {
 	return returnWithReadLock(a, func() int { return a.vp.GetInt(prop) })
 }
 
+// Get prop as float64
+func (a *AppConfig) GetPropFloat(prop string) float64 {
+	return returnWithReadLock(a, func() float64 { return a.vp.GetFloat64(prop) })
+}
+
 // Get prop as string based map.
 func (a *AppConfig) GetPropStrMap(prop string) map[string]string {
 	return returnWithReadLock(a, func() map[string]string {
@@ -547,6 +552,11 @@ func GetPropStrSlice(prop string) []string {
 // Get prop as int
 func GetPropInt(prop string) int {
 	return globalConfig().GetPropInt(prop)
+}
+
+// Get prop as int
+func GetPropFloat(prop string) float64 {
+	return globalConfig().GetPropFloat(prop)
 }
 
 // Get prop as string based map.
