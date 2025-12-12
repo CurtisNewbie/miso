@@ -210,7 +210,6 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 
 			if logJobExec {
 				rail.Infof("Task '%s' finished, took: %s", t.Name, took)
-				miso.LogJobNextRun(rail, t.Name)
 			}
 
 			return err
@@ -234,7 +233,11 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		m.dtaskMut.Unlock()
 
 		// produce task
-		return m.produceTask(rail, t.Name)
+		err := m.produceTask(rail, t.Name)
+
+		miso.LogJobNextRun(rail, t.Name)
+
+		return err
 	}
 	m.dtasks = append(m.dtasks, t)
 	return nil
