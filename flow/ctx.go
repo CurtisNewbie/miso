@@ -173,6 +173,20 @@ func (r Rail) Infof(format string, args ...interface{}) {
 		Infof(format, args...)
 }
 
+func (r Rail) TimeOp(start time.Time, pat string, args ...any) {
+	if len(args) > 0 {
+		pat = fmt.Sprintf(pat, args...)
+	}
+	r.Infof("%s took %s", pat, time.Since(start))
+}
+
+func (r Rail) DebugTimeOp(start time.Time, pat string, args ...any) {
+	if len(args) > 0 {
+		pat = fmt.Sprintf(pat, args...)
+	}
+	r.Debugf("%s took %s", pat, time.Since(start))
+}
+
 func appendErrStack(dofmt bool, format string, args ...any) string {
 	if dofmt && format != "" && len(args) > 0 {
 		format = fmt.Sprintf(format, args...)
