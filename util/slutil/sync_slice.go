@@ -51,6 +51,13 @@ func (s *SyncSlice[T]) Copy() []T {
 	return cp
 }
 
+func (s *SyncSlice[T]) Size() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	n := len(*s.sl)
+	return n
+}
+
 func NewSyncSlice[T any](initCap int) *SyncSlice[T] {
 	sl := make([]T, 0, initCap)
 	v := &SyncSlice[T]{

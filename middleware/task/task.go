@@ -15,6 +15,7 @@ import (
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/iputil"
 	"github.com/curtisnewbie/miso/util/randutil"
+	"github.com/curtisnewbie/miso/util/slutil"
 )
 
 const (
@@ -54,6 +55,7 @@ var module = miso.InitAppModuleFunc(func() *taskModule {
 		workerWg:             &sync.WaitGroup{},
 		refreshMasterTickers: hash.NewStrRWMap[*time.Ticker](),
 		disabledTasks:        hash.NewStrRWMap[struct{}](),
+		dtasks:               slutil.NewSyncSlice[miso.Job](1),
 	}
 })
 
@@ -68,7 +70,7 @@ type taskModule struct {
 	nodeId string
 
 	// tasks
-	dtasks []miso.Job
+	dtasks *slutil.SyncSlice[miso.Job]
 
 	// disabled task worker, only used for debugging
 	disabledTasks *hash.StrRWMap[struct{}]
@@ -88,7 +90,7 @@ type taskModule struct {
 }
 
 func (m *taskModule) enabled() bool {
-	return miso.GetPropBool(PropTaskSchedulingEnabled) && len(m.dtasks) > 0
+	return miso.GetPropBool(PropTaskSchedulingEnabled) && m.dtasks.Size() > 0
 }
 
 func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
@@ -244,7 +246,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 
 		return err
 	}
-	m.dtasks = append(m.dtasks, t)
+	m.dtasks.Append(t)
 	return nil
 }
 
@@ -269,10 +271,14 @@ func (m *taskModule) disableTaskWorker(rail miso.Rail, names []string) {
 	if len(names) < 1 {
 		return
 	}
+	_, star := slutil.MatchAny(names, func(v string) (incl bool) { return v == "*" })
+	if star {
+		names = slutil.MapTo(m.dtasks.Copy(), func(d miso.Job) string { return d.Name })
+	}
 	for _, n := range names {
 		m.disabledTasks.Put(n, struct{}{})
 	}
-	rail.Infof("Disabled task workers for %v", names)
+	rail.Infof("Disabled task workers for %+v", names)
 }
 
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
@@ -333,10 +339,10 @@ func (m *taskModule) startTaskSchedulerAsync(rail miso.Rail) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
 
-	if len(m.dtasks) < 1 {
+	if m.dtasks.Size() < 1 {
 		return nil
 	}
-	if err := m.prepareSched(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks.Copy()); err != nil {
 		return err
 	}
 	miso.StartSchedulerAsync()
@@ -347,10 +353,10 @@ func (m *taskModule) startTaskSchedulerAsync(rail miso.Rail) error {
 func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
-	if len(m.dtasks) < 1 {
+	if m.dtasks.Size() < 1 {
 		return nil
 	}
-	if err := m.prepareSched(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks.Copy()); err != nil {
 		return err
 	}
 	miso.StartSchedulerBlocking()
@@ -360,7 +366,7 @@ func (m *taskModule) startTaskSchedulerBlocking(rail miso.Rail) error {
 func (m *taskModule) bootstrapAsComponent(rail miso.Rail) error {
 	m.dtaskMut.Lock()
 	defer m.dtaskMut.Unlock()
-	if err := m.prepareSched(rail, m.dtasks); err != nil {
+	if err := m.prepareSched(rail, m.dtasks.Copy()); err != nil {
 		return fmt.Errorf("failed to prepareTaskScheduling, %w", err)
 	}
 	return nil
@@ -376,7 +382,7 @@ func (m *taskModule) stop() {
 		cancel()
 	}
 
-	for _, tsk := range m.dtasks {
+	for _, tsk := range m.dtasks.Copy() {
 		m.releaseMaster(rail, tsk.Name)
 	}
 
@@ -578,13 +584,13 @@ func registerRouteDisableTaskWorker() {
 		return
 	}
 
-	miso.HttpPost("/debug/task/disable",
+	miso.HttpPost("/debug/task/disable-workers",
 		miso.AutoHandler(func(inb *miso.Inbound, req disableTaskWorkerReq) (any, error) {
 			rail := inb.Rail()
 			module().disableTaskWorker(rail, req.Tasks)
 			return nil, nil
 		}),
-	).Desc("Manually Disable Distributed Task Worker By Name. For debugging only.")
+	).Desc("Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.")
 }
 
 type worker struct {

@@ -184,6 +184,16 @@ func First[T any](v []T) (t T, ok bool) {
 	return
 }
 
+func MatchAny[T any](l []T, filter func(v T) (incl bool)) (t T, ok bool) {
+	for _, v := range l {
+		if filter(v) {
+			return v, true
+		}
+	}
+	var v T
+	return v, false
+}
+
 func VarArgAny[T any](v []T, defVal func() T) (t T) {
 	f, ok := First(v)
 	if ok {
