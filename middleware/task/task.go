@@ -40,6 +40,7 @@ func init() {
 	})
 	miso.BeforeWebRouteRegister(func(rail miso.Rail) error {
 		registerRouteForJobTriggers()
+		registerRouteDisableTaskWorker()
 		return nil
 	})
 }
@@ -52,6 +53,7 @@ var module = miso.InitAppModuleFunc(func() *taskModule {
 		workerPool:           async.NewAsyncPool(async.CalcPoolSize(12, 128, 1024)),
 		workerWg:             &sync.WaitGroup{},
 		refreshMasterTickers: hash.NewStrRWMap[*time.Ticker](),
+		disabledTasks:        hash.NewStrRWMap[struct{}](),
 	}
 })
 
@@ -67,6 +69,9 @@ type taskModule struct {
 
 	// tasks
 	dtasks []miso.Job
+
+	// disabled task worker, only used for debugging
+	disabledTasks *hash.StrRWMap[struct{}]
 
 	// ticker for refreshing master node lock
 	refreshMasterTickers *hash.StrRWMap[*time.Ticker]
@@ -260,8 +265,22 @@ func (m *taskModule) produceTask(rail miso.Rail, name string) error {
 	return redis.LPushJson(rail, m.getTaskQueueKey(name), qt)
 }
 
+func (m *taskModule) disableTaskWorker(rail miso.Rail, names []string) {
+	if len(names) < 1 {
+		return
+	}
+	for _, n := range names {
+		m.disabledTasks.Put(n, struct{}{})
+	}
+	rail.Infof("Disabled task workers for %v", names)
+}
+
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
-	rail.Debugf("Pullling tasks: %v", name)
+	if _, ok := m.disabledTasks.Get(name); ok {
+		return nil
+	}
+
+	rail.Debugf("Pulling tasks: %v", name)
 
 	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second, m.getTaskQueueKey(name))
 	if err != nil {
@@ -547,6 +566,25 @@ func registerRouteForJobTriggers() {
 		}
 		inb.HandleResult(nil, err)
 	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
+}
+
+type disableTaskWorkerReq struct {
+	Tasks []string `json:"tasks"`
+}
+
+// enable api to manually disable task workers
+func registerRouteDisableTaskWorker() {
+	if miso.IsProdMode() {
+		return
+	}
+
+	miso.HttpPost("/debug/task/disable",
+		miso.AutoHandler(func(inb *miso.Inbound, req disableTaskWorkerReq) (any, error) {
+			rail := inb.Rail()
+			module().disableTaskWorker(rail, req.Tasks)
+			return nil, nil
+		}),
+	).Desc("Manually Disable Distributed Task Worker By Name. For debugging only.")
 }
 
 type worker struct {
