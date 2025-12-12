@@ -8,12 +8,10 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
 	"github.com/robfig/cron"
-	"github.com/spf13/cast"
 )
 
 type TickRunner = async.TickRunner
@@ -23,27 +21,27 @@ var (
 )
 
 var scheduleModule = InitAppModuleFunc(func() *scheduleMdoule {
+	var tz *time.Location = time.Local
 	tzv := &atomic.Value{}
-	tzv.Store("Local") // default value
+	tzv.Store(tz.String())
+
 	return &scheduleMdoule{
 		tz: tzv,
 		scheduler: sync.OnceValue(func() *gocron.Scheduler {
-			var name string = "Local"
-			var tz *time.Location = time.Local
-			if HasProp(PropSchedTimezoneOffsetHour) {
-				zoneOffset := GetPropFloat(PropSchedTimezoneOffsetHour)
-				zoneOffsetStr := cast.ToString(zoneOffset)
-				name = "UTC"
-				if zoneOffset > 0 {
-					name += "+" + zoneOffsetStr
-				} else if zoneOffset == 0 {
-				} else {
-					name += "-" + zoneOffsetStr
+			if HasProp(PropSchedTimezone) {
+				zone := GetPropStrTrimmed(PropSchedTimezone)
+				if zone != "" {
+					l, err := time.LoadLocation(zone)
+					if err != nil {
+						Errorf("Failed to load TimeZone %v for cron scheduler, %v", zone)
+					} else {
+						tz = l
+						tzv.Store(tz.String())
+					}
 				}
-				tz = atom.NewLoc(zoneOffset)
 			}
-			tzv.Store(name) // default value
-			Infof("Created gocron.Scheduler with timezone: %v", name)
+
+			Infof("Created gocron.Scheduler with timezone: %v", tz.String())
 			sched := gocron.NewScheduler(tz)
 			return sched
 		}),
@@ -287,7 +285,7 @@ func schedulerBootstrapCondition(rail Rail) (bool, error) {
 func schedulerBootstrap(rail Rail) error {
 	m := scheduleModule()
 	PostServerBootstrap(func(rail Rail) error {
-		rail.Infof("Cron Scheduler started, %s", m.tz.Load())
+		rail.Infof("Cron Scheduler started, time zone: %s", m.tz.Load())
 		m.startAsync()
 		AddAsyncShutdownHook(func() { m.stop() })
 		return nil

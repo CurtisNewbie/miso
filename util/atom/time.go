@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/strutil"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -465,5 +466,12 @@ func NewLoc(offsetHours float64) *time.Location {
 	if offsetHours == 0 {
 		return time.UTC
 	}
-	return time.FixedZone("", int(offsetHours*float64(60)*float64(60)))
+	name := "UTC"
+	if offsetHours > 0 {
+		name += "+" + cast.ToString(offsetHours)
+	} else if offsetHours == 0 {
+	} else {
+		name += "-" + cast.ToString(offsetHours)
+	}
+	return time.FixedZone(name, int(offsetHours*float64(60)*float64(60)))
 }
