@@ -64,10 +64,11 @@ type TResponse struct {
 	Err        error
 	logBody    bool
 
-	closed    bool
-	reqStart  time.Time
-	reqMethod string
-	reqURL    string
+	closed     bool
+	reqStart   time.Time
+	reqService string
+	reqMethod  string
+	reqURL     string
 }
 
 // Close Response
@@ -77,7 +78,11 @@ func (tr *TResponse) Close() error {
 	}
 	tr.closed = true
 	if !tr.reqStart.IsZero() {
-		tr.Rail.Infof("Request '%v %v' took: %v", tr.reqMethod, tr.reqURL, time.Since(tr.reqStart))
+		if tr.reqService != "" {
+			tr.Rail.Infof("Request %v '%v %v' took: %v", tr.reqService, tr.reqMethod, tr.reqURL, time.Since(tr.reqStart))
+		} else {
+			tr.Rail.Infof("Request '%v %v' took: %v", tr.reqMethod, tr.reqURL, time.Since(tr.reqStart))
+		}
 	}
 	if tr.Resp == nil || tr.Resp.Body == nil {
 		return nil
@@ -541,7 +546,7 @@ func (t *Client) PostJson(body any) *TResponse {
 }
 
 func (t *Client) errorResponse(e error) *TResponse {
-	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody, reqStart: t.reqStart, reqMethod: t.reqMethod, reqURL: t.reqURL}
+	return &TResponse{Err: e, Ctx: t.Ctx, Rail: t.Rail, logBody: t.logBody, reqStart: t.reqStart, reqMethod: t.reqMethod, reqURL: t.reqURL, reqService: t.serviceName}
 }
 
 // Send POST request with reader to request body.
@@ -684,6 +689,7 @@ func (t *Client) send(req *http.Request) *TResponse {
 		reqStart:   t.reqStart,
 		reqMethod:  t.reqMethod,
 		reqURL:     t.reqURL,
+		reqService: t.serviceName,
 	}
 
 	// check http status code
