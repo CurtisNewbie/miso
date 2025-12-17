@@ -27,7 +27,6 @@ type plotLineConf struct {
 	XTickNames []string
 	LineLabel  *string
 	Format     *string
-	Font       *font.Font
 }
 
 func WithXLabel(v string) plotLineConfFunc {
@@ -69,12 +68,6 @@ func WithLineLabel(v string) plotLineConfFunc {
 func WithFormat(v string) plotLineConfFunc {
 	return func(pgc *plotLineConf) {
 		pgc.Format = &v
-	}
-}
-
-func WithFont(f *font.Font) plotLineConfFunc {
-	return func(pgc *plotLineConf) {
-		pgc.Font = f
 	}
 }
 
