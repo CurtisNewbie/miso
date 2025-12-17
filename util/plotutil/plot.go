@@ -102,6 +102,9 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 	if pgc.PlotHeight != nil {
 		plotHeight = *pgc.PlotHeight
 	}
+	if pgc.Format != nil {
+		format = *pgc.Format
+	}
 
 	p := plot.New()
 	p.Title.Text = "\n" + title
