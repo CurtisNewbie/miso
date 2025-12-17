@@ -121,7 +121,7 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 
 	if len(pgc.XTickNames) > 0 {
 		p.NominalX(pgc.XTickNames...)
-		p.X.Padding = 0.3 * vg.Inch
+		p.X.Padding = 0.1 * vg.Inch
 		p.X.LineStyle = draw.LineStyle{
 			Color: color.Black,
 			Width: vg.Points(0.5),
