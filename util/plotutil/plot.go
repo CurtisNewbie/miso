@@ -2,6 +2,7 @@ package plotutil
 
 import (
 	"image/color"
+	"io"
 	"math"
 
 	"github.com/curtisnewbie/miso/util/errs"
@@ -22,6 +23,7 @@ type plotLineConf struct {
 	PlotHeight *font.Length
 	XTickNames []string
 	LineLabel  *string
+	Format     *string
 }
 
 func WithXLabel(v string) plotLineConfFunc {
@@ -60,9 +62,15 @@ func WithLineLabel(v string) plotLineConfFunc {
 	}
 }
 
+func WithFormat(v string) plotLineConfFunc {
+	return func(pgc *plotLineConf) {
+		pgc.Format = &v
+	}
+}
+
 type plotLineConfFunc func(*plotLineConf)
 
-func PlotLine(title string, plots plotter.XYs, fname string, ops ...plotLineConfFunc) error {
+func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfFunc) error {
 	pgc := &plotLineConf{}
 	for _, o := range ops {
 		o(pgc)
@@ -74,6 +82,7 @@ func PlotLine(title string, plots plotter.XYs, fname string, ops ...plotLineConf
 		lineLabel  string
 		plotWidth  = 10 * vg.Inch
 		plotHeight = plotWidth / 2
+		format     = "png"
 	)
 	if pgc.XLabel != nil {
 		xlabel = *pgc.XLabel
@@ -116,12 +125,15 @@ func PlotLine(title string, plots plotter.XYs, fname string, ops ...plotLineConf
 		}
 	}
 
+	// draw line on plot
 	drawLine(p, plots, 1, lineLabel)
-	err := p.Save(plotWidth, plotHeight, fname)
+
+	c, err := p.WriterTo(plotWidth, plotHeight, format)
 	if err != nil {
 		return err
 	}
-	return nil
+	_, err = c.WriteTo(w)
+	return err
 }
 
 func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error {
