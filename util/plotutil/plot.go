@@ -1,13 +1,16 @@
 package plotutil
 
 import (
+	"fmt"
 	"image/color"
 	"io"
 	"math"
+	"os"
 
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
+	"golang.org/x/image/font/opentype"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/font"
 	"gonum.org/v1/plot/plotter"
@@ -24,6 +27,7 @@ type plotLineConf struct {
 	XTickNames []string
 	LineLabel  *string
 	Format     *string
+	Font       *font.Font
 }
 
 func WithXLabel(v string) plotLineConfFunc {
@@ -65,6 +69,12 @@ func WithLineLabel(v string) plotLineConfFunc {
 func WithFormat(v string) plotLineConfFunc {
 	return func(pgc *plotLineConf) {
 		pgc.Format = &v
+	}
+}
+
+func WithFont(f *font.Font) plotLineConfFunc {
+	return func(pgc *plotLineConf) {
+		pgc.Font = f
 	}
 }
 
@@ -118,7 +128,7 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 
 	if len(pgc.XTickNames) > 0 {
 		p.NominalX(pgc.XTickNames...)
-		p.X.Padding = 0.1 * vg.Inch
+		p.X.Padding = 0.3 * vg.Inch
 		p.X.LineStyle = draw.LineStyle{
 			Color: color.Black,
 			Width: vg.Points(0.5),
@@ -162,7 +172,7 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 
 	if min < max {
 		lineLabels, err := plotter.NewLabels(plotter.XYLabels{
-			XYs:    []plotter.XY{{X: float64(mini), Y: min + 1}},
+			XYs:    []plotter.XY{{X: float64(mini), Y: min}},
 			Labels: []string{cast.ToString(min)},
 		})
 		if err != nil {
@@ -172,7 +182,7 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 	}
 
 	lineLabels, err := plotter.NewLabels(plotter.XYLabels{
-		XYs:    []plotter.XY{{X: float64(maxi), Y: max + 1}},
+		XYs:    []plotter.XY{{X: float64(maxi), Y: max}},
 		Labels: []string{cast.ToString(max)},
 	})
 	if err != nil {
@@ -181,7 +191,7 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 	p.Add(lineLabels)
 
 	lineLabels, err = plotter.NewLabels(plotter.XYLabels{
-		XYs:    []plotter.XY{{X: float64(1), Y: dat[0].Y + 1}},
+		XYs:    []plotter.XY{{X: float64(1), Y: dat[0].Y}},
 		Labels: []string{lineLabel},
 	})
 	if err != nil {
@@ -190,4 +200,47 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 	p.Add(lineLabels)
 
 	return nil
+}
+
+func LoadFontFile(path string) (*font.Font, error) {
+	ttf, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	fontTTF, err := opentype.Parse(ttf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse '%s' as font: %w", path, err)
+	}
+
+	f := font.Font{}
+	font.DefaultCache.Add([]font.Face{
+		{
+			Font: f,
+			Face: fontTTF,
+		},
+	})
+	return &f, nil
+}
+
+func LoadFont(byt []byte) (*font.Font, error) {
+	fontTTF, err := opentype.Parse(byt)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	f := font.Font{}
+	font.DefaultCache.Add([]font.Face{
+		{
+			Font: f,
+			Face: fontTTF,
+		},
+	})
+	if !font.DefaultCache.Has(f) {
+		return nil, errs.NewErrf("Font not loaded")
+	}
+	return &f, nil
+}
+
+func ChangeDefaultFont(f *font.Font) {
+	plot.DefaultFont = *f
 }
