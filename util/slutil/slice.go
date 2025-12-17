@@ -119,6 +119,18 @@ func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
 	return vs
 }
 
+// Map slice item to another.
+func MapToIdx[T any, V any](ts []T, mapFunc func(i int, t T) V) []V {
+	if len(ts) < 1 {
+		return []V{}
+	}
+	vs := make([]V, 0, len(ts))
+	for i := range ts {
+		vs = append(vs, mapFunc(i, ts[i]))
+	}
+	return vs
+}
+
 // Merge slice of items to a map.
 func MergeMapSlice[K comparable, V any](vs []V, keyFunc func(v V) K) map[K][]V {
 	if len(vs) < 1 {
