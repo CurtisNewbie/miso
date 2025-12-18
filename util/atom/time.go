@@ -466,6 +466,13 @@ func NewLoc(offsetHours float64) *time.Location {
 	if offsetHours == 0 {
 		return time.UTC
 	}
+	return time.FixedZone("", int(offsetHours*float64(60)*float64(60)))
+}
+
+func NewLocWithName(offsetHours float64) *time.Location {
+	if offsetHours == 0 {
+		return time.UTC
+	}
 	name := "UTC"
 	if offsetHours > 0 {
 		name += "+" + cast.ToString(offsetHours)
