@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/flow"
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/utillog"
@@ -43,9 +42,9 @@ type Future[T any] interface {
 }
 
 // Fire async task on new goroutine and forget about it.
-func Fire(rail flow.Rail, task func(rail flow.Rail) error) {
+func Fire(rail interface{ Errorf(string, ...any) }, task func() error) {
 	fut, wrp := buildFuture(rail, func() (struct{}, error) {
-		return struct{}{}, task(rail)
+		return struct{}{}, task()
 	})
 	fut.ThenErr(func(err error) {
 		if err != nil {
@@ -219,7 +218,7 @@ func (f *future[T]) TimedGet(timeout int) (T, error) {
 	return f.res, f.err
 }
 
-func buildFuture[T any](rail any, task func() (T, error)) (Future[T], func()) {
+func buildFuture[T any](rail interface{ Errorf(string, ...any) }, task func() (T, error)) (Future[T], func()) {
 	sig := NewSignalOnce()
 	fut := future[T]{
 		thenMu: &sync.Mutex{},
@@ -233,18 +232,13 @@ func buildFuture[T any](rail any, task func() (T, error)) (Future[T], func()) {
 
 			// task() panicked, change err
 			if v := recover(); v != nil {
-				logged := false
 				if rail != nil {
-					if traced, ok := rail.(interface{ Errorf(string, ...any) }); ok {
-						logged = true
-						if verr, ok := v.(*errs.MisoErr); ok {
-							traced.Errorf("Panic recovered, %v", verr)
-						} else {
-							traced.Errorf("Panic recovered, %v\n%v", v, string(debug.Stack()))
-						}
+					if verr, ok := v.(*errs.MisoErr); ok {
+						rail.Errorf("Panic recovered, %v", verr)
+					} else {
+						rail.Errorf("Panic recovered, %v\n%v", v, string(debug.Stack()))
 					}
-				}
-				if !logged {
+				} else {
 					utillog.ErrorLog("panic recovered, %v\n%v", v, string(debug.Stack()))
 				}
 				if verr, ok := v.(error); ok {
