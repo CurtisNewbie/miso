@@ -9,6 +9,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
+	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
 
@@ -43,12 +44,16 @@ type Future[T any] interface {
 
 // Fire async task on new goroutine and forget about it.
 func Fire(rail interface{ Errorf(string, ...any) }, task func() error) {
+	start := time.Now()
+	caller := src.GetCallerFn()
 	fut, wrp := buildFuture(rail, func() (struct{}, error) {
 		return struct{}{}, task()
 	})
 	fut.ThenErr(func(err error) {
 		if err != nil {
-			rail.Errorf("Async task failed, %v", err)
+			rail.Errorf("Async task failed (%v), took: %v, %v", caller, time.Since(start), err)
+		} else if rrail, ok := rail.(interface{ Infof(string, ...any) }); ok {
+			rrail.Infof("Async task completed (%v), took: %v", caller, time.Since(start))
 		}
 	})
 	go wrp()
