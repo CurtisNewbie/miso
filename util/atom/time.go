@@ -235,7 +235,7 @@ func (t Time) InZone(zoneOffset int) Time {
 	if zoneOffset == 0 {
 		return t.InLoc(time.UTC)
 	}
-	return t.InLoc(time.FixedZone("", zoneOffset*60*60))
+	return t.InLoc(NewLoc(float64(zoneOffset)))
 }
 
 // Format as 2006-01-02
