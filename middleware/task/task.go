@@ -281,6 +281,20 @@ func (m *taskModule) disableTaskWorker(rail miso.Rail, names []string) {
 	rail.Infof("Disabled task workers for %+v", names)
 }
 
+func (m *taskModule) enableTaskWorker(rail miso.Rail, names []string) {
+	if len(names) < 1 {
+		return
+	}
+	_, star := slutil.MatchAny(names, func(v string) (incl bool) { return v == "*" })
+	if star {
+		names = slutil.MapTo(m.dtasks.Copy(), func(d miso.Job) string { return d.Name })
+	}
+	for _, n := range names {
+		m.disabledTasks.Del(n)
+	}
+	rail.Infof("Enabled task workers for %+v", names)
+}
+
 func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
 	if _, ok := m.disabledTasks.Get(name); ok {
 		return nil
@@ -591,6 +605,14 @@ func registerRouteDisableTaskWorker() {
 			return nil, nil
 		}),
 	).Desc("Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.")
+
+	miso.HttpPost("/debug/task/enable-workers",
+		miso.AutoHandler(func(inb *miso.Inbound, req disableTaskWorkerReq) (any, error) {
+			rail := inb.Rail()
+			module().enableTaskWorker(rail, req.Tasks)
+			return nil, nil
+		}),
+	).Desc("Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.")
 }
 
 type worker struct {
