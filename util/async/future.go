@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/flow"
+	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
@@ -40,16 +42,29 @@ type Future[T any] interface {
 	ThenErr(tf func(error))
 }
 
+// Fire async task on new goroutine and forget about it.
+func Fire(rail flow.Rail, task func(rail flow.Rail) error) {
+	fut, wrp := buildFuture(rail, func() (struct{}, error) {
+		return struct{}{}, task(rail)
+	})
+	fut.ThenErr(func(err error) {
+		if err != nil {
+			rail.Errorf("Async task failed, %v", err)
+		}
+	})
+	go wrp()
+}
+
 // Create Future, once the future is created, it starts running on a new goroutine.
 func Run[T any](task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(task)
+	fut, wrp := buildFuture(nil, task)
 	go wrp()
 	return fut
 }
 
 // Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
 func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(task)
+	fut, wrp := buildFuture(nil, task)
 	pool.Go(wrp)
 	return fut
 }
@@ -204,7 +219,7 @@ func (f *future[T]) TimedGet(timeout int) (T, error) {
 	return f.res, f.err
 }
 
-func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
+func buildFuture[T any](rail any, task func() (T, error)) (Future[T], func()) {
 	sig := NewSignalOnce()
 	fut := future[T]{
 		thenMu: &sync.Mutex{},
@@ -218,7 +233,20 @@ func buildFuture[T any](task func() (T, error)) (Future[T], func()) {
 
 			// task() panicked, change err
 			if v := recover(); v != nil {
-				utillog.ErrorLog("panic recovered, %v\n%v", v, string(debug.Stack()))
+				logged := false
+				if rail != nil {
+					if traced, ok := rail.(interface{ Errorf(string, ...any) }); ok {
+						logged = true
+						if verr, ok := v.(*errs.MisoErr); ok {
+							traced.Errorf("Panic recovered, %v", verr)
+						} else {
+							traced.Errorf("Panic recovered, %v\n%v", v, string(debug.Stack()))
+						}
+					}
+				}
+				if !logged {
+					utillog.ErrorLog("panic recovered, %v\n%v", v, string(debug.Stack()))
+				}
 				if verr, ok := v.(error); ok {
 					err = verr
 				} else {

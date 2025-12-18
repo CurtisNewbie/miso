@@ -24,6 +24,11 @@ func PrepareTestEnv(t *testing.T) Rail {
 	if err := App().callConfigLoaders(rail); err != nil {
 		t.Fatal(err)
 	}
+
+	if err := App().configureLogging(); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := App().callPreServerBootstrap(rail); err != nil {
 		t.Fatal(err)
 	}
