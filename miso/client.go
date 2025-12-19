@@ -195,6 +195,8 @@ func (tr *TResponse) logRespBody(body any) {
 // Response is always closed automatically.
 //
 // If response body is somehow empty, *miso.NoneErr is returned.
+//
+// If ptr impl [TResponseJsonCheckErr], [TResponseJsonCheckErr.CheckErr] is called after json unmarshalling.
 func (tr *TResponse) Json(ptr any) error {
 	defer tr.Close()
 	if tr.Err != nil {
