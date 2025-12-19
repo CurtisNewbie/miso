@@ -228,14 +228,9 @@ func (t Time) InLoc(z *time.Location) Time {
 	return WrapTime(t.Unwrap().In(z))
 }
 
-// Change to time zone offset in hours
-//
-// Deprecated, Use [NewLoc] instead, as offsets are not always one hour apart.
-func (t Time) InZone(zoneOffset int) Time {
-	if zoneOffset == 0 {
-		return t.InLoc(time.UTC)
-	}
-	return t.InLoc(NewLoc(float64(zoneOffset)))
+// Change to time zone offset in hours.
+func (t Time) InZone(hourOffset float64) Time {
+	return t.InLoc(NewLoc(hourOffset))
 }
 
 // Format as 2006-01-02
