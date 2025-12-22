@@ -140,3 +140,26 @@ func InMergeCell(rowIdx int, colIdx int, mcels []MergeCell) (string, bool) {
 	}
 	return "", false
 }
+
+func Write(rail miso.Rail, fpath string, sheet string, records [][]string) error {
+	f := excelize.NewFile()
+	defer func() {
+		if err := f.Close(); err != nil {
+			rail.Warnf("Failed to close excel file, %v", err)
+		}
+	}()
+
+	index, err := f.NewSheet(sheet)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	for i, r := range records {
+		if err := f.SetSheetRow(sheet, "A"+cast.ToString(i+1), &r); err != nil {
+			return errs.Wrap(err)
+		}
+	}
+
+	f.SetActiveSheet(index)
+	return errs.Wrap(f.SaveAs(fpath))
+}
