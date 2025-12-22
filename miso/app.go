@@ -492,7 +492,7 @@ func (a *MisoApp) configureLogging() error {
 	c := a.Config()
 
 	// determine the writer that we will use for logging (loggerOut and loggerErrOut)
-	if c.HasProp(PropLoggingRollingFile) {
+	if c.HasProp(PropLoggingRollingFile) && !c.GetPropBool(PropAppTestEnv) {
 		logFile := c.GetPropStr(PropLoggingRollingFile)
 
 		if logFile != "" && c.GetPropBool(PropLoggingRollingFileAppendIpSuffix) {
