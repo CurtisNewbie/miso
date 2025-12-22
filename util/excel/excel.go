@@ -49,6 +49,7 @@ func BuildMergeCell(t excelize.MergeCell) MergeCell {
 
 type readExcelOp struct {
 	OverwriteMergeCell bool
+	WithHyperlink      bool
 }
 
 // Merge cell content is written to each row to maintain the overall structure.
@@ -57,6 +58,13 @@ type readExcelOp struct {
 func OverwriteMergeCell() func(o *readExcelOp) {
 	return func(o *readExcelOp) {
 		o.OverwriteMergeCell = true
+	}
+}
+
+// Include hyperlink if any.
+func WithHyperlink() func(o *readExcelOp) {
+	return func(o *readExcelOp) {
+		o.WithHyperlink = true
 	}
 }
 
@@ -94,6 +102,24 @@ func ReadExcel(rail miso.Rail, fpath string, ops ...func(*readExcelOp)) ([]Excel
 		rows, err := f.GetRows(s)
 		if err != nil {
 			return nil, errs.Wrap(err)
+		}
+
+		if op.WithHyperlink {
+			for x, r := range rows {
+				for y := range r {
+					cell, err := excelize.CoordinatesToCellName(y+1, x+1)
+					if err != nil {
+						return nil, err
+					}
+					ok, hy, err := f.GetCellHyperLink(s, cell)
+					if err != nil {
+						return nil, err
+					}
+					if ok {
+						rows[x][y] += " " + hy
+					}
+				}
+			}
 		}
 
 		st := &ExcelSheet{
