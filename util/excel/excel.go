@@ -48,8 +48,9 @@ func BuildMergeCell(t excelize.MergeCell) MergeCell {
 }
 
 type readExcelOp struct {
-	OverwriteMergeCell bool
-	WithHyperlink      bool
+	OverwriteMergeCell       bool
+	WithHyperlink            bool
+	WithHyperlinkPostProcess func(string) string
 }
 
 // Merge cell content is written to each row to maintain the overall structure.
@@ -62,9 +63,13 @@ func OverwriteMergeCell() func(o *readExcelOp) {
 }
 
 // Include hyperlink if any.
-func WithHyperlink() func(o *readExcelOp) {
+func WithHyperlink(postprocess ...func(link string) string) func(o *readExcelOp) {
+	f, ok := slutil.First(postprocess)
 	return func(o *readExcelOp) {
 		o.WithHyperlink = true
+		if ok {
+			o.WithHyperlinkPostProcess = f
+		}
 	}
 }
 
@@ -116,7 +121,12 @@ func ReadExcel(rail miso.Rail, fpath string, ops ...func(*readExcelOp)) ([]Excel
 						return nil, err
 					}
 					if ok {
-						rows[x][y] += " " + hy
+						if op.WithHyperlinkPostProcess != nil {
+							hy = op.WithHyperlinkPostProcess(hy)
+						}
+						if hy != "" {
+							rows[x][y] += " " + hy
+						}
 					}
 				}
 			}
