@@ -56,6 +56,7 @@ func init() {
 		Name:      "Bootstrap Cron Scheduler",
 		Condition: schedulerBootstrapCondition,
 		Bootstrap: schedulerBootstrap,
+		Order:     BootstrapOrderL4 + 10,
 	})
 	BeforeWebRouteRegister(func(rail Rail) error {
 		registerRouteForJobTriggers()

@@ -514,7 +514,7 @@ func (m *taskModule) registerTasks(tasks []miso.Job) error {
 			})
 		}
 		if err := miso.ScheduleCron(d); err != nil {
-			errs.Wrapf(err, "failed to schedule cron job, %+v", d)
+			return errs.Wrapf(err, "failed to schedule cron job, %+v", d)
 		}
 	}
 	return nil
