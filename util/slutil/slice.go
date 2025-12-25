@@ -180,6 +180,19 @@ func MergeMapAs[T any, K comparable, V any](ts []T, keyFunc func(t T) K, valueFu
 	return m
 }
 
+func MergeMapKV[T interface{ MapKV() (K, V) }, K comparable, V any](ts []T) map[K]V {
+	if len(ts) < 1 {
+		return make(map[K]V)
+	}
+	m := make(map[K]V, len(ts))
+	for i := range ts {
+		t := ts[i]
+		k, v := t.MapKV()
+		m[k] = v
+	}
+	return m
+}
+
 func Copy[T any](v []T) []T {
 	cp := make([]T, len(v))
 	copy(cp, v)

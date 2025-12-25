@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
+	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/utillog"
@@ -277,6 +278,14 @@ func NamedSprintf(pat string, p map[string]any) string {
 //	NamedSprintf(pat, ReflectGenMap(myStruct))
 func NamedSprintfv(pat string, v any) string {
 	return NamedSprintf(pat, rfutil.ReflectGenMap(v))
+}
+
+// Format message using fields in struct, e.g., '${startTime} ${message}'
+func NamedSprintfkv(pat string, pairs ...pair.Pair[string, any]) string {
+	if len(pairs) < 1 {
+		return pat
+	}
+	return NamedSprintf(pat, slutil.MergeMapKV(pairs))
 }
 
 func FmtFloat(f float64, width int, precision int) string {
