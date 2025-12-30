@@ -38,6 +38,16 @@ func main() {
 			s := strutil.UnsafeByt2Str(txt)
 			if strings.Contains(strings.ToLower(s), "curl") {
 				curl = s
+			} else {
+				_, err = json.SParseJsonAs[map[string]any](s)
+				if err == nil {
+					byt, err := gojson.Generate(strings.NewReader(s), gojson.ParseJson, "Req", "main", []string{"json"}, false, true)
+					if err == nil {
+						print(string(byt))
+						println()
+					}
+					return
+				}
 			}
 		}
 	}
@@ -76,7 +86,7 @@ func GenRequests(inst Instruction) string {
 	} else if !strutil.IsBlankStr(inst.Payload) {
 
 		inst.Payload = unquote(inst.Payload)
-		out, err := gojson.Generate(strings.NewReader(inst.Payload), gojson.ParseJson, "Req", "main", []string{"fmt"}, false, true)
+		out, err := gojson.Generate(strings.NewReader(inst.Payload), gojson.ParseJson, "Req", "main", []string{"json"}, false, true)
 		if err == nil {
 			callType = string(out)
 			callType = strings.ReplaceAll(callType, "package main", "")
@@ -151,12 +161,14 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 		tok := p.Next()
 		cli.DebugPrintlnf(Debug, "next tok: %v", tok)
 		switch tok {
-		case "-H":
+		case "-H", "--header":
 			k, v, ok := strutil.SplitKV(unquote(p.Next()), ":")
 			if ok {
 				inst.Headers[k] = v
 			}
-		case "-X":
+		case "--location":
+			p.Next()
+		case "-X", "--request":
 			inst.Method = unquote(p.Next())
 		case "-b": // don't need it yet
 			p.Next()
