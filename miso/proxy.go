@@ -312,12 +312,12 @@ func (h *HttpProxy) LoadBearerAuthRouteFromProp(rootProp string) []BearerAuthRou
 	})
 }
 
-type TimeLogUnit struct {
+type ReqTimeLogUnit struct {
 	Dur  time.Duration
 	Name string
 }
 
-func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool, unit ...TimeLogUnit) {
+func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool, unit ...ReqTimeLogUnit) {
 	h.AddFilter(func(pc *ProxyContext, next func()) {
 		_, r := pc.Inb.Unwrap()
 
