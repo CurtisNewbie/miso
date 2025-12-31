@@ -9,6 +9,7 @@ import (
 
 	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/pair"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/utillog"
 )
@@ -43,7 +44,7 @@ type Future[T any] interface {
 }
 
 // Fire async task on new goroutine and forget about it.
-func Fire(rail interface{ Errorf(string, ...any) }, task func() error) {
+func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ...func(func())) {
 	start := time.Now()
 	caller := src.GetCallerFn()
 	fut, wrp := buildFuture(rail, func() (struct{}, error) {
@@ -56,7 +57,12 @@ func Fire(rail interface{ Errorf(string, ...any) }, task func() error) {
 			rrail.Infof("Async task completed (%v), took: %v", caller, time.Since(start))
 		}
 	})
-	go wrp()
+	runner1, ok := slutil.First(runner)
+	if ok {
+		runner1(wrp)
+	} else {
+		go wrp()
+	}
 }
 
 // Create Future, once the future is created, it starts running on a new goroutine.
