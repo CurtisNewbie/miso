@@ -723,15 +723,11 @@ func BuildApiDecl(tags []MisoApiTag) (ApiDecl, bool) {
 		case tagRes:
 			ad.Resource = t.Body
 		case tagQueryDocV1, tagQueryDocV2:
-			kv, ok := t.BodyKV()
-			if ok {
-				ad.Query = append(ad.Query, kv)
-			}
+			kv, _ := t.BodyKV()
+			ad.Query = append(ad.Query, kv)
 		case tagHeaderDocV1, tagHeaderDocV2:
-			kv, ok := t.BodyKV()
-			if ok {
-				ad.Header = append(ad.Header, kv)
-			}
+			kv, _ := t.BodyKV()
+			ad.Header = append(ad.Header, kv)
 		case tagJsonRespType:
 			ad.JsonRespType = t.Body
 		default:
@@ -760,7 +756,7 @@ func (m *MisoApiTag) BodyKV() (Pair, bool) {
 func (m *MisoApiTag) BodyKVTok(tok string) (Pair, bool) {
 	i := strings.Index(m.Body, tok)
 	if i < 0 {
-		return Pair{K: m.Body}, false
+		return Pair{K: m.Body, V: m.Body}, false
 	}
 	return Pair{
 		K: strings.TrimSpace(m.Body[:i]),
