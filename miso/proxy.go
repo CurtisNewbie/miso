@@ -161,7 +161,11 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 			}
 		}
 		rproxy.ModifyResponse = func(r *http.Response) error {
-			pc.Rail.Debugf("Proxy response headers: %v, status: %v", r.Header, r.StatusCode)
+			if IsDebugLevel() {
+				pc.Rail.Debugf("Proxy response headers: %v, status: %v", r.Header, r.StatusCode)
+			} else {
+				pc.Rail.Infof("Proxy response status_code: %v", r.StatusCode)
+			}
 			return nil
 		}
 
