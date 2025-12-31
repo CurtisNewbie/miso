@@ -74,9 +74,7 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 		DisablePProfEndpointRegister()     // handle pprof endpoints manually
 		DisableApidocEndpointRegister()    // do not generate apidoc
 
-		SetDefProp(PropServerPropagateInboundTrace, false)         // disable trace propagation, we are the entry point
-		SetDefProp(PropMetricsEnabled, false)                      // disable metrics api by default
-		SetDefProp("nacos.discovery.enable-deregister-url", false) // disable nacos deregister api by default
+		SetDefProp(PropServerPropagateInboundTrace, false) // disable trace propagation, we are the entry point
 	}
 
 	p := &HttpProxy{
