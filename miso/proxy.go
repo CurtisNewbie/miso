@@ -312,7 +312,12 @@ func (h *HttpProxy) LoadBearerAuthRouteFromProp(rootProp string) []BearerAuthRou
 	})
 }
 
-func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
+type TimeLogUnit struct {
+	Dur  time.Duration
+	Name string
+}
+
+func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool, unit ...TimeLogUnit) {
 	h.AddFilter(func(pc *ProxyContext, next func()) {
 		_, r := pc.Inb.Unwrap()
 
@@ -324,7 +329,13 @@ func (h *HttpProxy) AddReqTimeLogFilter(exclPath func(proxyPath string) bool) {
 		start := time.Now()
 		pc.Rail.Infof("Receive '%v %v' [%v]", r.Method, r.RequestURI, r.RemoteAddr)
 		next()
-		pc.Rail.Infof("Processed '%v %v' [%v]", r.Method, r.RequestURI, time.Since(start))
+		took := time.Since(start)
+		u, ok := slutil.First(unit)
+		if ok {
+			pc.Rail.Infof("Processed '%v %v' [%.4f%v]", r.Method, r.RequestURI, float64(took/u.Dur), u.Name)
+		} else {
+			pc.Rail.Infof("Processed '%v %v' [%v]", r.Method, r.RequestURI, took)
+		}
 	})
 }
 
