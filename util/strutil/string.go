@@ -590,5 +590,9 @@ func ReplaceAll(s string, oldnew ...pair.StrPair) string {
 	if len(oldnew) < 1 {
 		return s
 	}
+	if len(oldnew) == 1 {
+		f := oldnew[0]
+		return strings.ReplaceAll(s, f.Left, f.Right)
+	}
 	return NewReplacer(oldnew...).Replace(s)
 }
