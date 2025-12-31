@@ -577,3 +577,18 @@ func TrimSpaceAnd(s string, extraRunes string) string {
 		return false
 	})
 }
+
+func NewReplacer(oldnew ...pair.StrPair) *strings.Replacer {
+	kw := make([]string, 0, len(oldnew)*2)
+	for _, p := range oldnew {
+		kw = append(kw, p.Left, p.Right)
+	}
+	return strings.NewReplacer(kw...)
+}
+
+func ReplaceAll(s string, oldnew ...pair.StrPair) string {
+	if len(oldnew) < 1 {
+		return s
+	}
+	return NewReplacer(oldnew...).Replace(s)
+}

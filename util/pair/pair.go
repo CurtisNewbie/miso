@@ -8,6 +8,8 @@ type Pair[T any, V any] struct {
 	Right V
 }
 
+type StrPair = Pair[string, string]
+
 func (p Pair[T, V]) MapKV() (T, V) {
 	return p.Left, p.Right
 }
