@@ -9,6 +9,7 @@ import (
 	"net/http/pprof"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/curtisnewbie/miso/util/async"
@@ -72,6 +73,10 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 		DisablePrometheusBootstrap()       // bootstrap metrics and prometheus stuff manually
 		DisablePProfEndpointRegister()     // handle pprof endpoints manually
 		DisableApidocEndpointRegister()    // do not generate apidoc
+
+		SetDefProp(PropServerPropagateInboundTrace, false)         // disable trace propagation, we are the entry point
+		SetDefProp(PropMetricsEnabled, false)                      // disable metrics api by default
+		SetDefProp("nacos.discovery.enable-deregister-url", false) // disable nacos deregister api by default
 	}
 
 	p := &HttpProxy{
@@ -417,10 +422,24 @@ func (h *HttpProxy) AddHealthcheckFilter() {
 	if hcUrl == "" {
 		return
 	}
+
+	healthy := true
+	var prevCheck time.Time
+	prevMu := &sync.Mutex{}
+
 	h.AddPathFilter([]string{hcUrl}, func(pc *ProxyContext, next func()) {
-		// check if it's a healthcheck endpoint (for consul), we don't really return anything, so it's fine to expose it
+		prevMu.Lock()
+		defer prevMu.Unlock()
+
+		// rate limit, once per second
+		if prevCheck.IsZero() || time.Since(prevCheck) > time.Second*1 {
+			healthy = IsHealthcheckPass(*pc.Rail)
+			prevCheck = time.Now()
+		}
+
+		// check if instance is healthy,  we don't really return anything, so it's fine to expose it
 		w, _ := pc.Inb.Unwrap()
-		if IsHealthcheckPass(*pc.Rail) {
+		if healthy {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
