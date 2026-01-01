@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/errs"
 )
 
 func TestRateLimiter(t *testing.T) {

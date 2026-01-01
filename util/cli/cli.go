@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/src"
 	"github.com/curtisnewbie/miso/util/strutil"

@@ -1,6 +1,6 @@
 package miso
 
-import "github.com/curtisnewbie/miso/util/errs"
+import "github.com/curtisnewbie/miso/errs"
 
 var (
 	// Error that represents None or Nil.

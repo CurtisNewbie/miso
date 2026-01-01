@@ -6,7 +6,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/spf13/cast"
 	glua "github.com/yuin/gopher-lua"
 )

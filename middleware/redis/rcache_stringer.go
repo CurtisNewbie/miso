@@ -3,8 +3,8 @@ package redis
 import (
 	"fmt"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/errs"
 )
 
 // Redis Cache implementation.

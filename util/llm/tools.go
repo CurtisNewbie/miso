@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/csv"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 )

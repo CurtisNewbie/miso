@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/cli"
-	"github.com/curtisnewbie/miso/util/errs"
 )
 
 func TestGetOneWithBackoff(t *testing.T) {

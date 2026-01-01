@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 )
 

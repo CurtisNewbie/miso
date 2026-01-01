@@ -6,9 +6,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-
-	"github.com/curtisnewbie/miso/util/slutil"
-	"github.com/curtisnewbie/miso/util/strutil"
 )
 
 var (
@@ -147,7 +144,7 @@ func (e *MisoErr) Error() string {
 }
 
 func (e *MisoErr) HasCode() bool {
-	return !strutil.IsBlankStr(e.code)
+	return e.code != "" && strings.TrimSpace(e.code) != ""
 }
 
 func (e *MisoErr) WithCode(code string) *MisoErr {
@@ -259,13 +256,28 @@ func WrapErrMulti(errs ...error) error {
 	if len(errs) < 1 {
 		return nil
 	}
-	errs = slutil.Filter(errs, func(err error) bool { return err != nil })
+	errs = slfilter(errs, func(err error) bool { return err != nil })
 	if len(errs) < 1 {
 		return nil
 	}
 	me := &MisoErr{msg: "", internalMsg: "", err: errors.Join(errs...), code: ""}
 	me.withStack()
 	return me
+}
+
+func slfilter[T any](l []T, f func(T) (incl bool)) []T {
+	cp := l[:0]
+	for i := range l {
+		x := l[i]
+		if f(x) {
+			cp = append(cp, x)
+		}
+	}
+	for i := len(cp); i < len(l); i++ {
+		var tv T
+		l[i] = tv
+	}
+	return cp
 }
 
 // Equivalent to ErrUnknownError.Wrapf(..).

@@ -72,6 +72,7 @@ The following are projects that use miso (mine tho), see also [moon-monorepo](ht
   - The default lowercase camel case json field naming strategy has been removed. Package `encoding/json` is moved to `util/json`.
   - A lot of deprecated code is removed. All code directly under `util` pkg is moved to dedicated pkgs, e.g., `util/strutil`, `util/snowflake`, `util/randutil`, `util/iputil`, `util/pool`, `util/profile`, `util/constraint`, `util/atom`, `util/must`, `util/cmputil` and more.
   - There are a lot of breaking changes, make sure you follow the guide and use the automatic migration tool.
+- Since v0.4.9, pkg `util/errs` was renamed to `errs` pkg.
 
 > [!WARNING]
 >

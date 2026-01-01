@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 )
 
 type RespUnwrapper interface {

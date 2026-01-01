@@ -3,8 +3,8 @@ package svc
 import (
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/middleware/redis"
-	"github.com/curtisnewbie/miso/util/errs"
 )
 
 type redisSvcLock struct {

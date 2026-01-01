@@ -17,10 +17,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/cli"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/osutil"

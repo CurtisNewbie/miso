@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/redis/go-redis/v9"
 )

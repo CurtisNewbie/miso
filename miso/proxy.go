@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/gin-gonic/gin"

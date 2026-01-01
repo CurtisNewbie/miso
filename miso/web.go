@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/exp/trace"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/pair"

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bsm/redislock"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/errs"
 )
 
 type Runnable func() error

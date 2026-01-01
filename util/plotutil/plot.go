@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 	"golang.org/x/image/font/opentype"

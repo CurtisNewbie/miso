@@ -4,7 +4,7 @@ import (
 	"encoding/csv"
 	"io"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/idutil"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/pool"

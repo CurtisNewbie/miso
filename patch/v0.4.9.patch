@@ -1,0 +1,7 @@
+@@
+var x identifier
+@@
+-import "github.com/curtisnewbie/miso/util/errs"
++import "github.com/curtisnewbie/miso/errs"
+
+errs.x

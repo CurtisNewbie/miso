@@ -8,7 +8,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 )
 
 // Hash Set.

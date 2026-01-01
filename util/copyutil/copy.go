@@ -1,7 +1,7 @@
 package copyutil
 
 import (
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/utillog"
 	"github.com/jinzhu/copier"
 )

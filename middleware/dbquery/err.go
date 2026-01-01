@@ -1,6 +1,6 @@
 package dbquery
 
-import "github.com/curtisnewbie/miso/util/errs"
+import "github.com/curtisnewbie/miso/errs"
 
 const (
 	ErrCodeRecordNotFound = "RECORD_NOT_FOUND"

@@ -1,7 +1,7 @@
 package expr
 
 import (
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/lru"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"

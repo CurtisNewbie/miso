@@ -1,8 +1,8 @@
 package excel
 
 import (
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/spf13/cast"
 	"github.com/xuri/excelize/v2"

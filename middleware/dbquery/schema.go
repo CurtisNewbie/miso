@@ -3,8 +3,8 @@ package dbquery
 import (
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/errs"
 	"gorm.io/gorm"
 )
 

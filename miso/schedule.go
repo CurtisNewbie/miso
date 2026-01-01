@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/go-co-op/gocron"
 	"github.com/robfig/cron"

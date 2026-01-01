@@ -13,10 +13,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/cli"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/curtisnewbie/miso/util/flags"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/slutil"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/async"
-	"github.com/curtisnewbie/miso/util/errs"
 	"github.com/go-redis/redis_rate/v10"
 )
 

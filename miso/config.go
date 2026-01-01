@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/iputil"
 	"github.com/curtisnewbie/miso/util/osutil"

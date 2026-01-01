@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/curtisnewbie/miso/util/errs"
+	"github.com/curtisnewbie/miso/errs"
 )
 
 func TestNewSpan(t *testing.T) {
