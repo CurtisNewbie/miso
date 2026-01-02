@@ -1,6 +1,6 @@
 package opt
 
-import "github.com/curtisnewbie/miso/util/rfutil"
+import "reflect"
 
 type Opt[T any] struct {
 	v     T
@@ -26,8 +26,16 @@ func Nil[T any]() Opt[T] {
 }
 
 func New[T any](v T) Opt[T] {
+	isNil := false
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+		if reflect.ValueOf(v).IsNil() {
+			isNil = true
+		}
+	}
+
 	return Opt[T]{
-		isNil: rfutil.IsAnyNil(v),
+		isNil: isNil,
 		v:     v,
 	}
 }
