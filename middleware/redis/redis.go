@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/json"
+	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -88,7 +91,9 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 		p.MaxConnPoolSize = async.CalcPoolSize(10, 64, -1)
 	}
 
-	rail.Infof("Connecting to redis '%v:%v', database: %v, pool_size: %v", p.Address, p.Port, p.Db, p.MaxConnPoolSize)
+	rail.Infof("Connecting to redis '%v:%v', database: %v, pool_size: %v, min_idle_conns: %v", p.Address, p.Port, p.Db,
+		p.MaxConnPoolSize, p.MinIdleConns)
+
 	var rdb *redis.Client = redis.NewClient(&redis.Options{
 		Addr:         fmt.Sprintf("%s:%s", p.Address, p.Port),
 		Password:     p.Password,
@@ -100,6 +105,12 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 	cmd := rdb.Ping(rail.Context())
 	if cmd.Err() != nil {
 		return nil, errs.Wrapf(cmd.Err(), "ping redis failed")
+	}
+
+	if miso.GetPropBool(PropRedisWithTimingHook) {
+		threshold := miso.GetPropDuration(PropRedisSlowLogThreshold)
+		rdb.AddHook(timingHook{threshold: threshold})
+		rail.Infof("Added TimingHook for Redis Client, threshold: %v", threshold)
 	}
 
 	rail.Info("Redis connection initialized")
@@ -242,5 +253,38 @@ func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
 func NewTopic[T any](topic string) *rtopic[T] {
 	return &rtopic[T]{
 		topic: topic,
+	}
+}
+
+type timingHook struct {
+	threshold time.Duration
+}
+
+func (t timingHook) DialHook(next redis.DialHook) redis.DialHook {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return next(ctx, network, addr)
+	}
+}
+
+func (t timingHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		start := time.Now()
+		defer func() {
+			took := time.Since(start)
+			if took > t.threshold && !strutil.EqualAnyStr(cmd.Name(), "blpop", "blmpop", "blmove", "brpop", "brpoplpush") {
+				miso.NewRail(ctx).Warnf("Slow Redis command, %v, took: %v", cmd.String(), took)
+			} else if miso.IsDebugLevel() {
+				miso.NewRail(ctx).Debugf("Redis command, %v, took: %v", cmd.String(), took)
+			} else if !miso.IsProdMode() && cmd.Name() != "ping" {
+				miso.NewRail(ctx).Infof("Redis command, %v, took: %v", cmd.String(), took)
+			}
+		}()
+		return next(ctx, cmd)
+	}
+}
+
+func (t timingHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		return next(ctx, cmds)
 	}
 }
