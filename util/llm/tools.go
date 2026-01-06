@@ -23,7 +23,7 @@ func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string 
 }
 
 // Extract content in <tag>...</tag>.
-func MustTagExtractor(tag string) func(answer string) (original string, extracted string) {
+func MustTagExtractor(tag string) tagContentExtractor {
 	t, err := TagExtractor(tag)
 	if err != nil {
 		panic(err)
@@ -31,18 +31,27 @@ func MustTagExtractor(tag string) func(answer string) (original string, extracte
 	return t
 }
 
-// Extract content in <tag>...</tag>.
-func TagExtractor(tag string) (func(answer string) (original string, extracted string), error) {
+type tagContentExtractor func(answer string) (original string, extracted string)
+
+func (t tagContentExtractor) Content(answer string) string {
+	_, v := t(answer)
+	return v
+}
+
+// Extract content in <tag>${content}</tag>.
+//
+// The content between the tags must not include xml closing tags, e.g., </xxx>.
+func TagExtractor(tag string) (tagContentExtractor, error) {
 	finalPat, err := regexp.Compile(`(?s)<` + tag + `>(.*)<\/` + tag + `>`)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
-	halfPat, err := regexp.Compile(`(?s)<` + tag + `>(.*)`)
+	partialPat, err := regexp.Compile(`<` + tag + `>([^<]*(?:<[^/][^<]*)*)`)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
 	return func(answer string) (original string, extracted string) {
-		return answer, parseTag(finalPat, halfPat, answer)
+		return answer, parseTag(finalPat, partialPat, answer)
 	}, nil
 }
 
