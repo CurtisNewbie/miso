@@ -23,8 +23,12 @@ const (
 	// misoconfig-prop: database | 0
 	PropRedisDatabase = "redis.database"
 
-	// misoconfig-prop: max connection pool size (default to `10 * runtime.GOMAXPROCS` or `64` whichever is greater). | 0
+	// misoconfig-prop: max connection pool size | `10 * runtime.GOMAXPROCS` or `64` whichever is greater
+	// misoconfig-doc-only
 	PropRedisMaxPoolSize = "redis.max-pool-size"
+
+	// misoconfig-prop: minimum idle connection counts | 4
+	PropRedisMinIdleConns = "redis.min-idle-conns"
 )
 
 // misoconfig-default-start
@@ -33,7 +37,7 @@ func init() {
 	miso.SetDefProp(PropRedisAddress, "localhost")
 	miso.SetDefProp(PropRedisPort, 6379)
 	miso.SetDefProp(PropRedisDatabase, 0)
-	miso.SetDefProp(PropRedisMaxPoolSize, 0)
+	miso.SetDefProp(PropRedisMinIdleConns, 4)
 }
 
 // misoconfig-default-end

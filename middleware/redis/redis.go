@@ -65,6 +65,7 @@ func (m *redisModule) initFromProp(rail miso.Rail) (*redis.Client, error) {
 			Password:        miso.GetPropStr(PropRedisPassword),
 			Db:              miso.GetPropInt(PropRedisDatabase),
 			MaxConnPoolSize: miso.GetPropInt(PropRedisMaxPoolSize),
+			MinIdleConns:    miso.GetPropInt(PropRedisMinIdleConns),
 		})
 }
 
@@ -89,10 +90,11 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 
 	rail.Infof("Connecting to redis '%v:%v', database: %v, pool_size: %v", p.Address, p.Port, p.Db, p.MaxConnPoolSize)
 	var rdb *redis.Client = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", p.Address, p.Port),
-		Password: p.Password,
-		DB:       p.Db,
-		PoolSize: p.MaxConnPoolSize,
+		Addr:         fmt.Sprintf("%s:%s", p.Address, p.Port),
+		Password:     p.Password,
+		DB:           p.Db,
+		PoolSize:     p.MaxConnPoolSize,
+		MinIdleConns: p.MinIdleConns,
 	})
 
 	cmd := rdb.Ping(rail.Context())
@@ -151,6 +153,7 @@ type RedisConnParam struct {
 	Password        string
 	Db              int
 	MaxConnPoolSize int
+	MinIdleConns    int
 }
 
 /*

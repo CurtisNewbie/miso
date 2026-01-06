@@ -196,15 +196,16 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Redis Configuration
 
-| property            | description                                                                                   | default value |
-| ------------------- | --------------------------------------------------------------------------------------------- | ------------- |
-| redis.enabled       | enable Redis client                                                                           | false         |
-| redis.address       | Redis server host                                                                             | localhost     |
-| redis.port          | Redis server port                                                                             | 6379          |
-| redis.username      | username                                                                                      |               |
-| redis.password      | password                                                                                      |               |
-| redis.database      | database                                                                                      | 0             |
-| redis.max-pool-size | max connection pool size (default to `10 * runtime.GOMAXPROCS` or `64` whichever is greater). | 0             |
+| property             | description                    | default value                                          |
+| -------------------- | ------------------------------ | ------------------------------------------------------ |
+| redis.enabled        | enable Redis client            | false                                                  |
+| redis.address        | Redis server host              | localhost                                              |
+| redis.port           | Redis server port              | 6379                                                   |
+| redis.username       | username                       |                                                        |
+| redis.password       | password                       |                                                        |
+| redis.database       | database                       | 0                                                      |
+| redis.max-pool-size  | max connection pool size       | `10 * runtime.GOMAXPROCS` or `64` whichever is greater |
+| redis.min-idle-conns | minimum idle connection counts | 4                                                      |
 
 ## SQLite Configuration
 
