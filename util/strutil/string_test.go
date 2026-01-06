@@ -349,3 +349,23 @@ func TestTrimStrSlice(t *testing.T) {
 func TestSplitStr(t *testing.T) {
 	t.Logf("%#v", SplitStr("1 ,2 , 3", ","))
 }
+
+func TestUnquoteStr(t *testing.T) {
+	tab := [][]string{
+		{"abc", "abc"},
+		{"abc d", "abc d"},
+		{"'abc d", "'abc d"},
+		{"'abc d'", "abc d"},
+		{"\"abc d'", "\"abc d'"},
+		{"\"abc d", "\"abc d"},
+		{"\"abc d\"", "abc d"},
+	}
+	for _, v := range tab {
+		act := UnquoteStr(v[0])
+		exp := v[1]
+		if act != exp {
+			t.Fatalf("%v != %v", act, exp)
+		}
+		t.Logf("%v -> %v", v[0], act)
+	}
+}

@@ -437,7 +437,8 @@ func UnquoteStr(s string) string {
 	if len(ru) < 2 {
 		return s
 	}
-	if ru[0] == '"' && ru[len(ru)-1] == '"' {
+	r1 := ru[0]
+	if (r1 == '"' || r1 == '\'') && ru[len(ru)-1] == r1 {
 		return string(ru[1 : len(ru)-1])
 	}
 	return s
