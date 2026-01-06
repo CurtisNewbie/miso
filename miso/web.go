@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -267,11 +268,26 @@ func registerServerRoutes(rail Rail, engine *gin.Engine) error {
 
 	logRoutes := GetPropBool(PropServerLogRoutes)
 	if IsDebugLevel() || logRoutes {
-		for _, r := range engine.Routes() {
+		routes := engine.Routes()
+		sort.SliceStable(routes, func(i, j int) bool {
+			ri := routes[i]
+			rj := routes[j]
+			if ri.Path < rj.Path {
+				return true
+			}
+			if ri.Path == rj.Path {
+				if ri.Method < rj.Method {
+					return true
+				}
+				return false
+			}
+			return false
+		})
+		for _, r := range routes {
 			if logRoutes {
-				rail.Infof("%-6s %s", r.Method, r.Path)
+				rail.Infof("%-7s %s", r.Method, r.Path)
 			} else {
-				rail.Debugf("%-6s %s", r.Method, r.Path)
+				rail.Debugf("%-7s %s", r.Method, r.Path)
 			}
 		}
 	}
