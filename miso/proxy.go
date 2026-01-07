@@ -186,6 +186,17 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 	h.filters = append(h.filters, f)
 }
 
+func (h *HttpProxy) AddIPBlacklistFilter(matchBlacklist func(ip string) bool) {
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		if matchBlacklist(pc.Inb.r.RemoteAddr) {
+			pc.Rail.Warnf("Matched IP blacklist, returning fake 200, request rejected")
+			pc.Inb.Status(http.StatusOK) // fake 200 :D
+			return
+		}
+		next()
+	})
+}
+
 func (h *HttpProxy) AddPathFilter(pathPatterns []string, f ProxyFilter) {
 	h.AddFilter(func(pc *ProxyContext, next func()) {
 		if ok := strutil.MatchPathAny(pathPatterns, pc.ProxyPath); ok {
