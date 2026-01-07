@@ -986,8 +986,9 @@ func (i *Inbound) WriteJsonStatus(v any, httpStatus int) {
 func (i *Inbound) LogRequest() {
 	rail := i.Rail()
 	_, r := i.Unwrap()
-	rail.Infof("Receive '%v %v' request from %v", r.Method, r.RequestURI, r.RemoteAddr)
-	rail.Infof("Content-Length: %v", r.ContentLength)
+	sb := strutil.SLPinter{}
+	sb.Printlnf("Receive '%v %v' request from %v", r.Method, r.RequestURI, r.RemoteAddr)
+	sb.Printlnf("Content-Length: %v", r.ContentLength)
 
 	var bodystr string
 	if r.Body != nil {
@@ -999,18 +1000,17 @@ func (i *Inbound) LogRequest() {
 		}
 		bodystr = string(body)
 	}
-	rail.Info("Headers: ")
+	sb.Printlnf("Headers: ")
 	for k, v := range r.Header {
 		if strutil.ContainsAnyStrIgnoreCase(k, "authorization", "cookie", "token") {
 			v = []string{"***"}
 		}
-		rail.Infof("  %-30s: %v", k, v)
+		sb.Printlnf("  %-30s: %v", k, v)
 	}
 
-	rail.Info("")
-	rail.Info("Body: ")
-	rail.Infof("  %s", bodystr)
-	rail.Info("")
+	sb.Printlnf("\nBody: ")
+	sb.Printlnf("  %s\n", bodystr)
+	rail.Info(sb.String())
 }
 
 func setNoRouteHandler(f func(ctx *gin.Context, rail Rail)) {
