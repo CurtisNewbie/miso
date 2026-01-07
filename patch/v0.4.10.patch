@@ -1,0 +1,15 @@
+@@
+var x identifier
+@@
+-import "github.com/curtisnewbie/miso/util/lua"
++import "github.com/curtisnewbie/miso/middleware/lua"
+
+lua.x
+
+@@
+var x identifier
+@@
+-import "github.com/curtisnewbie/miso/util/expr"
++import "github.com/curtisnewbie/miso/middleware/expr"
+
+expr.x
