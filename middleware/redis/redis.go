@@ -19,6 +19,10 @@ const (
 	Nil = redis.Nil
 )
 
+var (
+	blockingCmdNames = []string{"blpop", "blmpop", "blmove", "brpop", "brpoplpush", "xread", "xreadgroup", "subscribe", "psubscribe"}
+)
+
 func init() {
 	miso.RegisterBootstrapCallback(miso.ComponentBootstrap{
 		Name:      "Bootstrap Redis",
@@ -218,7 +222,7 @@ func (t timingHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 		start := time.Now()
 		defer func() {
 			took := time.Since(start)
-			if t.threshold > 0 && took > t.threshold && !strutil.EqualAnyStr(cmd.Name(), "blpop", "blmpop", "blmove", "brpop", "brpoplpush") {
+			if t.threshold > 0 && took > t.threshold && !strutil.EqualAnyStrSlice(cmd.Name(), blockingCmdNames) {
 				miso.NewRail(ctx).Warnf("Slow Redis command, %v, took: %v", cmd.String(), took)
 			} else if miso.IsTraceLevel() {
 				miso.NewRail(ctx).Tracef("Redis command, %v, took: %v", cmd.String(), took)

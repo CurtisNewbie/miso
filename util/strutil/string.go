@@ -453,6 +453,15 @@ func EqualAnyStr(s string, canditates ...string) bool {
 	return false
 }
 
+func EqualAnyStrSlice(s string, canditates []string) bool {
+	for _, c := range canditates {
+		if s == c {
+			return true
+		}
+	}
+	return false
+}
+
 func EqualAnyFold(s string, canditates ...string) bool {
 	for _, c := range canditates {
 		if strings.EqualFold(s, c) {
