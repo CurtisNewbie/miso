@@ -248,7 +248,7 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 					body = "\n" + string(buf)
 				}
 			}
-			rail.Warnf("Request forbidden (resource access not authorized): %v %v, body: %v", r.Method, r.RequestURI, body)
+			rail.Warnf("Request forbidden (resource access not authorized): %v %v (%v), body: %v", r.Method, r.RequestURI, r.RemoteAddr, body)
 			w.WriteHeader(invalidStatusCode)
 			return
 		}
