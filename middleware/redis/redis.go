@@ -217,8 +217,8 @@ func (t timingHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 			took := time.Since(start)
 			if took > t.threshold && !strutil.EqualAnyStr(cmd.Name(), "blpop", "blmpop", "blmove", "brpop", "brpoplpush") {
 				miso.NewRail(ctx).Warnf("Slow Redis command, %v, took: %v", cmd.String(), took)
-			} else if miso.IsDebugLevel() {
-				miso.NewRail(ctx).Debugf("Redis command, %v, took: %v", cmd.String(), took)
+			} else if miso.IsTraceLevel() {
+				miso.NewRail(ctx).Tracef("Redis command, %v, took: %v", cmd.String(), took)
 			}
 		}()
 		return next(ctx, cmd)
