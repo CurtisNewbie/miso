@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -26,4 +27,14 @@ func SHA256Hex(b []byte) string {
 
 func SHA256HexStr(b string) string {
 	return SHA256Hex(strutil.UnsafeStr2Byt(b))
+}
+
+func SHA512Hex(b []byte) string {
+	c := sha512.New()
+	c.Write(b)
+	return hex.EncodeToString(c.Sum(nil))
+}
+
+func SHA512HexStr(b string) string {
+	return SHA512Hex(strutil.UnsafeStr2Byt(b))
 }
