@@ -211,6 +211,9 @@ func (r *RCache[T]) DelAll(rail miso.Rail) error {
 	})
 }
 
+// ScanAll is O(N) where N is the total number of keys in the redis database.
+//
+// Use with caution.
 func (r *RCache[T]) ScanAll(rail miso.Rail, f func(keys []string) error) error {
 	prefix := r.cacheKeyPrefix()
 	return r.doScanAll(rail, func(keys []string) error {

@@ -219,8 +219,6 @@ func (t timingHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 				miso.NewRail(ctx).Warnf("Slow Redis command, %v, took: %v", cmd.String(), took)
 			} else if miso.IsDebugLevel() {
 				miso.NewRail(ctx).Debugf("Redis command, %v, took: %v", cmd.String(), took)
-			} else if !miso.IsProdMode() && cmd.Name() != "ping" {
-				miso.NewRail(ctx).Infof("Redis command, %v, took: %v", cmd.String(), took)
 			}
 		}()
 		return next(ctx, cmd)

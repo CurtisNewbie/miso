@@ -33,7 +33,7 @@ const (
 	// misoconfig-prop: add timing hook to redis client | true
 	PropRedisWithTimingHook = "redis.with-timing-hook"
 
-	// misoconfig-prop: slow command log threshold (for timing hook) | 10ms
+	// misoconfig-prop: slow command log threshold (for timing hook) | 30ms
 	PropRedisSlowLogThreshold = "redis.slow-log-threshold"
 )
 
@@ -45,7 +45,7 @@ func init() {
 	miso.SetDefProp(PropRedisDatabase, 0)
 	miso.SetDefProp(PropRedisMinIdleConns, 4)
 	miso.SetDefProp(PropRedisWithTimingHook, true)
-	miso.SetDefProp(PropRedisSlowLogThreshold, "10ms")
+	miso.SetDefProp(PropRedisSlowLogThreshold, "30ms")
 }
 
 // misoconfig-default-end
