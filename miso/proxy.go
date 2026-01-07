@@ -188,8 +188,13 @@ func (h *HttpProxy) AddFilter(f ProxyFilter) {
 
 func (h *HttpProxy) AddIPBlacklistFilter(matchBlacklist func(ip string) bool) {
 	h.AddFilter(func(pc *ProxyContext, next func()) {
-		if matchBlacklist(pc.Inb.r.RemoteAddr) {
-			pc.Rail.Warnf("Matched IP blacklist, returning fake 200, request rejected")
+		ip := pc.Inb.r.RemoteAddr
+		if ipseg := strings.SplitN(ip, ":", 2); len(ipseg) > 1 {
+			ip = ipseg[0]
+		}
+
+		if matchBlacklist(ip) {
+			pc.Rail.Warnf("Matched IP blacklist (%v), returning fake 200, request rejected", ip)
 			pc.Inb.Status(http.StatusOK) // fake 200 :D
 			return
 		}
