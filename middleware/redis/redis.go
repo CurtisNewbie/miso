@@ -107,9 +107,12 @@ func (m *redisModule) init(rail miso.Rail, p RedisConnParam) (*redis.Client, err
 	}
 
 	if miso.GetPropBool(PropRedisWithTimingHook) {
-		threshold := miso.GetPropDuration(PropRedisSlowLogThreshold)
+		var threshold time.Duration
+		if miso.IsProdMode() {
+			threshold = miso.GetPropDuration(PropRedisSlowLogThreshold)
+			rail.Infof("Added TimingHook for Redis Client, threshold: %v", threshold)
+		}
 		rdb.AddHook(timingHook{threshold: threshold})
-		rail.Infof("Added TimingHook for Redis Client, threshold: %v", threshold)
 	}
 
 	rail.Info("Redis connection initialized")
@@ -215,7 +218,7 @@ func (t timingHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 		start := time.Now()
 		defer func() {
 			took := time.Since(start)
-			if took > t.threshold && !strutil.EqualAnyStr(cmd.Name(), "blpop", "blmpop", "blmove", "brpop", "brpoplpush") {
+			if t.threshold > 0 && took > t.threshold && !strutil.EqualAnyStr(cmd.Name(), "blpop", "blmpop", "blmove", "brpop", "brpoplpush") {
 				miso.NewRail(ctx).Warnf("Slow Redis command, %v, took: %v", cmd.String(), took)
 			} else if miso.IsTraceLevel() {
 				miso.NewRail(ctx).Tracef("Redis command, %v, took: %v", cmd.String(), took)
