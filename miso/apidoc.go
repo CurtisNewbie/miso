@@ -1671,7 +1671,7 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 
 	for _, q := range d.QueryParams {
 		cname := strutil.CamelCase(q.Name)
-		sl.Printf(".\n%sAddQueryParams(\"%s\", %s)", strutil.Tabs(2), cname, cname)
+		sl.Printf(".\n%sAddQuery(\"%s\", %s)", strutil.Tabs(2), cname, cname)
 	}
 
 	for _, h := range d.Headers {
