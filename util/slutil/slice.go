@@ -108,6 +108,22 @@ func CopyFilter[T any](l []T, f func(T) (incl bool)) []T {
 }
 
 // Map slice item to another.
+func MapToErr[T any, V any](ts []T, mapFunc func(t T) (V, error)) ([]V, error) {
+	if len(ts) < 1 {
+		return []V{}, nil
+	}
+	vs := make([]V, 0, len(ts))
+	for i := range ts {
+		mp, err := mapFunc(ts[i])
+		if err != nil {
+			return nil, err
+		}
+		vs = append(vs, mp)
+	}
+	return vs, nil
+}
+
+// Map slice item to another.
 func MapTo[T any, V any](ts []T, mapFunc func(t T) V) []V {
 	if len(ts) < 1 {
 		return []V{}
