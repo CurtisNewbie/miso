@@ -226,6 +226,41 @@ func (tr *TResponse) Json(ptr any) error {
 	return nil
 }
 
+// Read response as JSON object.
+//
+// Response is always closed automatically.
+//
+// If response body is somehow empty, *miso.NoneErr is returned.
+//
+// If ptr impl [TResponseJsonCheckErr], [TResponseJsonCheckErr.CheckErr] is called after json unmarshalling.
+func (tr *TResponse) JsonStr(ptr any) (_originalJson string, _err error) {
+	defer tr.Close()
+	if tr.Err != nil {
+		return "", tr.Err
+	}
+	if tr.Resp.Body == nil {
+		return "", NoneErr
+	}
+
+	body, e := io.ReadAll(tr.Resp.Body)
+	if e != nil {
+		return "", WrapErr(e)
+	}
+	tr.logRespBody(body)
+
+	if e = json.ParseJson(body, ptr); e != nil {
+		return "", errs.Wrapf(e, "failed to unmarshal json from response, body: %v", strutil.UnsafeByt2Str(body))
+	}
+
+	if v, ok := ptr.(TResponseJsonCheckErr); ok && v != nil {
+		if err := v.CheckErr(); err != nil {
+			return "", WrapErr(err)
+		}
+	}
+
+	return string(body), nil
+}
+
 func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options ...func(c *SseReadConfig)) error {
 	defer tr.Close()
 	if tr.Err != nil {
