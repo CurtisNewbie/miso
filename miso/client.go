@@ -746,19 +746,25 @@ func (t *Client) SetHeaders(k string, v ...string) *Client {
 }
 
 // Append Query Parameters, subsequent method calls doesn't override previously appended parameters
-func (t *Client) AddQueryParams(k string, v ...string) *Client {
+func (t *Client) AddQuery(k string, v ...any) *Client {
 	for i := range v {
 		t.addQueryParam(k, v[i])
 	}
 	return t
 }
 
+// Deprecated: Since v0.4.10, use [Client.AddQuery] instead.
+func (t *Client) AddQueryParams(k string, v ...any) *Client {
+	return t.AddQuery(k, v...)
+}
+
 // Append Query Parameters, subsequent method calls doesn't override previously appended parameters
-func (t *Client) addQueryParam(k string, v string) *Client {
+func (t *Client) addQueryParam(k string, v any) *Client {
+	vs := cast.ToString(v)
 	if t.QueryParam[k] == nil {
-		t.QueryParam[k] = []string{v}
+		t.QueryParam[k] = []string{vs}
 	} else {
-		t.QueryParam[k] = append(t.QueryParam[k], v)
+		t.QueryParam[k] = append(t.QueryParam[k], vs)
 	}
 	return t
 }
