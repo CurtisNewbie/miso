@@ -191,6 +191,16 @@ func (s *Set[T]) InSet(b Set[T]) iter.Seq[T] {
 	}
 }
 
+func (s *Set[T]) All() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for k := range s.Keys {
+			if !yield(k) {
+				return
+			}
+		}
+	}
+}
+
 // Create new Set
 func NewSet[T comparable](keys ...T) Set[T] {
 	s := Set[T]{Keys: map[T]struct{}{}}
