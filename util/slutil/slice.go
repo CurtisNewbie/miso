@@ -333,3 +333,41 @@ func Flatten[T any](t [][]T) []T {
 	}
 	return flat
 }
+
+func Sort[T ltsType](l []T) {
+	sort.SliceStable(l, func(i, j int) bool {
+		return SortLess(l, func(t T) T { return t }, i, j)
+	})
+}
+
+func SortRev[T ltsType](l []T) {
+	sort.SliceStable(l, func(i, j int) bool {
+		return SortLessRev(l, func(t T) T { return t }, i, j)
+	})
+}
+
+func SortMapped[T any, V ltsType](l []T, f func(T) V) {
+	sort.SliceStable(l, func(i, j int) bool {
+		return SortLess(l, f, i, j)
+	})
+}
+
+func SortMappedRev[T any, V ltsType](l []T, f func(T) V) {
+	sort.SliceStable(l, func(i, j int) bool {
+		return SortLessRev(l, f, i, j)
+	})
+}
+
+type ltsType interface {
+	string | int | int8 | int16 | int32 | int64 | float32 | float64
+}
+
+func SortLess[T any, V ltsType](l []T, f func(T) V, i, j int) bool {
+	li := f(l[i])
+	lj := f(l[j])
+	return li < lj
+}
+
+func SortLessRev[T any, V ltsType](l []T, f func(T) V, i, j int) bool {
+	return !SortLess(l, f, i, j)
+}
