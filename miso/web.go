@@ -886,6 +886,9 @@ func (i *Inbound) WriteSSE(name string, message any) {
 		message = tmp // we serialize json ourselves for consistency
 	}
 	i.engine.SSEvent(name, message)
+	if fl, ok := i.w.(http.Flusher); ok {
+		fl.Flush()
+	}
 }
 
 func (i *Inbound) Rail() Rail {
