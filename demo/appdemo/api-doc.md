@@ -34,9 +34,13 @@
 - [TRACE /api/v30](#trace-apiv30)
 - [POST /api/v31](#post-apiv31)
 - [POST /api/v32](#post-apiv32)
+- [POST /api/v33](#post-apiv33)
 - [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 - [GET /debug/trace/recorder/run](#get-debugtracerecorderrun)
+- [GET /debug/trace/recorder/snapshot](#get-debugtracerecordersnapshot)
 - [GET /debug/trace/recorder/stop](#get-debugtracerecorderstop)
+- [POST /debug/task/disable-workers](#post-debugtaskdisable-workers)
+- [POST /debug/task/enable-workers](#post-debugtaskenable-workers)
 
 ## POST /api/v1
 
@@ -53,9 +57,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v1' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"requestId":""}
-  EOF
+    -d '{"requestId":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -66,7 +68,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api1(rail miso.Rail, req PostReq) (PostRes, error) {
@@ -150,9 +152,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v2' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"requestId":""}
-  EOF
+    -d '{"requestId":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -163,7 +163,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api2(rail miso.Rail, req *PostReq) (PostRes, error) {
@@ -247,9 +247,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v3' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"requestId":""}
-  EOF
+    -d '{"requestId":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -260,7 +258,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api3(rail miso.Rail, req *PostReq) (*PostRes, error) {
@@ -345,9 +343,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v4' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -363,7 +359,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api4(rail miso.Rail, req ApiReq) (*PostRes, error) {
@@ -453,9 +449,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v5' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -471,7 +465,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api5(rail miso.Rail, req *ApiReq) (*PostRes, error) {
@@ -561,9 +555,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v6' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -579,7 +571,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api6(rail miso.Rail, req *ApiReq) (*PostRes, error) {
@@ -667,9 +659,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v7' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -767,9 +757,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v8' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -866,9 +854,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v9' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -966,9 +952,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v10' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1068,9 +1052,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v11' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1086,7 +1068,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api11(rail miso.Rail, req *ApiReq) ([]PostRes, error) {
@@ -1177,9 +1159,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v12' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    [ {"extras":[],"name":""} ]
-  EOF
+    -d '[ {"extras":[],"name":""} ]'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1195,7 +1175,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api12(rail miso.Rail, req []ApiReq) ([]PostRes, error) {
@@ -1283,9 +1263,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v13' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    [ {"extras":[],"name":""} ]
-  EOF
+    -d '[ {"extras":[],"name":""} ]'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1379,9 +1357,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v14' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1397,7 +1373,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api14(rail miso.Rail, req ApiReq) ([]PostRes, error) {
@@ -1489,7 +1465,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api15(rail miso.Rail) ([]PostRes, error) {
@@ -1577,7 +1553,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api16(rail miso.Rail) (miso.PageRes[PostRes], error) {
@@ -1661,7 +1637,7 @@
   	</ng-container>
   	<ng-container matColumnDef="time">
   		<th mat-header-cell *matHeaderCellDef> Time </th>
-  		<td mat-cell *matCellDef="let u"> {{u.time}} </td>
+  		<td mat-cell *matCellDef="let u"> {{u.time | date: 'yyyy-MM-dd HH:mm:ss'}} </td>
   	</ng-container>
   	<tr mat-row *matRowDef="let row; columns: ['resultId','time'];"></tr>
   	<tr mat-header-row *matHeaderRowDef="['resultId','time']"></tr>
@@ -1686,7 +1662,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api17(rail miso.Rail) ([]PostRes, error) {
@@ -1896,9 +1872,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v20' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -1985,9 +1959,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v21' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2067,9 +2039,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v22' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"extras":[],"name":""}
-  EOF
+    -d '{"extras":[],"name":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2085,7 +2055,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api22(rail miso.Rail, req ApiReq) (PostRes, error) {
@@ -2161,7 +2131,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api23(rail miso.Rail) (PostRes, error) {
@@ -2276,7 +2246,7 @@
   ```go
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   func api25(rail miso.Rail) (PostRes, error) {
@@ -2723,6 +2693,109 @@
   }
   ```
 
+## POST /api/v33
+
+- JSON Request:
+    - "time": (int64) 
+    - "amt": (string) 
+    - "set": ([]string) 
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+    - "data": (*api.PostRes2) response data
+      - "time": (int64) 
+      - "amt": (string) 
+      - "set": ([]string) 
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/api/v33' \
+    -H 'Content-Type: application/json' \
+    -d '{"amt":"","set":null,"time":0}'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  type ApiReq2 struct {
+  	Time atom.Time `json:"time"`
+  	Amt money.Amt `json:"amt"`
+  	Set hash.Set[string] `json:"set"`
+  }
+
+  type PostRes2 struct {
+  	Time atom.Time `json:"time"`
+  	Amt money.Amt `json:"amt"`
+  	Set hash.Set[string] `json:"set"`
+  }
+
+  func api33(rail miso.Rail, req *ApiReq2) (*PostRes2, error) {
+  	var res miso.GnResp[*PostRes2]
+  	err := miso.NewDynClient(rail, "/api/v33", "demo").
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return nil, err
+  	}
+  	dat, err := res.Res()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return dat, err
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface ApiReq2 {
+    time?: number;
+    amt?: string;
+    set?: string[];
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+    data?: PostRes2;
+  }
+
+  export interface PostRes2 {
+    time?: number;
+    amt?: string;
+    set?: string[];
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  33() {
+    let req: ApiReq2 | null = null;
+    this.http.post<any>(`/demo/api/v33`, req)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+          let dat: PostRes2 = resp.data;
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
 ## POST /open/api/demo/grouped/open/api/demo/post
 
 - Description: Post demo stuff
@@ -2742,9 +2815,7 @@
   curl -X POST 'http://localhost:8080/open/api/demo/grouped/open/api/demo/post' \
     -H 'Authorization: ' \
     -H 'Content-Type: application/json' \
-    -d @- << EOF
-    {"requestId":""}
-  EOF
+    -d '{"requestId":""}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
@@ -2755,7 +2826,7 @@
 
   type PostRes struct {
   	ResultId string `json:"resultId"`
-  	Time util.Time `json:"time"`
+  	Time atom.Time `json:"time"`
   }
 
   // Post demo stuff
@@ -2848,7 +2919,7 @@
   func SendRequest(rail miso.Rail, duration string) error {
   	var res miso.GnResp[any]
   	err := miso.NewDynClient(rail, "/debug/trace/recorder/run", "demo").
-  		AddQueryParams("duration", duration).
+  		AddQuery("duration", duration).
   		Get().
   		Json(&res)
   	if err != nil {
@@ -2876,6 +2947,57 @@
   sendRequest() {
     let duration: any | null = null;
     this.http.get<any>(`/demo/debug/trace/recorder/run?duration=${duration}`)
+      .subscribe({
+        next: () => {
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## GET /debug/trace/recorder/snapshot
+
+- Description: FlightRecorder take snapshot. Recorded result is written to trace.out.
+- cURL:
+  ```sh
+  curl -X GET 'http://localhost:8080/debug/trace/recorder/snapshot'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  // FlightRecorder take snapshot. Recorded result is written to trace.out.
+  func SendRequest(rail miso.Rail) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynClient(rail, "/debug/trace/recorder/snapshot", "demo").
+  		Get().
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendRequest() {
+    this.http.get<any>(`/demo/debug/trace/recorder/snapshot`)
       .subscribe({
         next: () => {
         },
@@ -2938,6 +3060,168 @@
   }
   ```
 
+## POST /debug/task/disable-workers
+
+- Description: Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
+- JSON Request:
+    - "tasks": ([]string) 
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/debug/task/disable-workers' \
+    -H 'Content-Type: application/json' \
+    -d '{"tasks":[]}'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  type disableTaskWorkerReq struct {
+  	Tasks []string `json:"tasks"`
+  }
+
+  // Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
+  func SendDisableTaskWorkerReq(rail miso.Rail, req disableTaskWorkerReq) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynClient(rail, "/debug/task/disable-workers", "demo").
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface disableTaskWorkerReq {
+    tasks?: string[];
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendDisableTaskWorkerReq() {
+    let req: disableTaskWorkerReq | null = null;
+    this.http.post<any>(`/demo/debug/task/disable-workers`, req)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
+## POST /debug/task/enable-workers
+
+- Description: Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
+- JSON Request:
+    - "tasks": ([]string) 
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/debug/task/enable-workers' \
+    -H 'Content-Type: application/json' \
+    -d '{"tasks":[]}'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  type disableTaskWorkerReq struct {
+  	Tasks []string `json:"tasks"`
+  }
+
+  // Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
+  func SendDisableTaskWorkerReq(rail miso.Rail, req disableTaskWorkerReq) error {
+  	var res miso.GnResp[any]
+  	err := miso.NewDynClient(rail, "/debug/task/enable-workers", "demo").
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  		return err
+  	}
+  	err = res.Err()
+  	if err != nil {
+  		rail.Errorf("Request failed, %v", err)
+  	}
+  	return err
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface disableTaskWorkerReq {
+    tasks?: string[];
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendDisableTaskWorkerReq() {
+    let req: disableTaskWorkerReq | null = null;
+    this.http.post<any>(`/demo/debug/task/enable-workers`, req)
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
+
 # Event Pipelines
 
 - DemoPipeline
@@ -2946,4 +3230,4 @@
   - RabbitMQ Exchange: `demo:pipeline`
   - RabbitMQ RoutingKey: `#`
   - Event Payload: (array)
-    - "value": (string) 
+    - "Value": (string) 

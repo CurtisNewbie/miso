@@ -1,25 +1,27 @@
 package api
 
 import (
+	"github.com/curtisnewbie/miso/middleware/money"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/atom"
+	"github.com/curtisnewbie/miso/util/hash"
 	"gorm.io/gorm"
 )
 
 type PostReq struct {
-	RequestId string
+	RequestId string `json:"requestId"`
 }
 type PostRes struct {
-	ResultId string
-	Time     atom.Time
+	ResultId string    `json:"resultId"`
+	Time     atom.Time `json:"time"`
 }
 
 type ApiReq struct {
-	Name   string
-	Extras []ApiReqExtra
+	Name   string        `json:"name"`
+	Extras []ApiReqExtra `json:"extras"`
 }
 type ApiReqExtra struct {
-	Special bool
+	Special bool `json:"special"`
 }
 type ApiRes struct{}
 
@@ -186,4 +188,20 @@ func api31(inb *miso.Inbound, req EmptyReq) error {
 // misoapi-http: POST /api/v32
 func api32(inb *miso.Inbound, req EmptyReq) (map[string]int32, error) {
 	return nil, nil
+}
+
+type ApiReq2 struct {
+	Time atom.Time        `json:"time"`
+	Amt  money.Amt        `json:"amt"`
+	Set  hash.Set[string] `json:"set"`
+}
+type PostRes2 struct {
+	Time atom.Time        `json:"time"`
+	Amt  money.Amt        `json:"amt"`
+	Set  hash.Set[string] `json:"set"`
+}
+
+// misoapi-http: POST /api/v33
+func api33(inb *miso.Inbound, req *ApiReq2) (*PostRes2, error) {
+	return &PostRes2{}, nil
 }

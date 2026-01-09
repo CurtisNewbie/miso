@@ -32,9 +32,14 @@ var (
 	golangMapGenericRexp = regexp.MustCompile(`map\[(.*)\](.*)`)
 
 	ApiDocTypeAlias = map[string]string{
-		"Time":       "int64",
-		"*atom.Time": "int64",
-		"atom.Time":  "int64",
+		"Time":         "int64",
+		"Set":          "[]any",
+		"Set[string]":  "[]string",
+		"Set[int]":     "[]int",
+		"Set[int32]":   "[]int32",
+		"Set[int64]":   "[]int64",
+		"Set[float32]": "[]float32",
+		"Set[float64]": "[]float64",
 	}
 	apiDocEndpointDisabled = false
 
@@ -160,6 +165,10 @@ func (f FieldDesc) guessTsPrimiTypeName() string {
 
 func (f FieldDesc) isMisoPkg() bool {
 	return strings.HasPrefix(f.TypePkg, "github.com/curtisnewbie/miso")
+}
+
+func (f FieldDesc) typePkg() string {
+	return f.TypePkg
 }
 
 func (f FieldDesc) isBuiltInType() bool {
@@ -352,6 +361,10 @@ func (f JsonPayloadDesc) isBuiltInType() bool {
 
 func (j JsonPayloadDesc) isMisoPkg() bool {
 	return strings.HasPrefix(j.TypePkg, "github.com/curtisnewbie/miso")
+}
+
+func (j JsonPayloadDesc) typePkg() string {
+	return j.TypePkg
 }
 
 func pureGoTypeName(n string) string {
@@ -1137,16 +1150,19 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, str
 				if f.OriginTypeName == "any" {
 					return "", ""
 				}
-				inclTypeDef := inclGoTypeDef(f, seenTypeDef)
-				sb, writef := strutil.NewIndWritef("\t")
-				ptn := f.pureGoTypeName()
-				if inclTypeDef {
-					writef(0, "type %s struct {", ptn)
-				}
 				deferred := make([]func(), 0, 10)
-				genJsonGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
-				if inclTypeDef {
-					writef(0, "}")
+				sb, writef := strutil.NewIndWritef("\t")
+
+				ptn := f.pureGoTypeName()
+				inclTypeDef, stopDesc := inclGoTypeDef(f, seenTypeDef)
+				if !stopDesc {
+					if inclTypeDef {
+						writef(0, "type %s struct {", ptn)
+					}
+					genJsonGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
+					if inclTypeDef {
+						writef(0, "}")
+					}
 				}
 				for i := 0; i < len(deferred); i++ {
 					deferred[i]()
@@ -1156,16 +1172,20 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, str
 		}
 		return "", ""
 	} else {
-		sb, writef := strutil.NewIndWritef("\t")
-		inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
-		ptn := rv.pureGoTypeName()
-		if inclTypeDef {
-			writef(0, "type %s struct {", ptn)
-		}
 		deferred := make([]func(), 0, 10)
-		genJsonGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
-		if inclTypeDef {
-			writef(0, "}")
+		sb, writef := strutil.NewIndWritef("\t")
+		ptn := rv.pureGoTypeName()
+
+		inclTypeDef, stopDesc := inclGoTypeDef(rv, seenTypeDef)
+		if !stopDesc {
+			if inclTypeDef {
+				writef(0, "type %s struct {", ptn)
+			}
+
+			genJsonGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
+			if inclTypeDef {
+				writef(0, "}")
+			}
 		}
 
 		for i := 0; i < len(deferred); i++ {
@@ -1178,32 +1198,36 @@ func genJsonGoDef(rv JsonPayloadDesc, seenTypeDef hash.Set[string]) (string, str
 func inclGoTypeDef(f interface {
 	isBuiltInType() bool
 	isMisoPkg() bool
+	typePkg() string
 	pureGoTypeName() string
-}, seenTypeDef hash.Set[string]) bool {
+}, seenTypeDef hash.Set[string]) (incl bool, stopDescending bool) {
 
 	if f.isBuiltInType() { // e.g., map
-		return false
+		return false, false
 	}
 
 	pgn := f.pureGoTypeName()
+	Debugf("inclGoTypeDef: %v, %v\n", pgn, f.typePkg())
 
 	// TODO: temp fix
 	switch pgn {
 	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
 		"float32", "float64", "string", "bool", "byte":
-		return false
+		return false, false
 	}
 
 	if !seenTypeDef.Add(pgn) {
-		return false
+		return false, false
 	}
 	if f.isMisoPkg() {
 		switch pgn {
-		case "PageRes", "Paging", "User":
-			return false
+		case "PageRes", "Paging":
+			return false, false
+		case "User", "Set", "SyncSet", "Amt":
+			return false, true
 		}
 	}
-	return true
+	return true, false
 }
 
 func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef hash.Set[string]) {
@@ -1221,17 +1245,21 @@ func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func()
 				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 			}
 
-			*deferred = append(*deferred, func() {
-				inclTypeDef := inclGoTypeDef(f, seenTypeDef)
-				if inclTypeDef {
-					writef(0, "")
-					writef(0, "type %s struct {", f.pureGoTypeName())
-				}
-				genJsonGoDefRecur(1, writef, deferred, f.Fields, inclTypeDef, seenTypeDef)
-				if inclTypeDef {
-					writef(0, "}")
-				}
-			})
+			// TODO: this is ugly
+			inclType, stopDesc := inclGoTypeDef(f, seenTypeDef)
+			if !stopDesc {
+				*deferred = append(*deferred, func() {
+					if inclType {
+						writef(0, "")
+						writef(0, "type %s struct {", f.pureGoTypeName())
+					}
+					genJsonGoDefRecur(1, writef, deferred, f.Fields, inclType, seenTypeDef)
+					if inclType {
+						writef(0, "}")
+					}
+				})
+			}
+
 		} else {
 			if !writeField {
 				continue
@@ -1260,7 +1288,7 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 	seenType.Add(tsTypeName)
 	writef(0, "export interface %s {", tsTypeName)
 	deferred := make([]func(), 0, 10)
-	genJsonTsDefRecur(1, writef, &deferred, payload.Fields, seenType)
+	genJsonTsDefRecur(1, writef, true, &deferred, payload.Fields, seenType)
 	writef(0, "}")
 
 	for i := 0; i < len(deferred); i++ {
@@ -1270,27 +1298,46 @@ func genJsonTsDef(payload JsonPayloadDesc) string {
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
+func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
 	for i := range descs {
 		d := descs[i]
 
 		if len(d.Fields) > 0 {
 			tsTypeName := guessTsItfName(d.TypeNameAlias)
-			n := tsTypeName
-			if strings.HasPrefix(d.TypeNameAlias, "[]") {
-				n += "[]"
+			if writeField {
+				n := tsTypeName
+				if strings.HasPrefix(d.TypeNameAlias, "[]") {
+					n += "[]"
+				}
+				writef(indentc, "%s?: %s;", d.JsonName, n)
 			}
-			writef(indentc, "%s?: %s;", d.JsonName, n)
 
-			if seenType.Add(tsTypeName) {
+			// TODO: this is ugly
+			inclType := seenType.Add(tsTypeName)
+			stopDesc := false
+			if inclType {
+				if d.isMisoPkg() {
+					switch d.pureGoTypeName() {
+					// case "PageRes", "Paging":
+					// 	inclType = false
+					case "User", "Set", "SyncSet", "Amt":
+						inclType = false
+						stopDesc = true
+					}
+				}
+			}
+			if !stopDesc {
 				*deferred = append(*deferred, func() {
-					writef(0, "export interface %s {", tsTypeName)
-					genJsonTsDefRecur(1, writef, deferred, d.Fields, seenType)
-					writef(0, "}")
+					if inclType {
+						writef(0, "export interface %s {", tsTypeName)
+					}
+					genJsonTsDefRecur(1, writef, inclType, deferred, d.Fields, seenType)
+					if inclType {
+						writef(0, "}")
+					}
 				})
 			}
-
-		} else {
+		} else if writeField {
 			var tname string = d.guessTsPrimiTypeName()
 			var comment string = d.comment(true)
 			if comment != "" {

@@ -29,6 +29,7 @@ var (
 func init() {
 	miso.ApiDocTypeAlias["*money.Amt"] = "*string"
 	miso.ApiDocTypeAlias["money.Amt"] = "string"
+	miso.ApiDocTypeAlias["Amt"] = "string"
 }
 
 // Create new signed arbitrary-precision decimal with appropriate scale for the currency and HalfEven rounding.
