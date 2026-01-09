@@ -33,13 +33,23 @@ var (
 
 	ApiDocTypeAlias = map[string]string{
 		"Time":         "int64",
-		"Set":          "[]any",
+		"*atom.Time":   "int64",
+		"Set[any]":     "[]any",
 		"Set[string]":  "[]string",
 		"Set[int]":     "[]int",
 		"Set[int32]":   "[]int32",
 		"Set[int64]":   "[]int64",
 		"Set[float32]": "[]float32",
 		"Set[float64]": "[]float64",
+		"*Time":        "int64",
+		// TODO: fix following pkg name prefix
+		"*hash.Set[any]":     "[]any",
+		"*hash.Set[string]":  "[]string",
+		"*hash.Set[int]":     "[]int",
+		"*hash.Set[int32]":   "[]int32",
+		"*hash.Set[int64]":   "[]int64",
+		"*hash.Set[float32]": "[]float32",
+		"*hash.Set[float64]": "[]float64",
 	}
 	apiDocEndpointDisabled = false
 
@@ -848,6 +858,9 @@ func buildJsonDesc(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDesc {
 			JsonTag:               jsonTag,
 			Fields:                []FieldDesc{},
 		}
+		if jd.TypePkg == "" && f.Type.Kind() == reflect.Pointer {
+			jd.TypePkg = f.Type.Elem().PkgPath()
+		}
 
 		if typeAliasMatched {
 			jds = append(jds, jd)
@@ -1217,8 +1230,15 @@ func inclGoTypeDef(f interface {
 	}
 
 	if !seenTypeDef.Add(pgn) {
+		if f.isMisoPkg() {
+			switch pgn {
+			case "User", "Set", "SyncSet", "Amt":
+				return false, true
+			}
+		}
 		return false, false
 	}
+
 	if f.isMisoPkg() {
 		switch pgn {
 		case "PageRes", "Paging":

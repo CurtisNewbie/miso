@@ -196,9 +196,11 @@ type ApiReq2 struct {
 	Set  hash.Set[string] `json:"set"`
 }
 type PostRes2 struct {
-	Time atom.Time        `json:"time"`
-	Amt  money.Amt        `json:"amt"`
-	Set  hash.Set[string] `json:"set"`
+	Time   atom.Time         `json:"time"`
+	Amt    money.Amt         `json:"amt"`
+	AmtPtr *money.Amt        `json:"amtPtr"`
+	Set    hash.Set[string]  `json:"set"`
+	SetPtr *hash.Set[string] `json:"setPtr"`
 }
 
 // misoapi-http: POST /api/v33

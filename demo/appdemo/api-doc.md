@@ -2706,7 +2706,9 @@
     - "data": (*api.PostRes2) response data
       - "time": (int64) 
       - "amt": (string) 
+      - "amtPtr": (*string) 
       - "set": ([]string) 
+      - "setPtr": ([]string) 
 - cURL:
   ```sh
   curl -X POST 'http://localhost:8080/api/v33' \
@@ -2725,7 +2727,9 @@
   type PostRes2 struct {
   	Time atom.Time `json:"time"`
   	Amt money.Amt `json:"amt"`
+  	AmtPtr *money.Amt `json:"amtPtr"`
   	Set hash.Set[string] `json:"set"`
+  	SetPtr *hash.Set[string] `json:"setPtr"`
   }
 
   func api33(rail miso.Rail, req *ApiReq2) (*PostRes2, error) {
@@ -2763,7 +2767,9 @@
   export interface PostRes2 {
     time?: number;
     amt?: string;
+    amtPtr?: string;
     set?: string[];
+    setPtr?: string[];
   }
   ```
 
