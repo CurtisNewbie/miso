@@ -56,7 +56,7 @@ func init() {
 			}
 			return nil
 		},
-		Order: 5, // default is 0, runs after all default bootstrap components
+		Order: BootstrapOrderL4 + 5, // default is 0, runs after all default bootstrap components
 	})
 }
 
