@@ -606,6 +606,7 @@ func (s *NacosServerList) IsSubscribed(rail miso.Rail, service string) bool {
 }
 
 func (s *NacosServerList) Subscribe(rail miso.Rail, service string) error {
+	_ = s.ListServers(rail, service)
 	return nil
 }
 
