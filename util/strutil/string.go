@@ -606,3 +606,11 @@ func ReplaceAll(s string, oldnew ...pair.StrPair) string {
 	}
 	return NewReplacer(oldnew...).Replace(s)
 }
+
+func CutAfterLast(s string, sep string) string {
+	i := strings.LastIndex(s, sep)
+	if i < 0 {
+		return ""
+	}
+	return s[i+1:]
+}

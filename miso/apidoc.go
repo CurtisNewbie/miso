@@ -174,11 +174,11 @@ type FieldDesc struct {
 	DescTag               string      // `desc` tag value
 	JsonTag               string      // `json` tag value
 	ValidTag              string      // `validate` tag value
+	isSliceOrArray        bool        // slice or array []T
+	isSliceOfPointer      bool        // slice of pointer []*T
+	isMap                 bool        // map
+	isPointer             bool        // *T
 	Fields                []FieldDesc // struct fields
-	isSliceOrArray        bool
-	isSliceOfPointer      bool
-	isMap                 bool
-	isPointer             bool
 }
 
 func (f FieldDesc) TypeInfo() (pkg string, name string) {
@@ -189,7 +189,18 @@ func FuzzMatchType(v interface {
 	TypeInfo() (pkg string, typeName string)
 }, against ApiDocFuzzType) bool {
 	p, n := v.TypeInfo()
-	return p == against.PkgPath && strings.Contains(n, against.TypeName)
+	return strings.Contains(p, against.PkgPath) && strings.Contains(n, against.TypeName)
+}
+
+func FuzzMatchTypes(v interface {
+	TypeInfo() (pkg string, typeName string)
+}, against []ApiDocFuzzType) bool {
+	for _, a := range against {
+		if FuzzMatchType(v, a) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f FieldDesc) guessTsPrimiTypeName() string {
@@ -291,7 +302,8 @@ func (f FieldDesc) comment(withSlash bool) string {
 }
 
 func (f FieldDesc) goFieldTypeName() string {
-	if f.isMisoPkg() && !f.isMisoDemoPkg() {
+	// is miso pkg types, type def not included or type has alias name (e.g., atom.Time)
+	if f.isMisoPkg() && !f.isMisoDemoPkg() && (FuzzMatchTypes(f, ApiDocNotInclTypes) || f.TypeNameAlias != f.OriginTypeName) {
 		return f.OriginTypeNameWithPkg
 	}
 	ptn := f.pureGoTypeName()
@@ -537,6 +549,10 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		// json stuff
 		if d.JsonRequestValue != nil {
 			d.JsonRequestDesc = BuildTypeDesc(*d.JsonRequestValue)
+			if IsDebugLevel() {
+				Debugf("JsonRequestDesc:\n%v", json.TrySWriteJson(d.JsonRequestDesc))
+			}
+
 			d.JsonReqTsDef = genTsDef(d.JsonRequestDesc)
 			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genGoDef(d.JsonRequestDesc, hash.NewSet[string]())
 
@@ -553,6 +569,10 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 
 		if d.JsonResponseValue != nil {
 			d.JsonResponseDesc = BuildTypeDesc(*d.JsonResponseValue)
+			if IsDebugLevel() {
+				Debugf("JsonResponseDesc:\n%v", json.TrySWriteJson(d.JsonResponseDesc))
+			}
+
 			d.JsonRespTsDef = genTsDef(d.JsonResponseDesc)
 			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genGoDef(d.JsonResponseDesc, hash.NewSet[string]())
 
@@ -923,6 +943,7 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 				if ele := fv.Elem(); ele.IsValid() {
 					et := ele.Type()
 					jd.OriginTypeName = rfutil.TypeName(et)
+					jd.OriginTypeNameWithPkg = et.String()
 					jd.TypePkg = rfutil.TypePkgPath(et)
 					jd.TypeNameAlias, _ = translateTypeAlias(jd.OriginTypeName)
 					switch et.Kind() {
@@ -1203,12 +1224,7 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 func skipParsingType(f interface {
 	TypeInfo() (pkg string, typeName string)
 }) bool {
-	for _, v := range ApiDocSkipParsingTypes {
-		if FuzzMatchType(f, v) {
-			return true
-		}
-	}
-	return false
+	return FuzzMatchTypes(f, ApiDocSkipParsingTypes)
 }
 
 // generate one or more golang type definitions.
@@ -1290,10 +1306,8 @@ func inclGoTypeDef(f interface {
 		return false
 	}
 
-	for _, v := range ApiDocNotInclTypes {
-		if FuzzMatchType(f, v) {
-			return false
-		}
+	if FuzzMatchTypes(f, ApiDocNotInclTypes) {
+		return false
 	}
 
 	if !seenTypeDef.Add(pgn) {
@@ -1390,14 +1404,9 @@ func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, d
 			inclType := seenType.Add(tsTypeName)
 			stopDesc := false
 			if inclType {
-				if d.isMisoPkg() {
-					switch d.pureGoTypeName() {
-					// case "PageRes", "Paging":
-					// 	inclType = false
-					case "User", "Set", "SyncSet", "Amt":
-						inclType = false
-						stopDesc = true
-					}
+				if skipParsingType(d) {
+					inclType = false
+					stopDesc = true
 				}
 			}
 			if !stopDesc {
@@ -1695,14 +1704,13 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
 	sl := new(strutil.SLPinter)
 
-	buildTypeName := func(s string, isPtr bool, isSlice bool) string {
-		// TODO: pointer of slice?
-		if isSlice {
-			if isPtr {
-				s = "[]*" + s
-			} else {
-				s = "[]" + s
-			}
+	buildTypeName := func(s string, isPtrSlice, isSlicePtr, isSlice, isPtr bool) string {
+		if isPtrSlice {
+			s = "*[]" + s
+		} else if isSlicePtr || (isSlice && isPtr) {
+			s = "[]*" + s
+		} else if isSlice {
+			s = "[]" + s
 		} else if isPtr {
 			s = "*" + s
 		}
@@ -1717,8 +1725,9 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 		if respGeneName == "Resp" {
 			for _, n := range d.JsonResponseDesc.Fields {
 				if n.GoFieldName == "Data" {
+
 					respGeneName = guessGoTypName(n.TypeNameAlias)
-					if n.isMisoPkg() && !strings.Contains(n.TypePkg, "demo") { // hack for demo
+					if n.isMisoPkg() && !n.isMisoDemoPkg() {
 						respGeneName = "miso." + respGeneName
 						if v := guessGoGenericEleName(n.TypeNameAlias); v != "" {
 							respGeneName += "[" + v + "]"
@@ -1730,16 +1739,18 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 						isPtr = true
 						isSlice = true
 					}
-					respGeneName = buildTypeName(respGeneName, isPtr, isSlice)
+					respGeneName = buildTypeName(respGeneName, false, false, isSlice, isPtr)
 					break
 				}
 			}
 			if respGeneName == "Resp" {
 				respGeneName = "any"
-				respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtr, d.JsonResponseDesc.IsSlice)
+				respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtrSlice,
+					d.JsonResponseDesc.IsSlicePtr, d.JsonResponseDesc.IsSlice, d.JsonResponseDesc.IsPtr)
 			}
 		} else {
-			respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtr, d.JsonResponseDesc.IsSlice)
+			respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtrSlice,
+				d.JsonResponseDesc.IsSlicePtr, d.JsonResponseDesc.IsSlice, d.JsonResponseDesc.IsPtr)
 		}
 	}
 
@@ -1772,7 +1783,9 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 		}
 	}
 	if reqTypeName != "" {
-		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtr, d.JsonRequestDesc.IsSlice)
+		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtrSlice, d.JsonRequestDesc.IsSlicePtr,
+			d.JsonRequestDesc.IsSlice, d.JsonRequestDesc.IsPtr)
+
 		if respGeneName == "any" {
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) error {", mn, reqn, qh)
 		} else {
@@ -1963,7 +1976,7 @@ func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 			Description: v.Desc,
 			Schema: &openapi3.SchemaRef{
 				Value: &openapi3.Schema{
-					Type: &openapi3.Types{"string"}, // TODO
+					Type: &openapi3.Types{"string"},
 				},
 			},
 		})
@@ -1977,7 +1990,7 @@ func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
 			Description: v.Desc,
 			Schema: &openapi3.SchemaRef{
 				Value: &openapi3.Schema{
-					Type: &openapi3.Types{"string"}, // TODO
+					Type: &openapi3.Types{"string"},
 				},
 			},
 		})
