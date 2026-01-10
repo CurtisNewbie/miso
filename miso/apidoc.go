@@ -35,6 +35,18 @@ const (
 var (
 	golangMapGenericRexp = regexp.MustCompile(`map\[(.*)\](.*)`)
 
+	ApiDocSkipParsingTypes = []ApiDocFuzzType{
+		{"github.com/curtisnewbie/miso/middleware/user-vault/common", "User"},
+		{"github.com/curtisnewbie/miso/util/hash", "Set"},
+		{"github.com/curtisnewbie/miso/util/hash", "SyncSet"},
+		{"github.com/curtisnewbie/miso/middleware/money", "Amt"},
+	}
+
+	ApiDocNotInclTypes = []ApiDocFuzzType{
+		{"github.com/curtisnewbie/miso/miso", "PageRes"},
+		{"github.com/curtisnewbie/miso/miso", "Paging"},
+	}
+
 	ApiDocTypeAlias = map[string]string{
 		"Time":         "int64",
 		"*atom.Time":   "int64",
@@ -46,6 +58,7 @@ var (
 		"Set[float32]": "[]float32",
 		"Set[float64]": "[]float64",
 		"*Time":        "int64",
+
 		// TODO: fix following pkg name prefix
 		"*hash.Set[any]":     "[]any",
 		"*hash.Set[string]":  "[]string",
@@ -111,6 +124,11 @@ func init() {
 	})
 }
 
+type ApiDocFuzzType struct {
+	PkgPath  string
+	TypeName string
+}
+
 type GetPipelineDocFunc func() []PipelineDoc
 
 type globalHttpRouteDoc struct {
@@ -161,6 +179,17 @@ type FieldDesc struct {
 	isSliceOfPointer      bool
 	isMap                 bool
 	isPointer             bool
+}
+
+func (f FieldDesc) TypeInfo() (pkg string, name string) {
+	return f.TypePkg, f.OriginTypeName
+}
+
+func FuzzMatchType(v interface {
+	TypeInfo() (pkg string, typeName string)
+}, against ApiDocFuzzType) bool {
+	p, n := v.TypeInfo()
+	return p == against.PkgPath && strings.Contains(n, against.TypeName)
 }
 
 func (f FieldDesc) guessTsPrimiTypeName() string {
@@ -287,6 +316,10 @@ type TypeDesc struct {
 	IsSlice    bool
 	IsSlicePtr bool
 	Fields     []FieldDesc
+}
+
+func (f TypeDesc) TypeInfo() (pkg string, name string) {
+	return f.TypePkg, f.TypeName
 }
 
 func (f TypeDesc) toOpenApiReq(reqName string) *openapi3.SchemaRef {
@@ -1167,6 +1200,17 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 }
 */
 
+func skipParsingType(f interface {
+	TypeInfo() (pkg string, typeName string)
+}) bool {
+	for _, v := range ApiDocSkipParsingTypes {
+		if FuzzMatchType(f, v) {
+			return true
+		}
+	}
+	return false
+}
+
 // generate one or more golang type definitions.
 func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 	if rv.TypeName == "any" {
@@ -1183,8 +1227,9 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 				sb, writef := strutil.NewIndWritef("\t")
 
 				ptn := f.pureGoTypeName()
-				inclTypeDef, stopDesc := inclGoTypeDef(f, seenTypeDef)
-				if !stopDesc {
+
+				if !skipParsingType(f) {
+					inclTypeDef := inclGoTypeDef(f, seenTypeDef)
 					if inclTypeDef {
 						writef(0, "type %s struct {", ptn)
 					}
@@ -1205,8 +1250,8 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 		sb, writef := strutil.NewIndWritef("\t")
 		ptn := rv.pureGoTypeName()
 
-		inclTypeDef, stopDesc := inclGoTypeDef(rv, seenTypeDef)
-		if !stopDesc {
+		if !skipParsingType(rv) {
+			inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
 			if inclTypeDef {
 				writef(0, "type %s struct {", ptn)
 			}
@@ -1225,48 +1270,41 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 }
 
 func inclGoTypeDef(f interface {
+	TypeInfo() (pkg string, typeName string)
 	isBuiltInType() bool
-	isMisoPkg() bool
-	typePkg() string
 	pureGoTypeName() string
-}, seenTypeDef hash.Set[string]) (incl bool, stopDescending bool) {
+}, seenTypeDef hash.Set[string]) bool {
 
 	if f.isBuiltInType() { // e.g., map
-		return false, false
+		return false
 	}
 
 	pgn := f.pureGoTypeName()
-	Debugf("inclGoTypeDef: %v, %v\n", pgn, f.typePkg())
+	p, n := f.TypeInfo()
+	Debugf("inclGoTypeDef: %v, %v, %v\n", pgn, p, n)
 
 	// TODO: temp fix
 	switch pgn {
 	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
 		"float32", "float64", "string", "bool", "byte":
-		return false, false
+		return false
+	}
+
+	for _, v := range ApiDocNotInclTypes {
+		if FuzzMatchType(f, v) {
+			return false
+		}
 	}
 
 	if !seenTypeDef.Add(pgn) {
-		if f.isMisoPkg() {
-			switch pgn {
-			case "User", "Set", "SyncSet", "Amt":
-				return false, true
-			}
-		}
-		return false, false
+		return false
 	}
-
-	if f.isMisoPkg() {
-		switch pgn {
-		case "PageRes", "Paging":
-			return false, false
-		case "User", "Set", "SyncSet", "Amt":
-			return false, true
-		}
-	}
-	return true, false
+	return true
 }
 
-func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool, seenTypeDef hash.Set[string]) {
+func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool,
+	seenTypeDef hash.Set[string]) {
+
 	for _, f := range fields {
 		var jsonTag string
 		if f.JsonTag != "" {
@@ -1282,8 +1320,8 @@ func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func()
 			}
 
 			// TODO: this is ugly
-			inclType, stopDesc := inclGoTypeDef(f, seenTypeDef)
-			if !stopDesc {
+			if !skipParsingType(f) {
+				inclType := inclGoTypeDef(f, seenTypeDef)
 				*deferred = append(*deferred, func() {
 					if inclType {
 						writef(0, "")
