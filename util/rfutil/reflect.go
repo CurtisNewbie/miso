@@ -131,6 +131,15 @@ func TypeName(t reflect.Type) string {
 	}
 }
 
+func TypePkgPath(f reflect.Type) string {
+	switch f.Kind() {
+	case reflect.Pointer, reflect.Slice, reflect.Array:
+		return TypePkgPath(f.Elem())
+	default:
+		return f.PkgPath()
+	}
+}
+
 type WalkTagCallback struct {
 	Tag      string
 	OnWalked func(tagVal string, fieldVal reflect.Value, fieldType reflect.StructField) error
