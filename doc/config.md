@@ -61,6 +61,7 @@ The tables shown below list all configuration that you can tune. You can also re
 | app.name                     | name of the application                                                     |               |
 | app.profile                  | profile name, it's only a flag used to identify which environment we are in |               |
 | app.slow-bootstrap-threshold | warning threshold for slow ComponentBootstrap                               | 1s            |
+| app.stop-on-ready            | stop app once ready, e.g., used to generate API doc.                        | false         |
 | mode.production              | whether production mode is turned on                                        | true          |
 | config.extra.files           | extra config files that should be loaded                                    |               |
 

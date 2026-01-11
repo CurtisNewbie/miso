@@ -102,6 +102,7 @@ var (
 
 var (
 	Debug = flag.Bool("debug", false, "Enable debug log")
+	Run   = flag.Bool("run", false, "Run app after api generated (to generate api doc)")
 	log   = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 )
 
@@ -139,6 +140,20 @@ func main() {
 	}
 	if err := parseFiles(files); err != nil {
 		log.Errorf("parseFiles failed, %v", err)
+	}
+
+	if *Run {
+		for _, f := range files {
+			if f.File.Name() == "main.go" {
+				out, err := cli.Run(nil, "go", []string{"run", "main.go", "app.stop-on-ready=true"})
+				if err != nil {
+					panic(fmt.Sprintf("%v, %s", err, out))
+				} else {
+					println(string(out))
+				}
+				break
+			}
+		}
 	}
 }
 

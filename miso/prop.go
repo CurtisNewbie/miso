@@ -12,6 +12,9 @@ const (
 	// misoconfig-prop: warning threshold for slow ComponentBootstrap | 1s
 	PropAppSlowBoostrapThresohold = "app.slow-bootstrap-threshold"
 
+	// misoconfig-prop: stop app once ready, e.g., used to generate API doc. | false
+	PropAppStopOnReady = "app.stop-on-ready"
+
 	// misoconfig-prop: whether production mode is turned on | true
 	PropProdMode = "mode.production"
 
@@ -289,6 +292,7 @@ func init() {
 	})
 
 	SetDefProp(PropAppSlowBoostrapThresohold, "1s")
+	SetDefProp(PropAppStopOnReady, false)
 	SetDefProp(PropProdMode, true)
 	SetDefProp(PropConsulEnabled, false)
 	SetDefProp(PropConsuleRegisterName, "${app.name}")

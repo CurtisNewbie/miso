@@ -216,6 +216,10 @@ func (a *MisoApp) Bootstrap(args []string) {
 	split = strings.Repeat("-", 52)
 	rail.Infof("\n\n%s %s started (took: %dms) %s\n", split, appName, end-start, split)
 
+	if GetPropBool(PropAppStopOnReady) {
+		go func() { Shutdown() }()
+	}
+
 	// wait for Interrupt or SIGTERM, and shutdown gracefully
 	select {
 	case sig := <-osSigQuit:

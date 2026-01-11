@@ -48,18 +48,22 @@ $ misoapi -h
 
 # misoapi - automatically generate web endpoint in go based on misoapi-* comments
 #
-#   Supported miso version: v0.3.6
+#   Supported miso version: v0.4.10-beta.3
+#
 #
 # Usage of misoapi:
 #   -debug
 #         Enable debug log
+#   -run
+#         Run app after api generated (to generate api doc)
+#
 #
 # For example:
 #
 #   misoapi-http: GET /open/api/doc                                     // http method and url
 #   misoapi-desc: open api endpoint to retrieve documents               // description
-#   misoapi-query-doc: page: curent page index                          // query parameter
-#   misoapi-header-doc: Authorization: bearer authorization token       // header parameter
+#   misoapi-query: page: curent page index                              // query parameter
+#   misoapi-header: Authorization: bearer authorization token           // header parameter
 #   misoapi-scope: PROTECTED                                            // access scope
 #   misoapi-resource: document:read                                     // resource code
 #   misoapi-ngtable                                                     // generate angular table code
