@@ -19,6 +19,13 @@ type Resp struct {
 	Data      interface{} `json:"data" desc:"response data"`
 }
 
+func (r Resp) CheckErr() error {
+	if r.Error {
+		return errs.NewErrfCode(r.ErrorCode, r.Msg)
+	}
+	return nil
+}
+
 // Generic version of Resp
 type GnResp[T any] struct {
 	ErrorCode string `json:"errorCode" desc:"error code"`
@@ -41,6 +48,10 @@ func (r GnResp[T]) Err() error {
 		return errs.NewErrfCode(r.ErrorCode, r.Msg)
 	}
 	return nil
+}
+
+func (r GnResp[T]) CheckErr() error {
+	return r.Err()
 }
 
 func (r GnResp[T]) Res() (T, error) {
