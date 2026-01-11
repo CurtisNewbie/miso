@@ -37,10 +37,10 @@ func main() {
 }
 
 func checkGopatch() error {
-	_, err := cli.Run(nil, "command", []string{"-v", "gopatch"})
+	_, err := cli.Run("command", []string{"-v", "gopatch"})
 	if err != nil {
 		log.Infof("gopatch not found, installing")
-		out, err := cli.Run(nil, "go", []string{"install", "github.com/uber-go/gopatch@latest"})
+		out, err := cli.Run("go", []string{"install", "github.com/uber-go/gopatch@latest"})
 		if err != nil {
 			log.Errorf("Install gopatch failed, output: '%s', %v", out, err)
 			return err
@@ -50,7 +50,7 @@ func checkGopatch() error {
 }
 
 func runGopatch(path string) error {
-	out, err := cli.Run(nil, "gopatch", []string{"-p", path, "./..."})
+	out, err := cli.Run("gopatch", []string{"-p", path, "./..."})
 	if err != nil {
 		log.Errorf("gopatch failed, %s, %v", out, err)
 		return err

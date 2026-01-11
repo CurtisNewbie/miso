@@ -13,3 +13,14 @@ var x identifier
 +import "github.com/curtisnewbie/miso/middleware/expr"
 
 expr.x
+
+@@
+var x identifier
+@@
+
+import "github.com/curtisnewbie/miso/util/cli"
+
+cli.Run(
+-x, ...,
++...,
+)

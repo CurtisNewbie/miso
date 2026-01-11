@@ -54,35 +54,12 @@ func ErrorPrintlnf(pat string, args ...any) {
 	fmt.Printf("[ERROR] "+pat+"\n", args...)
 }
 
-type CliRail interface {
-	Infof(format string, args ...interface{})
-	Context() context.Context
-}
-
-type nilCliRailVal struct {
-}
-
-func (n nilCliRailVal) Infof(format string, args ...interface{}) {
-	Printlnf(format, args...)
-}
-
-func (n nilCliRailVal) Context() context.Context {
-	return context.Background()
-}
-
-func nilCliRail() CliRail {
-	return nilCliRailVal{}
-}
-
 // Run python script.
 //
 // Python executable must be available beforehand.
 //
 // rail can be nil.
-func RunPy(rail CliRail, pyExec string, pyContent string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
-	if rail == nil {
-		rail = nilCliRail()
-	}
+func RunPy(pyExec string, pyContent string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
 
 	// '-' tells python to read from stdin
 	if len(args) < 1 {
@@ -98,7 +75,7 @@ func RunPy(rail CliRail, pyExec string, pyContent string, args []string, opts ..
 	opts = append(opts, func(c *exec.Cmd) {
 		c.Stdin = strings.NewReader(pyContent)
 	})
-	return Run(rail, pyExec, args, opts...)
+	return Run(pyExec, args, opts...)
 }
 
 // Runs command.
@@ -106,7 +83,7 @@ func RunPy(rail CliRail, pyExec string, pyContent string, args []string, opts ..
 // If err is not nil, out may still contain output from the command.
 //
 // rail can be nil.
-func Run(rail CliRail, executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
+func Run(executable string, args []string, opts ...func(*exec.Cmd)) (out []byte, err error) {
 	cmd := exec.CommandContext(context.Background(), executable, args...)
 	for _, op := range opts {
 		op(cmd)

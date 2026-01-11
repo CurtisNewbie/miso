@@ -145,7 +145,7 @@ func main() {
 	if *Run {
 		for _, f := range files {
 			if f.File.Name() == "main.go" {
-				out, err := cli.Run(nil, "go", []string{"run", "main.go", "app.stop-on-ready=true"})
+				out, err := cli.Run("go", []string{"run", "main.go", "app.stop-on-ready=true"})
 				if err != nil {
 					panic(fmt.Sprintf("%v, %s", err, out))
 				} else {
@@ -1242,7 +1242,7 @@ func restoreDstFile(filePath string, modName string, f *dst.File) error {
 
 // check if package is imported in main
 func checkImported(pkgPath string) {
-	out, err := cli.Run(nil, "grep", []string{"-r", pkgPath, "--include", "*.go"})
+	out, err := cli.Run("grep", []string{"-r", pkgPath, "--include", "*.go"})
 	if err != nil {
 		var extErr *exec.ExitError
 		if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
@@ -1259,7 +1259,7 @@ func checkImported(pkgPath string) {
 
 func guessModName() (string, error) {
 	modName := ""
-	out, err := cli.Run(nil, "go", []string{"list", "-m"})
+	out, err := cli.Run("go", []string{"list", "-m"})
 	if err != nil {
 		return "", errs.Wrap(fmt.Errorf("%s, %v", out, err))
 	}
