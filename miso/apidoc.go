@@ -42,6 +42,12 @@ var (
 		{"github.com/curtisnewbie/miso/middleware/money", "Amt"},
 	}
 
+	ApiDocTsSkipParsingTypes = []ApiDocFuzzType{
+		{"github.com/curtisnewbie/miso/util/hash", "Set"},
+		{"github.com/curtisnewbie/miso/util/hash", "SyncSet"},
+		{"github.com/curtisnewbie/miso/middleware/money", "Amt"},
+	}
+
 	ApiDocNotInclTypes = []ApiDocFuzzType{
 		{"github.com/curtisnewbie/miso/miso", "PageRes"},
 		{"github.com/curtisnewbie/miso/miso", "Paging"},
@@ -1249,7 +1255,7 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 					if inclTypeDef {
 						writef(0, "type %s struct {", ptn)
 					}
-					genJsonGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
+					genGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
 					if inclTypeDef {
 						writef(0, "}")
 					}
@@ -1272,7 +1278,7 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 				writef(0, "type %s struct {", ptn)
 			}
 
-			genJsonGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
+			genGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
 			if inclTypeDef {
 				writef(0, "}")
 			}
@@ -1316,7 +1322,7 @@ func inclGoTypeDef(f interface {
 	return true
 }
 
-func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool,
+func genGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool,
 	seenTypeDef hash.Set[string]) {
 
 	for _, f := range fields {
@@ -1333,7 +1339,6 @@ func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func()
 				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 			}
 
-			// TODO: this is ugly
 			if !skipParsingType(f) {
 				inclType := inclGoTypeDef(f, seenTypeDef)
 				*deferred = append(*deferred, func() {
@@ -1341,7 +1346,7 @@ func genJsonGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func()
 						writef(0, "")
 						writef(0, "type %s struct {", f.pureGoTypeName())
 					}
-					genJsonGoDefRecur(1, writef, deferred, f.Fields, inclType, seenTypeDef)
+					genGoDefRecur(1, writef, deferred, f.Fields, inclType, seenTypeDef)
 					if inclType {
 						writef(0, "}")
 					}
@@ -1376,7 +1381,7 @@ func genTsDef(payload TypeDesc) string {
 	seenType.Add(tsTypeName)
 	writef(0, "export interface %s {", tsTypeName)
 	deferred := make([]func(), 0, 10)
-	genJsonTsDefRecur(1, writef, true, &deferred, payload.Fields, seenType)
+	genTsDefRecur(1, writef, true, &deferred, payload.Fields, seenType)
 	writef(0, "}")
 
 	for i := 0; i < len(deferred); i++ {
@@ -1386,7 +1391,7 @@ func genTsDef(payload TypeDesc) string {
 	return sb.String()
 }
 
-func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
+func genTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
 	for i := range descs {
 		d := descs[i]
 
@@ -1404,7 +1409,7 @@ func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, d
 			inclType := seenType.Add(tsTypeName)
 			stopDesc := false
 			if inclType {
-				if skipParsingType(d) {
+				if FuzzMatchTypes(d, ApiDocTsSkipParsingTypes) {
 					inclType = false
 					stopDesc = true
 				}
@@ -1414,7 +1419,7 @@ func genJsonTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, d
 					if inclType {
 						writef(0, "export interface %s {", tsTypeName)
 					}
-					genJsonTsDefRecur(1, writef, inclType, deferred, d.Fields, seenType)
+					genTsDefRecur(1, writef, inclType, deferred, d.Fields, seenType)
 					if inclType {
 						writef(0, "}")
 					}
