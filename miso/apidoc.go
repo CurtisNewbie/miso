@@ -1841,7 +1841,6 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	sl.Printf(".\n%sJson(&res)", strutil.Tabs(2))
 
 	sl.Printlnf("if err != nil {")
-	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
 	if respGeneName == "any" {
 		sl.Printlnf("%sreturn err", strutil.Tabs(1))
 	} else {
@@ -1865,20 +1864,12 @@ func genTClientDemo(d httpRouteDoc) (code string) {
 	sl.Printlnf("}")
 
 	if respGeneName == "any" {
-		sl.Printlnf("err = res.Err()")
-		sl.Printlnf("if err != nil {")
-		sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
-		sl.Printlnf("}")
-		sl.Printlnf("return err")
+		sl.Printlnf("return nil")
 		sl.Printf("\n}")
 		return sl.String()
 	}
 
-	sl.Printlnf("dat, err := res.Res()")
-	sl.Printlnf("if err != nil {")
-	sl.Printlnf("%srail.Errorf(\"Request failed, %%v\", err)", strutil.Tabs(1))
-	sl.Printlnf("}")
-	sl.Printlnf("return dat, err")
+	sl.Printlnf("return res.Data, nil")
 	sl.Printf("\n}")
 	return sl.String()
 }
