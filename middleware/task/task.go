@@ -200,7 +200,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 				}
 
 				// happens when producer out runs workers
-				rail.Infof("'%v' is running by other nodes, abort", t.Name)
+				rail.Debugf("'%v' is running by other nodes, abort", t.Name)
 				return nil
 			}
 			defer lock.Unlock()
