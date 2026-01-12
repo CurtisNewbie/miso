@@ -35,7 +35,7 @@ const (
 var (
 	golangMapGenericRexp = regexp.MustCompile(`map\[(.*)\](.*)`)
 
-	ApiDocSkipParsingTypes = []ApiDocFuzzType{
+	ApiDocGoSkipParsingTypes = []ApiDocFuzzType{
 		{"github.com/curtisnewbie/miso/middleware/user-vault/common", "User"},
 		{"github.com/curtisnewbie/miso/util/hash", "Set"},
 		{"github.com/curtisnewbie/miso/util/hash", "SyncSet"},
@@ -1239,10 +1239,10 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 }
 */
 
-func skipParsingType(f interface {
+func skipGoParsingType(f interface {
 	TypeInfo() (pkg string, typeName string)
 }) bool {
-	return FuzzMatchTypes(f, ApiDocSkipParsingTypes)
+	return FuzzMatchTypes(f, ApiDocGoSkipParsingTypes)
 }
 
 // generate one or more golang type definitions.
@@ -1262,7 +1262,7 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 
 				ptn := f.pureGoTypeName()
 
-				if !skipParsingType(f) {
+				if !skipGoParsingType(f) {
 					inclTypeDef := inclGoTypeDef(f, seenTypeDef)
 					if inclTypeDef {
 						writef(0, "type %s struct {", ptn)
@@ -1284,7 +1284,7 @@ func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
 		sb, writef := strutil.NewIndWritef("\t")
 		ptn := rv.pureGoTypeName()
 
-		if !skipParsingType(rv) {
+		if !skipGoParsingType(rv) {
 			inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
 			if inclTypeDef {
 				writef(0, "type %s struct {", ptn)
@@ -1351,7 +1351,7 @@ func genGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fi
 				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
 			}
 
-			if !skipParsingType(f) {
+			if !skipGoParsingType(f) {
 				inclType := inclGoTypeDef(f, seenTypeDef)
 				*deferred = append(*deferred, func() {
 					if inclType {
