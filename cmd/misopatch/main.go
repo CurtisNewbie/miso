@@ -63,6 +63,10 @@ func applyPatches() error {
 	if err != nil {
 		return err
 	}
+	semver.Sort(entries, func(f fs.DirEntry) string {
+		ver, _, _ := osutil.FileCutDotSuffix(f.Name())
+		return ver
+	})
 
 	currVer, err := cli.PkgVersion("", "github.com/curtisnewbie/miso")
 	if err != nil {

@@ -1,6 +1,7 @@
 package semver
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/spf13/cast"
@@ -40,6 +41,13 @@ func VerAfterEq(ver1 string, ver2 string) bool {
 		}
 	}
 	return true
+}
+
+// Check if ver1 is after ver2.
+func Sort[T any](l []T, f func(T) string) {
+	sort.SliceStable(l, func(i, j int) bool {
+		return VerAfter(f(l[j]), f(l[i]))
+	})
 }
 
 // Check if ver1 is after ver2.
