@@ -1,5 +1,7 @@
 package hash
 
+import "github.com/curtisnewbie/miso/util/pair"
+
 // Copy values of map
 func MapValues[K comparable, V any](m map[K]V) []V {
 	var values []V = []V{}
@@ -19,6 +21,14 @@ func MapKeys[T comparable, V any](m map[T]V) []T {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func MapKV[T comparable, V any](m map[T]V) []pair.Pair[T, V] {
+	l := make([]pair.Pair[T, V], 0, len(m))
+	for k, v := range m {
+		l = append(l, pair.New(k, v))
+	}
+	return l
 }
 
 // Get first from map
