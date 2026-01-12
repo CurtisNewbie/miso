@@ -1187,11 +1187,23 @@ func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
 					v = ""
 				case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
 					"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
-					v = 0
+					if strutil.EqualAnyStr(d.OriginTypeName, "Time", "*Time") {
+						v = 1768184753983 // epochmilli
+					} else {
+						v = 0
+					}
 				case "float32", "float64", "*float32", "*float64":
 					v = 0.0
 				case "bool", "*bool":
 					v = false
+				case "[]bool":
+					v = []bool{}
+				case "[]string":
+					v = []string{}
+				case "[]int", "[]int8", "[]int16", "[]int32", "[]int64":
+					v = []int{}
+				case "[]float32", "[]float64":
+					v = []float32{}
 				}
 				jm[d.JsonName] = v
 			}
