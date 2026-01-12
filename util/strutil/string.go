@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
+	"github.com/curtisnewbie/miso/util/constraint"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
@@ -285,7 +286,7 @@ func NamedSprintfv(pat string, v any) string {
 // e.g.,
 //
 //	NamedSprintfkv("my name is ${name}", "name", "slim shady")
-func NamedSprintfkv(pat string, kv ...any) string {
+func NamedSprintfkv[T constraint.BasicValue](pat string, kv ...T) string {
 	if len(kv) < 1 {
 		return pat
 	}

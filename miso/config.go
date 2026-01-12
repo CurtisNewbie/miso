@@ -593,31 +593,31 @@ func GetPropStr(prop string) string {
 }
 
 func GetPropStrNf(prop string, kv ...string) string {
-	return GetPropStr(strutil.NamedSprintfkv(prop, kv))
+	return GetPropStr(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropDurNf(prop string, kv ...string) time.Duration {
-	return GetPropDuration(strutil.NamedSprintfkv(prop, kv))
+	return GetPropDuration(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropBoolNf(prop string, kv ...string) bool {
-	return GetPropBool(strutil.NamedSprintfkv(prop, kv))
+	return GetPropBool(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropIntNf(prop string, kv ...string) int {
-	return GetPropInt(strutil.NamedSprintfkv(prop, kv))
+	return GetPropInt(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropFloatNf(prop string, kv ...string) float64 {
-	return GetPropFloat(strutil.NamedSprintfkv(prop, kv))
+	return GetPropFloat(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropStrSliceNf(prop string, kv ...string) []string {
-	return GetPropStrSlice(strutil.NamedSprintfkv(prop, kv))
+	return GetPropStrSlice(strutil.NamedSprintfkv(prop, kv...))
 }
 
 func GetPropIntSliceNf(prop string, kv ...string) []int {
-	return GetPropIntSlice(strutil.NamedSprintfkv(prop, kv))
+	return GetPropIntSlice(strutil.NamedSprintfkv(prop, kv...))
 }
 
 // Get prop as any
