@@ -177,9 +177,13 @@ func ParseCurl(curl string) (inst Instruction, ok bool) {
 			if ok {
 				inst.Form[k] = v
 			}
-		case "-d", "--data-raw":
+		case "-d", "--data-raw", "--data":
 			inst.Payload = p.Next()
 		case "curl":
+		case "--url":
+			if tok != "" {
+				inst.Url = unquote(tok)
+			}
 		default:
 			cli.DebugPrintlnf(Debug, "default tok: %v", tok)
 			if tok != "" {
