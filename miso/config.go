@@ -566,7 +566,7 @@ func GetPropStrMap(prop string) map[string]string {
 
 // Get prop as time.Duration
 //
-// Deprecated: Use GetPropDuration() instead.
+// Deprecated: Use [GetPropDuration] instead.
 func GetPropDur(prop string, unit time.Duration) time.Duration {
 	return globalConfig().GetPropDur(prop, unit)
 }
@@ -581,17 +581,43 @@ func GetPropBool(prop string) bool {
 	return globalConfig().GetPropBool(prop)
 }
 
-/*
-Get prop as string
-
-If the value is an argument that can be expanded, the actual value will be resolved if possible.
-
-e.g, for "name" : "${secretName}".
-
-This func will attempt to resolve the actual value for '${secretName}'.
-*/
+// Get prop as string
+//
+// If the value is an argument that can be expanded, the actual value will be resolved if possible.
+//
+// e.g, for "name" : "${secretName}".
+//
+// This func will attempt to resolve the actual value for '${secretName}'.
 func GetPropStr(prop string) string {
 	return globalConfig().GetPropStr(prop)
+}
+
+func GetPropStrNf(prop string, kv ...string) string {
+	return GetPropStr(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropDurNf(prop string, kv ...string) time.Duration {
+	return GetPropDuration(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropBoolNf(prop string, kv ...string) bool {
+	return GetPropBool(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropIntNf(prop string, kv ...string) int {
+	return GetPropInt(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropFloatNf(prop string, kv ...string) float64 {
+	return GetPropFloat(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropStrSliceNf(prop string, kv ...string) []string {
+	return GetPropStrSlice(strutil.NamedSprintfkv(prop, kv))
+}
+
+func GetPropIntSliceNf(prop string, kv ...string) []int {
+	return GetPropIntSlice(strutil.NamedSprintfkv(prop, kv))
 }
 
 // Get prop as any

@@ -369,3 +369,7 @@ func TestUnquoteStr(t *testing.T) {
 		t.Logf("%v -> %v", v[0], act)
 	}
 }
+
+func TestNamedSprintfkv(t *testing.T) {
+	t.Log(NamedSprintfkv("my name is ${name}", "name", "slim shady"))
+}

@@ -281,11 +281,25 @@ func NamedSprintfv(pat string, v any) string {
 }
 
 // Format message using fields in struct, e.g., '${startTime} ${message}'
-func NamedSprintfkv(pat string, pairs ...pair.Pair[string, any]) string {
-	if len(pairs) < 1 {
+//
+// e.g.,
+//
+//	NamedSprintfkv("my name is ${name}", "name", "slim shady")
+func NamedSprintfkv(pat string, kv ...any) string {
+	if len(kv) < 1 {
 		return pat
 	}
-	return NamedSprintf(pat, slutil.MergeMapKV(pairs))
+	p := make([]pair.StrPair, 0, len(kv)/2)
+	var last string
+	for i, v := range kv {
+		vs := cast.ToString(v)
+		if i%2 == 0 {
+			last = vs
+		} else {
+			p = append(p, pair.New(last, vs))
+		}
+	}
+	return NamedSprintf(pat, slutil.MergeMapKVAny(p))
 }
 
 func FmtFloat(f float64, width int, precision int) string {
