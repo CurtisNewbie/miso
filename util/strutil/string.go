@@ -123,6 +123,97 @@ func Tabs(count int) string {
 	return strings.Repeat("\t", count)
 }
 
+type builder struct {
+	*strings.Builder
+
+	lineSuffix string
+	linePrefix string
+
+	indentc int
+	indents string
+}
+
+func NewBuilder() *builder {
+	return &builder{
+		Builder: &strings.Builder{},
+		indentc: 0,
+		indents: "",
+	}
+}
+
+func (b *builder) buildIndent() string {
+	return strings.Repeat(b.indents, b.indentc)
+}
+
+func (b *builder) Printf(st string, args ...any) {
+	b.Builder.WriteString(b.buildIndent() + fmt.Sprintf(st, args...))
+}
+
+func (b *builder) Println(st string) {
+	inds := b.buildIndent()
+	if b.Builder.Len() > 0 {
+		b.Builder.WriteString(b.lineSuffix)
+		b.Builder.WriteString(inds)
+		b.Builder.WriteString("\n")
+	}
+	b.Builder.WriteString(b.linePrefix)
+	b.Builder.WriteString(inds)
+	b.Builder.WriteString(st)
+}
+
+func (b *builder) Printlnf(st string, args ...any) {
+	inds := b.buildIndent()
+	if b.Builder.Len() > 0 {
+		b.Builder.WriteString(b.lineSuffix)
+		b.Builder.WriteString(inds)
+		b.Builder.WriteString("\n")
+	}
+	b.Builder.WriteString(b.linePrefix)
+	b.Builder.WriteString(inds)
+	b.Builder.WriteString(fmt.Sprintf(st, args...))
+}
+
+func (b *builder) StepIn(f func(b *builder)) {
+	b.indentc += 1
+	f(b)
+	b.indentc -= 1
+}
+
+func (b *builder) WithLinePrefix(p string) {
+	b.linePrefix = p
+}
+
+func (b *builder) WithLineSuffix(p string) {
+	b.lineSuffix = p
+}
+
+func (b *builder) WithIndentStr(ind string) {
+	b.indents = ind
+}
+
+func (b *builder) WithIndentCnt(ind int) {
+	if ind < 0 {
+		ind = 0
+	}
+	b.indentc = ind
+}
+
+func (b *builder) WithIndent(s string, c int) {
+	b.WithIndentStr(s)
+	b.WithIndentCnt(c)
+}
+
+func (b *builder) IncrIndent() {
+	b.indentc += 1
+}
+
+func (b *builder) DecrIndent() {
+	if b.indentc < 1 {
+		return
+	}
+	b.indentc -= 1
+}
+
 type SLPinter struct {
 	*strings.Builder
 	LineSuffix string
