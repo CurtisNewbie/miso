@@ -303,6 +303,9 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	if s == "" {
 		return nil
 	}
+	if s == "null" {
+		return nil
+	}
 	millisec, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		s = strutil.UnquoteStr(s)
