@@ -722,6 +722,11 @@ func IsProdMode() bool {
 	return globalConfig().IsProdMode()
 }
 
+// Check whether we are running in env bootstrapped by [PrepareTestEnv].
+func InTestEnv() bool {
+	return GetPropBool(PropAppTestEnv)
+}
+
 // Resolve '${someArg}' style variables.
 func ResolveArg(arg string) string {
 	return globalConfig().ResolveArg(arg)
