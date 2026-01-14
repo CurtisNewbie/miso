@@ -303,7 +303,7 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	if s == "" {
 		return nil
 	}
-	if s == "null" {
+	if s == "null" { // when atom.Time field is not a pointer but the json value is null
 		return nil
 	}
 	millisec, err := strconv.ParseInt(s, 10, 64)
