@@ -89,6 +89,21 @@ func FilterIdx[T any](l []T, f func(int, T) (incl bool)) []T {
 	return cp
 }
 
+func CopyFilterUpdate[T any](l []T, filterUpdate func(T) (t T, incl bool)) []T {
+	ln := len(l)
+	if ln > 10 {
+		ln = ln / 2 // 50%?
+	}
+	cp := make([]T, 0, ln)
+	for i := range l {
+		x := l[i]
+		if upd, ok := filterUpdate(x); ok {
+			cp = append(cp, upd)
+		}
+	}
+	return cp
+}
+
 // Filter slice value.
 //
 // The original slice is not modified only copied.

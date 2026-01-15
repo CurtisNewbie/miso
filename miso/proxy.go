@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -216,6 +217,20 @@ func (h *HttpProxy) isRootPath() bool {
 	return h.rootProxiedPath == "/"
 }
 
+func (h *HttpProxy) JoinCheckAuth(checkAuth ...func(pc *ProxyContext) (statusCode int, ok bool)) func(pc *ProxyContext) (statusCode int, ok bool) {
+	return func(pc *ProxyContext) (statusCode int, ok bool) {
+		var lastCode int
+		for _, check := range checkAuth {
+			if c, ok := check(pc); ok {
+				return 0, true
+			} else {
+				lastCode = c
+			}
+		}
+		return lastCode, false
+	}
+}
+
 // Add Access Filter.
 //
 // See [HttpProxy.WithBearerAuthCheck].
@@ -285,6 +300,8 @@ func (h *HttpProxy) WithBearerAuthCheck(bars []BearerAuthRoute) func(pc *ProxyCo
 //	h.WithDynBearerAuthCheck(func() []BearerAuthRoute{
 //		return h.LoadBearerAuthRouteFromProp("root-prop")
 //	})
+//
+// Change to [HttpProxy.WithDynAuthCheck] intead.
 func (h *HttpProxy) WithDynBearerAuthCheck(load func() []BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
 	return func(pc *ProxyContext) (statusCode int, ok bool) {
 		authHeader := pc.Inb.Header("Authorization")
@@ -304,7 +321,143 @@ func (h *HttpProxy) WithDynBearerAuthCheck(load func() []BearerAuthRoute) func(p
 		}
 		return 0, false
 	}
+}
 
+type DynAuthRoute struct {
+	Name         string
+	Type         string // Bearer / Basic
+	Bearer       string
+	Username     string
+	Password     string
+	PathPatterns []string
+
+	basic string `mapstructure:"-"`
+}
+
+func (d *DynAuthRoute) BuildBasic() string {
+	if d.basic == "" {
+		base := d.Username + ":" + d.Password
+		d.basic = "Basic " + base64.StdEncoding.EncodeToString(strutil.UnsafeStr2Byt(base))
+	}
+	return d.basic
+}
+
+func (d *DynAuthRoute) CheckAuth(v *dynAuthReq) bool {
+	switch strings.ToLower(d.Type) {
+	case "basic":
+		return v.CheckBasic(d.BuildBasic())
+	default:
+		return v.CheckBearer(d.Bearer)
+	}
+}
+
+type dynAuthReq struct {
+	auth         string
+	basicParsed  bool
+	bearer       string
+	isBearer     bool
+	bearerParsed bool
+}
+
+func (d *dynAuthReq) Bearer() (string, bool) {
+	if d.bearerParsed {
+		return d.bearer, d.isBearer
+	}
+	d.bearerParsed = true
+	d.bearer, d.isBearer = ParseBearer(d.auth)
+	return d.bearer, d.isBearer
+}
+
+func (d *dynAuthReq) CheckBasic(auth string) bool {
+	return d.auth == auth
+}
+
+func (d *dynAuthReq) CheckBearer(bearer string) bool {
+	v, ok := d.Bearer()
+	if !ok {
+		return false
+	}
+	return bearer == v
+}
+
+// Check Authorization With dynamically loaded DynAuthRoute.
+//
+// E.g.,
+//
+//	var h *miso.HttpProxy
+//	h.WithDynAuthCheck(func() []DynAuthRoute{
+//		return h.LoadDynAuthRouteFromProp("root-prop")
+//	})
+func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
+	return func(pc *ProxyContext) (statusCode int, isBearer bool) {
+		authHeader := pc.Inb.Header("Authorization")
+		if strutil.IsBlankStr(authHeader) {
+			return 0, false
+		}
+		cand := &dynAuthReq{auth: authHeader}
+		for _, bar := range load() {
+			if !bar.CheckAuth(cand) {
+				continue
+			}
+			matched, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath)
+			if ok {
+				pc.Inb.Infof("Matched '%v' Bearer Authrization Path Pattern: '%v'", bar.Name, matched)
+				return 0, true
+			}
+		}
+		return 0, false
+	}
+}
+
+// Load DynAuthRoute from configuration.
+//
+// E.g.,
+//
+//	root-prop:
+//	  - name: "myauth1"
+//	    type: "bearer"
+//	    bearer: "mybearer1"
+//	    path-patterns:
+//	      - "/path1"
+//	      - "/path2"
+//	      - "/path3"
+//	  - name: "myauth2"
+//	    type: "basic"
+//	    username: "myuser"
+//	    password: "mypassword"
+//	    path-patterns:
+//	      - "/path4"
+//	      - "/path5"
+//	      - "/path6"
+func (h *HttpProxy) LoadDynAuthRouteFromProp(rootProp string) []DynAuthRoute {
+	p := UnmarshalFromPropKeyAs[[]DynAuthRoute](rootProp)
+	return slutil.CopyFilterUpdate(p, func(d DynAuthRoute) (_d DynAuthRoute, incl bool) {
+		if len(d.PathPatterns) < 1 {
+			return d, false
+		}
+
+		if d.Type == "" {
+			if d.Bearer != "" {
+				d.Type = "bearer"
+			} else {
+				d.Type = "basic"
+			}
+		}
+
+		switch strings.ToLower(d.Type) {
+		case "basic":
+			if d.Username == "" || d.Password == "" {
+				return d, false
+			}
+		case "bearer":
+			if d.Bearer == "" {
+				return d, false
+			}
+		default:
+			return d, false
+		}
+		return d, true
+	})
 }
 
 // Load BearerAuthRoutes from configuration.
