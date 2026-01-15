@@ -843,7 +843,7 @@ type erail = Rail
 // that returns the underlying http.ResponseWriter, *http.Request.
 //
 // Use miso.Rail for tracing (not just logs), pass it around your application code and the code
-// calling miso's methods course.
+// that directly/indirectly calls miso's methods.
 type Inbound struct {
 	erail
 	engine  *gin.Context
