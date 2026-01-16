@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -1002,6 +1003,7 @@ func (i *Inbound) LogRequest() {
 			return
 		}
 		bodystr = string(body)
+		r.Body = io.NopCloser(bytes.NewBuffer(body)) // it might be read again
 	}
 	sb.Printlnf("Headers: ")
 	for k, v := range r.Header {
@@ -1013,6 +1015,22 @@ func (i *Inbound) LogRequest() {
 
 	sb.Printlnf("\nBody: ")
 	sb.Printlnf("  %s\n", bodystr)
+	rail.Info(sb.String())
+}
+
+func (i *Inbound) LogHeaders() {
+	rail := i.Rail()
+	_, r := i.Unwrap()
+	sb := strutil.SLPinter{}
+	sb.Printlnf("Receive '%v %v' request from %v", r.Method, r.RequestURI, r.RemoteAddr)
+	sb.Printlnf("Content-Length: %v", r.ContentLength)
+	sb.Printlnf("Headers: ")
+	for k, v := range r.Header {
+		if strutil.ContainsAnyStrIgnoreCase(k, "authorization", "cookie", "token") {
+			v = []string{"***"}
+		}
+		sb.Printlnf("  %-30s: %v", k, v)
+	}
 	rail.Info(sb.String())
 }
 
