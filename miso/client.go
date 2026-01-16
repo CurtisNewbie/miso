@@ -291,14 +291,14 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options
 
 		if err != nil {
 			tr.Err = WrapErr(err)
-			tr.Rail.Errorf("Read SSE events failed, %v", tr.Err)
+			tr.Rail.Warnf("Read SSE events failed, %v", tr.Err)
 			return false
 		}
 
 		stop, err := parse(ev)
 		if err != nil {
 			tr.Err = WrapErr(err)
-			tr.Rail.Errorf("Parse SSE events failed, %v", tr.Err)
+			tr.Rail.Warnf("Parse SSE events failed, %v", tr.Err)
 			return !errs.IsAny(err, errs.ErrServerShuttingDown)
 		}
 		return !stop
