@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/strutil"
 	jsoniter "github.com/json-iterator/go"
 )
@@ -45,7 +46,11 @@ func SParseJsonAs[T any](body string) (T, error) {
 
 // Parse json string.
 func SParseJson(body string, ptr any) error {
-	return ParseJson(strutil.UnsafeStr2Byt(body), ptr)
+	err := ParseJson(strutil.UnsafeStr2Byt(body), ptr)
+	if err != nil {
+		return errs.Wrapf(err, "body '%v'", body)
+	}
+	return nil
 }
 
 // Write json as bytes.
