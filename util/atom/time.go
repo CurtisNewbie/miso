@@ -424,7 +424,7 @@ func FuzzParseTimeLoc(formats []string, value string, loc *time.Location) (time.
 			return t, nil
 		}
 	}
-	return t, fmt.Errorf("failed to parse time '%s'", value)
+	return t, fmt.Errorf("failed to parse time '%s', %w", value, err)
 }
 
 var classicDateTimeFmt = []string{SQLDateTimeFormat, ClassicDateTimeFormat}
