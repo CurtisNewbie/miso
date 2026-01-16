@@ -325,6 +325,8 @@ func (f FieldDesc) goFieldTypeName() string {
 	return f.OriginTypeName
 }
 
+// TODO: Support map as TypeDesc
+
 // See [BuildTypeDesc]
 type TypeDesc struct {
 	TypeName   string
@@ -964,7 +966,7 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 						jd.isPointer = true
 					}
 					if !seen.Has(et) {
-						jd.Fields = reflectAppendJsonDesc(et, ele, jd.Fields, seen)
+						jd.Fields = reflectAppendFieldDesc(et, ele, jd.Fields, seen)
 					}
 				}
 			} else {
@@ -984,7 +986,7 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 				jd.isPointer = true
 			}
 			if !seen.Has(f.Type) {
-				jd.Fields = reflectAppendJsonDesc(f.Type, fv, jd.Fields, seen)
+				jd.Fields = reflectAppendFieldDesc(f.Type, fv, jd.Fields, seen)
 			}
 		}
 
@@ -995,7 +997,7 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 	return jds
 }
 
-func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, seen *hash.Set[reflect.Type]) []FieldDesc {
+func reflectAppendFieldDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, seen *hash.Set[reflect.Type]) []FieldDesc {
 	if t.Kind() == reflect.Struct {
 		fields = append(fields, buildTypeDescRecur(v, seen)...)
 	} else if t.Kind() == reflect.Slice {
@@ -1015,7 +1017,7 @@ func reflectAppendJsonDesc(t reflect.Type, v reflect.Value, fields []FieldDesc, 
 		if !v.IsZero() && !v.IsNil() {
 			if ele := v.Elem(); ele.IsValid() {
 				et := ele.Type()
-				fields = reflectAppendJsonDesc(et, ele, fields, seen)
+				fields = reflectAppendFieldDesc(et, ele, fields, seen)
 			}
 		}
 	}
