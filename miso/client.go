@@ -279,7 +279,7 @@ func (tr *TResponse) Sse(parse func(e sse.Event) (stop bool, err error), options
 	onEvent(func(ev sse.Event, err error) (next bool) {
 		if tr.Rail.IsDone() {
 			tr.Err = errs.Wrap(context.Canceled)
-			tr.Rail.Errorf("Context canceled, %v", tr.Err)
+			tr.Rail.Warnf("Context canceled, %v", tr.Err)
 			return false
 		}
 
