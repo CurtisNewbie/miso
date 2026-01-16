@@ -1,0 +1,24 @@
+@@
+var x identifier
+@@
+import "github.com/curtisnewbie/miso/miso"
+
+-x.WithDynBearerAuthCheck(...)
++x.WithDynAuthCheck(...)
+
+
+@@
+var x identifier
+@@
+import "github.com/curtisnewbie/miso/miso"
+
+-x.LoadBearerAuthRouteFromProp(...)
++x.LoadDynAuthRouteFromProp(...)
+
+
+@@
+@@
+import "github.com/curtisnewbie/miso/miso"
+
+-BearerAuthRoute
++DynAuthRoute

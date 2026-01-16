@@ -279,50 +279,6 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 	Info("Registered Access Filter")
 }
 
-type BearerAuthRoute struct {
-	Name         string
-	Bearer       string
-	PathPatterns []string
-}
-
-// Check Bearer Authorization with given BearerAuthRoutes.
-func (h *HttpProxy) WithBearerAuthCheck(bars []BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
-	return h.WithDynBearerAuthCheck(func() []BearerAuthRoute {
-		return bars
-	})
-}
-
-// Check Bearer Authorization With dynamically loaded BearerAuthRoutes.
-//
-// E.g.,
-//
-//	var h *miso.HttpProxy
-//	h.WithDynBearerAuthCheck(func() []BearerAuthRoute{
-//		return h.LoadBearerAuthRouteFromProp("root-prop")
-//	})
-//
-// Change to [HttpProxy.WithDynAuthCheck] intead.
-func (h *HttpProxy) WithDynBearerAuthCheck(load func() []BearerAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
-	return func(pc *ProxyContext) (statusCode int, ok bool) {
-		authHeader := pc.Inb.Header("Authorization")
-		provided, ok := ParseBearer(authHeader)
-		if !ok {
-			return 0, false
-		}
-		for _, bar := range load() {
-			if provided != bar.Bearer {
-				continue
-			}
-			matched, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath)
-			if ok {
-				pc.Inb.Infof("Matched '%v' Bearer Authrization Path Pattern: '%v'", bar.Name, matched)
-				return 0, true
-			}
-		}
-		return 0, false
-	}
-}
-
 type DynAuthRoute struct {
 	Name         string
 	Type         string // Bearer / Basic
@@ -457,30 +413,6 @@ func (h *HttpProxy) LoadDynAuthRouteFromProp(rootProp string) []DynAuthRoute {
 			return d, false
 		}
 		return d, true
-	})
-}
-
-// Load BearerAuthRoutes from configuration.
-//
-// E.g.,
-//
-//	root-prop:
-//	  - name: "myauth1"
-//	    bearer: "mybearer1"
-//	    path-patterns:
-//	      - "/path1"
-//	      - "/path2"
-//	      - "/path3"
-//	  - name: "myauth2"
-//	    bearer: "mybearer2"
-//	    path-patterns:
-//	      - "/path4"
-//	      - "/path5"
-//	      - "/path6"
-func (h *HttpProxy) LoadBearerAuthRouteFromProp(rootProp string) []BearerAuthRoute {
-	p := UnmarshalFromPropKeyAs[[]BearerAuthRoute](rootProp)
-	return slutil.CopyFilter(p, func(bar BearerAuthRoute) (incl bool) {
-		return len(bar.PathPatterns) > 0
 	})
 }
 
