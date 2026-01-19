@@ -41,13 +41,13 @@ func (s *SSEPiper[D]) PushMsg(inb interface {
 func (s *SSEPiper[D]) PushAction(inb interface {
 	WriteSSE(name string, message any)
 }, m SSEAction) {
-	inb.WriteSSE(sseMessage, m)
+	inb.WriteSSE(sseAction, m)
 }
 
 func (s *SSEPiper[D]) PushData(inb interface {
 	WriteSSE(name string, message any)
 }, m D) {
-	inb.WriteSSE(sseMessage, m)
+	inb.WriteSSE(sseData, m)
 }
 
 func (s *SSEPiper[D]) OnMessage(f func(delta string, accumulated string) error) {
