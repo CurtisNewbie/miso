@@ -177,6 +177,18 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 		p.Add(lineLabels)
 	}
 
+	last := dat[len(dat)-1]
+	if last.Y != min && last.Y != max {
+		lineLabels, err := plotter.NewLabels(plotter.XYLabels{
+			XYs:    []plotter.XY{{X: float64(len(dat) - 1), Y: last.Y}},
+			Labels: []string{cast.ToString(last.Y)},
+		})
+		if err != nil {
+			return err
+		}
+		p.Add(lineLabels)
+	}
+
 	lineLabels, err := plotter.NewLabels(plotter.XYLabels{
 		XYs:    []plotter.XY{{X: float64(maxi), Y: max}},
 		Labels: []string{cast.ToString(max)},
