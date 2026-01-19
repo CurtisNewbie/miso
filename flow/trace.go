@@ -1,8 +1,6 @@
 package flow
 
 import (
-	"sync"
-
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/spf13/cast"
 )
@@ -11,47 +9,37 @@ const (
 	XTraceId  = "X-B3-TraceId"
 	XSpanId   = "X-B3-SpanId"
 	XUsername = "x-username"
+	XUserNo   = "x-userno"
+	XRoleNo   = "x-roleno"
 )
 
 var (
-	propagationKeys = PropagationKeys{keys: hash.NewSet(XTraceId, XSpanId, XUsername)}
+	propagationKeys = PropagationKeys{keys: hash.NewSyncSet(XTraceId, XSpanId, XUsername, XUserNo, XRoleNo)}
 )
 
 type PropagationKeys struct {
-	keys hash.Set[string]
-	rwmu sync.RWMutex
+	keys *hash.SyncSet[string]
 }
 
 // Add propagation key for tracing
 func AddPropagationKeys(keys ...string) {
-	propagationKeys.rwmu.Lock()
-	defer propagationKeys.rwmu.Unlock()
 	propagationKeys.keys.AddAll(keys)
 }
 
 // Add propagation key for tracing
 func AddPropagationKey(key string) {
-	propagationKeys.rwmu.Lock()
-	defer propagationKeys.rwmu.Unlock()
-
 	propagationKeys.keys.Add(key)
 }
 
 // Get all existing propagation key
 func GetPropagationKeys() []string {
-	propagationKeys.rwmu.RLock()
-	defer propagationKeys.rwmu.RUnlock()
 	return propagationKeys.keys.CopyKeys()
 }
 
 func UsePropagationKeys(forEach func(key string)) {
-	propagationKeys.rwmu.RLock()
-	defer propagationKeys.rwmu.RUnlock()
-
-	propagationKeys.keys.ForEach(func(v string) (stop bool) {
-		forEach(v)
-		return false
-	})
+	for _, k := range GetPropagationKeys() {
+		forEach(k)
+	}
 }
 
 func LoadPropagationKeysFromHeaders[T any](rail Rail, headers map[string]T) Rail {

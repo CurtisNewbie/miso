@@ -22,11 +22,6 @@ var (
 	nilUser = User{IsNil: true}
 )
 
-// load builtin propagation keys, so all dependents get the same behaviour
-func LoadBuiltinPropagationKeys() {
-	miso.AddPropagationKeys(UserNoTraceKey, RoleNoTraceKey)
-}
-
 // Get a 'nil' User.
 func NilUser() User {
 	return nilUser
