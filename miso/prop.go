@@ -21,6 +21,7 @@ const (
 	// misoconfig-prop: extra config files that should be loaded
 	PropConfigExtraFiles = "config.extra.files"
 
+	// whether we are in test env
 	PropAppTestEnv = "app.test-env"
 )
 
