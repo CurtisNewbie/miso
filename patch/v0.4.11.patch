@@ -22,3 +22,65 @@ import "github.com/curtisnewbie/miso/miso"
 
 -BearerAuthRoute
 +DynAuthRoute
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.User
++flow.User
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.UsernameTraceKey
++flow.UsernameTraceKey
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.UserNoTraceKey
++flow.UserNoTraceKey
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.RoleNoTraceKey
++flow.RoleNoTraceKey
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.NilUser
++flow.NilUser
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.GetUser
++flow.GetUser
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
++import "github.com/curtisnewbie/miso/flow"
+
+-common.StoreUser
++flow.StoreUser
+
+@@
+@@
+-import "github.com/curtisnewbie/miso/middleware/user-vault/common"
+
+-common.LoadBuiltinPropagationKeys()
