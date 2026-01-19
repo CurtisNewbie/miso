@@ -132,7 +132,9 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 	}
 
 	// draw line on plot
-	drawLine(p, plots, 1, lineLabel)
+	if len(plots) > 0 {
+		drawLine(p, plots, 1, lineLabel)
+	}
 
 	c, err := p.WriterTo(plotWidth, plotHeight, format)
 	if err != nil {
