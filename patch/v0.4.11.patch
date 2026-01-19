@@ -80,7 +80,12 @@ import "github.com/curtisnewbie/miso/miso"
 +flow.StoreUser
 
 @@
+var x identifier
 @@
 -import "github.com/curtisnewbie/miso/middleware/user-vault/common"
 
+func x(...) {
+...
 -common.LoadBuiltinPropagationKeys()
+...
+}
