@@ -87,7 +87,7 @@ if err != nil {
 To query a page of data, we can use `dbquery.NewPagedQuery()`:
 
 ```go
-func ListSitePasswords(rail miso.Rail, req ListSitePasswordReq, user common.User, db *gorm.DB) (miso.PageRes[ListSitePasswordRes], error) {
+func ListSitePasswords(rail miso.Rail, req ListSitePasswordReq, user flow.User, db *gorm.DB) (miso.PageRes[ListSitePasswordRes], error) {
 	return dbquery.NewPagedQuery[ListSitePasswordRes](db).
 		WithBaseQuery(func(q *dbquery.Query) *dbquery.Query {
 			return q.Table("site_password").

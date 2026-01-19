@@ -38,7 +38,7 @@ const (
 	typeInvalidMisoInboundVal = "miso.Inbound"
 	typeInvalidMisoRailPtr    = "*miso.Rail"
 	typeInvalidGormDbVal      = "gorm.DB"
-	typeInvalidCommonUserPtr  = "*common.User"
+	typeInvalidFlowUserPtr    = "*flow.User"
 )
 
 const (
@@ -48,13 +48,13 @@ const (
 	typeMisoRail       = "miso.Rail"
 	typeGormDbPtr      = "*gorm.DB"
 	typeMySqlQryPtr    = "*mysql.Query"
-	typeCommonUser     = "common.User"
+	typeFlowUser       = "flow.User"
 
-	importCommonUser = "github.com/curtisnewbie/miso/middleware/user-vault/common"
-	importMiso       = "github.com/curtisnewbie/miso/miso"
-	importGorm       = "gorm.io/gorm"
-	importMySQL      = "github.com/curtisnewbie/miso/middleware/mysql"
-	importDbQuery    = "github.com/curtisnewbie/miso/middleware/dbquery"
+	importFlowUser = "github.com/curtisnewbie/miso/flow"
+	importMiso     = "github.com/curtisnewbie/miso/miso"
+	importGorm     = "gorm.io/gorm"
+	importMySQL    = "github.com/curtisnewbie/miso/middleware/mysql"
+	importDbQuery  = "github.com/curtisnewbie/miso/middleware/dbquery"
 )
 
 const (
@@ -79,7 +79,7 @@ var (
 	refPat              = regexp.MustCompile(`ref\(([a-zA-Z0-9 \\-\\_\.]+)\)`)
 	flagTags            = hash.NewSet(tagNgTable, tagRaw, tagIgnore)
 	injectTokenToImport = map[string]string{
-		typeCommonUser:     importCommonUser,
+		typeFlowUser:       importFlowUser,
 		typeMySqlQryPtr:    importMySQL,
 		typeGormDbPtr:      importDbQuery,
 		typeMisoInboundPtr: "",
@@ -90,13 +90,13 @@ var (
 		typeMisoRail:       "inb.Rail()",
 		typeMySqlQryPtr:    "mysql.NewQuery(dbquery.GetDB())",
 		typeGormDbPtr:      "dbquery.GetDB()",
-		typeCommonUser:     "common.GetUser(inb.Rail())",
+		typeFlowUser:       "inb.Rail().User()",
 	}
 	invalidInjectTokens = map[string]string{
 		typeInvalidMisoInboundVal: typeMisoInboundPtr,
 		typeInvalidMisoRailPtr:    typeMisoRail,
 		typeInvalidGormDbVal:      typeGormDbPtr,
-		typeInvalidCommonUserPtr:  typeCommonUser,
+		typeInvalidFlowUserPtr:    typeFlowUser,
 	}
 )
 
@@ -383,7 +383,7 @@ func guessImport(n string, importSpec map[string]string, imports hash.Set[string
 	cached, ok := importSpec[n]
 	if ok {
 		switch cached {
-		case importCommonUser, importMiso, importGorm, importMySQL:
+		case importFlowUser, importMiso, importGorm, importMySQL:
 			return
 		default:
 			imports.Add(cached)

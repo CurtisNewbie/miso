@@ -134,8 +134,20 @@ func (r Rail) Username() string {
 	return r.CtxValStr(XUsername)
 }
 
+func (r Rail) User() User {
+	return GetUser(r)
+}
+
+func (r Rail) RoleNo() string {
+	return r.CtxValStr(XRoleNo)
+}
+
 func (r Rail) WithUsername(v string) Rail {
 	return r.WithCtxVal(XUsername, v)
+}
+
+func (r Rail) WithRoleNo(v string) Rail {
+	return r.WithCtxVal(XRoleNo, v)
 }
 
 func (r Rail) SpanId() string {
