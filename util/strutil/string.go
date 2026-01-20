@@ -123,7 +123,10 @@ func Tabs(count int) string {
 	return strings.Repeat("\t", count)
 }
 
-type builder struct {
+// Enhanced [strings.Builder].
+//
+// Use [NewBuilder] instantiate.
+type Builder struct {
 	*strings.Builder
 
 	lineSuffix string
@@ -133,23 +136,23 @@ type builder struct {
 	indents string
 }
 
-func NewBuilder() *builder {
-	return &builder{
+func NewBuilder() *Builder {
+	return &Builder{
 		Builder: &strings.Builder{},
 		indentc: 0,
 		indents: "",
 	}
 }
 
-func (b *builder) buildIndent() string {
+func (b *Builder) buildIndent() string {
 	return strings.Repeat(b.indents, b.indentc)
 }
 
-func (b *builder) Printf(st string, args ...any) {
-	b.Builder.WriteString(b.buildIndent() + fmt.Sprintf(st, args...))
+func (b *Builder) Printf(st string, args ...any) {
+	b.Builder.WriteString(fmt.Sprintf(st, args...))
 }
 
-func (b *builder) Println(st string) {
+func (b *Builder) Println(st string) {
 	inds := b.buildIndent()
 	if b.Builder.Len() > 0 {
 		b.Builder.WriteString(b.lineSuffix)
@@ -161,7 +164,7 @@ func (b *builder) Println(st string) {
 	b.Builder.WriteString(st)
 }
 
-func (b *builder) Printlnf(st string, args ...any) {
+func (b *Builder) Printlnf(st string, args ...any) {
 	inds := b.buildIndent()
 	if b.Builder.Len() > 0 {
 		b.Builder.WriteString(b.lineSuffix)
@@ -173,41 +176,41 @@ func (b *builder) Printlnf(st string, args ...any) {
 	b.Builder.WriteString(fmt.Sprintf(st, args...))
 }
 
-func (b *builder) StepIn(f func(b *builder)) {
+func (b *Builder) StepIn(f func(b *Builder)) {
 	b.indentc += 1
 	f(b)
 	b.indentc -= 1
 }
 
-func (b *builder) WithLinePrefix(p string) {
+func (b *Builder) WithLinePrefix(p string) {
 	b.linePrefix = p
 }
 
-func (b *builder) WithLineSuffix(p string) {
+func (b *Builder) WithLineSuffix(p string) {
 	b.lineSuffix = p
 }
 
-func (b *builder) WithIndentStr(ind string) {
+func (b *Builder) WithIndentStr(ind string) {
 	b.indents = ind
 }
 
-func (b *builder) WithIndentCnt(ind int) {
+func (b *Builder) WithIndentCnt(ind int) {
 	if ind < 0 {
 		ind = 0
 	}
 	b.indentc = ind
 }
 
-func (b *builder) WithIndent(s string, c int) {
+func (b *Builder) WithIndent(s string, c int) {
 	b.WithIndentStr(s)
 	b.WithIndentCnt(c)
 }
 
-func (b *builder) IncrIndent() {
+func (b *Builder) IncrIndent() {
 	b.indentc += 1
 }
 
-func (b *builder) DecrIndent() {
+func (b *Builder) DecrIndent() {
 	if b.indentc < 1 {
 		return
 	}
