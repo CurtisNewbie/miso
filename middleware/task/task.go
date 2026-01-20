@@ -242,8 +242,6 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 		// produce task
 		err := m.produceTask(rail, t.Name)
 
-		miso.LogJobNextRun(rail, t.Name)
-
 		return err
 	}
 	m.dtasks.Append(t)
