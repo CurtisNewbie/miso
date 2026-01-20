@@ -189,7 +189,7 @@ func (m *taskModule) scheduleTask(t miso.Job) error {
 	m.workerRegistry.Put(t.Name, &worker{
 		f: func(rail miso.Rail) error {
 			if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
-				rail.Infof("Task '%v' disabled, skipped", t.Name)
+				rail.Debugf("Task '%v' disabled, skipped", t.Name)
 				return nil
 			}
 
