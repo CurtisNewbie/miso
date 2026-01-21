@@ -90,6 +90,24 @@ func (p TableTransform) WriteRow(buf *strings.Builder, header []string, inclColR
 	}
 }
 
+type loadedFileReader struct {
+	i    int
+	rows [][]string
+}
+
+func (l *loadedFileReader) Read() ([]string, error) {
+	if l.i >= len(l.rows) {
+		return nil, io.EOF
+	}
+	r := l.rows[l.i]
+	l.i++
+	return r, nil
+}
+
+func (p TableTransform) ParseFileLoaded(rail miso.Rail, rows [][]string) (*strings.Builder, error) {
+	return p.ParseFile(rail, &loadedFileReader{rows: rows})
+}
+
 func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]string, error) }) (*strings.Builder, error) {
 	skipRowRange, err := p.SkipRowRange()
 	if err != nil {
