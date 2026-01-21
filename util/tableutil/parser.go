@@ -20,11 +20,18 @@ var (
 //
 // Transform rows and columns while reading.
 type TableTransform struct {
-	SkipRowRangeExpr   string // Skip row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`.
-	InclColRangeExpr   string // Include column range expression. [0] - start col index, [1] - end col index. E.g., `[0, 3]` or `[]`.
-	HeaderRowRangeExpr string // Header row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`
-	RowSeperator       string // Row Seperator, default to `'\n'`
-	ColSeperator       string // Col Seperator, default to `'  '` (two spaces)
+	// Skip row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`.
+	//
+	// You don't need to skip rows in HeaderRowRangeExpr.
+	SkipRowRangeExpr string
+	// Include column range expression. [0] - start col index, [1] - end col index. E.g., `[0, 3]` or `[]`.
+	InclColRangeExpr string
+	// Header row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`
+	HeaderRowRangeExpr string
+	// Row Seperator, default to `'\n'`
+	RowSeperator string
+	// Col Seperator, default to `'  '` (two spaces)
+	ColSeperator string
 }
 
 func (p TableTransform) HeaderRowRange() (Range, error) {
