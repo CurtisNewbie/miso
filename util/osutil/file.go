@@ -104,6 +104,11 @@ func WriteFile(name string, content []byte) error {
 	return err
 }
 
+// Create file and write content.
+func WriteFileStr(name string, content string) error {
+	return WriteFile(name, strutil.UnsafeStr2Byt(content))
+}
+
 // MkdirAll with 0755 perm.
 func MkdirAll(path string) error {
 	return errs.Wrap(os.MkdirAll(path, 0755))
