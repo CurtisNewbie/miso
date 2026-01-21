@@ -20,7 +20,6 @@ var (
 //
 // Transform rows and columns while reading.
 type TableTransform struct {
-	Name               string // Parser name
 	SkipRowRangeExpr   string // Skip row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`.
 	InclColRangeExpr   string // Include column range expression. [0] - start col index, [1] - end col index. E.g., `[0, 3]` or `[]`.
 	HeaderRowRangeExpr string // Header row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`
