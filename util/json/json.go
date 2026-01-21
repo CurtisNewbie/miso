@@ -87,6 +87,17 @@ func TrySWriteJson(body any) string {
 	return string(buf)
 }
 
+func TrySWriteIndent(body any) string {
+	if v, ok := body.(string); ok {
+		return v
+	}
+	buf, err := config.MarshalIndent(body, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(buf)
+}
+
 func SWriteIndent(body any) (string, error) {
 	if v, ok := body.(string); ok {
 		return v, nil
