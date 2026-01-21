@@ -103,22 +103,22 @@ func (l *loadedFileReader) Read() ([]string, error) {
 	return r, nil
 }
 
-func (p TableTransform) ParseFileLoaded(rail miso.Rail, rows [][]string) (*strings.Builder, error) {
+func (p TableTransform) ParseFileLoaded(rail miso.Rail, rows [][]string) (string, error) {
 	return p.ParseFile(rail, &loadedFileReader{rows: rows})
 }
 
-func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]string, error) }) (*strings.Builder, error) {
+func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]string, error) }) (string, error) {
 	skipRowRange, err := p.SkipRowRange()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	inclColRange, err := p.InclColRange()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	headerRowRange, err := p.HeaderRowRange()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	rail.Infof("SkipRowRange: %#v, InclColRange: %#v, HeaderRowRange: %#v", skipRowRange, inclColRange, headerRowRange)
 
@@ -148,10 +148,10 @@ func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]st
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
-			return b, nil
+			return b.String(), nil
 		}
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		if validRow(i, record) {
 			p.WriteRow(b, header, inclColRange, record)
