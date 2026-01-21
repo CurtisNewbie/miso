@@ -92,6 +92,18 @@ func OpenRWFile(name string, createIfAbsent ...bool) (*os.File, error) {
 	return OpenFile(name, flag)
 }
 
+// Create file and write content.
+func WriteFile(name string, content []byte) error {
+	f, err := OpenRWFile(name, true)
+	if err != nil {
+		return err
+	}
+	_ = f.Truncate(0)
+	defer f.Close()
+	_, err = f.Write(content)
+	return err
+}
+
 // MkdirAll with 0755 perm.
 func MkdirAll(path string) error {
 	return errs.Wrap(os.MkdirAll(path, 0755))
