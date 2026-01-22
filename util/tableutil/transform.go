@@ -3,66 +3,49 @@ package tableutil
 import (
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 
-	"github.com/curtisnewbie/miso/middleware/expr"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/slutil"
-	"github.com/spf13/cast"
-)
-
-var (
-	rowRangeExprPool = expr.NewPooledExpr[struct{}](100)
 )
 
 // Table Transform
 //
 // Transform rows and columns while reading.
 type TableTransform struct {
-	// Skip row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`.
+	// Skip row range.
 	//
 	// You don't need to skip rows in HeaderRowRangeExpr.
-	SkipRowRangeExpr string
-	// Include column range expression. [0] - start col index, [1] - end col index. E.g., `[0, 3]` or `[]`.
-	InclColRangeExpr string
-	// Header row range expression. [0] - start row index, [1] - end row index. E.g., `[0, 3]` or `[]`
-	HeaderRowRangeExpr string
+	SkipRowRangeSpec *Range
+	// Include column range.
+	InclColRangeSpec *Range
+	// Header row range.
+	HeaderRowRangeSpec *Range
 	// Row Seperator, default to `'\n'`
 	RowSeperator string
 	// Col Seperator, default to `'  '` (two spaces)
 	ColSeperator string
 }
 
-func (p TableTransform) HeaderRowRange() (Range, error) {
-	return p.parseRowRange(p.HeaderRowRangeExpr)
+func (p TableTransform) HeaderRowRange() Range {
+	if p.HeaderRowRangeSpec == nil {
+		return ZeroRange()
+	}
+	return *p.HeaderRowRangeSpec
 }
 
-func (p TableTransform) SkipRowRange() (Range, error) {
-	return p.parseRowRange(p.SkipRowRangeExpr)
+func (p TableTransform) SkipRowRange() Range {
+	if p.SkipRowRangeSpec == nil {
+		return ZeroRange()
+	}
+	return *p.SkipRowRangeSpec
 }
 
-func (p TableTransform) InclColRange() (Range, error) {
-	return p.parseRowRange(p.InclColRangeExpr)
-}
-
-func (p TableTransform) parseRowRange(s string) (Range, error) {
-	if s == "" {
-		return Range{Min: -1, Max: -1}, nil
+func (p TableTransform) InclColRange() Range {
+	if p.InclColRangeSpec == nil {
+		return ZeroRange()
 	}
-	v, err := rowRangeExprPool.Eval(s, struct{}{})
-	if err != nil {
-		return Range{}, err
-	}
-	is := cast.ToIntSlice(v)
-	min := -1
-	max := -1
-	slices.Sort(is)
-	if len(is) > 0 {
-		min = is[0]
-		max = is[len(is)-1]
-	}
-	return Range{Min: min, Max: max}, nil
+	return *p.InclColRangeSpec
 }
 
 func (p TableTransform) WriteRow(buf *strings.Builder, header []string, inclColRange Range, r []string) {
@@ -115,18 +98,9 @@ func (p TableTransform) ParseFileLoaded(rail miso.Rail, rows [][]string) (string
 }
 
 func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]string, error) }) (string, error) {
-	skipRowRange, err := p.SkipRowRange()
-	if err != nil {
-		return "", err
-	}
-	inclColRange, err := p.InclColRange()
-	if err != nil {
-		return "", err
-	}
-	headerRowRange, err := p.HeaderRowRange()
-	if err != nil {
-		return "", err
-	}
+	skipRowRange := p.SkipRowRange()
+	inclColRange := p.InclColRange()
+	headerRowRange := p.HeaderRowRange()
 	rail.Infof("SkipRowRange: %#v, InclColRange: %#v, HeaderRowRange: %#v", skipRowRange, inclColRange, headerRowRange)
 
 	var header []string
@@ -165,6 +139,10 @@ func (p TableTransform) ParseFile(rail miso.Rail, reader interface{ Read() ([]st
 		}
 		i++
 	}
+}
+
+func ZeroRange() Range {
+	return Range{Min: -1, Max: -1}
 }
 
 type Range struct {
