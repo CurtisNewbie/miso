@@ -9,7 +9,8 @@ import (
 )
 
 type PostReq struct {
-	RequestId string `json:"requestId"`
+	RequestId      string `json:"requestId"`
+	shouldNotSeeMe string `json:"shouldNotSeeMe"`
 }
 type PostRes struct {
 	ResultId string    `json:"resultId"`

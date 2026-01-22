@@ -1,5 +1,5 @@
-go 1.22
+go 1.24.4
 
 use .
 
-replace github.com/curtisnewbie/miso => ../../
+use ../../

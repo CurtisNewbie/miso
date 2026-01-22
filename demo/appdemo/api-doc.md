@@ -2553,7 +2553,7 @@
   ```sh
   curl -X POST 'http://localhost:8080/api/v33' \
     -H 'Content-Type: application/json' \
-    -d '{"amt":"","set":null,"time":0}'
+    -d '{"amt":"","set":[],"time":1768184753983}'
   ```
 
 - Miso HTTP Client (experimental, demo may not work):
