@@ -49,7 +49,7 @@ func TryFileExists(path string) bool {
 
 // Read all content from file.
 func ReadFileAll(path string) ([]byte, error) {
-	f, err := OpenRWFile(path)
+	f, err := OpenRWFile(path, false)
 	if err != nil {
 		return nil, errs.Wrapf(err, "failed to open file %v", path)
 	}
