@@ -891,6 +891,9 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
+		if !f.IsExported() {
+			continue
+		}
 		skipped := false
 		for _, it := range ignoredJsonDocTag {
 			if v := f.Tag.Get(it); v != "" {
