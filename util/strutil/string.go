@@ -148,46 +148,71 @@ func (b *Builder) buildIndent() string {
 	return strings.Repeat(b.indents, b.indentc)
 }
 
-func (b *Builder) Printf(st string, args ...any) {
+func (b *Builder) Printf(st string, args ...any) *Builder {
 	b.Builder.WriteString(fmt.Sprintf(st, args...))
+	return b
 }
 
-func (b *Builder) Println(st string) {
-	inds := b.buildIndent()
-	if b.Builder.Len() > 0 {
-		b.Builder.WriteString(b.lineSuffix)
-		b.Builder.WriteString(inds)
-		b.Builder.WriteString("\n")
-	}
+func (b *Builder) NewLine(st string) *Builder {
+	b.Builder.WriteRune('\n')
+	return b
+}
+
+// Add new content.
+//
+// Always add line break at the end of the line.
+func (b *Builder) Println(st string) *Builder {
 	b.Builder.WriteString(b.linePrefix)
-	b.Builder.WriteString(inds)
+	b.Builder.WriteString(b.buildIndent())
 	b.Builder.WriteString(st)
+	b.Builder.WriteString(b.lineSuffix)
+	b.Builder.WriteRune('\n')
+	return b
 }
 
-func (b *Builder) Printlnf(st string, args ...any) {
-	inds := b.buildIndent()
+// Add new content.
+//
+// Only add line break at the start if the builder is not empty.
+func (b *Builder) PPrintln(st string) *Builder {
 	if b.Builder.Len() > 0 {
-		b.Builder.WriteString(b.lineSuffix)
-		b.Builder.WriteString(inds)
-		b.Builder.WriteString("\n")
+		b.Builder.WriteRune('\n')
 	}
 	b.Builder.WriteString(b.linePrefix)
-	b.Builder.WriteString(inds)
-	b.Builder.WriteString(fmt.Sprintf(st, args...))
+	b.Builder.WriteString(b.buildIndent())
+	b.Builder.WriteString(st)
+	b.Builder.WriteString(b.lineSuffix)
+	return b
 }
 
-func (b *Builder) StepIn(f func(b *Builder)) {
+// Add new formatted content.
+//
+// Always add line break at the end of the line.
+func (b *Builder) Printlnf(st string, args ...any) *Builder {
+	return b.Println(fmt.Sprintf(st, args...))
+}
+
+// Add new formatted content
+//
+// Only add line break at the start if the builder is not empty.
+func (b *Builder) PPrintlnf(st string, args ...any) *Builder {
+	return b.PPrintln(fmt.Sprintf(st, args...))
+}
+
+func (b *Builder) StepIn(f func(b *Builder)) *Builder {
 	b.indentc += 1
 	f(b)
 	b.indentc -= 1
+	return b
 }
 
-func (b *Builder) WithLinePrefix(p string) {
+func (b *Builder) WithLinePrefix(p string) *Builder {
 	b.linePrefix = p
+	return b
 }
 
-func (b *Builder) WithLineSuffix(p string) {
+func (b *Builder) WithLineSuffix(p string) *Builder {
 	b.lineSuffix = p
+	return b
 }
 
 func (b *Builder) WithIndentStr(ind string) {
@@ -201,20 +226,23 @@ func (b *Builder) WithIndentCnt(ind int) {
 	b.indentc = ind
 }
 
-func (b *Builder) WithIndent(s string, c int) {
+func (b *Builder) WithIndent(s string, c int) *Builder {
 	b.WithIndentStr(s)
 	b.WithIndentCnt(c)
+	return b
 }
 
-func (b *Builder) IncrIndent() {
+func (b *Builder) IncrIndent() *Builder {
 	b.indentc += 1
+	return b
 }
 
-func (b *Builder) DecrIndent() {
+func (b *Builder) DecrIndent() *Builder {
 	if b.indentc < 1 {
-		return
+		return b
 	}
 	b.indentc -= 1
+	return b
 }
 
 type SLPinter struct {

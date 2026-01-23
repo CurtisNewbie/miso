@@ -373,3 +373,19 @@ func TestUnquoteStr(t *testing.T) {
 func TestNamedSprintfkv(t *testing.T) {
 	t.Log(NamedSprintfkv("my name is ${name}", "name", "slim shady"))
 }
+
+func TestBuilder(t *testing.T) {
+	b := NewBuilder().
+		WithIndent(strings.Repeat(".", 2), 1).
+		WithLineSuffix("|").
+		Println("hay").
+		Println("who are you").
+		Printlnf("ok").
+		Printlnf("{").
+		StepIn(func(b *Builder) {
+			b.Println("it's")
+			b.Println("me")
+		}).
+		Printlnf("}")
+	fmt.Print(b.String())
+}
