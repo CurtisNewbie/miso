@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/curtisnewbie/miso/errs"
+	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	jsoniter "github.com/json-iterator/go"
 )
@@ -73,6 +74,18 @@ func SWriteJson(body any) (string, error) {
 		return "", err
 	}
 	return string(buf), nil
+}
+
+// Convert []any to []T through json serialization/deserialization.
+func ConvertAnySlice[T any](v []any) ([]T, error) {
+	return slutil.MapToErr(v, func(v any) (T, error) {
+		var t T
+		s, err := SWriteJson(v)
+		if err != nil {
+			return t, err
+		}
+		return t, SParseJson(s, &t)
+	})
 }
 
 // Write json as string.
