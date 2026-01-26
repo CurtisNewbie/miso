@@ -36,7 +36,8 @@ func main() {
 		txt := clipboard.Read(clipboard.FmtText)
 		if txt != nil {
 			s := strutil.UnsafeByt2Str(txt)
-			if strings.Contains(strings.ToLower(s), "curl") {
+			cli.DebugPrintlnf(Debug, "clipboard: %v", s)
+			if strings.HasPrefix(strings.ToLower(strings.TrimSpace(s)), "curl") {
 				curl = s
 			} else {
 				_, err = json.SParseJsonAs[map[string]any](s)
@@ -50,6 +51,8 @@ func main() {
 				}
 			}
 		}
+	} else {
+		cli.ErrorPrintlnf("failed to init clipboard, %v", err)
 	}
 
 	if curl == "" {
