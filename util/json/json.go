@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/curtisnewbie/miso/errs"
+	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
 	jsoniter "github.com/json-iterator/go"
@@ -85,6 +86,22 @@ func ConvertAnySlice[T any](v []any) ([]T, error) {
 			return t, err
 		}
 		return t, SParseJson(s, &t)
+	})
+}
+
+// Convert []any to []T through json serialization/deserialization.
+func ConvertAnySliceWithStr[T any](v []any) ([]pair.Pair[string, T], error) {
+	return slutil.MapToErr(v, func(v any) (pair.Pair[string, T], error) {
+		var t T
+		s, err := SWriteJson(v)
+		if err != nil {
+			return pair.Pair[string, T]{}, err
+		}
+		err = SParseJson(s, &t)
+		if err != nil {
+			return pair.Pair[string, T]{}, err
+		}
+		return pair.New(s, t), nil
 	})
 }
 
