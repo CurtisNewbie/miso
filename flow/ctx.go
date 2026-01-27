@@ -462,6 +462,11 @@ func NewSpanId() string {
 
 // Create new Rail from context.
 func NewRail(ctx context.Context) Rail {
+	switch v := ctx.(type) {
+	case Rail:
+		return v
+	}
+
 	var tid string
 	if ctx.Value(XTraceId) == nil {
 		tid = NewTraceId()
