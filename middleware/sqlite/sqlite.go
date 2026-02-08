@@ -55,6 +55,16 @@ func (m *sqliteModule) initOnce() {
 		m.sqliteDb = sq
 
 		dbquery.ImplGetPrimaryDBFunc(func() *gorm.DB { return GetDB() })
+
+		colorful := false
+		if miso.GetPropStrTrimmed(miso.PropLoggingRollingFile) == "" {
+			colorful = true
+		}
+		if logSQL() {
+			dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Info, Colorful: colorful})
+		} else {
+			dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: colorful})
+		}
 	})
 }
 
@@ -130,7 +140,6 @@ func sqliteBootstrap(rail miso.Rail) error {
 	} else {
 		dbLogger.UpdateConfig(logger.Config{SlowThreshold: slowThreshold, LogLevel: logger.Warn, Colorful: colorful})
 	}
-
 	return nil
 }
 
