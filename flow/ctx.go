@@ -393,7 +393,7 @@ func (r Rail) Println(args ...interface{}) {
 		Println(args...)
 }
 
-func (r Rail) WithCtxVal(key string, val any) Rail {
+func (r Rail) WithCtxVal(key any, val any) Rail {
 	ctx := context.WithValue(r.ctx, key, val) //lint:ignore SA1029 keys must be exposed for user to use
 	return Rail{ctx: ctx}
 }
