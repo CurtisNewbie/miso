@@ -11,15 +11,23 @@ import (
 )
 
 func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string {
-	fr := finalPat.FindStringSubmatch(s)
-	if len(fr) < 1 {
-		fr = halfPat.FindStringSubmatch(s)
-		if len(fr) < 1 {
-			return ""
+	_, withoutThink := ParseThink(s)
+
+	// Find all matches in the text without think blocks and use the last one
+	allMatches := finalPat.FindAllStringSubmatch(withoutThink, -1)
+	if len(allMatches) > 0 {
+		lastMatch := allMatches[len(allMatches)-1]
+		if len(lastMatch) > 1 {
+			return lastMatch[1]
 		}
+	}
+
+	// Fallback to partial pattern for incomplete tags (also without think blocks)
+	fr := halfPat.FindStringSubmatch(withoutThink)
+	if len(fr) > 1 {
 		return fr[1]
 	}
-	return fr[1]
+	return ""
 }
 
 // Extract content in <tag>...</tag>.
@@ -42,7 +50,7 @@ func (t tagContentExtractor) Content(answer string) string {
 //
 // The content between the tags must not include xml closing tags, e.g., </xxx>.
 func TagExtractor(tag string) (tagContentExtractor, error) {
-	finalPat, err := regexp.Compile(`(?s)<` + tag + `>(.*)<\/` + tag + `>`)
+	finalPat, err := regexp.Compile(`(?s)<` + tag + `>(.*?)<\/` + tag + `>`)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
