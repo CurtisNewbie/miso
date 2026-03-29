@@ -49,6 +49,44 @@ start := time.Now()
 rail.TimeOp(start, "Operation name")
 ```
 
+### Trace Lifecycle
+
+```go
+// Create child span (same trace ID, new span ID)
+childRail := rail.NextSpan()
+
+// Create new trace (new trace ID, new span ID)
+newRail := rail.NewTrace()
+```
+
+### Cross-Service Propagation
+
+Miso automatically propagates trace information across components and services:
+
+**Automatic Propagation:**
+- Inbound HTTP requests: Trace headers are automatically extracted and loaded into Rail
+- Outbound HTTP requests: Use `miso.BuildTraceHeadersStr(rail)` to get trace headers for downstream calls
+- RabbitMQ messages: Trace headers are automatically propagated to message headers
+- New goroutines: Use `rail.NewCtx()` to propagate trace context to background tasks
+- Database queries: Trace context is automatically propagated to GORM logger
+
+**Default Propagation Keys:**
+- `X-B3-TraceId` - Trace ID
+- `X-B3-SpanId` - Span ID
+- `x-username` - Username
+- `x-userno` - User number
+- `x-roleno` - Role number
+
+**Configuration:**
+
+```yaml
+# conf.yml
+server:
+  trace:
+    inbound:
+      propagate: true  # enable/disable trace propagation from inbound requests (default: true)
+```
+
 ### Global Logging
 
 ```go

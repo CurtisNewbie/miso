@@ -21,10 +21,17 @@ miso is a Go framework for building microservices with:
 
 ## Quick Reference
 
-For implementation details and patterns:
+**Core Concepts:** [core-concepts.md](references/core-concepts.md)
+- Tracing, Bootstrap, Request Handling, Error Handling
 
-- **[core-concepts.md](references/core-concepts.md)** - Rail, Bootstrap, Inbound, MisoErr deep dive
-- **[web-development.md](references/web-development.md)** - Web server, routing, API patterns, middleware, misoapi
-- **[database.md](references/database.md)** - GORM usage, transactions, migrations, dbquery API
-- **[configuration.md](references/configuration.md)** - Configuration management with Viper and misoconfig
-- **[error-handling.md](references/error-handling.md)** - Error types, wrapping, logging patterns
+**Web Development:** [web-development.md](references/web-development.md)
+- Routing, API patterns, middleware, misoapi code generation
+
+**Database:** [database.md](references/database.md)
+- GORM usage, transactions, migrations, dbquery API
+
+**Configuration:** [configuration.md](references/configuration.md)
+- Viper-based config, property constants, default values
+
+**Error Handling:** [error-handling.md](references/error-handling.md)
+- Error types, wrapping, logging patterns with Rail
