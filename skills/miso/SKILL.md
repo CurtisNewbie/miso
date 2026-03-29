@@ -1,6 +1,6 @@
 ---
 name: miso
-description: Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Bootstrap lifecycle management, (8) Service discovery and middleware integration
+description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Bootstrap lifecycle management, (8) Service discovery and middleware integration"
 ---
 
 # Miso Framework
