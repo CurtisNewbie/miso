@@ -35,3 +35,6 @@ miso is a Go framework for building microservices with:
 
 **Error Handling:** [error-handling.md](references/error-handling.md)
 - Error types, wrapping, logging patterns with Rail
+
+**Service Discovery:** [service-discovery.md](references/service-discovery.md)
+- Nacos/Consul service registration, HTTP client with service discovery

@@ -2,6 +2,10 @@
 
 Configuration management in miso using Viper with property constants and multiple sources.
 
+## Complete Configuration Reference
+
+For the complete list of all configuration properties, defaults, and descriptions, see **[doc/config.md](../../doc/config.md)**. This file is generated automatically from code and serves as the single source of truth for configuration.
+
 ## Property Constants
 
 Define configuration properties as constants for type safety and documentation:
