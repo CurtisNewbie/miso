@@ -508,22 +508,31 @@ func HandleEndpointResult(inb Inbound, rail Rail, result any, err error) {
 
 // Must bind request payload to the given pointer, else panic
 func mustBind(rail Rail, c *gin.Context, ptr any) {
-	onFailed := func(err error) {
-		rail.Warnf("Bind payload failed, %v", err)
+	onFailed := func(b []byte, err error) {
+		if len(b) > 0 {
+			rail.Warnf("Bind payload failed, body: %v, %v", string(b), err)
+		} else {
+			rail.Warnf("Bind payload failed, %v", err)
+		}
 		panic(errs.NewErrf("Illegal Arguments"))
 	}
 
 	// we now use jsoniter
 	if c.Request.Method != http.MethodGet && c.ContentType() == gin.MIMEJSON {
-		if err := json.DecodeJson(c.Request.Body, ptr); err != nil {
-			onFailed(err)
+		buf, readErr := io.ReadAll(c.Request.Body)
+		if readErr != nil {
+			onFailed(nil, readErr)
+			return
+		}
+		if err := json.DecodeJson(bytes.NewReader(buf), ptr); err != nil {
+			onFailed(buf, err)
 		}
 		return
 	}
 
 	// other mime types
 	if err := c.ShouldBind(ptr); err != nil {
-		onFailed(err)
+		onFailed(nil, err)
 	}
 }
 
