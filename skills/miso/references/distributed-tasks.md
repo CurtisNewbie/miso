@@ -7,10 +7,35 @@ Cron-based scheduling with master-worker architecture for distributed task execu
 Distributed tasks use a **Producer-Worker** design pattern:
 
 - **Producer (Master Node)**: Scheduled tasks that run on cron schedule and push tasks to the queue
-- **Queue (Redis)**: Shared queue using Redis lists (LPUSH/BRPOP)
+- **Queue (Redis)**: Shared queue using Redis lists (LPUSH/BRPopAny)
 - **Workers (All Nodes)**: All nodes (including master) pull and execute tasks
 
 Only one master node per cluster at a time (via Redis-based leader election).
+
+### Trace Propagation
+
+Tasks include trace context for distributed tracing:
+
+```go
+type queuedTask struct {
+    Name        string    // Task name
+    ScheduledAt atom.Time // When task was scheduled (UTC)
+    Producer    string    // Producer node identifier (IP:port)
+    TraceId     string    // Trace ID for distributed tracing
+}
+```
+
+When a producer schedules a task, it includes the current trace ID. Workers pick up the trace context when executing tasks, enabling end-to-end tracing across the distributed system.
+
+### Concurrent Execution Prevention
+
+Each task execution uses a distributed Redis lock (`RLock`) to prevent concurrent execution of the same task across multiple nodes:
+
+- Lock key format: `dtask:{group}:{taskName}`
+- Lock timeout with backoff: 1 second
+- If lock cannot be acquired, the task is skipped (producer may be outpacing workers)
+
+This ensures idempotency and prevents resource conflicts when tasks overlap.
 
 ## Job Structure
 
@@ -62,28 +87,7 @@ func main() {
 
 ## Configuration
 
-```yaml
-# conf.yml
-task:
-  scheduling:
-    enabled: true
-    group: "${app.name}"  # Cluster group name
-
-# Enable job trigger API endpoints (for manual triggering)
-scheduler:
-  api:
-    trigger:
-      job:
-        enabled: true
-```
-
-### Properties
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `task.scheduling.enabled` | `true` | Enable/disable task scheduling |
-| `task.scheduling.group` | `${app.name}` | Schedule group name (cluster identifier) |
-| `scheduler.api.trigger.job.enabled` | `false` | Enable job trigger API endpoints |
+See [config.md](https://github.com/CurtisNewbie/miso/blob/main/doc/config.md) for distributed task scheduling configuration properties.
 
 ## Key Behaviors
 
@@ -96,9 +100,9 @@ scheduler:
 
 ### Task Execution
 
-- All nodes continuously poll queue (BRPOP with 1s timeout)
+- Single goroutine pulls tasks from all queues using `BRPopAny` with 10s timeout
 - Stale task threshold: 5s (older tasks are ignored)
-- Worker pool: Calculated with size range 12-1024 workers
+- Worker pool: Calculated with `async.CalcPoolSize(12, 128, 1024)` based on system resources
 - Tasks logged with timing info
 
 ### Bootstrapping
@@ -163,10 +167,11 @@ The middleware registers bootstrap callbacks automatically.
 
 ## Performance Considerations
 
-- Each task worker occupies one Redis connection
-- With 30+ tasks and low GOMAXPROCS, consider increasing Redis pool size
-- Stale task threshold prevents executing old tasks from queue
-- Worker pool sized automatically based on system resources
+- **Single goroutine architecture**: Uses one BRPopAny call to pull from all task queues, requiring only ONE Redis connection regardless of task count
+- **Efficient polling**: BRPopAny blocks up to 10s, reducing CPU usage compared to continuous polling
+- **Worker pool sizing**: Automatically calculated with `async.CalcPoolSize(12, 128, 1024)` based on system resources
+- **Stale task threshold**: 5s threshold prevents executing old tasks from queue
+- **Distributed locks**: Each task uses Redis lock (1s backoff) to prevent concurrent execution
 
 ## Differences from Local Scheduling
 
