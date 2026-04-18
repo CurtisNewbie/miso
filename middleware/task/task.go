@@ -14,6 +14,7 @@ import (
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/iputil"
+	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/randutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 )
@@ -106,23 +107,21 @@ func (m *taskModule) prepareSched(rail miso.Rail, tasks []miso.Job) error {
 	if err := m.registerTasks(tasks); err != nil {
 		return err
 	}
-	m.cancelPullTaskRunner = make([]func(), 0, len(tasks))
+	m.cancelPullTaskRunner = make([]func(), 0, 1)
 
-	redisPoolSize := redis.GetRedis().Options().PoolSize
-	if len(tasks) > redisPoolSize/2 {
-		rail.Errorf("Number of tasks registered: %v, current Redis connection pool size: %v, increase max-pool-size to avoid exhausting the pool!", len(tasks), redisPoolSize)
-	}
+	// Single goroutine pulls from all task queues using BRPop with multiple keys
+	// This is more efficient than N goroutines each polling their own queue
+	cancel := async.RunCancellable(func() {
+		nrail := miso.EmptyRail()
+		if err := async.PanicSafeRunErr(func() error { return m.pullTasksAny(nrail) }); err != nil {
+			nrail.Errorf("Pull tasks failed, %v", err)
+			time.Sleep(time.Millisecond * 200) // backoff from error
+		}
+	})
+	m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
 
-	// queue per task to prevent old nodes attempting to run new tasks
+	// Log all subscribed queues
 	for _, t := range tasks {
-		cancel := async.RunCancellable(func() {
-			nrail := miso.EmptyRail()
-			if err := async.PanicSafeRunErr(func() error { return m.pullTasks(nrail, t.Name) }); err != nil {
-				nrail.Errorf("Pull tasks queue failed, %v", err)
-				time.Sleep(time.Millisecond * 200) // backoff from error
-			}
-		})
-		m.cancelPullTaskRunner = append(m.cancelPullTaskRunner, cancel)
 		rail.Infof("Subscribed to distributed task queue: '%v'", m.getTaskQueueKey(t.Name))
 	}
 
@@ -164,6 +163,16 @@ func (m *taskModule) getTaskMasterKey(name string) string {
 
 func (m *taskModule) getTaskQueueKey(name string) string {
 	return "task:master:queue:" + m.group + ":" + name
+}
+
+// Extract task name from queue key
+// Queue key format: "task:master:queue:{group}:{name}"
+func (m *taskModule) extractTaskNameFromQueueKey(key string) string {
+	prefix := "task:master:queue:" + m.group + ":"
+	if strings.HasPrefix(key, prefix) {
+		return key[len(prefix):]
+	}
+	return ""
 }
 
 func (m *taskModule) scheduleTasks(tasks ...miso.Job) error {
@@ -293,36 +302,78 @@ func (m *taskModule) enableTaskWorker(rail miso.Rail, names []string) {
 	rail.Infof("Enabled task workers for %+v", names)
 }
 
-func (m *taskModule) pullTasks(rail miso.Rail, name string) error {
-	if _, ok := m.disabledTasks.Get(name); ok {
+// pullTasksAny pulls tasks from all registered task queues using a single BRPop call.
+// This is more efficient than pullTasks as it uses only one goroutine and one Redis connection.
+// BRPop blocks up to 10 seconds until a task is available.
+func (m *taskModule) pullTasksAny(rail miso.Rail) error {
+	tasks := m.dtasks.Copy()
+	if len(tasks) < 1 {
 		return nil
 	}
 
-	rail.Debugf("Pulling tasks: %v", name)
+	// Collect all queue keys
+	keys := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		keys = append(keys, m.getTaskQueueKey(t.Name))
+	}
 
-	v, ok, err := redis.BRPopJson[queuedTask](rail, time.Second, m.getTaskQueueKey(name))
+	rail.Debugf("Pulling tasks from %d queues", len(keys))
+
+	// BRPopAny blocks up to 10 seconds until a task is available from any queue
+	// Returns [key, value] where key is the actual queue key
+	v, ok, err := redis.BRPopAny(rail, 10*time.Second, keys...)
 	if err != nil {
 		return err
 	}
 	if !ok {
+		// Timeout reached without any data, this is normal behavior
 		return nil
 	}
 
-	for _, qt := range v {
-		if qt.ScheduledAt.Before(atom.NowUTC().Add(-staleTaskThreshold)) {
-			rail.Warnf("Task was triggered %v ago, ignore, %v, scheduledAt: %v", staleTaskThreshold, qt.Name, qt.ScheduledAt)
-			continue
-		}
-
-		newRail := miso.EmptyRail()
-		if qt.TraceId != "" {
-			newRail = newRail.WithTraceId(qt.TraceId)
-		}
-		newRail.Debugf("Pulled task '%v' from task queue, producer: %v", qt.Name, qt.Producer)
-		if err := m.triggerWorker(newRail, qt.Name); err != nil {
-			newRail.Errorf("Failed to trigger worker, task: '%v', %v", qt.Name, err)
-		}
+	// v is [key, value] where key is the actual queue key
+	if len(v) < 2 {
+		return errs.NewErrf("Invalid BRPop result, expected [key, value], got: %v", v)
 	}
+
+	queueKey := v[0]
+	taskName := m.extractTaskNameFromQueueKey(queueKey)
+	if taskName == "" {
+		rail.Warnf("Failed to extract task name from queue key: %v", queueKey)
+		return nil
+	}
+
+	// Check if task is disabled
+	if _, ok := m.disabledTasks.Get(taskName); ok {
+		rail.Debugf("Task '%v' disabled, skipped", taskName)
+		return nil
+	}
+
+	// Parse the queued task
+	qt, err := json.SParseJsonAs[queuedTask](v[1])
+	if err != nil {
+		rail.Errorf("Failed to parse queued task from queue %v: %v", queueKey, err)
+		return err
+	}
+
+	// Check for stale task
+	if qt.ScheduledAt.Before(atom.NowUTC().Add(-staleTaskThreshold)) {
+		rail.Warnf("Task was triggered %v ago, ignore, %v, scheduledAt: %v", staleTaskThreshold, qt.Name, qt.ScheduledAt)
+		return nil
+	}
+
+	// Create new rail with trace id if available
+	newRail := miso.EmptyRail()
+	if qt.TraceId != "" {
+		newRail = newRail.WithTraceId(qt.TraceId)
+	}
+	newRail.Debugf("Pulled task '%v' from queue %v, producer: %v", qt.Name, queueKey, qt.Producer)
+
+	// Trigger the worker
+	if err := m.triggerWorker(newRail, qt.Name); err != nil {
+		newRail.Errorf("Failed to trigger worker, task: '%v', %v", qt.Name, err)
+		return err
+	}
+
 	return nil
 }
 

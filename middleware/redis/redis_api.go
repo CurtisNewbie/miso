@@ -238,6 +238,22 @@ func BRPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, e
 
 }
 
+// BRPopAny pops from the first non-empty key among multiple keys.
+// Unlike BRPop, this returns [key, value] where key is the actual queue key.
+// This allows the caller to identify which queue the value came from.
+// Returns false if timeout reached without any data.
+func BRPopAny(rail miso.Rail, timeout time.Duration, keys ...string) ([]string, bool, error) {
+	c := GetRedis().BRPop(rail.Context(), timeout, keys...)
+	v, err := c.Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return v, false, nil
+		}
+		return v, false, errs.Wrap(err)
+	}
+	return v, true, nil
+}
+
 func BLPop(rail miso.Rail, timeout time.Duration, key string) ([]string, bool, error) {
 	c := GetRedis().BLPop(rail.Context(), timeout, key)
 	v, err := c.Result()
