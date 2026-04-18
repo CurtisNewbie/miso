@@ -38,3 +38,6 @@ miso is a Go framework for building microservices with:
 
 **Service Discovery:** [service-discovery.md](references/service-discovery.md)
 - Nacos/Consul service registration, HTTP client with service discovery
+
+**CLI Tools:** [cmd-tools.md](references/cmd-tools.md)
+- misogen, misoapi, misocurl, misopatch, misoconfig
