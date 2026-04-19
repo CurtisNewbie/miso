@@ -1,6 +1,6 @@
 ---
 name: miso
-description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration"
+description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies"
 ---
 
 # Miso Framework
@@ -45,3 +45,15 @@ miso is a Go framework for building microservices with:
 
 **CLI Tools:** [cmd-tools.md](references/cmd-tools.md)
 - misogen, misoapi, misocurl, misopatch, misoconfig
+
+**Health Checks:** [health-checks.md](references/health-checks.md)
+- Health indicators, status monitoring
+
+**Validation:** [validation.md](references/validation.md)
+- Struct validation rules, custom error messages, recursive validation
+
+**Performance Monitoring:** [performance-monitoring.md](references/performance-monitoring.md)
+- pprof profiling, FlightRecorder traces, gops inspection
+
+**Caching:** [caching.md](references/caching.md)
+- Local cache, TTL cache, Redis cache, cache patterns
