@@ -2,6 +2,23 @@
 
 Configuration management in miso using Viper with property constants and multiple sources.
 
+**Table of Contents:**
+- Complete Configuration Reference
+- Property Constants
+- Accessing Configuration
+- Setting Configuration
+- Checking Configuration
+- Configuration Sources
+- Configuration File (conf.yml)
+- Environment Variables
+- Configuration in Bootstrap
+- Conditional Configuration
+- Configuration Best Practices
+- Configuration with misoconfig CLI
+- Configuration Tags (for code generation)
+- Accessing AppConfig
+- Type Conversion
+
 ## Complete Configuration Reference
 
 For the complete list of all configuration properties, defaults, and descriptions, see **[doc/config.md](../../doc/config.md)**. This file is generated automatically from code and serves as the single source of truth for configuration.

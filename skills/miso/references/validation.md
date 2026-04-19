@@ -2,6 +2,21 @@
 
 Request validation framework for ensuring data integrity and providing meaningful error messages.
 
+**Table of Contents:**
+- Overview
+- Basic Usage
+- Validation Rules
+- Combining Rules
+- Custom Error Messages
+- Parameterized Rules
+- Validation Errors
+- Advanced Examples
+- Validation Flow
+- Best Practices
+- Validation Rules Reference
+- Integration with misoapi
+- Testing Validation
+
 ## Overview
 
 Miso provides a declarative validation system using struct tags. Validation automatically runs before handler execution, ensuring invalid requests are rejected early with clear error messages.

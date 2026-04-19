@@ -2,6 +2,18 @@
 
 Performance profiling and debugging tools including pprof, FlightRecorder, and gops.
 
+**Table of Contents:**
+- Overview
+- pprof (CPU/Memory Profiling)
+- FlightRecorder (Execution Tracing)
+- gops (Runtime Inspection)
+- Configuration
+- Performance Monitoring with Proxy
+- Best Practices
+- Memory Statistics
+- Performance Monitoring Checklist
+- Resources
+
 ## Overview
 
 Miso provides built-in performance monitoring tools for debugging production issues, analyzing performance bottlenecks, and profiling Go applications. These tools include pprof for CPU/memory profiling, FlightRecorder for execution traces, and gops for runtime inspection.

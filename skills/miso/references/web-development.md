@@ -2,7 +2,22 @@
 
 Building web servers and RESTful APIs with miso using Gin integration.
 
-## Two Approaches
+**Table of Contents:**
+- Two Approaches
+- Handler Types
+- Auto Generation with misoapi
+- Request/Response
+- HTTP Methods
+- Query Parameters
+- miso.Inbound Methods
+- Validation
+- Metadata and Documentation
+- Interceptors
+- Manual Response
+- Middleware
+- HTTP Client
+- Static Files
+- Configuration
 
 miso supports two ways to register HTTP endpoints:
 

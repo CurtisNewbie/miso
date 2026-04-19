@@ -2,6 +2,16 @@
 
 In-memory caching with TTL, LRU eviction, and distributed caching support.
 
+**Table of Contents:**
+- Overview
+- LocalCache
+- LocalCacheV2
+- TTLCache
+- Redis Cache
+- Cache Comparison
+- Best Practices
+- Configuration
+
 ## Overview
 
 Miso provides multiple caching strategies:

@@ -2,6 +2,12 @@
 
 Detailed explanation of miso framework's core abstractions.
 
+**Table of Contents:**
+- Rail (Tracing Context)
+- Bootstrap (Component Lifecycle)
+- Inbound (Request Context)
+- MisoErr (Error Type)
+
 ## Rail (Tracing Context)
 
 Rail is the primary abstraction for distributed tracing and logging in miso. It wraps `context.Context` and adds trace/span information.

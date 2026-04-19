@@ -2,6 +2,15 @@
 
 miso framework provides several CLI tools to streamline development workflow:
 
+**Table of Contents:**
+- Installation
+- misogen
+- misoapi
+- misocurl
+- misopatch
+- misoconfig
+- Common Patterns
+
 - **misogen** - Generate new project scaffolding
 - **misoapi** - Auto-generate web endpoint registration from comments
 - **misocurl** - Generate HTTP client code from curl command

@@ -2,6 +2,21 @@
 
 Database operations with GORM integration in miso framework.
 
+**Table of Contents:**
+- Getting Database Instance
+- Model Definition
+- Automatic Audit Fields
+- Bootstrap Database
+- Query Operations
+- Create Operations
+- Update Operations
+- Delete Operations
+- Transactions
+- Raw SQL
+- Error Handling
+- Pagination
+- Database Configuration Properties
+
 miso framework provides two database middleware packages:
 
 - **MySQL**: `github.com/curtisnewbie/miso/middleware/mysql`
