@@ -378,13 +378,30 @@ func (t *Client) UseClient(client *http.Client) *Client {
 	return t
 }
 
-// Prepare request url.
-//
-// If service discovery is enabled, serviceName will be resolved using Consul.
-//
-// If consul is disabled, t.serviceName is used directly as the host name. This is especially useful in container environment.
 func (t *Client) prepReqUrl() (string, error) {
 	url := t.Url
+
+	// Check if URL starts with "lb:" for load balancer/service discovery
+	// Only process if discoverService is not already set (e.g., by EnableServiceDiscovery)
+	if strings.HasPrefix(url, "lb:") && !t.discoverService {
+		// Extract service name from "lb:SERVICE_NAME/..." pattern
+		rest := strings.TrimPrefix(url, "lb:")
+		if idx := strings.Index(rest, "/"); idx >= 0 {
+			t.serviceName = rest[:idx]
+			t.discoverService = true
+			url = rest[idx:] // Use the rest starting from "/"
+		} else {
+			// No "/" found, the entire thing is the service name
+			t.serviceName = rest
+			t.discoverService = true
+			url = "/"
+		}
+
+		// Validate service name is not empty
+		if t.serviceName == "" {
+			return "", UnknownErrMsgf("malformed 'lb:' URL: service name is empty, expected format 'lb:SERVICE_NAME/path'")
+		}
+	}
 
 	if t.discoverService {
 		sr := GetServiceRegistry()
@@ -411,7 +428,23 @@ func (t *Client) Require2xx() *Client {
 	return t
 }
 
-// Enable service discovery
+// Enable service discovery for this request.
+//
+// This method enables service discovery and sets the service name to be resolved.
+// When enabled, the service name will be resolved using the configured service registry
+// (Nacos, Consul, hardcoded properties, etc.) before making the HTTP request.
+//
+// Usage:
+//
+//	// Method 1: Using EnableServiceDiscovery with URL path
+//	miso.NewClient(rail, "/api/users").
+//	    EnableServiceDiscovery("user-service").
+//	    Get()
+//	→ Resolves "user-service" to "http://10.0.0.1:8080/api/users"
+//
+//	// Method 2: Using "lb:" prefix (alternative, no need to call EnableServiceDiscovery)
+//	miso.NewClient(rail, "lb:user-service/api/users").Get()
+//	→ Same result as Method 1
 func (t *Client) EnableServiceDiscovery(serviceName string) *Client {
 	t.serviceName = serviceName
 	t.discoverService = true

@@ -26,7 +26,9 @@ Consul provides service discovery, health checking, and KV store.
 
 ### Usage
 
-Both Nacos and Consul use the same API for service discovery:
+Both Nacos and Consul use the same API for service discovery. There are two ways to make requests with service discovery:
+
+**Method 1: Using NewDynClient (recommended for dynamic service discovery)**
 
 ```go
 // Create client with service discovery
@@ -37,6 +39,24 @@ err := miso.NewDynClient(rail, "/api/users", "target-service-name").
 	Get().
 	Json(&res)
 ```
+
+**Method 2: Using "lb:" prefix with NewClient**
+
+```go
+// Use "lb:" prefix to indicate service discovery
+// Format: lb:SERVICE_NAME/path
+var res ApiResponse
+err := miso.NewClient(rail, "lb:target-service-name/api/users").
+	Get().
+	Json(&res)
+
+// Equivalent to using EnableServiceDiscovery:
+// miso.NewClient(rail, "/api/users").
+//     EnableServiceDiscovery("target-service-name").
+//     Get()
+```
+
+The "lb:" prefix automatically enables service discovery and extracts the service name from the URL, making it more concise.
 
 ## Service Registration
 
@@ -58,11 +78,17 @@ The registration includes:
 // 1. Service registration happens automatically during bootstrap
 // No code needed if configuration is set correctly
 
-// 2. Discover and call another service
+// 2a. Discover and call another service using NewDynClient
 // Second parameter is the relative URL path
 // Third parameter is the service name to resolve
 var res ApiResponse
 err := miso.NewDynClient(rail, "/api/users", "other-service").
+	Get().
+	Json(&res)
+
+// 2b. Alternatively, use "lb:" prefix with NewClient
+// Format: lb:SERVICE_NAME/path
+err = miso.NewClient(rail, "lb:other-service/api/users").
 	Get().
 	Json(&res)
 
