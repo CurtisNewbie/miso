@@ -19,6 +19,7 @@ import (
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/flags"
@@ -319,6 +320,9 @@ ${code}
 			return err
 		}
 		log.Infof("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
+
+		// fix imports
+		tools.RunGoImports(outFile)
 	}
 
 	// insert func calls to register apis
@@ -1048,6 +1052,7 @@ func addBlankImports(filePath string, pkgName string, modName string, importPath
 	}
 
 	log.Infof("Added import %q to %s\n", importPath, filePath)
+	tools.RunGoImports(filePath)
 	return nil
 }
 
