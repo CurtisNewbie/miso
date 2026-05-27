@@ -311,9 +311,16 @@ func (m *taskModule) pullTasksAny(rail miso.Rail) error {
 		return nil
 	}
 
-	// Collect all queue keys
 	keys := make([]string, 0, len(tasks))
 	for _, t := range tasks {
+		if miso.GetPropBool("task.scheduling." + t.Name + ".disabled") {
+			rail.Debugf("Task '%v' disabled, skipped", t.Name)
+			continue
+		}
+		if _, disabled := m.disabledTasks.Get(t.Name); disabled {
+			rail.Debugf("Task '%v' disabled, skipped", t.Name)
+			continue
+		}
 		keys = append(keys, m.getTaskQueueKey(t.Name))
 	}
 
