@@ -44,3 +44,19 @@ func PrettifyMarkdownDoc(markdown string) string {
 func EscapeMarkdownLatex(markdown string) string {
 	return latexRegex.ReplaceAllString(markdown, `$1\$`)
 }
+
+func StripMarkdownFence(s string) string {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "```") {
+		return s
+	}
+	nl := strings.IndexByte(s, '\n')
+	if nl < 0 {
+		return ""
+	}
+	inner := s[nl+1:]
+	if idx := strings.LastIndex(inner, "```"); idx >= 0 {
+		inner = inner[:idx]
+	}
+	return strings.TrimSpace(inner)
+}
