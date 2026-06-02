@@ -7,7 +7,6 @@ import (
 	"path"
 	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 
@@ -54,25 +53,31 @@ var (
 	}
 
 	ApiDocTypeAlias = map[string]string{
-		"Time":         "int64",
-		"*atom.Time":   "int64",
-		"Set[any]":     "[]any",
-		"Set[string]":  "[]string",
-		"Set[int]":     "[]int",
-		"Set[int32]":   "[]int32",
-		"Set[int64]":   "[]int64",
-		"Set[float32]": "[]float32",
-		"Set[float64]": "[]float64",
-		"*Time":        "int64",
+		// Time is atom.Time (util/atom). Both short and full-module-path forms
+		// are covered: runtime uses reflect.Type.Name() → "Time", static misoapi
+		// uses types.TypeString(…, RelativeTo(…)) → full module path.
+		"github.com/curtisnewbie/miso/util/atom.Time":  "int64",
+		"*github.com/curtisnewbie/miso/util/atom.Time": "int64",
 
-		// TODO: fix following pkg name prefix
-		"*hash.Set[any]":     "[]any",
-		"*hash.Set[string]":  "[]string",
-		"*hash.Set[int]":     "[]int",
-		"*hash.Set[int32]":   "[]int32",
-		"*hash.Set[int64]":   "[]int64",
-		"*hash.Set[float32]": "[]float32",
-		"*hash.Set[float64]": "[]float64",
+		// Set[T] is util/hash.Set[T], ~map[T]struct{}
+		"github.com/curtisnewbie/miso/util/hash.Set[any]":      "[]any",
+		"*github.com/curtisnewbie/miso/util/hash.Set[any]":     "[]any",
+		"github.com/curtisnewbie/miso/util/hash.Set[string]":   "[]string",
+		"*github.com/curtisnewbie/miso/util/hash.Set[string]":  "[]string",
+		"github.com/curtisnewbie/miso/util/hash.Set[int]":      "[]int",
+		"*github.com/curtisnewbie/miso/util/hash.Set[int]":     "[]int",
+		"github.com/curtisnewbie/miso/util/hash.Set[int32]":    "[]int32",
+		"*github.com/curtisnewbie/miso/util/hash.Set[int32]":   "[]int32",
+		"github.com/curtisnewbie/miso/util/hash.Set[int64]":    "[]int64",
+		"*github.com/curtisnewbie/miso/util/hash.Set[int64]":   "[]int64",
+		"github.com/curtisnewbie/miso/util/hash.Set[float32]":  "[]float32",
+		"*github.com/curtisnewbie/miso/util/hash.Set[float32]": "[]float32",
+		"github.com/curtisnewbie/miso/util/hash.Set[float64]":  "[]float64",
+		"*github.com/curtisnewbie/miso/util/hash.Set[float64]": "[]float64",
+
+		// Amt is middleware/money.Amt, type Amt string
+		"github.com/curtisnewbie/miso/middleware/money.Amt":  "string",
+		"*github.com/curtisnewbie/miso/middleware/money.Amt": "string",
 	}
 	apiDocEndpointDisabled = false
 
@@ -108,18 +113,22 @@ func init() {
 			pipelineDoc = append(pipelineDoc, f()...)
 		}
 
-		err := writeApiDocFile(rail, docs.routeDocs, pipelineDoc)
-		if err != nil {
-			rail.Errorf("Failed to write api-doc markdown file: %v", err)
-			return err
-		}
+		// misoapi now generate doc statically
+		//
+		// err := writeApiDocFile(rail, docs.routeDocs, pipelineDoc)
+		// if err != nil {
+		// 	rail.Errorf("Failed to write api-doc markdown file: %v", err)
+		// 	return err
+		// }
 
-		err = writeApiDocOpenApiSpec(rail, docs)
+		// TODO: deprecate, migrate to misoapi?
+		err := writeApiDocOpenApiSpec(rail, docs)
 		if err != nil {
 			rail.Errorf("Failed to write api-doc open-api 3.0 spec file: %v", err)
 			return err
 		}
 
+		// TODO: deprecate, migrate to misoapi?
 		err = writeApiDocGoFile(rail, docs.globalDoc.GoTypeDef, docs.routeDocs)
 		if err != nil {
 			rail.Errorf("Failed to write api-doc golang file: %v", err)
@@ -141,7 +150,7 @@ type globalHttpRouteDoc struct {
 	GoTypeDef []string
 }
 
-type httpRouteDoc struct {
+type HttpRouteDoc struct {
 	Name                    string           // api func name
 	Url                     string           // http request url
 	Method                  string           // http method
@@ -180,10 +189,10 @@ type FieldDesc struct {
 	DescTag               string      // `desc` tag value
 	JsonTag               string      // `json` tag value
 	ValidTag              string      // `validate` tag value
-	isSliceOrArray        bool        // slice or array []T
-	isSliceOfPointer      bool        // slice of pointer []*T
-	isMap                 bool        // map
-	isPointer             bool        // *T
+	IsSliceOrArray        bool        // slice or array []T
+	IsSliceOfPointer      bool        // slice of pointer []*T
+	IsMap                 bool        // map
+	IsPointer             bool        // *T
 	Fields                []FieldDesc // struct fields
 }
 
@@ -211,7 +220,7 @@ func FuzzMatchTypes(v interface {
 
 func (f FieldDesc) guessTsPrimiTypeName() string {
 	var tname string
-	if f.isMap {
+	if f.IsMap {
 		re := golangMapGenericRexp
 		tname = "Map<any, any>"
 		if sm := re.FindStringSubmatch(f.goFieldTypeName()); len(sm) > 2 {
@@ -236,15 +245,15 @@ func (f FieldDesc) typePkg() string {
 }
 
 func (f FieldDesc) isBuiltInType() bool {
-	return f.isMap
+	return f.IsMap
 }
 
 func (f FieldDesc) pureGoTypeName() string {
 	n := f.OriginTypeName
-	if f.isMap {
+	if f.IsMap {
 		return n
 	}
-	return pureGoTypeName(n)
+	return PureGoTypeName(n)
 }
 
 func (f FieldDesc) comment(withSlash bool) string {
@@ -313,13 +322,13 @@ func (f FieldDesc) goFieldTypeName() string {
 		return f.OriginTypeNameWithPkg
 	}
 	ptn := f.pureGoTypeName()
-	if f.isSliceOfPointer {
+	if f.IsSliceOfPointer {
 		return "[]*" + ptn
 	}
-	if f.isSliceOrArray {
+	if f.IsSliceOrArray {
 		return "[]" + ptn
 	}
-	if f.isPointer {
+	if f.IsPointer {
 		return "*" + ptn
 	}
 	return f.OriginTypeName
@@ -373,7 +382,7 @@ func (j TypeDesc) buildSchemaRef(f FieldDesc) *openapi3.SchemaRef {
 		return str
 	}
 	var sec *openapi3.Schema
-	if f.isSliceOrArray {
+	if f.IsSliceOrArray {
 		sec = openapi3.NewArraySchema()
 		secit := &openapi3.Schema{}
 		sec.WithItems(secit)
@@ -426,22 +435,14 @@ func (j TypeDesc) toOpenApiResp(respName string) *openapi3.Response {
 
 func (j TypeDesc) pureGoTypeName() string {
 	n := j.TypeName
-	return pureGoTypeName(n)
+	return PureGoTypeName(n)
 }
 
 func (f TypeDesc) isBuiltInType() bool {
 	return false
 }
 
-func (j TypeDesc) isMisoPkg() bool {
-	return strings.HasPrefix(j.TypePkg, "github.com/curtisnewbie/miso")
-}
-
-func (j TypeDesc) typePkg() string {
-	return j.TypePkg
-}
-
-func pureGoTypeName(n string) string {
+func PureGoTypeName(n string) string {
 	if len(n) == 0 {
 		return n
 	}
@@ -476,14 +477,14 @@ func pureGoTypeName(n string) string {
 	return n
 }
 
-type httpRouteDocs struct {
-	routeDocs []httpRouteDoc
+type HttpRouteDocs struct {
+	routeDocs []HttpRouteDoc
 	globalDoc globalHttpRouteDoc
 	openapi   *openapi3.T
 }
 
-func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
-	docs := make([]httpRouteDoc, 0, len(hr))
+func buildHttpRouteDoc(hr []HttpRoute) HttpRouteDocs {
+	docs := make([]HttpRouteDoc, 0, len(hr))
 	filteredPathPatterns := []string{
 		"/debug/pprof/**",
 		"/doc/api/**",
@@ -519,7 +520,7 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 			continue
 		}
 
-		d := httpRouteDoc{
+		d := HttpRouteDoc{
 			Url:         r.Url,
 			Method:      r.Method,
 			Extra:       r.Extra,
@@ -561,11 +562,11 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 				Debugf("JsonRequestDesc:\n%v", json.TrySWriteJson(d.JsonRequestDesc))
 			}
 
-			d.JsonReqTsDef = genTsDef(d.JsonRequestDesc)
-			d.JsonReqGoDef, d.JsonReqGoDefTypeName = genGoDef(d.JsonRequestDesc, hash.NewSet[string]())
+			d.JsonReqTsDef = GenTsDef(d.JsonRequestDesc)
+			d.JsonReqGoDef, d.JsonReqGoDefTypeName = GenGoDef(d.JsonRequestDesc, hash.NewSet[string]())
 
 			if addGlobalGoTypeDef {
-				td, _ := genGoDef(d.JsonRequestDesc, seenGlobalGoTypeDef)
+				td, _ := GenGoDef(d.JsonRequestDesc, seenGlobalGoTypeDef)
 				td = strings.TrimSpace(td)
 				if td != "" {
 					globalGoTypeDef = append(globalGoTypeDef, td)
@@ -581,11 +582,11 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 				Debugf("JsonResponseDesc:\n%v", json.TrySWriteJson(d.JsonResponseDesc))
 			}
 
-			d.JsonRespTsDef = genTsDef(d.JsonResponseDesc)
-			d.JsonRespGoDef, d.JsonRespGoDefTypeName = genGoDef(d.JsonResponseDesc, hash.NewSet[string]())
+			d.JsonRespTsDef = GenTsDef(d.JsonResponseDesc)
+			d.JsonRespGoDef, d.JsonRespGoDefTypeName = GenGoDef(d.JsonResponseDesc, hash.NewSet[string]())
 
 			if addGlobalGoTypeDef {
-				td, _ := genGoDef(d.JsonResponseDesc, seenGlobalGoTypeDef)
+				td, _ := GenGoDef(d.JsonResponseDesc, seenGlobalGoTypeDef)
 				td = strings.TrimSpace(td)
 				if td != "" {
 					globalGoTypeDef = append(globalGoTypeDef, td)
@@ -599,18 +600,18 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		}
 
 		// curl
-		d.Curl = genRouteCurl(d)
+		d.Curl = GenRouteCurl(d, GetPropStr(PropServerPort))
 
 		// ng http client
-		d.NgHttpClientDemo = genNgHttpClientDemo(d)
+		d.NgHttpClientDemo = GenNgHttpClientDemo(d, GetPropStr(PropAppName), GetPropBool(PropServerGenerateEndpointDocInclPrefix))
 
 		// ng table demo
 		if _, ok := r.Extra[ExtraNgTable]; ok {
-			d.NgTableDemo = genNgTableDemo(d)
+			d.NgTableDemo = GenNgTableDemo(d)
 		}
 
 		// miso http TClient
-		d.MisoTClientDemo = genTClientDemo(d)
+		d.MisoTClientDemo = GenTClientDemo(d, GetPropStr(PropAppName))
 		d.MisoTClientWithoutTypes = d.MisoTClientDemo
 		if d.JsonRespGoDef != "" {
 			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
@@ -626,210 +627,19 @@ func buildHttpRouteDoc(hr []HttpRoute) httpRouteDocs {
 		}
 
 		if matchSpecPattern {
-			d.OpenApiDoc = genOpenApiDoc(d, rootSpec)
+			d.OpenApiDoc = GenOpenApiDoc(d, rootSpec)
 		} else {
-			d.OpenApiDoc = genOpenApiDoc(d, nil)
+			d.OpenApiDoc = GenOpenApiDoc(d, nil)
 		}
 
 		docs = append(docs, d)
 	}
-	return httpRouteDocs{
+	return HttpRouteDocs{
 		routeDocs: docs,
 		globalDoc: globalHttpRouteDoc{
 			GoTypeDef: globalGoTypeDef,
 		},
 		openapi: rootSpec,
-	}
-}
-
-func genMarkDownDoc(hr []httpRouteDoc, pd []PipelineDoc) string {
-	b := strings.Builder{}
-	b.WriteString("# API Endpoints\n")
-
-	b.WriteString("\n## Contents\n")
-	for _, r := range hr {
-		tag := fmt.Sprintf("#%s %s", r.Method, r.Url)
-		tag = strings.ToLower(tag)
-		tag = strings.TrimSpace(tag)
-		tag = strings.ReplaceAll(tag, " ", "-")
-		tag = regexp.MustCompile(`[/:]`).ReplaceAllString(tag, "")
-		b.WriteString(fmt.Sprintf("\n- [%s %s](%s)", r.Method, r.Url, tag))
-	}
-	b.WriteRune('\n')
-
-	for _, r := range hr {
-		b.WriteString(fmt.Sprintf("\n## %s %s\n", r.Method, r.Url))
-		if r.Desc != "" {
-			b.WriteRune('\n')
-			b.WriteString("- Description: ")
-			b.WriteString(r.Desc)
-		}
-		if r.Scope != "" {
-			b.WriteRune('\n')
-			b.WriteString("- Expected Access Scope: ")
-			b.WriteString(r.Scope)
-		}
-		if r.Resource != "" {
-			b.WriteRune('\n')
-			b.WriteString("- Bound to Resource: `\"")
-			b.WriteString(r.Resource)
-			b.WriteString("\"`")
-		}
-		if len(r.Headers) > 0 {
-			b.WriteRune('\n')
-			b.WriteString("- Header Parameter:")
-			for _, h := range r.Headers {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- \"")
-				b.WriteString(h.Name)
-				b.WriteString("\": ")
-				b.WriteString(h.Desc)
-			}
-		}
-		if len(r.QueryParams) > 0 {
-			b.WriteRune('\n')
-			b.WriteString("- Query Parameter:")
-			for _, q := range r.QueryParams {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- \"")
-				b.WriteString(q.Name)
-				b.WriteString("\": ")
-				b.WriteString(q.Desc)
-			}
-		}
-		if len(r.JsonRequestDesc.Fields) > 0 {
-			b.WriteRune('\n')
-			b.WriteString("- JSON Request:")
-			if r.JsonRequestDesc.IsSlice {
-				b.WriteString(" (array)")
-			}
-			appendJsonPayloadDoc(&b, r.JsonRequestDesc.Fields, 2)
-		}
-		if len(r.JsonResponseDesc.Fields) > 0 {
-			b.WriteRune('\n')
-			b.WriteString("- JSON Response:")
-			if r.JsonResponseDesc.IsSlice {
-				b.WriteString(" (array)")
-			}
-			appendJsonPayloadDoc(&b, r.JsonResponseDesc.Fields, 2)
-		}
-
-		if r.Curl != "" {
-			b.WriteRune('\n')
-			b.WriteString("- cURL:\n")
-			b.WriteString(strutil.Spaces(2) + "```sh\n")
-			b.WriteString(strutil.SAddLineIndent(r.Curl, strutil.Spaces(2)))
-			b.WriteString(strutil.Spaces(2) + "```\n")
-		}
-
-		if r.MisoTClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
-			b.WriteRune('\n')
-			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
-			b.WriteString(strutil.Spaces(2) + "```go\n")
-			b.WriteString(strutil.SAddLineIndent(r.MisoTClientDemo+"\n", strutil.Spaces(2)))
-			b.WriteString(strutil.Spaces(2) + "```\n")
-		}
-
-		if r.JsonTsDef != "" {
-			b.WriteRune('\n')
-			b.WriteString("- JSON Request / Response Object In TypeScript:\n")
-			b.WriteString(strutil.Spaces(2) + "```ts\n")
-			b.WriteString(strutil.SAddLineIndent(r.JsonTsDef, strutil.Spaces(2)))
-			b.WriteString(strutil.Spaces(2) + "```\n")
-		}
-
-		if !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
-			if r.NgHttpClientDemo != "" {
-				b.WriteRune('\n')
-				b.WriteString("- Angular HttpClient Demo:\n")
-				b.WriteString(strutil.Spaces(2) + "```ts\n")
-				b.WriteString(strutil.SAddLineIndent(r.NgHttpClientDemo, strutil.Spaces(2)))
-				b.WriteString(strutil.Spaces(2) + "```\n")
-			}
-
-			if r.NgTableDemo != "" {
-				b.WriteRune('\n')
-				b.WriteString("- Angular NgTable Demo:\n")
-				b.WriteString(strutil.Spaces(2) + "```html\n")
-				b.WriteString(strutil.SAddLineIndent(r.NgTableDemo+"\n", strutil.Spaces(2)))
-				b.WriteString(strutil.Spaces(2) + "```\n")
-			}
-		}
-
-		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApi) {
-			b.WriteRune('\n')
-			b.WriteString("- Open Api (experimental, demo may not work):\n")
-			b.WriteString(strutil.Spaces(2) + "```json\n")
-			b.WriteString(strutil.SAddLineIndent(r.OpenApiDoc+"\n", strutil.Spaces(2)))
-			b.WriteString(strutil.Spaces(2) + "```\n")
-		}
-	}
-
-	if len(pd) > 0 {
-
-		b.WriteString("\n# Event Pipelines\n")
-		sort.Slice(pd, func(i, j int) bool { return pd[i].Queue < pd[j].Queue })
-
-		for _, p := range pd {
-			b.WriteString("\n- ")
-			b.WriteString(p.Name)
-
-			if p.Desc != "" {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- Description: ")
-				b.WriteString(p.Desc)
-			}
-
-			if p.Queue != "" {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- RabbitMQ Queue: `")
-				b.WriteString(p.Queue)
-				b.WriteString("`")
-			}
-
-			if p.Exchange != "" {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- RabbitMQ Exchange: `")
-				b.WriteString(p.Exchange)
-				b.WriteString("`")
-			}
-
-			if p.RoutingKey != "" {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- RabbitMQ RoutingKey: `")
-				b.WriteString(p.RoutingKey)
-				b.WriteString("`")
-			}
-
-			if len(p.PayloadDesc.Fields) > 0 {
-				b.WriteRune('\n')
-				b.WriteString(strutil.Spaces(2))
-				b.WriteString("- Event Payload:")
-				if p.PayloadDesc.IsSlice {
-					b.WriteString(" (array)")
-				}
-				appendJsonPayloadDoc(&b, p.PayloadDesc.Fields, 2)
-			}
-			b.WriteString("\n")
-		}
-	}
-
-	return b.String()
-}
-
-func appendJsonPayloadDoc(b *strings.Builder, jds []FieldDesc, indent int) {
-	for _, jd := range jds {
-		b.WriteString(fmt.Sprintf("\n%s- \"%s\": (%s) %s", strutil.Spaces(indent+2), jd.JsonName, jd.TypeNameAlias, jd.comment(false)))
-
-		if len(jd.Fields) > 0 {
-			appendJsonPayloadDoc(b, jd.Fields, indent+2)
-		}
 	}
 }
 
@@ -959,14 +769,14 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 					jd.TypeNameAlias, _ = translateTypeAlias(jd.OriginTypeName)
 					switch et.Kind() {
 					case reflect.Slice, reflect.Array:
-						jd.isSliceOrArray = true
+						jd.IsSliceOrArray = true
 						if et.Elem().Kind() == reflect.Pointer {
-							jd.isSliceOfPointer = true
+							jd.IsSliceOfPointer = true
 						}
 					case reflect.Map:
-						jd.isMap = true
+						jd.IsMap = true
 					case reflect.Pointer:
-						jd.isPointer = true
+						jd.IsPointer = true
 					}
 					if !seen.Has(et) {
 						jd.Fields = reflectAppendFieldDesc(et, ele, jd.Fields, seen)
@@ -979,14 +789,14 @@ func buildTypeDescRecur(v reflect.Value, seen *hash.Set[reflect.Type]) []FieldDe
 		} else {
 			switch fv.Kind() {
 			case reflect.Slice, reflect.Array:
-				jd.isSliceOrArray = true
+				jd.IsSliceOrArray = true
 				if fv.Type().Elem().Kind() == reflect.Pointer {
-					jd.isSliceOfPointer = true
+					jd.IsSliceOfPointer = true
 				}
 			case reflect.Map:
-				jd.isMap = true
+				jd.IsMap = true
 			case reflect.Pointer:
-				jd.isPointer = true
+				jd.IsPointer = true
 			}
 			if !seen.Has(f.Type) {
 				jd.Fields = reflectAppendFieldDesc(f.Type, fv, jd.Fields, seen)
@@ -1060,13 +870,13 @@ func serveApiDocTmpl(rail Rail) error {
 			for _, f := range getPipelineDocFuncs {
 				pipelineDoc = append(pipelineDoc, f()...)
 			}
-			markdown := genMarkDownDoc(docs.routeDocs, pipelineDoc)
+			markdown := GenMarkDownDoc(docs.routeDocs, pipelineDoc)
 
 			w, _ := inb.Unwrap()
 			if err := apiDocTmpl.ExecuteTemplate(w, "apiDocTempl",
 				struct {
 					App         string
-					HttpDoc     []httpRouteDoc
+					HttpDoc     []HttpRouteDoc
 					PipelineDoc []PipelineDoc
 					Markdown    string
 				}{
@@ -1138,84 +948,6 @@ func parseHeaderDoc(t reflect.Type) []ParamDoc {
 	return pds
 }
 
-func genRouteCurl(d httpRouteDoc) string {
-	sl := new(strutil.SLPinter)
-	sl.LineSuffix = " \\"
-	var qp string
-	for i, q := range d.QueryParams {
-		if qp == "" {
-			qp = "?"
-		}
-		qp += fmt.Sprintf("%s=", q.Name)
-		if i < len(d.QueryParams)-1 {
-			qp += "&"
-		}
-	}
-	sl.Printlnf("curl -X %s 'http://localhost:%s%s%s'", d.Method, GetPropStr(PropServerPort), d.Url, qp)
-	sl.LinePrefix = "  "
-
-	for _, h := range d.Headers {
-		sl.Printlnf("-H '%s: '", h.Name)
-	}
-
-	if len(d.JsonRequestDesc.Fields) > 0 {
-		sl.Printlnf("-H 'Content-Type: application/json'")
-
-		jm := map[string]any{}
-		genJsonReqMap(jm, d.JsonRequestDesc.Fields)
-		sj, err := json.CustomSWriteJson(apiDocJsoniterConfig, jm)
-		if err == nil {
-			if d.JsonRequestDesc.IsSlice {
-				sl.Printlnf("-d '[ %s ]'", sj)
-			} else {
-				sl.Printlnf("-d '%s'", sj)
-			}
-		}
-	}
-	sl.WriteString("\n")
-	return sl.String()
-}
-
-func genJsonReqMap(jm map[string]any, descs []FieldDesc) {
-	for _, d := range descs {
-		if d.isSliceOrArray {
-			jm[d.JsonName] = make([]any, 0)
-		} else {
-			if len(d.Fields) > 0 {
-				t := map[string]any{}
-				genJsonReqMap(t, d.Fields)
-				jm[d.JsonName] = t
-			} else {
-				var v any
-				switch d.TypeNameAlias {
-				case "string", "*string":
-					v = ""
-				case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
-					"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
-					if strutil.EqualAnyStr(d.OriginTypeName, "Time", "*Time") {
-						v = 1768184753983 // epochmilli
-					} else {
-						v = 0
-					}
-				case "float32", "float64", "*float32", "*float64":
-					v = 0.0
-				case "bool", "*bool":
-					v = false
-				case "[]bool":
-					v = []bool{}
-				case "[]string":
-					v = []string{}
-				case "[]int", "[]int8", "[]int16", "[]int32", "[]int64":
-					v = []int{}
-				case "[]float32", "[]float64":
-					v = []float32{}
-				}
-				jm[d.JsonName] = v
-			}
-		}
-	}
-}
-
 /*
 type structFieldVal struct {
 	v reflect.Value
@@ -1244,653 +976,6 @@ func collectStructFieldValues(rv reflect.Value) []structFieldVal {
 }
 */
 
-func skipGoParsingType(f interface {
-	TypeInfo() (pkg string, typeName string)
-}) bool {
-	return FuzzMatchTypes(f, ApiDocGoSkipParsingTypes)
-}
-
-// generate one or more golang type definitions.
-func genGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
-	if rv.TypeName == "any" {
-		return "", ""
-	}
-
-	if rv.TypeName == "Resp" || rv.TypeName == "GnResp" {
-		for _, f := range rv.Fields {
-			if f.GoFieldName == "Data" {
-				if f.OriginTypeName == "any" {
-					return "", ""
-				}
-				deferred := make([]func(), 0, 10)
-				sb, writef := strutil.NewIndWritef("\t")
-
-				ptn := f.pureGoTypeName()
-
-				if !skipGoParsingType(f) {
-					inclTypeDef := inclGoTypeDef(f, seenTypeDef)
-					if inclTypeDef {
-						writef(0, "type %s struct {", ptn)
-					}
-					genGoDefRecur(1, writef, &deferred, f.Fields, inclTypeDef, seenTypeDef)
-					if inclTypeDef {
-						writef(0, "}")
-					}
-				}
-				for i := 0; i < len(deferred); i++ {
-					deferred[i]()
-				}
-				return sb.String(), ptn
-			}
-		}
-		return "", ""
-	} else {
-		deferred := make([]func(), 0, 10)
-		sb, writef := strutil.NewIndWritef("\t")
-		ptn := rv.pureGoTypeName()
-
-		if !skipGoParsingType(rv) {
-			inclTypeDef := inclGoTypeDef(rv, seenTypeDef)
-			if inclTypeDef {
-				writef(0, "type %s struct {", ptn)
-			}
-
-			genGoDefRecur(1, writef, &deferred, rv.Fields, inclTypeDef, seenTypeDef)
-			if inclTypeDef {
-				writef(0, "}")
-			}
-		}
-
-		for i := 0; i < len(deferred); i++ {
-			deferred[i]()
-		}
-		return sb.String(), ptn
-	}
-}
-
-func inclGoTypeDef(f interface {
-	TypeInfo() (pkg string, typeName string)
-	isBuiltInType() bool
-	pureGoTypeName() string
-}, seenTypeDef hash.Set[string]) bool {
-
-	if f.isBuiltInType() { // e.g., map
-		return false
-	}
-
-	pgn := f.pureGoTypeName()
-	p, n := f.TypeInfo()
-	Debugf("inclGoTypeDef: %v, %v, %v\n", pgn, p, n)
-
-	// TODO: temp fix
-	switch pgn {
-	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
-		"float32", "float64", "string", "bool", "byte":
-		return false
-	}
-
-	if FuzzMatchTypes(f, ApiDocNotInclTypes) {
-		return false
-	}
-
-	if !seenTypeDef.Add(pgn) {
-		return false
-	}
-	return true
-}
-
-func genGoDefRecur(indentc int, writef strutil.IndWritef, deferred *[]func(), fields []FieldDesc, writeField bool,
-	seenTypeDef hash.Set[string]) {
-
-	for _, f := range fields {
-		var jsonTag string
-		if f.JsonTag != "" {
-			jsonTag = fmt.Sprintf(" `json:\"%v\"`", f.JsonTag)
-		}
-		ffields := f.Fields
-
-		if len(ffields) > 0 {
-
-			if writeField {
-				fieldTypeName := f.goFieldTypeName()
-				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
-			}
-
-			if !skipGoParsingType(f) {
-				inclType := inclGoTypeDef(f, seenTypeDef)
-				*deferred = append(*deferred, func() {
-					if inclType {
-						writef(0, "")
-						writef(0, "type %s struct {", f.pureGoTypeName())
-					}
-					genGoDefRecur(1, writef, deferred, f.Fields, inclType, seenTypeDef)
-					if inclType {
-						writef(0, "}")
-					}
-				})
-			}
-
-		} else {
-			if !writeField {
-				continue
-			}
-			fieldTypeName := f.goFieldTypeName()
-			var comment string = f.comment(true)
-			if comment != "" {
-				fieldDec := fmt.Sprintf("%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
-				writef(indentc, "%-30s%s", fieldDec, comment)
-			} else {
-				writef(indentc, "%s %s%s", f.GoFieldName, fieldTypeName, jsonTag)
-			}
-		}
-	}
-}
-
-// generate one or more typescript interface definitions based on a set of jsonDesc.
-func genTsDef(payload TypeDesc) string {
-	var typeName string = payload.TypeName
-	if len(payload.Fields) < 1 && typeName == "" {
-		return ""
-	}
-	sb, writef := strutil.NewIndWritef("  ")
-	seenType := hash.NewSet[string]()
-	tsTypeName := guessTsItfName(typeName)
-	seenType.Add(tsTypeName)
-	writef(0, "export interface %s {", tsTypeName)
-	deferred := make([]func(), 0, 10)
-	genTsDefRecur(1, writef, true, &deferred, payload.Fields, seenType)
-	writef(0, "}")
-
-	for i := 0; i < len(deferred); i++ {
-		writef(0, "")
-		deferred[i]()
-	}
-	return sb.String()
-}
-
-func genTsDefRecur(indentc int, writef strutil.IndWritef, writeField bool, deferred *[]func(), descs []FieldDesc, seenType hash.Set[string]) {
-	for i := range descs {
-		d := descs[i]
-
-		if len(d.Fields) > 0 {
-			tsTypeName := guessTsItfName(d.TypeNameAlias)
-			if writeField {
-				n := tsTypeName
-				if strings.HasPrefix(d.TypeNameAlias, "[]") {
-					n += "[]"
-				}
-				writef(indentc, "%s?: %s;", d.JsonName, n)
-			}
-
-			// TODO: this is ugly
-			inclType := seenType.Add(tsTypeName)
-			stopDesc := false
-			if inclType {
-				if FuzzMatchTypes(d, ApiDocTsSkipParsingTypes) {
-					inclType = false
-					stopDesc = true
-				}
-			}
-			if !stopDesc {
-				*deferred = append(*deferred, func() {
-					if inclType {
-						writef(0, "export interface %s {", tsTypeName)
-					}
-					genTsDefRecur(1, writef, inclType, deferred, d.Fields, seenType)
-					if inclType {
-						writef(0, "}")
-					}
-				})
-			}
-		} else if writeField {
-			var tname string = d.guessTsPrimiTypeName()
-			var comment string = d.comment(true)
-			if comment != "" {
-				fieldDec := fmt.Sprintf("%s?: %s", d.JsonName, tname)
-				writef(indentc, "%-30s%s", fieldDec+";", comment)
-			} else {
-				writef(indentc, "%s?: %s;", d.JsonName, tname)
-			}
-		}
-	}
-}
-
-// try to convert golang type name to typescript primitive type name.
-func guessTsPrimiTypeName(typeName string) string {
-	var tname string
-	switch typeName {
-	case "string", "*string":
-		tname = "string"
-	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
-		"*int", "*int8", "*int16", "*int32", "*int64", "*uint", "*uint8", "*uint16", "*uint32", "*uint64":
-		tname = "number"
-	case "float32", "float64", "*float32", "*float64":
-		tname = "number"
-	case "bool", "*bool":
-		tname = "boolean"
-	default:
-		if v, ok := strings.CutPrefix(typeName, "[]"); ok {
-			tname = guessTsItfName(v) + "[]"
-		} else {
-			tname = guessTsItfName(typeName)
-		}
-	}
-	return tname
-}
-
-// try to convert golang type (incl struct name) name to typescript interface name.
-func guessTsItfName(n string) string {
-	if len(n) == 0 {
-		return n
-	}
-
-	// cp := n
-	v, ok := strings.CutPrefix(n, "[]")
-	if ok {
-		if len(n) == 2 {
-			return n
-		}
-		n = v
-	}
-
-	if n[len(n)-1] == ']' {
-		j := strings.IndexByte(n, '[')
-		if j > -1 {
-			n = n[:j]
-		}
-	}
-
-	i := strings.LastIndexByte(n, '.')
-	if i > -1 {
-		n = n[i+1:]
-	}
-	// Debugf("guessing typescript interface name: %v -> %v", cp, n)
-	return n
-}
-
-func guessGoGenericEleName(n string) string {
-	if len(n) < 3 {
-		return ""
-	}
-	if n[len(n)-1] != ']' {
-		return ""
-	}
-	i := strings.IndexByte(n, '[')
-	if i < 0 {
-		return ""
-	}
-	v := n[i+1 : len(n)-1]
-	return guessGoTypName(v)
-}
-
-func guessGoTypName(n string) string {
-	tsTypeName := guessTsItfName(n)
-	return tsTypeName
-}
-
-func genNgTableDemo(d httpRouteDoc) string {
-	var respTypeName string = d.JsonResponseDesc.TypeName
-	sl := new(strutil.SLPinter)
-	sl.Println(`<table mat-table [dataSource]="tabdata" class="mb-4" style="width: 100%;">`)
-
-	var cols []string
-
-	if respTypeName != "" {
-		respTypeName = guessTsItfName(respTypeName)
-
-		// Resp.Data -> PageRes -> PageRes.Payload
-		if respTypeName == "Resp" {
-			pl, hasData := slutil.FirstMatch(d.JsonResponseDesc.Fields, func(j FieldDesc) bool {
-				return j.GoFieldName == "Data"
-			})
-			if hasData {
-				pl, hasPayload := slutil.FirstMatch(pl.Fields, func(j FieldDesc) bool {
-					return j.GoFieldName == "Payload"
-				})
-				if hasPayload {
-					for _, f := range pl.Fields {
-						sl.Printlnf(strutil.Tabs(1)+"<ng-container matColumnDef=\"%v\">", f.JsonName)
-						sl.Printlnf(strutil.Tabs(2)+"<th mat-header-cell *matHeaderCellDef> %s </th>", f.GoFieldName)
-						if f.OriginTypeName == "Time" || f.OriginTypeName == "*Time" || f.OriginTypeName == "atom.Time" || f.OriginTypeName == "*atom.Time" {
-							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s | date: 'yyyy-MM-dd HH:mm:ss'}} </td>", f.JsonName)
-						} else {
-							sl.Printlnf(strutil.Tabs(2)+"<td mat-cell *matCellDef=\"let u\"> {{u.%s}} </td>", f.JsonName)
-						}
-						sl.Println(strutil.Tabs(1) + "</ng-container>")
-						cols = append(cols, "'"+f.JsonName+"'")
-					}
-				}
-			}
-		}
-	}
-
-	colstr := "[" + strings.Join(cols, ",") + "]"
-	sl.Printlnf(strutil.Tabs(1)+"<tr mat-row *matRowDef=\"let row; columns: %v;\"></tr>", colstr)
-	sl.Printlnf(strutil.Tabs(1)+"<tr mat-header-row *matHeaderRowDef=\"%s\"></tr>", colstr)
-	sl.Printlnf(`</table>`)
-	return sl.String()
-}
-
-func genNgHttpClientDemo(d httpRouteDoc) string {
-	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
-	sl := new(strutil.SLPinter)
-	sl.Printlnf("import { MatSnackBar } from \"@angular/material/snack-bar\";")
-	sl.Printlnf("import { HttpClient } from \"@angular/common/http\";")
-	sl.Printlnf("")
-	sl.Printlnf("constructor(")
-	sl.Println(strutil.Spaces(2) + "private snackBar: MatSnackBar,")
-	sl.Println(strutil.Spaces(2) + "private http: HttpClient")
-	sl.Printlnf(") {}")
-	sl.Printlnf("")
-
-	var mn string = "sendRequest"
-	if d.Name != "" {
-		if strings.HasPrefix(strings.ToLower(d.Name), "api") {
-			dr := []rune(d.Name)
-			if len(dr) > 3 {
-				mn = strutil.CamelCase(string(dr[3:]))
-			} else {
-				mn = strutil.CamelCase(d.Name)
-			}
-		} else {
-			mn = strutil.CamelCase(d.Name)
-		}
-	} else if reqTypeName != "" {
-		if len(reqTypeName) > 1 {
-			mn = fmt.Sprintf("send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
-		}
-	}
-	sl.Printlnf("%s() {", mn)
-	sl.LinePrefix = "  "
-
-	var qp string
-	for i, q := range d.QueryParams {
-		cname := strutil.CamelCase(q.Name)
-		sl.Printlnf("let %s: any | null = null;", cname)
-
-		if qp == "" {
-			qp = "?"
-		}
-		qp += fmt.Sprintf("%s=${%s}", q.Name, cname)
-		if i < len(d.QueryParams)-1 {
-			qp += "&"
-		}
-	}
-
-	var url string
-	if GetPropBool(PropServerGenerateEndpointDocInclPrefix) {
-		app := GetPropStr(PropAppName)
-		if app != "" {
-			app = "/" + app
-		}
-		url = "`" + app + d.Url + qp + "`"
-	} else {
-		url = "`" + d.Url + qp + "`"
-	}
-
-	for _, h := range d.Headers {
-		sl.Printlnf("let %s: any | null = null;", strutil.CamelCase(h.Name))
-	}
-
-	isBuiltinResp := false
-	hasData := false
-	if respTypeName != "" {
-		respTypeName = guessTsItfName(respTypeName)
-		if respTypeName == "Resp" || respTypeName == "GnResp" {
-			hasErrorCode := false
-			hasError := false
-			for _, d := range d.JsonResponseDesc.Fields {
-				if d.GoFieldName == "Data" {
-					hasData = true
-				} else if d.GoFieldName == "Error" {
-					hasError = true
-				} else if d.GoFieldName == "ErrorCode" {
-					hasErrorCode = true
-				}
-			}
-			isBuiltinResp = hasErrorCode && hasError
-		}
-	}
-
-	lmethod := strings.ToLower(d.Method)
-	reqVar := ""
-	if reqTypeName != "" {
-		reqTypeName = guessTsItfName(reqTypeName)
-		{
-			n := reqTypeName
-			if d.JsonRequestDesc.IsSlice {
-				n = n + "[]"
-			}
-			sl.Printlnf("let req: %s | null = null;", n)
-		}
-
-		reqVar = ", req"
-	}
-	if (lmethod == "post" || lmethod == "put") && reqVar == "" {
-		reqVar = ", null"
-	}
-
-	n := "any"
-	if respTypeName != "" && !isBuiltinResp {
-		n = respTypeName
-	}
-	sl.Printlnf("this.http.%s<%s>(%s%s", lmethod, n, url, reqVar)
-
-	if len(d.Headers) > 0 {
-		sl.Printf(",")
-		sl.Println(strutil.Spaces(2) + "{")
-		sl.Println(strutil.Spaces(4) + "headers: {")
-		for _, h := range d.Headers {
-			sl.Printlnf(strutil.Spaces(6)+"\"%s\": %s", h.Name, strutil.CamelCase(h.Name))
-		}
-		sl.Println(strutil.Spaces(4) + "}")
-		sl.Println(strutil.Spaces(2) + "})")
-	} else {
-		sl.Printf(")")
-	}
-	sl.Println(strutil.Spaces(2) + ".subscribe({")
-
-	if respTypeName != "" {
-		sl.Println(strutil.Spaces(4) + "next: (resp) => {")
-		if isBuiltinResp {
-			sl.Println(strutil.Spaces(6) + "if (resp.error) {")
-			sl.Println(strutil.Spaces(8) + "this.snackBar.open(resp.msg, \"ok\", { duration: 6000 })")
-			sl.Println(strutil.Spaces(8) + "return;")
-			sl.Println(strutil.Spaces(6) + "}")
-			if hasData {
-				if dataField, ok := slutil.FirstMatch(d.JsonResponseDesc.Fields,
-					func(d FieldDesc) bool { return d.GoFieldName == "Data" }); ok {
-					sl.Printlnf(strutil.Spaces(6)+"let dat: %s = resp.data;", guessTsTypeName(dataField))
-				}
-			}
-		}
-		sl.Println(strutil.Spaces(4) + "},")
-	} else {
-		sl.Println(strutil.Spaces(4) + "next: () => {")
-		sl.Println(strutil.Spaces(4) + "},")
-	}
-
-	sl.Println(strutil.Spaces(4) + "error: (err) => {")
-	sl.Println(strutil.Spaces(6) + "console.log(err)")
-	sl.Println(strutil.Spaces(6) + "this.snackBar.open(\"Request failed, unknown error\", \"ok\", { duration: 3000 })")
-	sl.Println(strutil.Spaces(4) + "}")
-	sl.Println(strutil.Spaces(2) + "});")
-
-	sl.LinePrefix = ""
-	sl.Printlnf("}\n")
-
-	return sl.String()
-}
-
-func genTClientDemo(d httpRouteDoc) (code string) {
-	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
-	sl := new(strutil.SLPinter)
-
-	buildTypeName := func(s string, isPtrSlice, isSlicePtr, isSlice, isPtr bool) string {
-		if isPtrSlice {
-			s = "*[]" + s
-		} else if isSlicePtr || (isSlice && isPtr) {
-			s = "[]*" + s
-		} else if isSlice {
-			s = "[]" + s
-		} else if isPtr {
-			s = "*" + s
-		}
-		return s
-	}
-
-	respGeneName := respTypeName
-	if respGeneName == "" {
-		respGeneName = "any"
-	} else {
-		respGeneName = guessGoTypName(respTypeName)
-		if respGeneName == "Resp" {
-			for _, n := range d.JsonResponseDesc.Fields {
-				if n.GoFieldName == "Data" {
-
-					respGeneName = guessGoTypName(n.TypeNameAlias)
-					if n.isMisoPkg() && !n.isMisoDemoPkg() {
-						respGeneName = "miso." + respGeneName
-						if v := guessGoGenericEleName(n.TypeNameAlias); v != "" {
-							respGeneName += "[" + v + "]"
-						}
-					}
-					isPtr := n.isPointer
-					isSlice := n.isSliceOrArray
-					if n.isSliceOfPointer {
-						isPtr = true
-						isSlice = true
-					}
-					respGeneName = buildTypeName(respGeneName, false, false, isSlice, isPtr)
-					break
-				}
-			}
-			if respGeneName == "Resp" {
-				respGeneName = "any"
-				respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtrSlice,
-					d.JsonResponseDesc.IsSlicePtr, d.JsonResponseDesc.IsSlice, d.JsonResponseDesc.IsPtr)
-			}
-		} else {
-			respGeneName = buildTypeName(respGeneName, d.JsonResponseDesc.IsPtrSlice,
-				d.JsonResponseDesc.IsSlicePtr, d.JsonResponseDesc.IsSlice, d.JsonResponseDesc.IsPtr)
-		}
-	}
-
-	qhp := make([]string, 0, len(d.QueryParams)+len(d.Headers))
-	for _, s := range d.QueryParams {
-		qhp = append(qhp, fmt.Sprintf("%s string", strutil.CamelCase(s.Name)))
-	}
-	for _, s := range d.Headers {
-		qhp = append(qhp, fmt.Sprintf("%s string", strutil.CamelCase(s.Name)))
-	}
-
-	qh := ""
-	if len(qhp) > 0 {
-		qh = ", " + strings.Join(qhp, ", ")
-	}
-
-	var mn string = "SendRequest"
-	if d.Name != "" {
-		mn = d.Name
-	} else if reqTypeName != "" {
-		if len(reqTypeName) > 1 {
-			mn = fmt.Sprintf("Send%s%s", strings.ToUpper(string(reqTypeName[0])), string(reqTypeName[1:]))
-		}
-	}
-
-	{
-		desc := strings.TrimSpace(d.Desc)
-		if desc != "" {
-			sl.Println(strutil.SAddLineIndent(desc, "// "))
-		}
-	}
-	if reqTypeName != "" {
-		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtrSlice, d.JsonRequestDesc.IsSlicePtr,
-			d.JsonRequestDesc.IsSlice, d.JsonRequestDesc.IsPtr)
-
-		if respGeneName == "any" {
-			sl.Printlnf("func %s(rail miso.Rail, req %s%s) error {", mn, reqn, qh)
-		} else {
-			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respGeneName)
-		}
-	} else {
-		if respGeneName == "any" {
-			sl.Printlnf("func %s(rail miso.Rail%s) error {", mn, qh)
-		} else {
-			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respGeneName)
-		}
-	}
-
-	sl.LinePrefix = "\t"
-	sl.Printlnf("var res miso.GnResp[%s]", respGeneName)
-	sl.Printf("\n%serr := miso.NewDynClient(rail, \"%s\", \"%s\")", strutil.Tabs(1), d.Url, GetPropStr(PropAppName))
-
-	for _, q := range d.QueryParams {
-		cname := strutil.CamelCase(q.Name)
-		sl.Printf(".\n%sAddQuery(\"%s\", %s)", strutil.Tabs(2), cname, cname)
-	}
-
-	for _, h := range d.Headers {
-		cname := strutil.CamelCase(h.Name)
-		sl.Printf(".\n%sAddHeader(\"%s\", %s)", strutil.Tabs(2), cname, cname)
-	}
-
-	httpCall := d.Method
-	if len(httpCall) > 1 {
-		httpCall = strings.ToUpper(string(d.Method[0])) + strings.ToLower(string(d.Method[1:]))
-	}
-	um := strings.ToUpper(d.Method)
-	if reqTypeName != "" {
-		if um == "POST" {
-			sl.Printf(".\n%sPostJson(req)", strutil.Tabs(2))
-		} else if um == "PUT" {
-			sl.Printf(".\n%sPutJson(req)", strutil.Tabs(2))
-		}
-	} else {
-		if um == "POST" {
-			sl.Printf(".\n%sPost(nil)", strutil.Tabs(2))
-		} else if um == "PUT" {
-			sl.Printf(".\n%sPut(nil)", strutil.Tabs(2))
-		} else {
-			sl.Printf(".\n%s%s()", strutil.Tabs(2), httpCall)
-		}
-	}
-	sl.Printf(".\n%sJson(&res)", strutil.Tabs(2))
-
-	sl.Printlnf("if err != nil {")
-	if respGeneName == "any" {
-		sl.Printlnf("%sreturn err", strutil.Tabs(1))
-	} else {
-		if strings.HasPrefix(respGeneName, "*") {
-			sl.Printlnf("%sreturn nil, err", strutil.Tabs(1))
-		} else {
-			dat := "dat"
-			switch respGeneName {
-			case "string":
-				dat = "\"\""
-			case "int", "int8", "int16", "int32", "int64", "float", "float32", "float64":
-				dat = "0"
-			case "bool":
-				dat = "false"
-			default:
-				sl.Printlnf("%svar dat %s", strutil.Tabs(1), respGeneName)
-			}
-			sl.Printlnf("%sreturn %s, err", strutil.Tabs(1), dat)
-		}
-	}
-	sl.Printlnf("}")
-
-	if respGeneName == "any" {
-		sl.Printlnf("return nil")
-		sl.Printf("\n}")
-		return sl.String()
-	}
-
-	sl.Printlnf("return res.Data, nil")
-	sl.Printf("\n}")
-	return sl.String()
-}
-
 type PipelineDoc struct {
 	Name        string
 	Desc        string
@@ -1903,18 +988,6 @@ type PipelineDoc struct {
 // Register func to supply PipelineDoc.
 func AddGetPipelineDocFunc(f GetPipelineDocFunc) {
 	getPipelineDocFuncs = append(getPipelineDocFuncs, f)
-}
-
-func guessTsTypeName(d FieldDesc) string {
-	if len(d.Fields) > 0 {
-		tsTypeName := guessTsItfName(d.TypeNameAlias)
-		if strings.HasPrefix(d.TypeNameAlias, "[]") {
-			return tsTypeName + "[]"
-		}
-		return tsTypeName
-	} else {
-		return d.guessTsPrimiTypeName()
-	}
 }
 
 // Associate xdesc value with the code appeared in field tag `xdesc:"..."`.
@@ -1964,82 +1037,7 @@ func DisableApidocEndpointRegister() {
 	apiDocEndpointDisabled = true
 }
 
-func genOpenApiDoc(d httpRouteDoc, root *openapi3.T) string {
-	title := d.Desc
-	if title == "" {
-		title = d.Method + " " + d.Url
-	}
-
-	servers := openapi3.Servers{}
-	if v := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecServer); v != "" {
-		servers = openapi3.Servers{
-			&openapi3.Server{URL: v},
-		}
-	}
-	op := &openapi3.Operation{
-		Summary:     d.Desc,
-		Description: d.Desc,
-	}
-
-	for _, v := range d.QueryParams {
-		op.AddParameter(&openapi3.Parameter{
-			Name:        v.Name,
-			In:          "query",
-			Required:    false,
-			Description: v.Desc,
-			Schema: &openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{"string"},
-				},
-			},
-		})
-	}
-
-	for _, v := range d.Headers {
-		op.AddParameter(&openapi3.Parameter{
-			Name:        v.Name,
-			In:          "header",
-			Required:    false,
-			Description: v.Desc,
-			Schema: &openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{"string"},
-				},
-			},
-		})
-	}
-
-	if d.JsonRequestValue != nil {
-		if p := d.JsonRequestDesc.toOpenApiReq(d.JsonReqGoDefTypeName); p != nil {
-			op.RequestBody = &openapi3.RequestBodyRef{}
-			op.RequestBody.Value = &openapi3.RequestBody{}
-			op.RequestBody.Value.WithJSONSchemaRef(p)
-		}
-	}
-
-	if p := d.JsonResponseDesc.toOpenApiResp(d.JsonRespGoDefTypeName); p != nil {
-		op.AddResponse(200, p)
-	}
-
-	doc := openapi3.T{
-		OpenAPI: "3.0.0",
-		Info: &openapi3.Info{
-			Title:   title,
-			Version: "1.0.0",
-		},
-		Servers: servers,
-	}
-	doc.AddOperation(d.Url, d.Method, op)
-
-	if root != nil {
-		root.AddOperation(d.Url, d.Method, op)
-	}
-
-	j, _ := json.SWriteJson(doc)
-	return j
-}
-
-func writeApiDocOpenApiSpec(rail Rail, docs httpRouteDocs) error {
+func writeApiDocOpenApiSpec(rail Rail, docs HttpRouteDocs) error {
 	if oapiFile := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecFile); oapiFile != "" {
 		f, err := osutil.OpenRWFile(oapiFile)
 		if err != nil {
@@ -2056,7 +1054,7 @@ func writeApiDocOpenApiSpec(rail Rail, docs httpRouteDocs) error {
 	return nil
 }
 
-func writeApiDocFile(rail Rail, routes []httpRouteDoc, pipelineDoc []PipelineDoc) error {
+func writeApiDocFile(rail Rail, routes []HttpRouteDoc, pipelineDoc []PipelineDoc) error {
 	outf := GetPropStr(PropServerGenerateEndpointDocFile)
 	if outf != "" {
 		_ = osutil.MkdirParentAll(outf)
@@ -2068,7 +1066,7 @@ func writeApiDocFile(rail Rail, routes []httpRouteDoc, pipelineDoc []PipelineDoc
 		f.Truncate(0)
 		defer f.Close()
 
-		markdown := genMarkDownDoc(routes, pipelineDoc)
+		markdown := GenMarkDownDoc(routes, pipelineDoc)
 		_, err = f.WriteString(markdown)
 		return err
 	}
@@ -2090,7 +1088,7 @@ func matchGoFilePathPatternFunc() func(u string) bool {
 	return matchPatterns
 }
 
-func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []httpRouteDoc) error {
+func writeApiDocGoFile(rail Rail, goTypeDefs []string, routes []HttpRouteDoc) error {
 	fp := GetPropStrTrimmed(PropServerApiDocGoFile)
 	if fp == "" {
 		return nil
