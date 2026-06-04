@@ -18,7 +18,7 @@ type rtopic[T any] struct {
 	topic string
 }
 
-func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) error {
+func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) (context.CancelFunc, error) {
 	pubsub := GetRedis().Subscribe(context.Background(), p.topic)
 	miso.AddShutdownHook(func() { pubsub.Close() })
 
@@ -38,11 +38,11 @@ func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) err
 			}
 		}
 	}()
-	return nil
+	return func() { pubsub.Close() }, nil
 }
 
 func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
-	return p.SubscribeSync(func(rail miso.Rail, evt T) error {
+	_, err := p.SubscribeSync(func(rail miso.Rail, evt T) error {
 		pool.Go(func() {
 			if err := handler(rail, evt); err != nil {
 				rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
@@ -50,6 +50,7 @@ func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail,
 		})
 		return nil
 	})
+	return err
 }
 
 func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
@@ -82,11 +83,9 @@ func NewTopic[T any](topic string) *rtopic[T] {
 //	// publisher
 //	stopTopic.Signal(rail)
 //
-//	// subscriber (call once at startup)
-//	stopTopic.OnSignal(pool, func(rail miso.Rail) error {
-//	    stopFlag.Store(true)
-//	    return nil
-//	})
+//	// subscriber — cancel rail context when signal is received
+//	rail, cancel := stopTopic.OnSignalCancel(rail)
+//	defer cancel()
 type RSignalTopic struct {
 	inner *rtopic[struct{}]
 }
@@ -101,23 +100,17 @@ func (s RSignalTopic) Signal(rail miso.Rail) error {
 	return s.inner.Publish(rail, struct{}{})
 }
 
-// OnSignal subscribes to this topic and invokes handler on every received signal.
-// The handler runs asynchronously via pool to avoid blocking the subscription goroutine.
-// Call once at application startup.
-func (s RSignalTopic) OnSignal(pool async.AsyncPool, handler func(rail miso.Rail) error) error {
-	return s.inner.Subscribe(pool, func(rail miso.Rail, _ struct{}) error {
-		return handler(rail)
-	})
-}
-
 // OnSignalCancel returns a Rail derived from rail with a cancel func attached.
 // When a signal is received on this topic, the cancel func is called, cancelling the returned Rail's context.
-// Call once per operation that should be cancellable; subscribe once at application startup.
+// The returned CancelFunc also unsubscribes from the topic — always defer it.
 func (s RSignalTopic) OnSignalCancel(rail miso.Rail) (miso.Rail, context.CancelFunc) {
-	child, cancel := rail.WithCancel()
-	s.inner.SubscribeSync(func(_ miso.Rail, _ struct{}) error {
-		cancel()
+	child, cancelRail := rail.WithCancel()
+	unsubscribe, _ := s.inner.SubscribeSync(func(_ miso.Rail, _ struct{}) error {
+		cancelRail()
 		return nil
 	})
-	return child, cancel
+	return child, func() {
+		cancelRail()
+		unsubscribe()
+	}
 }
