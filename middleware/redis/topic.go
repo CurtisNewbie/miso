@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"sync"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
@@ -20,7 +21,9 @@ type rtopic[T any] struct {
 
 func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) (context.CancelFunc, error) {
 	pubsub := GetRedis().Subscribe(context.Background(), p.topic)
-	miso.AddShutdownHook(func() { pubsub.Close() })
+	var once sync.Once
+	cancel := func() { once.Do(func() { pubsub.Close() }) }
+	miso.AddShutdownHook(cancel)
 
 	ch := pubsub.Channel()
 	go func() {
@@ -38,7 +41,7 @@ func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) (co
 			}
 		}
 	}()
-	return func() { pubsub.Close() }, nil
+	return cancel, nil
 }
 
 func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
