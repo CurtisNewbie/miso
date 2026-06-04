@@ -18,8 +18,7 @@ type rtopic[T any] struct {
 	topic string
 }
 
-func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
-
+func (p *rtopic[T]) SubscribeSync(handler func(rail miso.Rail, evt T) error) error {
 	pubsub := GetRedis().Subscribe(context.Background(), p.topic)
 	miso.AddShutdownHook(func() { pubsub.Close() })
 
@@ -34,16 +33,23 @@ func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail,
 			}
 			rail = miso.LoadPropagationKeysFromHeaders(rail, pm.Headers)
 			rail.Infof("Receive redis channel message, topic: %v, payload: %#v", p.topic, pm.Payload)
-
-			// redis subscription cannot be blocked for more than 30s, have to handle these asynchronously
-			pool.Go(func() {
-				if err := handler(rail, pm.Payload); err != nil {
-					rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
-				}
-			})
+			if err := handler(rail, pm.Payload); err != nil {
+				rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
+			}
 		}
 	}()
 	return nil
+}
+
+func (p *rtopic[T]) Subscribe(pool async.AsyncPool, handler func(rail miso.Rail, evt T) error) error {
+	return p.SubscribeSync(func(rail miso.Rail, evt T) error {
+		pool.Go(func() {
+			if err := handler(rail, evt); err != nil {
+				rail.Errorf("Failed to handle redis channle message, topic: %v, %v", p.topic, err)
+			}
+		})
+		return nil
+	})
 }
 
 func (p *rtopic[T]) Publish(rail miso.Rail, t T) error {
@@ -62,4 +68,56 @@ func NewTopic[T any](topic string) *rtopic[T] {
 	return &rtopic[T]{
 		topic: topic,
 	}
+}
+
+// RSignalTopic is a pub/sub topic that carries no payload — publish is a fire-and-forget
+// signal, and subscribers receive only a Rail for tracing.
+//
+// Useful for cross-instance broadcast signals (e.g. stop, refresh, invalidate).
+//
+// Example:
+//
+//	var stopTopic = redis.NewSignalTopic("myapp:stop")
+//
+//	// publisher
+//	stopTopic.Signal(rail)
+//
+//	// subscriber (call once at startup)
+//	stopTopic.OnSignal(pool, func(rail miso.Rail) error {
+//	    stopFlag.Store(true)
+//	    return nil
+//	})
+type RSignalTopic struct {
+	inner *rtopic[struct{}]
+}
+
+// NewSignalTopic creates a new RSignalTopic bound to the given Redis pub/sub channel key.
+func NewSignalTopic(topic string) RSignalTopic {
+	return RSignalTopic{inner: NewTopic[struct{}](topic)}
+}
+
+// Signal publishes a signal to all subscribers on this topic.
+func (s RSignalTopic) Signal(rail miso.Rail) error {
+	return s.inner.Publish(rail, struct{}{})
+}
+
+// OnSignal subscribes to this topic and invokes handler on every received signal.
+// The handler runs asynchronously via pool to avoid blocking the subscription goroutine.
+// Call once at application startup.
+func (s RSignalTopic) OnSignal(pool async.AsyncPool, handler func(rail miso.Rail) error) error {
+	return s.inner.Subscribe(pool, func(rail miso.Rail, _ struct{}) error {
+		return handler(rail)
+	})
+}
+
+// OnSignalCancel returns a Rail derived from rail with a cancel func attached.
+// When a signal is received on this topic, the cancel func is called, cancelling the returned Rail's context.
+// Call once per operation that should be cancellable; subscribe once at application startup.
+func (s RSignalTopic) OnSignalCancel(rail miso.Rail) (miso.Rail, context.CancelFunc) {
+	child, cancel := rail.WithCancel()
+	s.inner.SubscribeSync(func(_ miso.Rail, _ struct{}) error {
+		cancel()
+		return nil
+	})
+	return child, cancel
 }
