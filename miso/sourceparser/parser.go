@@ -386,6 +386,7 @@ func isErrorType(t dst.Expr) bool {
 }
 
 // extractStringArg extracts a string literal from args[idx].
+// Falls back to exprToString for non-literal expressions (e.g., variable URLs).
 func extractStringArg(args []dst.Expr, idx int) string {
 	if idx >= len(args) {
 		return ""
@@ -396,7 +397,8 @@ func extractStringArg(args []dst.Expr, idx int) string {
 			return s[1 : len(s)-1]
 		}
 	}
-	return ""
+	// Fallback: capture variable identifiers (e.g., deregisterURL)
+	return exprToString(args[idx])
 }
 
 // extractTypeFromExpr extracts a type name from an expression.

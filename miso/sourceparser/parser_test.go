@@ -867,6 +867,41 @@ func init() {
 	}
 }
 
+func TestParseFile_VariableURL(t *testing.T) {
+	// URL can be a variable (not just a string literal), e.g.,
+	// miso.HttpGet(deregisterURL, miso.ResHandler(...)).
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.HttpGet(deregisterURL, miso.ResHandler(
+		func(inb *miso.Inbound) (any, error) { return nil, nil },
+	))
+}`)
+	if ep.URL != "deregisterURL" {
+		t.Errorf("URL = %q, want %q (variable ident should be captured)", ep.URL, "deregisterURL")
+	}
+	if ep.Handler != "ResHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "ResHandler")
+	}
+	if ep.ResponseRef == nil || ep.ResponseRef.Name != "any" {
+		t.Errorf("ResponseRef should be 'any', got %v", ep.ResponseRef)
+	}
+}
+
+func TestParseFile_DescVariableArg(t *testing.T) {
+	// Desc/Scope/Resource can also use variable args, not just literals.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Desc(deregisterDesc)
+}`)
+	if ep.Desc != "deregisterDesc" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "deregisterDesc")
+	}
+}
+
 // === ResHandler type pattern tests ===
 
 func TestParseFile_ResHandler_SliceResp(t *testing.T) {
