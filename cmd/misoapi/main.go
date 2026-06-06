@@ -112,6 +112,7 @@ var (
 	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs (only with -doc)")
 	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
+	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -119,6 +120,24 @@ func perfLog(format string, args ...any) {
 	if *Perf {
 		log.Infof(format, args...)
 	}
+}
+
+// matchSkipPkg checks if pkgPath should be skipped based on skipPkgs patterns.
+// Patterns can be full import paths (github.com/curtisnewbie/myapp/internal/web)
+// or relative paths (internal/web). Two matching modes:
+//   - Exact pkg: pkgPath ends with the pattern (e.g., "demo" matches ".../demo")
+//   - Subtree: pattern appears as a path segment followed by "/" (e.g., "demo"
+//     matches ".../demo/appdemo/api" because "/demo/" appears in the path)
+func matchSkipPkg(pkgPath string, skipPkgs []string) bool {
+	for _, sp := range skipPkgs {
+		if sp == "" {
+			continue
+		}
+		if strings.HasSuffix(pkgPath, sp) || strings.Contains(pkgPath, "/"+sp+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -153,18 +172,26 @@ func main() {
 	})
 	flags.Parse()
 
+	var skipPkgsList []string
+	if *SkipPkgs != "" {
+		skipPkgsList = strings.Split(*SkipPkgs, ",")
+		for i := range skipPkgsList {
+			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
+		}
+	}
+
 	files, err := walkDir(".", ".go")
 	if err != nil {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	_, err = parseFiles(files, !*Doc)
+	_, err = parseFiles(files, !*Doc, skipPkgsList)
 	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
 
 	if *Doc {
-		if err := generateDocs(); err != nil {
+		if err := generateDocs(skipPkgsList); err != nil {
 			log.Errorf("generateDocs failed, %v", err)
 		}
 		return
@@ -198,7 +225,7 @@ type FsFile struct {
 	File fs.FileInfo
 }
 
-func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, error) {
+func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[string]GroupedApiDecl, error) {
 	start := time.Now()
 	defer func() {
 		perfLog("parseFiles total elapsed: %v", time.Since(start))
@@ -286,6 +313,10 @@ func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, e
 		genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
 		baseIndent := 1
 		for dir, v := range pathApiDecls {
+			if matchSkipPkg(v.PkgPath, skipPkgs) {
+				log.Infof("Skipping package %v (matched by -skip-pkgs)", v.PkgPath)
+				continue
+			}
 			for _, ad := range v.Apis {
 				log.Debugf("%v (%v) => %#v", dir, v.Pkg, ad)
 			}
@@ -1343,7 +1374,7 @@ func convertFiles(files []FsFile) []docgen.SourceFile {
 }
 
 // generateDocs generates static API documentation from source code parsing.
-func generateDocs() error {
+func generateDocs(skipPkgs []string) error {
 	start := time.Now()
 	defer func() {
 		perfLog("generateDocs total elapsed: %v", time.Since(start))
@@ -1354,9 +1385,23 @@ func generateDocs() error {
 		return err
 	}
 
+	// If -appname not set, default to the last segment of the module name
+	// (e.g., "github.com/curtisnewbie/xxx" → "xxx").
+	if *DocAppName == "" {
+		*DocAppName = path.Base(modName)
+	}
+
 	manualFiles, err := walkDir(".", ".go")
 	if err != nil {
 		return fmt.Errorf("walkDir for docs failed: %v", err)
+	}
+
+	// Filter out files from skipped packages
+	if len(skipPkgs) > 0 {
+		manualFiles = slutil.Filter(manualFiles, func(f FsFile) bool {
+			pkgPath := modName + "/" + path.Dir(f.Path)
+			return !matchSkipPkg(pkgPath, skipPkgs)
+		})
 	}
 
 	buildStart := time.Now()
