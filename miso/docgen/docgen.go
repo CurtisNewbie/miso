@@ -12,6 +12,7 @@ import (
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/miso/sourceparser"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"golang.org/x/tools/go/packages"
@@ -46,6 +47,21 @@ var (
 	misoPkgCache *types.Package
 	misoPkgErr   error
 )
+
+// docgenPool is a lazily-initialised CPU-bound goroutine pool reused across
+// BuildManualRouteDocs calls. Uses 4 * GOMAXPROCS workers (min 8) — matches
+// the async.NewCpuAsyncPool pattern.
+var (
+	docgenPoolOnce sync.Once
+	docgenPool     async.AsyncPool
+)
+
+func getDocgenPool() async.AsyncPool {
+	docgenPoolOnce.Do(func() {
+		docgenPool = async.NewAsyncPool(async.CalcPoolSize(4, 8, -1))
+	})
+	return docgenPool
+}
 
 // lookupTypeInPkg looks up a type name in the package scope. If not found and the
 // name contains a '.' (e.g., "api.PostRes"), it splits by the last '.' and tries
@@ -384,86 +400,96 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 
 	var allDocs []miso.HttpRouteDoc
 
-	// Sort directory keys for deterministic output order
-	dirs := make([]string, 0, len(dirMap))
-	for dir := range dirMap {
-		dirs = append(dirs, dir)
+	// Parallelize: loadPackageFromDir + resolveTypeRef per directory.
+	// Each directory's package is independent; loadMisoPackage() uses sync.Once.
+	type dirResult struct {
+		dir  string
+		docs []miso.HttpRouteDoc
 	}
-	sort.Strings(dirs)
 
-	for _, dir := range dirs {
-		eps := dirMap[dir]
-		pkgPath := modName + "/" + dir
-		pkgPath = strings.TrimRight(pkgPath, "/")
+	var futures []async.Future[dirResult]
+	for dir, eps := range dirMap {
+		d, e := dir, eps
+		fut := async.Submit(getDocgenPool(), func() (dirResult, error) {
+			pkgPath := modName + "/" + d
+			pkgPath = strings.TrimRight(pkgPath, "/")
 
-		pkgLoadStart := time.Now()
-		pkg, err := loadPackageFromDir(pkgPath, dir)
-		if LogPerf {
-			log.Infof("  loadPackageFromDir(%s) elapsed: %v", dir, time.Since(pkgLoadStart))
-		}
-		if err != nil {
-			log.Debugf("Failed to load package %s: %v", pkgPath, err)
-			continue
-		}
-
-		resolveStart := time.Now()
-		for _, ep := range eps {
-			doc := miso.HttpRouteDoc{
-				Name:     ep.FuncName,
-				Url:      ep.URL,
-				Method:   ep.Method,
-				Desc:     ep.Desc,
-				Scope:    ep.Scope,
-				Resource: ep.Resource,
+			pkgLoadStart := time.Now()
+			pkg, err := loadPackageFromDir(pkgPath, d)
+			if LogPerf {
+				log.Infof("  loadPackageFromDir(%s) elapsed: %v", d, time.Since(pkgLoadStart))
+			}
+			if err != nil {
+				log.Debugf("Failed to load package %s: %v", pkgPath, err)
+				return dirResult{}, nil
 			}
 
-			// Query params
-			for _, q := range ep.QueryParams {
-				doc.QueryParams = append(doc.QueryParams, miso.ParamDoc{Name: q.Left, Desc: q.Right})
-			}
-
-			// Headers
-			for _, h := range ep.Headers {
-				doc.Headers = append(doc.Headers, miso.ParamDoc{Name: h.Left, Desc: h.Right})
-			}
-
-			// Request type
-			if ep.RequestRef != nil {
-				doc.JsonRequestDesc = resolveTypeRef(*ep.RequestRef, pkg)
-			}
-
-			// Extract query/header params from DocQueryReq/DocHeaderReq structs.
-			// These structs use "query"/"form" tags for query params and "header"
-			// tags for header params.
-			extractRequestParams(&doc, ep, pkg)
-
-			// Response type — RawHandler with DocJsonResp gets the DTO as-is
-			// (no Resp wrapping), matching runtime where DocJsonResp stores
-			// the raw value without PayloadJsonBuilder wrapping.
-			if ep.ResponseRef != nil {
-				ref := *ep.ResponseRef
-				if ref.Name == "any" && ref.PkgName == "" {
-					// Handler returns only error → show Resp envelope without Data field
-					doc.JsonResponseDesc = buildRespTypeDesc(miso.TypeDesc{TypeName: "any"})
-				} else {
-					desc := resolveTypeRef(ref, pkg)
-					if desc.TypeName != "" && ep.Handler != "RawHandler" {
-						desc = buildRespTypeDesc(desc)
-					}
-					doc.JsonResponseDesc = desc
+			resolveStart := time.Now()
+			var docs []miso.HttpRouteDoc
+			for _, ep := range e {
+				doc := miso.HttpRouteDoc{
+					Name:     ep.FuncName,
+					Url:      ep.URL,
+					Method:   ep.Method,
+					Desc:     ep.Desc,
+					Scope:    ep.Scope,
+					Resource: ep.Resource,
 				}
+
+				for _, q := range ep.QueryParams {
+					doc.QueryParams = append(doc.QueryParams, miso.ParamDoc{Name: q.Left, Desc: q.Right})
+				}
+
+				for _, h := range ep.Headers {
+					doc.Headers = append(doc.Headers, miso.ParamDoc{Name: h.Left, Desc: h.Right})
+				}
+
+				if ep.RequestRef != nil {
+					doc.JsonRequestDesc = resolveTypeRef(*ep.RequestRef, pkg)
+				}
+
+				extractRequestParams(&doc, ep, pkg)
+
+				if ep.ResponseRef != nil {
+					ref := *ep.ResponseRef
+					if ref.Name == "any" && ref.PkgName == "" {
+						doc.JsonResponseDesc = buildRespTypeDesc(miso.TypeDesc{TypeName: "any"})
+					} else {
+						desc := resolveTypeRef(ref, pkg)
+						if desc.TypeName != "" && ep.Handler != "RawHandler" {
+							desc = buildRespTypeDesc(desc)
+						}
+						doc.JsonResponseDesc = desc
+					}
+				}
+
+				if hasExtra(ep.Extras, miso.ExtraNgTable) {
+					doc.NgTableDemo = miso.GenNgTableDemo(doc)
+				}
+
+				docs = append(docs, doc)
+			}
+			if LogPerf {
+				log.Infof("  resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", d, time.Since(resolveStart), len(e))
 			}
 
-			// Angular NgTable demo for pageable endpoints
-			if hasExtra(ep.Extras, miso.ExtraNgTable) {
-				doc.NgTableDemo = miso.GenNgTableDemo(doc)
-			}
+			return dirResult{docs: docs, dir: d}, nil
+		})
+		futures = append(futures, fut)
+	}
 
-			allDocs = append(allDocs, doc)
+	var results []dirResult
+	for _, fut := range futures {
+		r, err := fut.Get()
+		if err == nil && len(r.docs) > 0 {
+			results = append(results, r)
 		}
-		if LogPerf {
-			log.Infof("  resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", dir, time.Since(resolveStart), len(eps))
-		}
+	}
+
+	// Flatten in directory-sorted order for deterministic output
+	sort.Slice(results, func(i, j int) bool { return results[i].dir < results[j].dir })
+	for _, r := range results {
+		allDocs = append(allDocs, r.docs...)
 	}
 
 	return allDocs
