@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
@@ -104,6 +105,7 @@ var (
 
 var (
 	Debug      = flag.Bool("debug", false, "Enable debug log")
+	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
 	Run        = flag.Bool("run", false, "Run app after api generated (to generate api doc)")
 	Doc        = flag.Bool("doc", false, "Generate API docs statically (markdown)")
 	DocFile    = flag.String("file", "api-doc.md", "Output file for API docs (only with -doc)")
@@ -112,7 +114,19 @@ var (
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 )
 
+// perfLog logs at INFO level only when the -perf flag is set.
+func perfLog(format string, args ...any) {
+	if *Perf {
+		log.Infof(format, args...)
+	}
+}
+
 func main() {
+	start := time.Now()
+	defer func() {
+		perfLog("misoapi total elapsed: %v", time.Since(start))
+	}()
+
 	flags.WithDescriptionBuilder(func(printlnf func(v string, args ...any)) {
 		printlnf("misoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
 		printlnf("  Supported miso version: %v\n", version.Version)
@@ -185,7 +199,14 @@ type FsFile struct {
 }
 
 func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, error) {
+	start := time.Now()
+	defer func() {
+		perfLog("parseFiles total elapsed: %v", time.Since(start))
+	}()
+
+	astStart := time.Now()
 	dstFiles, err := parseFileAst(files)
+	perfLog("parseFileAst elapsed: %v, %d files", time.Since(astStart), len(dstFiles))
 	if err != nil {
 		return nil, err
 	}
@@ -216,6 +237,7 @@ func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, e
 		}
 	}
 
+	extractStart := time.Now()
 	for _, df := range dstFiles {
 		dir := path.Dir(path.Dir(path.Clean(df.Path)))
 		var pkgPath string
@@ -240,6 +262,7 @@ func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, e
 			},
 		)
 	}
+	perfLog("API extraction (AST walk) elapsed: %v, %d groups", time.Since(extractStart), len(pathApiDecls))
 
 	webGoPath := "." + string(os.PathSeparator) + path.Join("internal", "web", "web.go")
 	regApiDstFiles := slutil.Transform(dstFiles,
@@ -259,6 +282,7 @@ func parseFiles(files []FsFile, generateCode bool) (map[string]GroupedApiDecl, e
 	}
 
 	if generateCode {
+		genStart := time.Now()
 		genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
 		baseIndent := 1
 		for dir, v := range pathApiDecls {
@@ -347,6 +371,7 @@ ${code}
 				return pathApiDecls, err
 			}
 		}
+		perfLog("Code generation + write elapsed: %v", time.Since(genStart))
 	}
 
 	return pathApiDecls, nil
@@ -1319,6 +1344,11 @@ func convertFiles(files []FsFile) []docgen.SourceFile {
 
 // generateDocs generates static API documentation from source code parsing.
 func generateDocs() error {
+	start := time.Now()
+	defer func() {
+		perfLog("generateDocs total elapsed: %v", time.Since(start))
+	}()
+
 	modName, err := guessModName()
 	if err != nil {
 		return err
@@ -1329,15 +1359,18 @@ func generateDocs() error {
 		return fmt.Errorf("walkDir for docs failed: %v", err)
 	}
 
+	buildStart := time.Now()
+	docgen.LogPerf = *Perf
 	allDocs := docgen.BuildManualRouteDocs(convertFiles(manualFiles), modName, log)
-	log.Infof("Found %d endpoints via source parsing", len(allDocs))
+	perfLog("BuildManualRouteDocs elapsed: %v, %d endpoints", time.Since(buildStart), len(allDocs))
 
 	log.Infof("Built %d route docs", len(allDocs))
 	for i, d := range allDocs {
-		log.Debugf("  Doc[%d] %s %s: reqFields=%d, respFields=%d", i, d.Method, d.Url, len(d.JsonRequestDesc.Fields), len(d.JsonResponseDesc.Fields))
+		log.Infof("  Doc[%d] %s %s: reqFields=%d, respFields=%d", i, d.Method, d.Url, len(d.JsonRequestDesc.Fields), len(d.JsonResponseDesc.Fields))
 	}
 
 	// Fill generated fields for each doc
+	renderStart := time.Now()
 	seenGoTypes := hash.NewSet[string]()
 	for i := range allDocs {
 		d := &allDocs[i]
@@ -1379,12 +1412,15 @@ func generateDocs() error {
 
 		_ = seenGoTypes // used for global Go type defs in future
 	}
+	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))
 
+	mdStart := time.Now()
 	markdown := miso.GenMarkDownDoc(allDocs, nil)
 
 	if err := os.WriteFile(*DocFile, []byte(markdown), 0644); err != nil {
 		return fmt.Errorf("failed to write doc file %s: %v", *DocFile, err)
 	}
+	perfLog("GenMarkDownDoc + write elapsed: %v", time.Since(mdStart))
 
 	log.Infof("API docs written to %s", *DocFile)
 	return nil

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/miso/sourceparser"
@@ -35,6 +36,9 @@ func (nopLogger) Debugf(string, ...any) {}
 
 // log is the package-level logger, set by BuildManualRouteDocs.
 var log Logger = nopLogger{}
+
+// LogPerf enables performance timing logs. Set from the CLI's -perf flag.
+var LogPerf bool
 
 // cached miso package loader, reused by resolveGenericTypeRef and buildRespTypeDesc
 var (
@@ -360,6 +364,8 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 	// Group parsed endpoints by directory
 	dirMap := make(map[string][]*sourceparser.ParsedEndpoint)
 
+	parseStart := time.Now()
+	var totalEps int
 	for _, f := range files {
 		dir := path.Dir(f.Path)
 		eps, err := sourceparser.ParseFile(f.Path)
@@ -369,7 +375,11 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		}
 		if len(eps) > 0 {
 			dirMap[dir] = append(dirMap[dir], eps...)
+			totalEps += len(eps)
 		}
+	}
+	if LogPerf {
+		log.Infof("sourceparser.ParseFile elapsed: %v, %d files → %d endpoints", time.Since(parseStart), len(files), totalEps)
 	}
 
 	var allDocs []miso.HttpRouteDoc
@@ -386,12 +396,17 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		pkgPath := modName + "/" + dir
 		pkgPath = strings.TrimRight(pkgPath, "/")
 
+		pkgLoadStart := time.Now()
 		pkg, err := loadPackageFromDir(pkgPath, dir)
+		if LogPerf {
+			log.Infof("  loadPackageFromDir(%s) elapsed: %v", dir, time.Since(pkgLoadStart))
+		}
 		if err != nil {
 			log.Debugf("Failed to load package %s: %v", pkgPath, err)
 			continue
 		}
 
+		resolveStart := time.Now()
 		for _, ep := range eps {
 			doc := miso.HttpRouteDoc{
 				Name:     ep.FuncName,
@@ -445,6 +460,9 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 			}
 
 			allDocs = append(allDocs, doc)
+		}
+		if LogPerf {
+			log.Infof("  resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", dir, time.Since(resolveStart), len(eps))
 		}
 	}
 
@@ -527,9 +545,12 @@ func hasExtra(extras []pair.StrPair, extraConst string) bool {
 }
 
 // loadPackageFromDir loads a Go package with the specified working directory.
+// Uses NeedTypes|NeedImports (not NeedDeps) — all type lookups go through
+// pkg.Scope() or pkg.Imports(), and type walking is self-contained on
+// already-loaded types.Type objects. Avoids loading transitive deps.
 func loadPackageFromDir(pkgPath string, dir string) (*types.Package, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedName | packages.NeedImports | packages.NeedDeps,
+		Mode: packages.NeedTypes | packages.NeedImports,
 		Dir:  dir,
 	}
 	pkgs, err := packages.Load(cfg, pkgPath)
