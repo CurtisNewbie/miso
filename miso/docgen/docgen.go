@@ -395,7 +395,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		}
 	}
 	if LogPerf {
-		log.Infof("sourceparser.ParseFile elapsed: %v, %d files → %d endpoints", time.Since(parseStart), len(files), totalEps)
+		log.Infof("BuildManualRouteDocs - sourceparser.ParseFile elapsed: %v, %d files → %d endpoints", time.Since(parseStart), len(files), totalEps)
 	}
 
 	var allDocs []miso.HttpRouteDoc
@@ -417,7 +417,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 			pkgLoadStart := time.Now()
 			pkg, err := loadPackageFromDir(pkgPath, d)
 			if LogPerf {
-				log.Infof("  loadPackageFromDir(%s) elapsed: %v", d, time.Since(pkgLoadStart))
+				log.Infof("BuildManualRouteDocs - loadPackageFromDir(%s) elapsed: %v", d, time.Since(pkgLoadStart))
 			}
 			if err != nil {
 				log.Debugf("Failed to load package %s: %v", pkgPath, err)
@@ -470,7 +470,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				docs = append(docs, doc)
 			}
 			if LogPerf {
-				log.Infof("  resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", d, time.Since(resolveStart), len(e))
+				log.Infof("BuildManualRouteDocs - resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", d, time.Since(resolveStart), len(e))
 			}
 
 			return dirResult{docs: docs, dir: d}, nil
