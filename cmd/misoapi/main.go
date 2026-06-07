@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -35,6 +36,7 @@ import (
 	"github.com/dave/dst/decorator/resolver/goast"
 	"github.com/dave/dst/decorator/resolver/gopackages"
 	"github.com/dave/dst/dstutil"
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 const (
@@ -113,6 +115,7 @@ var (
 	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
+	OasFile    = flag.String("oas-file", "openapi.json", "Generate OpenAPI 3.0 JSON spec to file (only with -doc); use -oas-file \"\" to disable")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -168,6 +171,7 @@ func main() {
 		printlnf(strutil.Spaces(2) + "If file is not found, APIs are registered in init() func, however it's not recommended as it's implicit.")
 		printlnf(strutil.Spaces(2) + "If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should")
 		printlnf(strutil.Spaces(2) + "makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)")
+		printlnf(strutil.Spaces(2) + "Use -oas-file flag with -doc to also generate OpenAPI 3.0 JSON spec.")
 		printlnf("")
 	})
 	flags.Parse()
@@ -178,6 +182,11 @@ func main() {
 		for i := range skipPkgsList {
 			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
 		}
+	}
+
+	// Allow -doc to take optional positional arg as markdown output file
+	if *Doc && flag.NArg() > 0 {
+		*DocFile = flag.Arg(0)
 	}
 
 	files, err := walkDir(".", ".go")
@@ -1458,6 +1467,36 @@ func generateDocs(skipPkgs []string) error {
 		_ = seenGoTypes // used for global Go type defs in future
 	}
 	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))
+
+	// Generate aggregate OpenAPI 3.0 spec
+	if *OasFile != "" {
+		oasStart := time.Now()
+		rootSpec := &openapi3.T{
+			OpenAPI: "3.0.0",
+			Info: &openapi3.Info{
+				Title:   *DocAppName,
+				Version: "1.0.0",
+			},
+		}
+		if *DocPort != "" {
+			rootSpec.AddServer(&openapi3.Server{URL: "http://localhost:" + *DocPort})
+		}
+
+		for _, d := range allDocs {
+			miso.GenOpenApiDoc(d, rootSpec)
+		}
+
+		oasJson, err := json.MarshalIndent(rootSpec, "", "  ")
+		if err != nil {
+			return errs.Wrapf(err, "failed to marshal OpenAPI spec")
+		}
+
+		if err := os.WriteFile(*OasFile, oasJson, 0644); err != nil {
+			return errs.Wrapf(err, "failed to write OpenAPI spec file %s", *OasFile)
+		}
+		perfLog("OpenAPI spec generation + write elapsed: %v", time.Since(oasStart))
+		log.Infof("OpenAPI spec written to %s", *OasFile)
+	}
 
 	mdStart := time.Now()
 	markdown := miso.GenMarkDownDoc(allDocs, nil)
