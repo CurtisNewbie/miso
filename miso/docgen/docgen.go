@@ -15,12 +15,14 @@ import (
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/pair"
 	"github.com/curtisnewbie/miso/util/slutil"
+	"github.com/dave/dst"
 	"golang.org/x/tools/go/packages"
 )
 
 // SourceFile represents a source file to parse for endpoint registrations.
 type SourceFile struct {
 	Path string
+	Ast  *dst.File // pre-parsed AST; if nil, sourceparser will parse from disk
 }
 
 // Logger is the minimal logging interface used by the doc generator.
@@ -46,6 +48,13 @@ var (
 	misoPkgOnce  sync.Once
 	misoPkgCache *types.Package
 	misoPkgErr   error
+)
+
+// loadPkgCache caches loaded packages by directory, shared across
+// BuildManualRouteDocs and BuildManualPipelineDocs to avoid reloading.
+var (
+	loadPkgMu  sync.RWMutex
+	loadPkgMap = make(map[string]*types.Package)
 )
 
 // docgenPool is a lazily-initialised CPU-bound goroutine pool reused across
@@ -367,6 +376,7 @@ func buildDataField(dto miso.TypeDesc) miso.FieldDesc {
 
 // BuildManualRouteDocs parses all Go files for manual endpoint registrations
 // and builds HttpRouteDoc objects using go/types type resolution.
+// If SourceFile.Ast is not nil, it is used directly; otherwise the file is parsed from disk.
 func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.HttpRouteDoc {
 	if l != nil {
 		log = l
@@ -384,10 +394,16 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 	var totalEps int
 	for _, f := range files {
 		dir := path.Dir(f.Path)
-		eps, err := sourceparser.ParseFile(f.Path)
-		if err != nil {
-			log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, err)
-			continue
+		var eps []*sourceparser.ParsedEndpoint
+		if f.Ast != nil {
+			eps = sourceparser.ParseFileDst(f.Ast)
+		} else {
+			var err error
+			eps, err = sourceparser.ParseFile(f.Path)
+			if err != nil {
+				log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, err)
+				continue
+			}
 		}
 		if len(eps) > 0 {
 			dirMap[dir] = append(dirMap[dir], eps...)
@@ -495,6 +511,112 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 	return allDocs
 }
 
+// BuildManualPipelineDocs parses all Go files for rabbit.NewEventPipeline declarations
+// and builds PipelineDoc objects using go/types type resolution.
+// If SourceFile.Ast is not nil, it is used directly; otherwise the file is parsed from disk.
+func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []miso.PipelineDoc {
+	if l != nil {
+		log = l
+	}
+	// Filter out generated and test files
+	files = slutil.Filter(files, func(f SourceFile) bool {
+		base := path.Base(f.Path)
+		return !strings.HasSuffix(base, "_test.go")
+	})
+
+	// Group parsed pipelines by directory
+	dirMap := make(map[string][]*sourceparser.ParsedPipeline)
+
+	parseStart := time.Now()
+	var totalPps int
+	for _, f := range files {
+		dir := path.Dir(f.Path)
+		var pps []*sourceparser.ParsedPipeline
+		if f.Ast != nil {
+			pps = sourceparser.ParsePipelinesDst(f.Ast)
+		} else {
+			var err error
+			pps, err = sourceparser.ParsePipelines(f.Path)
+			if err != nil {
+				log.Debugf("sourceparser.ParsePipelines(%s) failed: %v", f.Path, err)
+				continue
+			}
+		}
+		if len(pps) > 0 {
+			dirMap[dir] = append(dirMap[dir], pps...)
+			totalPps += len(pps)
+		}
+	}
+	if LogPerf {
+		log.Infof("BuildManualPipelineDocs - sourceparser.ParsePipelines elapsed: %v, %d files → %d pipelines", time.Since(parseStart), len(files), totalPps)
+	}
+
+	var allDocs []miso.PipelineDoc
+
+	// Parallelize: loadPackageFromDir + resolveTypeRef per directory.
+	// Package loading is cached — pipelines in the same directory as endpoints
+	// reuse the already-loaded package.
+	type pipedirResult struct {
+		dir  string
+		docs []miso.PipelineDoc
+	}
+
+	var futures []async.Future[pipedirResult]
+	for dir, pps := range dirMap {
+		d, p := dir, pps
+		fut := async.Submit(getDocgenPool(), func() (pipedirResult, error) {
+			pkgPath := modName + "/" + d
+			pkgPath = strings.TrimRight(pkgPath, "/")
+
+			pkg, err := loadPackageFromDir(pkgPath, d)
+			if err != nil {
+				log.Debugf("BuildManualPipelineDocs: Failed to load package %s: %v", pkgPath, err)
+				return pipedirResult{}, nil
+			}
+
+			var docs []miso.PipelineDoc
+			for _, pp := range p {
+				doc := miso.PipelineDoc{
+					Name:       pp.Name,
+					Desc:       pp.Desc,
+					Queue:      pp.Queue,
+					Exchange:   pp.Queue,
+					RoutingKey: "#",
+				}
+
+				if pp.PayloadRef != nil {
+					doc.PayloadDesc = resolveTypeRef(*pp.PayloadRef, pkg)
+				}
+
+				docs = append(docs, doc)
+			}
+
+			return pipedirResult{docs: docs, dir: d}, nil
+		})
+		futures = append(futures, fut)
+	}
+
+	var results []pipedirResult
+	for _, fut := range futures {
+		r, err := fut.Get()
+		if err == nil && len(r.docs) > 0 {
+			results = append(results, r)
+		}
+	}
+
+	// Flatten in directory-sorted order for deterministic output
+	sort.Slice(results, func(i, j int) bool { return results[i].dir < results[j].dir })
+	for _, r := range results {
+		allDocs = append(allDocs, r.docs...)
+	}
+
+	if LogPerf {
+		log.Infof("BuildManualPipelineDocs - total: %d pipeline docs", len(allDocs))
+	}
+
+	return allDocs
+}
+
 // extractRequestParams extracts query and header params from DocQueryReq/DocHeaderReq struct types.
 // Fields with "form" struct tag become query params; fields with "header" tags become header params.
 func extractRequestParams(doc *miso.HttpRouteDoc, ep *sourceparser.ParsedEndpoint, pkg *types.Package) {
@@ -575,16 +697,32 @@ func hasExtra(extras []pair.StrPair, extraConst string) bool {
 // pkg.Scope() or pkg.Imports(), and type walking is self-contained on
 // already-loaded types.Type objects. Avoids loading transitive deps.
 func loadPackageFromDir(pkgPath string, dir string) (*types.Package, error) {
+	// Check cache first — directories may be loaded by both BuildManualRouteDocs
+	// and BuildManualPipelineDocs.
+	loadPkgMu.RLock()
+	if pkg, ok := loadPkgMap[dir]; ok {
+		loadPkgMu.RUnlock()
+		return pkg, nil
+	}
+	loadPkgMu.RUnlock()
+
 	cfg := &packages.Config{
 		Mode: packages.NeedTypes | packages.NeedImports,
 		Dir:  dir,
 	}
-	pkgs, err := packages.Load(cfg, pkgPath)
+	// Use "." to load the package in the specified directory, avoiding
+	// submodule path mismatch issues when pkgPath doesn't match the actual
+	// Go package path (e.g., demo/appdemo has its own go.mod).
+	pkgs, err := packages.Load(cfg, ".")
 	if err != nil {
 		return nil, err
 	}
 	if len(pkgs) > 0 && pkgs[0].Types != nil {
-		return pkgs[0].Types, nil
+		pkg := pkgs[0].Types
+		loadPkgMu.Lock()
+		loadPkgMap[dir] = pkg
+		loadPkgMu.Unlock()
+		return pkg, nil
 	}
 	return nil, fmt.Errorf("no types loaded for %s", pkgPath)
 }

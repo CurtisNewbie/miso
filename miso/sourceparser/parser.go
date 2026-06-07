@@ -43,6 +43,17 @@ type ParsedEndpoint struct {
 	ResponseRef   *TypeRef // response type
 }
 
+// ParsedPipeline holds metadata extracted from a rabbit.NewEventPipeline declaration chain.
+type ParsedPipeline struct {
+	Name       string   // from Document(name, ...)
+	Desc       string   // from Document(_, desc, ...)
+	Provider   string   // from Document(_, _, provider)
+	Queue      string   // from NewEventPipeline[T](queue)
+	MaxRetry   int      // from MaxRetry(n), -1 if not set
+	LogPayload bool     // from LogPayload()
+	PayloadRef *TypeRef // the type parameter T from NewEventPipeline[T]
+}
+
 // TypeRef is a structured representation of a Go type expression, preserving
 // type wrappers (pointer, slice) that are lost in string round-trips.
 type TypeRef struct {
@@ -141,6 +152,132 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 	}, nil)
 
 	return endpoints, nil
+}
+
+// ParseFileDst extracts all miso endpoint registrations from a pre-parsed *dst.File.
+func ParseFileDst(f *dst.File) []*ParsedEndpoint {
+	var endpoints []*ParsedEndpoint
+	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
+		call, ok := c.Node().(*dst.CallExpr)
+		if !ok {
+			return true
+		}
+		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
+			return true
+		}
+		if eps := processGroupCall(call); len(eps) > 0 {
+			for _, ep := range eps {
+				extractFuncName(ep)
+				endpoints = append(endpoints, ep)
+			}
+			return false
+		}
+		ep := analyzeCallChain(call)
+		if ep != nil {
+			extractFuncName(ep)
+			endpoints = append(endpoints, ep)
+		}
+		return true
+	}, nil)
+	return endpoints
+}
+
+// ParsePipelines parses a single Go file and extracts all rabbit.NewEventPipeline declarations.
+func ParsePipelines(filePath string) ([]*ParsedPipeline, error) {
+	f, err := decorator.ParseFile(nil, filePath, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+
+	var pipelines []*ParsedPipeline
+	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
+		call, ok := c.Node().(*dst.CallExpr)
+		if !ok {
+			return true
+		}
+		// Only process if this is the top of a chain
+		// (parent is not a SelectorExpr which would mean chaining)
+		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
+			return true
+		}
+
+		pp := analyzePipelineChain(call)
+		if pp != nil {
+			pipelines = append(pipelines, pp)
+		}
+		return true
+	}, nil)
+
+	return pipelines, nil
+}
+
+// ParsePipelinesDst extracts all rabbit.NewEventPipeline declarations from a pre-parsed *dst.File.
+func ParsePipelinesDst(f *dst.File) []*ParsedPipeline {
+	var pipelines []*ParsedPipeline
+	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
+		call, ok := c.Node().(*dst.CallExpr)
+		if !ok {
+			return true
+		}
+		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
+			return true
+		}
+		pp := analyzePipelineChain(call)
+		if pp != nil {
+			pipelines = append(pipelines, pp)
+		}
+		return true
+	}, nil)
+	return pipelines
+}
+
+// analyzePipelineChain recursively descends through chained method calls
+// to find the root rabbit.NewEventPipeline[T] call and collect all chained methods.
+func analyzePipelineChain(call *dst.CallExpr) *ParsedPipeline {
+	// Chained call: .Document(), .MaxRetry(), etc.
+	if sel, ok := call.Fun.(*dst.SelectorExpr); ok {
+		if innerCall, ok := sel.X.(*dst.CallExpr); ok {
+			pp := analyzePipelineChain(innerCall)
+			if pp == nil {
+				return nil
+			}
+			collectPipelineChain(pp, sel.Sel.Name, call.Args)
+			return pp
+		}
+	}
+
+	// Base case: rabbit.NewEventPipeline[T](queue)
+	if idx, ok := call.Fun.(*dst.IndexExpr); ok {
+		if sel, ok := idx.X.(*dst.SelectorExpr); ok {
+			if ident, ok := sel.X.(*dst.Ident); ok && ident.Name == "rabbit" && sel.Sel.Name == "NewEventPipeline" {
+				pp := &ParsedPipeline{MaxRetry: -1}
+				pp.Queue = extractStringArg(call.Args, 0)
+				ref := exprToTypeRef(idx.Index)
+				pp.PayloadRef = &ref
+				return pp
+			}
+		}
+	}
+
+	return nil
+}
+
+// collectPipelineChain extracts information from a chained method call on an EventPipeline.
+func collectPipelineChain(pp *ParsedPipeline, name string, args []dst.Expr) {
+	switch name {
+	case "Document":
+		pp.Name = extractStringArg(args, 0)
+		pp.Desc = extractStringArg(args, 1)
+		pp.Provider = extractStringArg(args, 2)
+	case "MaxRetry":
+		if len(args) > 0 {
+			if lit, ok := args[0].(*dst.BasicLit); ok && lit.Kind == token.INT {
+				fmt.Sscanf(lit.Value, "%d", &pp.MaxRetry)
+			}
+		}
+	case "LogPayload":
+		pp.LogPayload = true
+	}
 }
 
 // analyzeCallChain recursively descends through chained method calls

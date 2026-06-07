@@ -1373,15 +1373,6 @@ func parseDstFile(fpath string, shortPkgName string) (*dst.File, error) {
 	return f, nil
 }
 
-// convertFiles converts FsFile slice to docgen.SourceFile slice.
-func convertFiles(files []FsFile) []docgen.SourceFile {
-	out := make([]docgen.SourceFile, len(files))
-	for i, f := range files {
-		out[i] = docgen.SourceFile{Path: f.Path}
-	}
-	return out
-}
-
 // generateDocs generates static API documentation from source code parsing.
 func generateDocs(skipPkgs []string) error {
 	start := time.Now()
@@ -1413,10 +1404,26 @@ func generateDocs(skipPkgs []string) error {
 		})
 	}
 
+	// Parse all files once; both endpoint and pipeline extraction share the ASTs
+	// embedded in each SourceFile.
+	parseStart := time.Now()
+	convertedFiles := make([]docgen.SourceFile, 0, len(manualFiles))
+	for _, f := range manualFiles {
+		parsed, err := decorator.ParseFile(nil, f.Path, nil, parser.ParseComments)
+		if err != nil {
+			return errs.Wrapf(err, "failed to parse %s", f.Path)
+		}
+		convertedFiles = append(convertedFiles, docgen.SourceFile{Path: f.Path, Ast: parsed})
+	}
+	perfLog("Parse all files: %v, %d files", time.Since(parseStart), len(convertedFiles))
+
 	buildStart := time.Now()
 	docgen.LogPerf = *Perf
-	allDocs := docgen.BuildManualRouteDocs(convertFiles(manualFiles), modName, log)
+	allDocs := docgen.BuildManualRouteDocs(convertedFiles, modName, log)
 	perfLog("BuildManualRouteDocs elapsed: %v, %d endpoints", time.Since(buildStart), len(allDocs))
+
+	pipelineDocs := docgen.BuildManualPipelineDocs(convertedFiles, modName, log)
+	log.Infof("Built %d pipeline docs", len(pipelineDocs))
 
 	log.Infof("Built %d route docs", len(allDocs))
 	for i, d := range allDocs {
@@ -1499,7 +1506,7 @@ func generateDocs(skipPkgs []string) error {
 	}
 
 	mdStart := time.Now()
-	markdown := miso.GenMarkDownDoc(allDocs, nil)
+	markdown := miso.GenMarkDownDoc(allDocs, pipelineDocs)
 
 	if err := os.WriteFile(*DocFile, []byte(markdown), 0644); err != nil {
 		return fmt.Errorf("failed to write doc file %s: %v", *DocFile, err)
