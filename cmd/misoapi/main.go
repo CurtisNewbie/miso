@@ -1464,12 +1464,13 @@ func generateDocs(skipPkgs []string) error {
 		d.Curl = miso.GenRouteCurl(*d, *DocPort)
 
 		// Generate Go/Ts definitions for request types.
-		// Gate on both GenGoDef result and TypeName — GenGoDef returns "" for
-		// primitives/non-struct types, but returns "type  struct { }" for zero-value
-		// TypeDesc (TypeName=""). TypeName check excludes that case while allowing
-		// empty structs (e.g. EmptyReq{}).
+		// Only POST/PUT have request bodies — empty structs (e.g. EmptyReq{}) are
+		// valid for these methods. Other methods never have a body.
+		// GenGoDef returns "" for primitives/non-struct types; returns
+		// "type  struct { }" for zero-value TypeDesc (TypeName="").
 		jsonReqGoDef, jsonReqGoDefTypeName := miso.GenGoDef(d.JsonRequestDesc, hash.NewSet[string]())
-		if jsonReqGoDef != "" && d.JsonRequestDesc.TypeName != "" {
+		if jsonReqGoDef != "" && d.JsonRequestDesc.TypeName != "" &&
+			(d.Method == "POST" || d.Method == "PUT") {
 			d.JsonReqTsDef = miso.GenTsDef(d.JsonRequestDesc)
 			d.JsonTsDef = d.JsonReqTsDef
 			d.JsonReqGoDef = jsonReqGoDef

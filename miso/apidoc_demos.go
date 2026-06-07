@@ -137,7 +137,7 @@ func GenNgHttpClientDemo(d HttpRouteDoc, appName string, inclPrefix bool) string
 
 	lmethod := strings.ToLower(d.Method)
 	reqVar := ""
-	if reqTypeName != "" {
+	if reqTypeName != "" && (d.Method == "POST" || d.Method == "PUT") {
 		reqTypeName = guessTsItfName(reqTypeName)
 		{
 			n := reqTypeName
@@ -290,7 +290,8 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 			sl.Println(strutil.SAddLineIndent(desc, "// "))
 		}
 	}
-	if reqTypeName != "" {
+	shouldIncludeReq := reqTypeName != "" && (d.Method == "POST" || d.Method == "PUT")
+	if shouldIncludeReq {
 		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtrSlice, d.JsonRequestDesc.IsSlicePtr,
 			d.JsonRequestDesc.IsSlice, d.JsonRequestDesc.IsPtr)
 
@@ -326,7 +327,7 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 		httpCall = strings.ToUpper(string(d.Method[0])) + strings.ToLower(string(d.Method[1:]))
 	}
 	um := strings.ToUpper(d.Method)
-	if reqTypeName != "" {
+	if shouldIncludeReq {
 		if um == "POST" {
 			sl.Printf(".\n%sPostJson(req)", strutil.Tabs(2))
 		} else if um == "PUT" {
