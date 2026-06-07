@@ -203,6 +203,9 @@ func ParsePipelines(filePath string) ([]*ParsedPipeline, error) {
 
 		pp := analyzePipelineChain(call)
 		if pp != nil {
+			if pp.Name == "" {
+				pp.Name = extractVarName(c.Parent())
+			}
 			pipelines = append(pipelines, pp)
 		}
 		return true
@@ -224,11 +227,32 @@ func ParsePipelinesDst(f *dst.File) []*ParsedPipeline {
 		}
 		pp := analyzePipelineChain(call)
 		if pp != nil {
+			if pp.Name == "" {
+				pp.Name = extractVarName(c.Parent())
+			}
 			pipelines = append(pipelines, pp)
 		}
 		return true
 	}, nil)
 	return pipelines
+}
+
+// extractVarName extracts the variable name from a dst.Node that is the parent of a
+// pipeline CallExpr, handling *dst.ValueSpec (var block) and *dst.AssignStmt (init/func body).
+func extractVarName(parent dst.Node) string {
+	switch p := parent.(type) {
+	case *dst.ValueSpec:
+		if len(p.Names) > 0 {
+			return p.Names[0].Name
+		}
+	case *dst.AssignStmt:
+		if len(p.Lhs) > 0 {
+			if ident, ok := p.Lhs[0].(*dst.Ident); ok {
+				return ident.Name
+			}
+		}
+	}
+	return ""
 }
 
 // analyzePipelineChain recursively descends through chained method calls

@@ -115,7 +115,7 @@ var (
 	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
-	OasFile    = flag.String("oas-file", "openapi.json", "Generate OpenAPI 3.0 JSON spec to file (only with -doc); use -oas-file \"\" to disable")
+	OasFile    = flag.String("oas-file", "", "Generate OpenAPI 3.0 JSON spec to file (only with -doc)")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.

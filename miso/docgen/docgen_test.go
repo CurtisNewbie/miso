@@ -995,3 +995,147 @@ func TestLookupTypeInPkg_NonExistentType(t *testing.T) {
 		t.Error("NonExistentType should not be found")
 	}
 }
+
+// === refTypeName and extractRequestParams tests ===
+
+func TestRefTypeName(t *testing.T) {
+	tests := []struct {
+		ref  sourceparser.TypeRef
+		want string
+	}{
+		{sourceparser.TypeRef{Name: "FileInfoReq"}, "FileInfoReq"},
+		{sourceparser.TypeRef{PkgName: "api", Name: "FileInfoReq"}, "api.FileInfoReq"},
+		{sourceparser.TypeRef{PkgName: "miso", Name: "Inbound", IsPtr: true}, "miso.Inbound"},
+	}
+	for _, tt := range tests {
+		got := refTypeName(tt.ref)
+		if got != tt.want {
+			t.Errorf("refTypeName(%+v) = %q, want %q", tt.ref, got, tt.want)
+		}
+	}
+}
+
+func TestExtractRequestParams_ExplicitType_StillWorks(t *testing.T) {
+	// explicit QueryReqType/HeaderReqType must not regress
+	pkg := loadDemoAPIPkg(t)
+	ep := &sourceparser.ParsedEndpoint{
+		QueryReqType:  "PostReq",
+		HeaderReqType: "PostReq",
+	}
+	doc := miso.HttpRouteDoc{}
+	extractRequestParams(&doc, ep, pkg)
+
+	// PostReq has no form or header tags
+	if len(doc.QueryParams) != 0 {
+		t.Errorf("expected 0 query params from PostReq (no form tags), got %d: %+v", len(doc.QueryParams), doc.QueryParams)
+	}
+	if len(doc.Headers) != 0 {
+		t.Errorf("expected 0 headers from PostReq (no header tags), got %d: %+v", len(doc.Headers), doc.Headers)
+	}
+}
+
+func TestExtractRequestParams_NilRequestRef(t *testing.T) {
+	// nil RequestRef with empty QueryReqType/HeaderReqType must not panic
+	pkg := loadDemoAPIPkg(t)
+	ep := &sourceparser.ParsedEndpoint{
+		QueryReqType:  "",
+		HeaderReqType: "",
+		RequestRef:    nil,
+	}
+	doc := miso.HttpRouteDoc{}
+	extractRequestParams(&doc, ep, pkg)
+
+	if len(doc.QueryParams) != 0 {
+		t.Errorf("expected 0 query params, got %d", len(doc.QueryParams))
+	}
+	if len(doc.Headers) != 0 {
+		t.Errorf("expected 0 headers, got %d", len(doc.Headers))
+	}
+}
+
+func TestExtractRequestParams_RequestRefNoFormTags(t *testing.T) {
+	// RequestRef set but type has no form/header tags — no params extracted
+	pkg := loadDemoAPIPkg(t)
+	ep := &sourceparser.ParsedEndpoint{
+		QueryReqType:  "",
+		HeaderReqType: "",
+		RequestRef:    &sourceparser.TypeRef{Name: "PostReq"},
+	}
+	doc := miso.HttpRouteDoc{}
+	extractRequestParams(&doc, ep, pkg)
+
+	if len(doc.QueryParams) != 0 {
+		t.Errorf("expected 0 query params from PostReq (no form tags), got %d: %+v", len(doc.QueryParams), doc.QueryParams)
+	}
+	if len(doc.Headers) != 0 {
+		t.Errorf("expected 0 headers from PostReq (no header tags), got %d: %+v", len(doc.Headers), doc.Headers)
+	}
+}
+
+func TestExtractRequestParams_FallbackToRequestRef(t *testing.T) {
+	// When QueryReqType/HeaderReqType are empty, fall back to RequestRef
+	// to extract form/header tags from the struct.
+	dir := t.TempDir()
+
+	goModPath := filepath.Join(dir, "go.mod")
+	if err := os.WriteFile(goModPath, []byte("module testpkg\n\ngo 1.21\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srcPath := filepath.Join(dir, "pkg.go")
+	srcContent := "package testpkg\n" +
+		"\n" +
+		"type FileInfoReq struct {\n" +
+		"\tFileId       string `form:\"fileId\" desc:\"actual file_id of the file record\"`\n" +
+		"\tUploadFileId string `form:\"uploadFileId\" desc:\"temporary file_id\"`\n" +
+		"\tAuth         string `header:\"Authorization\" desc:\"bearer token\"`\n" +
+		"}\n"
+	if err := os.WriteFile(srcPath, []byte(srcContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	pkg, err := loadPackageFromDir("testpkg", dir)
+	if err != nil {
+		t.Fatalf("loadPackageFromDir failed: %v", err)
+	}
+
+	ep := &sourceparser.ParsedEndpoint{
+		QueryReqType:  "",
+		HeaderReqType: "",
+		RequestRef:    &sourceparser.TypeRef{Name: "FileInfoReq"},
+	}
+	doc := miso.HttpRouteDoc{}
+	extractRequestParams(&doc, ep, pkg)
+
+	// Query params from form tags
+	if len(doc.QueryParams) != 2 {
+		t.Errorf("expected 2 query params from form tags, got %d: %+v", len(doc.QueryParams), doc.QueryParams)
+	}
+	wantQueries := map[string]string{
+		"fileId":       "actual file_id of the file record",
+		"uploadFileId": "temporary file_id",
+	}
+	for _, q := range doc.QueryParams {
+		expDesc, ok := wantQueries[q.Name]
+		if !ok {
+			t.Errorf("unexpected query param: %q", q.Name)
+			continue
+		}
+		if q.Desc != expDesc {
+			t.Errorf("query param %q desc = %q, want %q", q.Name, q.Desc, expDesc)
+		}
+	}
+
+	// Header params from header tags
+	if len(doc.Headers) != 1 {
+		t.Errorf("expected 1 header from header tags, got %d: %+v", len(doc.Headers), doc.Headers)
+	}
+	if len(doc.Headers) > 0 {
+		if doc.Headers[0].Name != "Authorization" {
+			t.Errorf("header name = %q, want %q", doc.Headers[0].Name, "Authorization")
+		}
+		if doc.Headers[0].Desc != "bearer token" {
+			t.Errorf("header desc = %q, want %q", doc.Headers[0].Desc, "bearer token")
+		}
+	}
+}

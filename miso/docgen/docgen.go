@@ -576,6 +576,9 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []mis
 
 			var docs []miso.PipelineDoc
 			for _, pp := range p {
+				if pp.Name == "" {
+					continue // skip pipelines with no name (no Document() call and no var name)
+				}
 				doc := miso.PipelineDoc{
 					Name:       pp.Name,
 					Desc:       pp.Desc,
@@ -620,14 +623,30 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []mis
 // extractRequestParams extracts query and header params from DocQueryReq/DocHeaderReq struct types.
 // Fields with "form" struct tag become query params; fields with "header" tags become header params.
 func extractRequestParams(doc *miso.HttpRouteDoc, ep *sourceparser.ParsedEndpoint, pkg *types.Package) {
-	if ep.QueryReqType != "" {
-		params := lookupTagParams(ep.QueryReqType, pkg, miso.TagQueryParam)
+	queryType := ep.QueryReqType
+	if queryType == "" && ep.RequestRef != nil {
+		queryType = refTypeName(*ep.RequestRef)
+	}
+	if queryType != "" {
+		params := lookupTagParams(queryType, pkg, miso.TagQueryParam)
 		doc.QueryParams = append(doc.QueryParams, params...)
 	}
-	if ep.HeaderReqType != "" {
-		params := lookupTagParams(ep.HeaderReqType, pkg, miso.TagHeaderParam)
+	headerType := ep.HeaderReqType
+	if headerType == "" && ep.RequestRef != nil {
+		headerType = refTypeName(*ep.RequestRef)
+	}
+	if headerType != "" {
+		params := lookupTagParams(headerType, pkg, miso.TagHeaderParam)
 		doc.Headers = append(doc.Headers, params...)
 	}
+}
+
+// refTypeName returns the package-qualified type name for a TypeRef.
+func refTypeName(ref sourceparser.TypeRef) string {
+	if ref.PkgName != "" {
+		return ref.PkgName + "." + ref.Name
+	}
+	return ref.Name
 }
 
 // lookupTagParams resolves a type by name in the package scope and extracts ParamDoc
