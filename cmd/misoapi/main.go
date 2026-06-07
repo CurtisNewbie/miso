@@ -37,6 +37,7 @@ import (
 	"github.com/dave/dst/decorator/resolver/gopackages"
 	"github.com/dave/dst/dstutil"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -108,14 +109,14 @@ var (
 var (
 	Debug      = flag.Bool("debug", false, "Enable debug log")
 	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
-	Run        = flag.Bool("run", false, "Run app after api generated (to generate api doc)")
 	Doc        = flag.Bool("doc", false, "Generate API docs statically (markdown)")
-	DocFile    = flag.String("file", "api-doc.md", "Output file for API docs (only with -doc)")
+	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs (only with -doc)")
 	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs (only with -doc)")
 	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
-	OasFile    = flag.String("oas-file", "", "Generate OpenAPI 3.0 JSON spec to file (only with -doc)")
+	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec (only with -doc)")
+	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec (only with -doc)")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -123,6 +124,32 @@ func perfLog(format string, args ...any) {
 	if *Perf {
 		log.Infof(format, args...)
 	}
+}
+
+// loadConfYml loads conf.yml using Viper. Returns the Viper instance or nil on failure.
+func loadConfYml() *viper.Viper {
+	v := viper.New()
+	v.SetConfigFile("conf.yml")
+	if err := v.ReadInConfig(); err != nil {
+		return nil
+	}
+	return v
+}
+
+// resolveFromViper reads a key from Viper, using the raw key as a fallback
+// if nested lookup fails (keys with dots in YAML are stored flat).
+func resolveFromViper(v *viper.Viper, key string) string {
+	if v.IsSet(key) {
+		return v.GetString(key)
+	}
+	// Dotted keys in flat YAML (e.g., "app.name") may be stored as-is
+	// rather than nested. Try all keys.
+	for _, k := range v.AllKeys() {
+		if k == key {
+			return v.GetString(k)
+		}
+	}
+	return ""
 }
 
 // matchSkipPkg checks if pkgPath should be skipped based on skipPkgs patterns.
@@ -171,10 +198,28 @@ func main() {
 		printlnf(strutil.Spaces(2) + "If file is not found, APIs are registered in init() func, however it's not recommended as it's implicit.")
 		printlnf(strutil.Spaces(2) + "If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should")
 		printlnf(strutil.Spaces(2) + "makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)")
-		printlnf(strutil.Spaces(2) + "Use -oas-file flag with -doc to also generate OpenAPI 3.0 JSON spec.")
+		printlnf(strutil.Spaces(2) + "Use -oas flag with -doc to also generate OpenAPI 3.0 JSON spec.")
 		printlnf("")
 	})
 	flags.Parse()
+
+	// If conf.yml exists and flags were not explicitly set, load defaults from it.
+	if fi, err := os.Stat("conf.yml"); err == nil && !fi.IsDir() {
+		if v := loadConfYml(); v != nil {
+			d := map[string]bool{}
+			flag.Visit(func(f *flag.Flag) { d[f.Name] = true })
+			if !d["appname"] {
+				if s := resolveFromViper(v, "app.name"); s != "" {
+					*DocAppName = s
+				}
+			}
+			if !d["port"] {
+				if s := resolveFromViper(v, "server.port"); s != "" {
+					*DocPort = s
+				}
+			}
+		}
+	}
 
 	var skipPkgsList []string
 	if *SkipPkgs != "" {
@@ -182,11 +227,6 @@ func main() {
 		for i := range skipPkgsList {
 			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
 		}
-	}
-
-	// Allow -doc to take optional positional arg as markdown output file
-	if *Doc && flag.NArg() > 0 {
-		*DocFile = flag.Arg(0)
 	}
 
 	files, err := walkDir(".", ".go")
@@ -204,20 +244,6 @@ func main() {
 			log.Errorf("generateDocs failed, %v", err)
 		}
 		return
-	}
-
-	if *Run {
-		for _, f := range files {
-			if f.File.Name() == "main.go" {
-				out, err := cli.Run("go", []string{"run", "main.go", "app.stop-on-ready=true"})
-				if err != nil {
-					panic(fmt.Sprintf("%v, %s", err, out))
-				} else {
-					println(string(out))
-				}
-				break
-			}
-		}
 	}
 }
 
@@ -1476,8 +1502,9 @@ func generateDocs(skipPkgs []string) error {
 	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))
 
 	// Generate aggregate OpenAPI 3.0 spec
-	if *OasFile != "" {
+	if *Oas {
 		oasStart := time.Now()
+		oasPath := *OasFile
 		rootSpec := &openapi3.T{
 			OpenAPI: "3.0.0",
 			Info: &openapi3.Info{
@@ -1498,11 +1525,11 @@ func generateDocs(skipPkgs []string) error {
 			return errs.Wrapf(err, "failed to marshal OpenAPI spec")
 		}
 
-		if err := os.WriteFile(*OasFile, oasJson, 0644); err != nil {
-			return errs.Wrapf(err, "failed to write OpenAPI spec file %s", *OasFile)
+		if err := os.WriteFile(oasPath, oasJson, 0644); err != nil {
+			return errs.Wrapf(err, "failed to write OpenAPI spec file %s", oasPath)
 		}
 		perfLog("OpenAPI spec generation + write elapsed: %v", time.Since(oasStart))
-		log.Infof("OpenAPI spec written to %s", *OasFile)
+		log.Infof("OpenAPI spec written to %s", oasPath)
 	}
 
 	mdStart := time.Now()
