@@ -109,7 +109,7 @@ var (
 var (
 	Debug      = flag.Bool("debug", false, "Enable debug log")
 	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
-	Doc        = flag.Bool("doc", false, "Generate API docs statically (markdown)")
+	Doc        = flag.Bool("doc", true, "Generate API docs statically (markdown)")
 	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs (only with -doc)")
 	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs (only with -doc)")
 	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
