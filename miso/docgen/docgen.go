@@ -387,18 +387,14 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		return !strings.HasSuffix(base, "_test.go")
 	})
 
-	// Group parsed endpoints by directory
-	dirMap := make(map[string][]*sourceparser.ParsedEndpoint)
-
-	parseStart := time.Now()
-	var totalEps int
-
 	// Pre-collect cross-file const/var string values per directory so that
 	// references like Resource(ResCodeUpload) resolve across files.
 	dirFileAsts := make(map[string][]*dst.File)
+	dirFiles := make(map[string][]SourceFile)
 	for _, f := range files {
+		dir := path.Dir(f.Path)
+		dirFiles[dir] = append(dirFiles[dir], f)
 		if f.Ast != nil {
-			dir := path.Dir(f.Path)
 			dirFileAsts[dir] = append(dirFileAsts[dir], f.Ast)
 		}
 	}
@@ -407,46 +403,10 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		dirConstVars[dir] = sourceparser.CollectPackageConstVars(asts)
 	}
 
-	// Pre-load *types.Package per directory for cross-package const resolution.
-	// Package loading is cached, so the per-directory future loop below will
-	// reuse these already-loaded packages.
-	dirPkgs := make(map[string]*types.Package)
-	for dir := range dirFileAsts {
-		pkgPath := modName + "/" + dir
-		pkgPath = strings.TrimRight(pkgPath, "/")
-		pkg, err := loadPackageFromDir(pkgPath, dir)
-		if err == nil {
-			dirPkgs[dir] = pkg
-		} else {
-			log.Debugf("Failed to pre-load package for dir %s: %v", dir, err)
-		}
-	}
-
-	for _, f := range files {
-		dir := path.Dir(f.Path)
-		var eps []*sourceparser.ParsedEndpoint
-		if f.Ast != nil {
-			eps = sourceparser.ParseFileDst(f.Ast, dirPkgs[dir], dirConstVars[dir])
-		} else {
-			var err error
-			eps, err = sourceparser.ParseFile(f.Path)
-			if err != nil {
-				log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, err)
-				continue
-			}
-		}
-		if len(eps) > 0 {
-			dirMap[dir] = append(dirMap[dir], eps...)
-			totalEps += len(eps)
-		}
-	}
-	if LogPerf {
-		log.Infof("BuildManualRouteDocs - sourceparser.ParseFile elapsed: %v, %d files → %d endpoints", time.Since(parseStart), len(files), totalEps)
-	}
-
 	var allDocs []miso.HttpRouteDoc
 
-	// Parallelize: loadPackageFromDir + resolveTypeRef per directory.
+	// Parallelize per directory: loadPackageFromDir, parse endpoints with
+	// *types.Package for cross-package const resolution, then resolve type refs.
 	// Each directory's package is independent; loadMisoPackage() uses sync.Once.
 	type dirResult struct {
 		dir  string
@@ -454,8 +414,8 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 	}
 
 	var futures []async.Future[dirResult]
-	for dir, eps := range dirMap {
-		d, e := dir, eps
+	for dir, dfs := range dirFiles {
+		d, dfiles := dir, dfs
 		fut := async.Submit(getDocgenPool(), func() (dirResult, error) {
 			pkgPath := modName + "/" + d
 			pkgPath = strings.TrimRight(pkgPath, "/")
@@ -470,9 +430,29 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				return dirResult{}, nil
 			}
 
+			// Parse all files in this directory, passing *types.Package for
+			// cross-package const/var resolution (e.g., impconst.TestURL).
+			var eps []*sourceparser.ParsedEndpoint
+			for _, f := range dfiles {
+				if f.Ast != nil {
+					eps = append(eps, sourceparser.ParseFileDst(f.Ast, pkg, dirConstVars[d])...)
+				} else {
+					pe, err := sourceparser.ParseFile(f.Path)
+					if err != nil {
+						log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, err)
+						continue
+					}
+					eps = append(eps, pe...)
+				}
+			}
+
+			if len(eps) == 0 {
+				return dirResult{dir: d}, nil
+			}
+
 			resolveStart := time.Now()
 			var docs []miso.HttpRouteDoc
-			for _, ep := range e {
+			for _, ep := range eps {
 				doc := miso.HttpRouteDoc{
 					Name:     ep.FuncName,
 					Url:      ep.URL,
@@ -516,7 +496,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				docs = append(docs, doc)
 			}
 			if LogPerf {
-				log.Infof("BuildManualRouteDocs - resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", d, time.Since(resolveStart), len(e))
+				log.Infof("BuildManualRouteDocs - resolveTypeRef + extractParams(%s) elapsed: %v, %d endpoints", d, time.Since(resolveStart), len(eps))
 			}
 
 			return dirResult{docs: docs, dir: d}, nil

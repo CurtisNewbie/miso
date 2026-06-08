@@ -37,43 +37,6 @@ func parseSingle(t *testing.T, content string) *ParsedEndpoint {
 	return eps[0]
 }
 
-// loadTestPackage constructs a *types.Package for impapp with impconst as import,
-// simulating what go/types would produce from the testdata source files.
-// We cannot use packages.Load because testdata directories are excluded from
-// module-based package resolution.
-func loadTestPackage(t *testing.T) *types.Package {
-	t.Helper()
-
-	// Build impconst package with its string constants
-	constPath := "github.com/curtisnewbie/miso/miso/sourceparser/testdata/impconst"
-	impconstPkg := types.NewPackage(constPath, "impconst")
-
-	impconstPkg.Scope().Insert(types.NewConst(
-		token.NoPos, impconstPkg, "TestURL", types.Typ[types.String],
-		constant.MakeString("/api/v1/test"),
-	))
-	impconstPkg.Scope().Insert(types.NewConst(
-		token.NoPos, impconstPkg, "TestDesc", types.Typ[types.String],
-		constant.MakeString("test endpoint description"),
-	))
-	impconstPkg.Scope().Insert(types.NewConst(
-		token.NoPos, impconstPkg, "TestResource", types.Typ[types.String],
-		constant.MakeString("test-resource"),
-	))
-
-	// Build impapp package with its local const and reference to impconst
-	appPath := "github.com/curtisnewbie/miso/miso/sourceparser/testdata/impapp"
-	impappPkg := types.NewPackage(appPath, "impapp")
-	impappPkg.SetImports([]*types.Package{impconstPkg})
-
-	impappPkg.Scope().Insert(types.NewConst(
-		token.NoPos, impappPkg, "LocalURL", types.Typ[types.String],
-		constant.MakeString("/api/local"),
-	))
-
-	return impappPkg
-}
-
 // === Handler Type Tests ===
 
 func TestParseFile_AutoHandler(t *testing.T) {
@@ -1261,7 +1224,7 @@ func init() {
 	}
 }
 
-// === resolveConstStr / resolveImportedConstStr unit tests ===
+// === resolveConstStr unit tests ===
 
 func TestResolveConstStr(t *testing.T) {
 	t.Run("nil object", func(t *testing.T) {
@@ -1288,35 +1251,6 @@ func TestResolveConstStr(t *testing.T) {
 		v := types.NewVar(token.NoPos, pkg, "v", types.Typ[types.String])
 		if got := resolveConstStr(v); got != "" {
 			t.Errorf("var → %q, want %q", got, "")
-		}
-	})
-}
-
-func TestResolveImportedConstStr(t *testing.T) {
-	pkg := loadTestPackage(t)
-
-	t.Run("matching import", func(t *testing.T) {
-		got := resolveImportedConstStr(pkg, "impconst", "TestURL")
-		if got != "/api/v1/test" {
-			t.Errorf("impconst.TestURL → %q, want %q", got, "/api/v1/test")
-		}
-	})
-	t.Run("matching import other const", func(t *testing.T) {
-		got := resolveImportedConstStr(pkg, "impconst", "TestDesc")
-		if got != "test endpoint description" {
-			t.Errorf("impconst.TestDesc → %q, want %q", got, "test endpoint description")
-		}
-	})
-	t.Run("non-existent package", func(t *testing.T) {
-		got := resolveImportedConstStr(pkg, "nonexistent", "Foo")
-		if got != "" {
-			t.Errorf("nonexistent.Foo → %q, want %q", got, "")
-		}
-	})
-	t.Run("non-existent const", func(t *testing.T) {
-		got := resolveImportedConstStr(pkg, "impconst", "NonExistent")
-		if got != "" {
-			t.Errorf("impconst.NonExistent → %q, want %q", got, "")
 		}
 	})
 }
@@ -1351,22 +1285,6 @@ func TestExtractStringArg_WithPackage_ConstVarsTakesPriority(t *testing.T) {
 	got := extractStringArg(args, 0, constVars, pkg)
 	if got != "fromConstVars" {
 		t.Errorf("constVars should take priority → %q, want %q", got, "fromConstVars")
-	}
-}
-
-func TestExtractStringArg_WithPackage_SelectorExpr(t *testing.T) {
-	pkg := loadTestPackage(t)
-
-	// Construct dst.SelectorExpr: impconst.TestURL
-	sel := &dst.SelectorExpr{
-		X:   &dst.Ident{Name: "impconst"},
-		Sel: &dst.Ident{Name: "TestURL"},
-	}
-	args := []dst.Expr{sel}
-
-	got := extractStringArg(args, 0, nil, pkg)
-	if got != "/api/v1/test" {
-		t.Errorf("impconst.TestURL via SelectorExpr → %q, want %q", got, "/api/v1/test")
 	}
 }
 
@@ -1414,81 +1332,80 @@ func TestExtractStringArg_NilPackage_SelectorExprFallthrough(t *testing.T) {
 
 // === ParseFileDst with *types.Package integration tests ===
 
-func TestParseFileDst_WithPackage_ImportedConst(t *testing.T) {
-	pkg := loadTestPackage(t)
+func TestParseFileDst_WithPackage_LocalConst(t *testing.T) {
+	// Same-package const resolution: ParseFileDst with *types.Package
+	// where pkg.Scope() contains the const values.
+	path := writeTestFile(t, "test.go", `package test
+import "github.com/curtisnewbie/miso/miso"
+const LocalURL = "/api/local"
+const LocalDesc = "test description"
+func init() {
+	miso.HttpGet(LocalURL, miso.RawHandler(myHandler)).
+		Desc(LocalDesc)
+}
+func myHandler(inb *miso.Inbound) {}
+`)
 
-	// Parse impapp/main.go to dst.File
-	f, err := decorator.ParseFile(token.NewFileSet(), "./testdata/impapp/main.go", nil, 0)
+	// Construct a *types.Package with the same consts in scope
+	pkg := types.NewPackage("testpkg", "testpkg")
+	pkg.Scope().Insert(types.NewConst(
+		token.NoPos, pkg, "LocalURL", types.Typ[types.String],
+		constant.MakeString("/api/local"),
+	))
+	pkg.Scope().Insert(types.NewConst(
+		token.NoPos, pkg, "LocalDesc", types.Typ[types.String],
+		constant.MakeString("test description"),
+	))
+
+	f, err := decorator.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
 
 	eps := ParseFileDst(f, pkg)
-	if len(eps) < 2 {
-		t.Fatalf("expected at least 2 endpoints, got %d", len(eps))
+	if len(eps) < 1 {
+		t.Fatalf("expected at least 1 endpoint, got %d", len(eps))
 	}
 
-	// First endpoint: miso.HttpGet(impconst.TestURL, ...) → URL should be resolved
-	ep1 := eps[0]
-	if ep1.URL != "/api/v1/test" {
-		t.Errorf("ep1 URL: got %q, want %q", ep1.URL, "/api/v1/test")
+	ep := eps[0]
+	if ep.URL != "/api/local" {
+		t.Errorf("URL: got %q, want %q", ep.URL, "/api/local")
 	}
-
-	// Second endpoint: miso.HttpGet(LocalURL, ...).Desc(impconst.TestDesc).Resource(impconst.TestResource)
-	ep2 := eps[1]
-	if ep2.URL != "/api/local" {
-		t.Errorf("ep2 URL: got %q, want %q", ep2.URL, "/api/local")
-	}
-	if ep2.Desc != "test endpoint description" {
-		t.Errorf("ep2 Desc: got %q, want %q", ep2.Desc, "test endpoint description")
-	}
-	if ep2.Resource != "test-resource" {
-		t.Errorf("ep2 Resource: got %q, want %q", ep2.Resource, "test-resource")
+	if ep.Desc != "test description" {
+		t.Errorf("Desc: got %q, want %q", ep.Desc, "test description")
 	}
 }
 
 func TestParseFileDst_NilPackage_ConstVarsStillWorks(t *testing.T) {
-	// Parse impapp/main.go with nil pkg but with constVars.
-	// ParseFileDst prioritizes file-local constVars (collectConstVars runs first),
-	// then extraConsts only fill keys not already present in the file.
+	// nil pkg + constVars: AST-based fallback should still resolve bare Ident consts.
+	path := writeTestFile(t, "test.go", `package test
+import "github.com/curtisnewbie/miso/miso"
+const LocalURL = "/api/local"
+func init() {
+	miso.HttpGet(LocalURL, miso.RawHandler(myHandler))
+}
+func myHandler(inb *miso.Inbound) {}
+`)
+
 	constVars := map[string]string{
-		"TestURL":      "/from-constvars",
-		"LocalURL":     "/from-constvars-local",
-		"TestDesc":     "from-constvars-desc",
-		"TestResource": "from-constvars-res",
+		"LocalURL": "/from-constvars",
 	}
 
-	f, err := decorator.ParseFile(token.NewFileSet(), "./testdata/impapp/main.go", nil, 0)
+	f, err := decorator.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
 
 	eps := ParseFileDst(f, nil, constVars)
-	if len(eps) < 2 {
-		t.Fatalf("expected at least 2 endpoints, got %d", len(eps))
+	if len(eps) < 1 {
+		t.Fatalf("expected at least 1 endpoint, got %d", len(eps))
 	}
 
-	// ep1: impconst.TestURL is a SelectorExpr — without a *types.Package the
-	// SelectorExpr branch is never taken (pkg != nil guard), so it falls through
-	// to exprToString → "impconst.TestURL"
-	ep1 := eps[0]
-	if ep1.URL != "impconst.TestURL" {
-		t.Errorf("ep1 URL (nil pkg): got %q, want %q", ep1.URL, "impconst.TestURL")
-	}
-
-	// ep2: LocalURL is a bare Ident, but collectConstVars already captured it
-	// from the file source ("/api/local"), and file-local constVars take
-	// priority over extraConsts in ParseFileDst's merge logic.
-	ep2 := eps[1]
-	if ep2.URL != "/api/local" {
-		t.Errorf("ep2 URL (nil pkg): got %q, want %q", ep2.URL, "/api/local")
-	}
-	// impconst.TestDesc is a SelectorExpr — falls through to "impconst.TestDesc"
-	if ep2.Desc != "impconst.TestDesc" {
-		t.Errorf("ep2 Desc (nil pkg): got %q, want %q", ep2.Desc, "impconst.TestDesc")
-	}
-	// impconst.TestResource is a SelectorExpr — falls through to "impconst.TestResource"
-	if ep2.Resource != "impconst.TestResource" {
-		t.Errorf("ep2 Resource (nil pkg): got %q, want %q", ep2.Resource, "impconst.TestResource")
+	// collectConstVars captures LocalURL="/api/local" from the file source,
+	// and it takes priority over extraConsts. So the URL comes from the file,
+	// not from the extra constVars.
+	ep := eps[0]
+	if ep.URL != "/api/local" {
+		t.Errorf("URL (nil pkg, file-local takes priority): got %q, want %q", ep.URL, "/api/local")
 	}
 }

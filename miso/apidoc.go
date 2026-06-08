@@ -294,7 +294,7 @@ func (f FieldDesc) comment(withSlash bool) string {
 			}
 
 			switch pvr.rule {
-			case ValidNotEmpty:
+			case ValidNotEmpty, ValidNotNil:
 				appendRemaining("Required.")
 			case ValidMaxLen:
 				appendRemaining(fmt.Sprintf("Max length: %v.", pvr.param))

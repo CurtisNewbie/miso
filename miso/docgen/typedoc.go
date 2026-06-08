@@ -169,7 +169,7 @@ func extractFieldDescs(st *types.Struct, pkg *types.Package, seen map[types.Type
 		// Valid tag
 		validTag := stTag.Get("valid")
 		if validTag == "" {
-			validTag = stTag.Get("validate")
+			validTag = stTag.Get("validation")
 		}
 
 		// Desc tag

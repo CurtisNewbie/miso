@@ -2,6 +2,7 @@ package docgen
 
 import (
 	"fmt"
+	"go/constant"
 	"go/types"
 	"os"
 	"path/filepath"
@@ -1138,4 +1139,60 @@ func TestExtractRequestParams_FallbackToRequestRef(t *testing.T) {
 			t.Errorf("header desc = %q, want %q", doc.Headers[0].Desc, "bearer token")
 		}
 	}
+}
+
+// TestLoadPackageFromDir_SamePackageConsts verifies that packages.Load with
+// NeedTypes|NeedImports preserves string consts in the loaded package's scope,
+// enabling same-package const resolution via ParseFileDst.
+func TestLoadPackageFromDir_SamePackageConsts(t *testing.T) {
+	dir := t.TempDir()
+
+	// go.mod
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(`module testmod
+
+go 1.21
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// pkg/consts.go — defines consts in the same package
+	if err := os.MkdirAll(filepath.Join(dir, "pkg"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "pkg", "handler.go"), []byte(`package pkg
+
+const LocalURL = "/api/local"
+const LocalDesc = "local description"
+
+func init() {
+	_ = LocalURL
+	_ = LocalDesc
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Load the package
+	pkg, err := loadPackageFromDir("testmod/pkg", filepath.Join(dir, "pkg"))
+	if err != nil {
+		t.Fatalf("loadPackageFromDir failed: %v", err)
+	}
+
+	// Verify LocalURL is accessible in package scope
+	obj := pkg.Scope().Lookup("LocalURL")
+	if obj == nil {
+		t.Fatal("pkg.Scope().Lookup(\"LocalURL\") returned nil")
+	}
+	c, ok := obj.(*types.Const)
+	if !ok {
+		t.Fatalf("LocalURL is not a *types.Const, got %T", obj)
+	}
+	if c.Val() == nil || c.Val().Kind() != constant.String {
+		t.Fatal("LocalURL.Val() is nil or not a string")
+	}
+	val := constant.StringVal(c.Val())
+	if val != "/api/local" {
+		t.Fatalf("LocalURL = %q, want %q", val, "/api/local")
+	}
+	t.Logf("LocalURL = %q ✓", val)
 }
