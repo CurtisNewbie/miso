@@ -121,6 +121,8 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		return nil, err
 	}
 
+	constVars := collectConstVars(f)
+
 	var endpoints []*ParsedEndpoint
 	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
 		call, ok := c.Node().(*dst.CallExpr)
@@ -135,7 +137,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		}
 
 		// Handle BaseRoute("/prefix").Group(endpoints...) pattern
-		if eps := processGroupCall(call); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
@@ -143,7 +145,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 			return false // Don't recurse into Group's children (already processed)
 		}
 
-		ep := analyzeCallChain(call)
+		ep := analyzeCallChain(call, constVars)
 		if ep != nil {
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
@@ -155,7 +157,17 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 }
 
 // ParseFileDst extracts all miso endpoint registrations from a pre-parsed *dst.File.
-func ParseFileDst(f *dst.File) []*ParsedEndpoint {
+// extraConsts (optional) provides const/var values from other files in the package.
+func ParseFileDst(f *dst.File, extraConsts ...map[string]string) []*ParsedEndpoint {
+	constVars := collectConstVars(f)
+	if len(extraConsts) > 0 && extraConsts[0] != nil {
+		for k, v := range extraConsts[0] {
+			if _, exists := constVars[k]; !exists {
+				constVars[k] = v
+			}
+		}
+	}
+
 	var endpoints []*ParsedEndpoint
 	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
 		call, ok := c.Node().(*dst.CallExpr)
@@ -165,14 +177,14 @@ func ParseFileDst(f *dst.File) []*ParsedEndpoint {
 		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
 			return true
 		}
-		if eps := processGroupCall(call); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
 			}
 			return false
 		}
-		ep := analyzeCallChain(call)
+		ep := analyzeCallChain(call, constVars)
 		if ep != nil {
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
@@ -275,7 +287,7 @@ func analyzePipelineChain(call *dst.CallExpr) *ParsedPipeline {
 		if sel, ok := idx.X.(*dst.SelectorExpr); ok {
 			if ident, ok := sel.X.(*dst.Ident); ok && ident.Name == "rabbit" && sel.Sel.Name == "NewEventPipeline" {
 				pp := &ParsedPipeline{MaxRetry: -1}
-				pp.Queue = extractStringArg(call.Args, 0)
+				pp.Queue = extractStringArg(call.Args, 0, nil)
 				ref := exprToTypeRef(idx.Index)
 				pp.PayloadRef = &ref
 				return pp
@@ -290,9 +302,9 @@ func analyzePipelineChain(call *dst.CallExpr) *ParsedPipeline {
 func collectPipelineChain(pp *ParsedPipeline, name string, args []dst.Expr) {
 	switch name {
 	case "Document":
-		pp.Name = extractStringArg(args, 0)
-		pp.Desc = extractStringArg(args, 1)
-		pp.Provider = extractStringArg(args, 2)
+		pp.Name = extractStringArg(args, 0, nil)
+		pp.Desc = extractStringArg(args, 1, nil)
+		pp.Provider = extractStringArg(args, 2, nil)
 	case "MaxRetry":
 		if len(args) > 0 {
 			if lit, ok := args[0].(*dst.BasicLit); ok && lit.Kind == token.INT {
@@ -306,7 +318,7 @@ func collectPipelineChain(pp *ParsedPipeline, name string, args []dst.Expr) {
 
 // analyzeCallChain recursively descends through chained method calls
 // to find the root miso.Http* call and collect all chained methods.
-func analyzeCallChain(call *dst.CallExpr) *ParsedEndpoint {
+func analyzeCallChain(call *dst.CallExpr, constVars map[string]string) *ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok {
 		return nil
@@ -314,11 +326,11 @@ func analyzeCallChain(call *dst.CallExpr) *ParsedEndpoint {
 
 	// If X is another CallExpr, this is a chained method call
 	if innerCall, ok := sel.X.(*dst.CallExpr); ok {
-		ep := analyzeCallChain(innerCall)
+		ep := analyzeCallChain(innerCall, constVars)
 		if ep == nil {
 			return nil
 		}
-		collectChained(ep, sel.Sel.Name, call.Args)
+		collectChained(ep, sel.Sel.Name, call.Args, constVars)
 		return ep
 	}
 
@@ -331,7 +343,7 @@ func analyzeCallChain(call *dst.CallExpr) *ParsedEndpoint {
 		ep := &ParsedEndpoint{Method: method}
 		// URL (first arg)
 		if len(call.Args) > 0 {
-			ep.URL = extractStringArg(call.Args, 0)
+			ep.URL = extractStringArg(call.Args, 0, constVars)
 		}
 		// Handler (second arg)
 		if len(call.Args) > 1 {
@@ -355,7 +367,7 @@ func extractFuncName(ep *ParsedEndpoint) {
 
 // processGroupCall handles the miso.BaseRoute("/prefix").Group(endpoints...) pattern.
 // Returns endpoints with the base path prepended to each endpoint URL, or nil.
-func processGroupCall(call *dst.CallExpr) []*ParsedEndpoint {
+func processGroupCall(call *dst.CallExpr, constVars map[string]string) []*ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok || sel.Sel.Name != "Group" {
 		return nil
@@ -376,7 +388,7 @@ func processGroupCall(call *dst.CallExpr) []*ParsedEndpoint {
 		return nil
 	}
 
-	basePrefix := extractStringArg(innerCall.Args, 0)
+	basePrefix := extractStringArg(innerCall.Args, 0, constVars)
 	if basePrefix == "" {
 		return nil
 	}
@@ -387,7 +399,7 @@ func processGroupCall(call *dst.CallExpr) []*ParsedEndpoint {
 		if !ok {
 			continue
 		}
-		ep := analyzeCallChain(argCall)
+		ep := analyzeCallChain(argCall, constVars)
 		if ep != nil {
 			ep.URL = basePrefix + ep.URL
 			endpoints = append(endpoints, ep)
@@ -398,22 +410,22 @@ func processGroupCall(call *dst.CallExpr) []*ParsedEndpoint {
 }
 
 // collectChained extracts information from a chained method call.
-func collectChained(ep *ParsedEndpoint, name string, args []dst.Expr) {
+func collectChained(ep *ParsedEndpoint, name string, args []dst.Expr, constVars map[string]string) {
 	switch name {
 	case "Desc":
-		ep.Desc = extractStringArg(args, 0)
+		ep.Desc = extractStringArg(args, 0, constVars)
 	case "Public":
 		ep.Scope = "PUBLIC"
 	case "Protected":
 		ep.Scope = "PROTECTED"
 	case "Scope":
-		ep.Scope = extractStringArg(args, 0)
+		ep.Scope = extractStringArg(args, 0, constVars)
 	case "Resource":
-		ep.Resource = extractStringArg(args, 0)
+		ep.Resource = extractStringArg(args, 0, constVars)
 	case "DocQueryParam":
-		ep.QueryParams = append(ep.QueryParams, pair.StrPair{Left: extractStringArg(args, 0), Right: extractStringArg(args, 1)})
+		ep.QueryParams = append(ep.QueryParams, pair.StrPair{Left: extractStringArg(args, 0, constVars), Right: extractStringArg(args, 1, constVars)})
 	case "DocHeader":
-		ep.Headers = append(ep.Headers, pair.StrPair{Left: extractStringArg(args, 0), Right: extractStringArg(args, 1)})
+		ep.Headers = append(ep.Headers, pair.StrPair{Left: extractStringArg(args, 0, constVars), Right: extractStringArg(args, 1, constVars)})
 	case "DocJsonReq":
 		if ep.RequestRef == nil && len(args) > 0 {
 			ref := extractTypeRefFromExpr(args[0])
@@ -546,9 +558,55 @@ func isErrorType(t dst.Expr) bool {
 	return false
 }
 
+// collectConstVars walks a *dst.File and collects all const/var declarations
+// that have string literal values into a map[name]value.
+func collectConstVars(f *dst.File) map[string]string {
+	m := map[string]string{}
+	collectConstVarsInto(f, m)
+	return m
+}
+
+// CollectPackageConstVars collects const/var string values from multiple files
+// into a merged map. File-local values take precedence (first file wins if duplicate).
+func CollectPackageConstVars(files []*dst.File) map[string]string {
+	m := map[string]string{}
+	for _, f := range files {
+		collectConstVarsInto(f, m)
+	}
+	return m
+}
+
+func collectConstVarsInto(f *dst.File, m map[string]string) {
+	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
+		n, ok := c.Node().(*dst.GenDecl)
+		if !ok || (n.Tok != token.CONST && n.Tok != token.VAR) {
+			return true
+		}
+		for _, spec := range n.Specs {
+			vs, ok := spec.(*dst.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range vs.Names {
+				if i >= len(vs.Values) {
+					continue
+				}
+				if lit, ok := vs.Values[i].(*dst.BasicLit); ok && lit.Kind == token.STRING {
+					s := lit.Value
+					if len(s) >= 2 {
+						m[name.Name] = s[1 : len(s)-1]
+					}
+				}
+			}
+		}
+		return true
+	}, nil)
+}
+
 // extractStringArg extracts a string literal from args[idx].
-// Falls back to exprToString for non-literal expressions (e.g., variable URLs).
-func extractStringArg(args []dst.Expr, idx int) string {
+// For non-literal expressions, first tries to resolve as a const/var reference,
+// then falls back to exprToString.
+func extractStringArg(args []dst.Expr, idx int, constVars map[string]string) string {
 	if idx >= len(args) {
 		return ""
 	}
@@ -556,6 +614,12 @@ func extractStringArg(args []dst.Expr, idx int) string {
 		s := lit.Value
 		if len(s) >= 2 {
 			return s[1 : len(s)-1]
+		}
+	}
+	// Try to resolve as const/var reference
+	if ident, ok := args[idx].(*dst.Ident); ok && constVars != nil {
+		if val, ok := constVars[ident.Name]; ok {
+			return val
 		}
 	}
 	// Fallback: capture variable identifiers (e.g., deregisterURL)

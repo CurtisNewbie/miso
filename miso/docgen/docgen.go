@@ -392,11 +392,26 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 
 	parseStart := time.Now()
 	var totalEps int
+
+	// Pre-collect cross-file const/var string values per directory so that
+	// references like Resource(ResCodeUpload) resolve across files.
+	dirFileAsts := make(map[string][]*dst.File)
+	for _, f := range files {
+		if f.Ast != nil {
+			dir := path.Dir(f.Path)
+			dirFileAsts[dir] = append(dirFileAsts[dir], f.Ast)
+		}
+	}
+	dirConstVars := make(map[string]map[string]string, len(dirFileAsts))
+	for dir, asts := range dirFileAsts {
+		dirConstVars[dir] = sourceparser.CollectPackageConstVars(asts)
+	}
+
 	for _, f := range files {
 		dir := path.Dir(f.Path)
 		var eps []*sourceparser.ParsedEndpoint
 		if f.Ast != nil {
-			eps = sourceparser.ParseFileDst(f.Ast)
+			eps = sourceparser.ParseFileDst(f.Ast, dirConstVars[dir])
 		} else {
 			var err error
 			eps, err = sourceparser.ParseFile(f.Path)

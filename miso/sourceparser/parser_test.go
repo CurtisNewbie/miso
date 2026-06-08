@@ -889,7 +889,7 @@ func init() {
 }
 
 func TestParseFile_DescVariableArg(t *testing.T) {
-	// Desc/Scope/Resource can also use variable args, not just literals.
+	// Undefined variable names fall back to the identifier name.
 	ep := parseSingle(t, `package test
 import "github.com/curtisnewbie/miso/miso"
 func init() {
@@ -899,6 +899,66 @@ func init() {
 }`)
 	if ep.Desc != "deregisterDesc" {
 		t.Errorf("Desc = %q, want %q", ep.Desc, "deregisterDesc")
+	}
+}
+
+func TestParseFile_ResourceConstArg(t *testing.T) {
+	// Resource(constName) should resolve to the const's string value.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+const ResCodeUpload = "fstore:upload"
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Resource(ResCodeUpload)
+}`)
+	if ep.Resource != "fstore:upload" {
+		t.Errorf("Resource = %q, want %q", ep.Resource, "fstore:upload")
+	}
+}
+
+func TestParseFile_ScopeConstArg(t *testing.T) {
+	// Scope(constName) should resolve to the const's string value.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+const ScopeAdmin = "ADMIN"
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Scope(ScopeAdmin)
+}`)
+	if ep.Scope != "ADMIN" {
+		t.Errorf("Scope = %q, want %q", ep.Scope, "ADMIN")
+	}
+}
+
+func TestParseFile_DescConstArg(t *testing.T) {
+	// Desc(constName) should resolve to the const's string value.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+const ErrDesc = "something went wrong"
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Desc(ErrDesc)
+}`)
+	if ep.Desc != "something went wrong" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "something went wrong")
+	}
+}
+
+func TestParseFile_VarStringArg(t *testing.T) {
+	// var with string value should also be resolved.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+var ResCodeDelete = "fstore:delete"
+func init() {
+	miso.HttpDelete("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Resource(ResCodeDelete)
+}`)
+	if ep.Resource != "fstore:delete" {
+		t.Errorf("Resource = %q, want %q", ep.Resource, "fstore:delete")
 	}
 }
 
