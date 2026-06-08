@@ -407,11 +407,26 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 		dirConstVars[dir] = sourceparser.CollectPackageConstVars(asts)
 	}
 
+	// Pre-load *types.Package per directory for cross-package const resolution.
+	// Package loading is cached, so the per-directory future loop below will
+	// reuse these already-loaded packages.
+	dirPkgs := make(map[string]*types.Package)
+	for dir := range dirFileAsts {
+		pkgPath := modName + "/" + dir
+		pkgPath = strings.TrimRight(pkgPath, "/")
+		pkg, err := loadPackageFromDir(pkgPath, dir)
+		if err == nil {
+			dirPkgs[dir] = pkg
+		} else {
+			log.Debugf("Failed to pre-load package for dir %s: %v", dir, err)
+		}
+	}
+
 	for _, f := range files {
 		dir := path.Dir(f.Path)
 		var eps []*sourceparser.ParsedEndpoint
 		if f.Ast != nil {
-			eps = sourceparser.ParseFileDst(f.Ast, dirConstVars[dir])
+			eps = sourceparser.ParseFileDst(f.Ast, dirPkgs[dir], dirConstVars[dir])
 		} else {
 			var err error
 			eps, err = sourceparser.ParseFile(f.Path)
