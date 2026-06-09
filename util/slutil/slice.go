@@ -39,6 +39,20 @@ func Distinct(l []string) []string {
 	return keys
 }
 
+// Filter duplicate values by a key extracted from each element.
+func DistinctStrBy[T any](l []T, f func(T) string) []T {
+	s := make(map[string]struct{}, len(l))
+	out := make([]T, 0, len(l))
+	for _, v := range l {
+		k := f(v)
+		if _, exists := s[k]; !exists {
+			s[k] = struct{}{}
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 // Filter duplicate values, faster but values are sorted, and the slice values are filtered in place.
 func FastDistinct(l []string) []string {
 	sort.Strings(l)
