@@ -345,7 +345,7 @@ func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *type
 		ep := &ParsedEndpoint{Method: method}
 		// URL (first arg)
 		if len(call.Args) > 0 {
-			ep.URL = extractStringArg(call.Args, 0, constVars, pkg)
+			ep.URL = wrapUnresolvedURLIdent(call.Args, 0, extractStringArg(call.Args, 0, constVars, pkg))
 		}
 		// Handler (second arg)
 		if len(call.Args) > 1 {
@@ -390,7 +390,7 @@ func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *type
 		return nil
 	}
 
-	basePrefix := extractStringArg(innerCall.Args, 0, constVars, pkg)
+	basePrefix := wrapUnresolvedURLIdent(innerCall.Args, 0, extractStringArg(innerCall.Args, 0, constVars, pkg))
 	if basePrefix == "" {
 		return nil
 	}
@@ -638,6 +638,16 @@ func resolveImportedConstStr(pkg *types.Package, pkgName, constName string) stri
 	return ""
 }
 
+// wrapUnresolvedURLIdent wraps the resolved string in /${...} if it came from an
+// unresolved *dst.Ident (a variable that couldn't be resolved to a const value).
+// Only use for URL paths; do NOT use for Desc/Scope/Resource etc.
+func wrapUnresolvedURLIdent(args []dst.Expr, idx int, resolved string) string {
+	if ident, ok := args[idx].(*dst.Ident); ok && resolved == ident.Name {
+		return "/${" + resolved + "}"
+	}
+	return resolved
+}
+
 // extractStringArg extracts a string literal from args[idx].
 // For non-literal expressions, first tries to resolve as a const/var reference,
 // then falls back to exprToString.
@@ -672,6 +682,12 @@ func extractStringArg(args []dst.Expr, idx int, constVars map[string]string, pkg
 				return val
 			}
 		}
+	}
+	// Handle BinaryExpr: string concatenation (e.g., "prefix" + constName)
+	if bin, ok := args[idx].(*dst.BinaryExpr); ok && bin.Op == token.ADD {
+		left := extractStringArg([]dst.Expr{bin.X}, 0, constVars, pkg)
+		right := extractStringArg([]dst.Expr{bin.Y}, 0, constVars, pkg)
+		return left + right
 	}
 	// Fallback: capture variable identifiers (e.g., deregisterURL)
 	return exprToString(args[idx])

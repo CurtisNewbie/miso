@@ -883,8 +883,8 @@ func init() {
 		func(inb *miso.Inbound) (any, error) { return nil, nil },
 	))
 }`)
-	if ep.URL != "deregisterURL" {
-		t.Errorf("URL = %q, want %q (variable ident should be captured)", ep.URL, "deregisterURL")
+	if ep.URL != "/${deregisterURL}" {
+		t.Errorf("URL = %q, want %q (variable ident should be captured)", ep.URL, "/${deregisterURL}")
 	}
 	if ep.Handler != "ResHandler" {
 		t.Errorf("Handler = %q, want %q", ep.Handler, "ResHandler")
@@ -905,6 +905,21 @@ func init() {
 }`)
 	if ep.Desc != "deregisterDesc" {
 		t.Errorf("Desc = %q, want %q", ep.Desc, "deregisterDesc")
+	}
+}
+
+func TestParseFile_DescBinaryExprArg(t *testing.T) {
+	// Desc("prefix " + constName) should concatenate string parts.
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+const PropKey = "some.prop.key"
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Desc("Endpoint desc. Configurable using '" + PropKey + "'")
+}`)
+	if ep.Desc != "Endpoint desc. Configurable using 'some.prop.key'" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "Endpoint desc. Configurable using 'some.prop.key'")
 	}
 }
 

@@ -143,7 +143,7 @@ func (m *nacosModule) prepDeregisterUrl(rail miso.Rail) {
 					}
 					return nil, nil
 				})).
-				Desc("Endpoint used to trigger Nacos service deregistration")
+				Desc("Endpoint used to trigger Nacos service deregistration. Configurable using prop: '" + PropNacosDiscoveryEnableDeregisterUrl + "'.")
 		}
 	}
 }

@@ -10,23 +10,53 @@ import (
 	"github.com/curtisnewbie/miso/util/strutil"
 )
 
+// displayURL transforms a raw URL (possibly with ${var} markers) into a
+// markdown-safe display form. Variable markers ${name} become _var_name.
+func displayURL(url string) string {
+	return strings.NewReplacer("${", "_var_", "}", "").Replace(url)
+}
+
 func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
+	type routeKey struct {
+		method string
+		url    string
+	}
+	writtenCount := map[routeKey]int{}
+
 	b.WriteString("\n## Contents\n")
 	for _, r := range hr {
-		tag := fmt.Sprintf("#%s %s", r.Method, r.Url)
+		u := displayURL(r.Url)
+		k := routeKey{method: r.Method, url: u}
+		writtenCount[k] = writtenCount[k] + 1
+		n := writtenCount[k]
+		disp := u
+		if n > 1 {
+			disp = fmt.Sprintf("%s_%d", u, n-1)
+		}
+		tag := fmt.Sprintf("#%s %s", r.Method, disp)
 		tag = strings.ToLower(tag)
 		tag = strings.TrimSpace(tag)
 		tag = strings.ReplaceAll(tag, " ", "-")
-		tag = regexp.MustCompile(`[/:]`).ReplaceAllString(tag, "")
-		b.WriteString(fmt.Sprintf("\n- [%s %s](%s)", r.Method, r.Url, tag))
+		tag = regexp.MustCompile(`[/:${}]`).ReplaceAllString(tag, "")
+		b.WriteString(fmt.Sprintf("\n- [%s %s](%s)", r.Method, disp, tag))
 	}
 	b.WriteRune('\n')
 
+	// Reset writtenCount for heading section
+	writtenCount = map[routeKey]int{}
 	for _, r := range hr {
-		b.WriteString(fmt.Sprintf("\n## %s %s\n", r.Method, r.Url))
+		u := displayURL(r.Url)
+		k := routeKey{method: r.Method, url: u}
+		writtenCount[k] = writtenCount[k] + 1
+		n := writtenCount[k]
+		disp := u
+		if n > 1 {
+			disp = fmt.Sprintf("%s_%d", u, n-1)
+		}
+		b.WriteString(fmt.Sprintf("\n## %s %s\n", r.Method, disp))
 		if r.Desc != "" {
 			b.WriteRune('\n')
 			b.WriteString("- Description: ")
