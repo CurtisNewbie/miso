@@ -1424,3 +1424,121 @@ func myHandler(inb *miso.Inbound) {}
 		t.Errorf("URL (nil pkg, file-local takes priority): got %q, want %q", ep.URL, "/api/local")
 	}
 }
+
+// === BinaryExpr (string concatenation) tests ===
+
+func TestExtractStringArg_BinaryExpr_Literals(t *testing.T) {
+	// "a" + "b" → "ab"
+	bin := &dst.BinaryExpr{
+		X:  &dst.BasicLit{Kind: token.STRING, Value: `"hello "`},
+		Op: token.ADD,
+		Y:  &dst.BasicLit{Kind: token.STRING, Value: `"world"`},
+	}
+	args := []dst.Expr{bin}
+	got := extractStringArg(args, 0, nil, nil)
+	if got != "hello world" {
+		t.Errorf("BinaryExpr literals: got %q, want %q", got, "hello world")
+	}
+}
+
+func TestExtractStringArg_BinaryExpr_LiteralPlusConst(t *testing.T) {
+	// "prefix" + LocalConst → "prefixresolved"
+	constVars := map[string]string{"LocalConst": "resolved"}
+	bin := &dst.BinaryExpr{
+		X:  &dst.BasicLit{Kind: token.STRING, Value: `"prefix"`},
+		Op: token.ADD,
+		Y:  &dst.Ident{Name: "LocalConst"},
+	}
+	args := []dst.Expr{bin}
+	got := extractStringArg(args, 0, constVars, nil)
+	if got != "prefixresolved" {
+		t.Errorf("BinaryExpr literal + const: got %q, want %q", got, "prefixresolved")
+	}
+}
+
+func TestExtractStringArg_BinaryExpr_ImportedConst(t *testing.T) {
+	// "prefix '" + pkg.Const + "'" → "prefix 'hello'"
+	impPkg := types.NewPackage("imported/pkg", "imp")
+	impPkg.Scope().Insert(types.NewConst(
+		token.NoPos, impPkg, "PropKey", types.Typ[types.String],
+		constant.MakeString("some.prop.key"),
+	))
+
+	pkg := types.NewPackage("testpkg", "testpkg")
+	pkg.SetImports([]*types.Package{impPkg})
+
+	bin := &dst.BinaryExpr{
+		X:  &dst.BasicLit{Kind: token.STRING, Value: `"Configurable using '"`},
+		Op: token.ADD,
+		Y: &dst.SelectorExpr{
+			X:   &dst.Ident{Name: "imp"},
+			Sel: &dst.Ident{Name: "PropKey"},
+		},
+	}
+	args := []dst.Expr{bin}
+	got := extractStringArg(args, 0, nil, pkg)
+	if got != "Configurable using 'some.prop.key" {
+		t.Errorf("BinaryExpr with imported const: got %q, want %q", got, "Configurable using 'some.prop.key")
+	}
+}
+
+func TestExtractStringArg_BinaryExpr_NestedConcat(t *testing.T) {
+	// "a" + "b" + "c" → "abc" (left-associative BinaryExpr chain)
+	// AST: ((a + b) + c)
+	inner := &dst.BinaryExpr{
+		X:  &dst.BasicLit{Kind: token.STRING, Value: `"a"`},
+		Op: token.ADD,
+		Y:  &dst.BasicLit{Kind: token.STRING, Value: `"b"`},
+	}
+	outer := &dst.BinaryExpr{
+		X:  inner,
+		Op: token.ADD,
+		Y:  &dst.BasicLit{Kind: token.STRING, Value: `"c"`},
+	}
+	args := []dst.Expr{outer}
+	got := extractStringArg(args, 0, nil, nil)
+	if got != "abc" {
+		t.Errorf("Nested BinaryExpr: got %q, want %q", got, "abc")
+	}
+}
+
+// === ParseFileDst: BinaryExpr with imported const ===
+
+func TestParseFileDst_BinaryExprWithImportedConst(t *testing.T) {
+	path := writeTestFile(t, "test.go", `package test
+import (
+	"github.com/curtisnewbie/miso/miso"
+	"imported/pkg"
+)
+func init() {
+	miso.HttpPost("/api/v1", miso.AutoHandler(
+		func(inb *miso.Inbound, req Req) (Res, error) { return nil, nil },
+	)).Desc("Configurable using '" + imp.PropKey + "'")
+}
+`)
+
+	impPkg := types.NewPackage("imported/pkg", "imp")
+	impPkg.Scope().Insert(types.NewConst(
+		token.NoPos, impPkg, "PropKey", types.Typ[types.String],
+		constant.MakeString("some.prop.key"),
+	))
+
+	pkg := types.NewPackage("testpkg", "testpkg")
+	pkg.SetImports([]*types.Package{impPkg})
+
+	f, err := decorator.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+
+	eps := ParseFileDst(f, pkg)
+	if len(eps) < 1 {
+		t.Fatalf("expected at least 1 endpoint, got %d", len(eps))
+	}
+
+	ep := eps[0]
+	want := "Configurable using 'some.prop.key'"
+	if ep.Desc != want {
+		t.Errorf("Desc: got %q, want %q", ep.Desc, want)
+	}
+}
