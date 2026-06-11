@@ -44,6 +44,7 @@ type ParsedEndpoint struct {
 	RequestRef    *TypeRef // request type
 	ResponseRef   *TypeRef // response type
 	NoDoc         bool     // true if .NoDoc() was called
+	File          string   // source file path (set by ParseFile)
 }
 
 // ParsedPipeline holds metadata extracted from a rabbit.NewEventPipeline declaration chain.
@@ -143,6 +144,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		// Handle BaseRoute("/prefix").Group(endpoints...) pattern
 		if eps := processGroupCall(call, constVars, nil, filePkgName); len(eps) > 0 {
 			for _, ep := range eps {
+				ep.File = filePath
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
 			}
@@ -151,6 +153,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 
 		ep := analyzeCallChain(call, constVars, nil, filePkgName)
 		if ep != nil {
+			ep.File = filePath
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
 		}

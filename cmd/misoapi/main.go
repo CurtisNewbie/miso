@@ -1453,7 +1453,7 @@ func generateDocs(skipPkgs []string) error {
 
 	log.Infof("Built %d route docs", len(allDocs))
 	for i, d := range allDocs {
-		log.Debugf("  Doc[%d] %s %s: reqFields=%d, respFields=%d", i, d.Method, d.Url, len(d.JsonRequestDesc.Fields), len(d.JsonResponseDesc.Fields))
+		log.Debugf("  Doc[%d] %s %-40s (%s) reqFields=%d, respFields=%d", i, d.Method, d.Url, d.SourceFile, len(d.JsonRequestDesc.Fields), len(d.JsonResponseDesc.Fields))
 	}
 
 	// Fill generated fields for each doc

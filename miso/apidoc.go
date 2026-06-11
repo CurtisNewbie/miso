@@ -88,6 +88,7 @@ type globalHttpRouteDoc struct {
 
 type HttpRouteDoc struct {
 	Name                    string           // api func name
+	SourceFile              string           // source file where the endpoint is registered
 	Url                     string           // http request url
 	Method                  string           // http method
 	Extra                   map[string][]any // extra metadata

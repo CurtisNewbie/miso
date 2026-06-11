@@ -820,7 +820,10 @@ func reflectSetHeaderValue(fieldVal reflect.Value, fieldType reflect.Type, heade
 		fieldVal.SetUint(vv)
 	case reflect.Pointer:
 		ptrType := fieldType.Elem()
-		reflectSetHeaderValue(fieldVal, ptrType, header)
+		if fieldVal.IsNil() {
+			fieldVal.Set(reflect.New(ptrType))
+		}
+		reflectSetHeaderValue(fieldVal.Elem(), ptrType, header)
 	}
 }
 

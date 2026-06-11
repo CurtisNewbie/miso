@@ -434,16 +434,23 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 			// cross-package const/var resolution (e.g., impconst.TestURL).
 			var eps []*sourceparser.ParsedEndpoint
 			for _, f := range dfiles {
+				var perr error
+				var fileEps []*sourceparser.ParsedEndpoint
 				if f.Ast != nil {
-					eps = append(eps, sourceparser.ParseFileDst(f.Ast, pkg, dirConstVars[d])...)
+					fileEps = sourceparser.ParseFileDst(f.Ast, pkg, dirConstVars[d])
 				} else {
-					pe, err := sourceparser.ParseFile(f.Path)
-					if err != nil {
-						log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, err)
+					fileEps, perr = sourceparser.ParseFile(f.Path)
+					if perr != nil {
+						log.Debugf("sourceparser.ParseFile(%s) failed: %v", f.Path, perr)
 						continue
 					}
-					eps = append(eps, pe...)
 				}
+				for _, ep := range fileEps {
+					if ep.File == "" {
+						ep.File = f.Path
+					}
+				}
+				eps = append(eps, fileEps...)
 			}
 
 			if len(eps) == 0 {
@@ -459,12 +466,13 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 			var docs []miso.HttpRouteDoc
 			for _, ep := range eps {
 				doc := miso.HttpRouteDoc{
-					Name:     ep.FuncName,
-					Url:      ep.URL,
-					Method:   ep.Method,
-					Desc:     ep.Desc,
-					Scope:    ep.Scope,
-					Resource: ep.Resource,
+					Name:       ep.FuncName,
+					SourceFile: ep.File,
+					Url:        ep.URL,
+					Method:     ep.Method,
+					Desc:       ep.Desc,
+					Scope:      ep.Scope,
+					Resource:   ep.Resource,
 				}
 
 				for _, q := range ep.QueryParams {
