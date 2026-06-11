@@ -9,6 +9,26 @@ func TestEscapeMarkdownLatex(t *testing.T) {
 	t.Log(EscapeMarkdownLatex(s))
 }
 
+func TestStripMarkdownFence(t *testing.T) {
+	tab := []struct {
+		in  string
+		exp string
+	}{
+		{"```json\n{}\n```", "{}"},
+		{"```\n{}\n```", "{}"},
+		{"```json\n```", ""},
+		{"```\n```", ""},
+		{"{}", "{}"},
+		{"  ```json\n{\"a\":1}\n```  ", `{"a":1}`},
+	}
+	for _, v := range tab {
+		act := StripMarkdownFence(v.in)
+		if act != v.exp {
+			t.Fatalf("in: %q, exp: %q, act: %q", v.in, v.exp, act)
+		}
+	}
+}
+
 func TestTagExtractor(t *testing.T) {
 	tx, err := TagExtractor("test")
 	if err != nil {

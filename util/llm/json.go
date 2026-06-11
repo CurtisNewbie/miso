@@ -7,6 +7,11 @@ import (
 )
 
 func ParseLLMJsonAs[T any](s string) (T, error) {
+	s = StripMarkdownFence(s)
+	if s == "" {
+		var t T
+		return t, nil
+	}
 	b, err := hujson.Standardize(strutil.UnsafeStr2Byt(s))
 	if err != nil {
 		var t T
