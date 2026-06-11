@@ -37,6 +37,17 @@ func parseSingle(t *testing.T, content string) *ParsedEndpoint {
 	return eps[0]
 }
 
+// parseMulti parses a single test file and returns all endpoints, or fails.
+func parseMulti(t *testing.T, content string) []*ParsedEndpoint {
+	t.Helper()
+	path := writeTestFile(t, "test.go", content)
+	eps, err := ParseFile(path)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	return eps
+}
+
 // === Handler Type Tests ===
 
 func TestParseFile_AutoHandler(t *testing.T) {
@@ -1756,5 +1767,106 @@ func init() {
 }`)
 	if !ep.NoDoc {
 		t.Error("Expected NoDoc to be true")
+	}
+}
+
+// === GroupRoute Tests ===
+
+func TestParseFile_GroupRoute_Qualified(t *testing.T) {
+	eps := parseMulti(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.GroupRoute("/debug/pprof",
+		miso.HttpGet("/cmdline", miso.RawHandler(func(inb *miso.Inbound) {})),
+		miso.HttpGet("/profile", miso.RawHandler(func(inb *miso.Inbound) {})),
+	)
+}`)
+	if len(eps) != 2 {
+		t.Fatalf("expected 2 endpoints, got %d", len(eps))
+	}
+	for _, ep := range eps {
+		if ep.URL != "/debug/pprof/cmdline" && ep.URL != "/debug/pprof/profile" {
+			t.Errorf("unexpected URL: %q", ep.URL)
+		}
+		if ep.Method != "GET" {
+			t.Errorf("unexpected method: %q", ep.Method)
+		}
+	}
+}
+
+func TestParseFile_GroupRoute_Bare(t *testing.T) {
+	eps := parseMulti(t, `package miso
+func init() {
+	GroupRoute("/debug/pprof",
+		HttpGet("/cmdline", RawHandler(func(inb *Inbound) {})),
+		HttpGet("/profile", RawHandler(func(inb *Inbound) {})),
+	)
+}`)
+	if len(eps) != 2 {
+		t.Fatalf("expected 2 endpoints, got %d", len(eps))
+	}
+	for _, ep := range eps {
+		if ep.URL != "/debug/pprof/cmdline" && ep.URL != "/debug/pprof/profile" {
+			t.Errorf("unexpected URL: %q", ep.URL)
+		}
+	}
+}
+
+func TestParseFile_GroupRoute_WithChainedDesc(t *testing.T) {
+	eps := parseMulti(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.GroupRoute("/api",
+		miso.HttpGet("/users", miso.AutoHandler(
+			func(inb *miso.Inbound, req Req) (Res, error) { return Res{}, nil },
+		)).Desc("List users").Protected(),
+		miso.HttpPost("/users", miso.AutoHandler(
+			func(inb *miso.Inbound, req Req) (Res, error) { return Res{}, nil },
+		)).Desc("Create user").Public(),
+	)
+}`)
+	if len(eps) != 2 {
+		t.Fatalf("expected 2 endpoints, got %d", len(eps))
+	}
+	for _, ep := range eps {
+		expectedURL := ""
+		expectedDesc := ""
+		expectedScope := ""
+		switch {
+		case ep.URL == "/api/users" && ep.Method == "GET":
+			expectedURL = "/api/users"
+			expectedDesc = "List users"
+			expectedScope = "PROTECTED"
+		case ep.URL == "/api/users" && ep.Method == "POST":
+			expectedURL = "/api/users"
+			expectedDesc = "Create user"
+			expectedScope = "PUBLIC"
+		default:
+			t.Errorf("unexpected endpoint: %s %s", ep.Method, ep.URL)
+			continue
+		}
+		_ = expectedURL
+		if ep.Desc != expectedDesc {
+			t.Errorf("%s %s: Desc=%q, want %q", ep.Method, ep.URL, ep.Desc, expectedDesc)
+		}
+		if ep.Scope != expectedScope {
+			t.Errorf("%s %s: Scope=%q, want %q", ep.Method, ep.URL, ep.Scope, expectedScope)
+		}
+	}
+}
+
+func TestParseFile_GroupRoute_VariableBaseURL(t *testing.T) {
+	eps := parseMulti(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.GroupRoute(baseURL,
+		miso.HttpGet("/health", miso.RawHandler(func(inb *miso.Inbound) {})),
+	)
+}`)
+	if len(eps) != 1 {
+		t.Fatalf("expected 1 endpoint, got %d", len(eps))
+	}
+	if eps[0].URL != "/${baseURL}/health" {
+		t.Errorf("URL=%q, want %q (variable ident gets /${} wrapping consistent with TestParseFile_VariableURL)", eps[0].URL, "/${baseURL}/health")
 	}
 }

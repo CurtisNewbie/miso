@@ -151,6 +151,16 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 			return false // Don't recurse into Group's children (already processed)
 		}
 
+		// Handle GroupRoute("/prefix", endpoints...) pattern
+		if eps := processGroupRouteCall(call, constVars, nil, filePkgName); len(eps) > 0 {
+			for _, ep := range eps {
+				ep.File = filePath
+				extractFuncName(ep)
+				endpoints = append(endpoints, ep)
+			}
+			return false
+		}
+
 		ep := analyzeCallChain(call, constVars, nil, filePkgName)
 		if ep != nil {
 			ep.File = filePath
@@ -186,6 +196,13 @@ func ParseFileDst(f *dst.File, pkg *types.Package, extraConsts ...map[string]str
 			return true
 		}
 		if eps := processGroupCall(call, constVars, pkg, filePkgName); len(eps) > 0 {
+			for _, ep := range eps {
+				extractFuncName(ep)
+				endpoints = append(endpoints, ep)
+			}
+			return false
+		}
+		if eps := processGroupRouteCall(call, constVars, pkg, filePkgName); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
@@ -421,6 +438,57 @@ func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *type
 	var endpoints []*ParsedEndpoint
 	for _, arg := range call.Args {
 		argCall, ok := arg.(*dst.CallExpr)
+		if !ok {
+			continue
+		}
+		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName)
+		if ep != nil {
+			ep.URL = basePrefix + ep.URL
+			endpoints = append(endpoints, ep)
+		}
+	}
+
+	return endpoints
+}
+
+// processGroupRouteCall handles the miso.GroupRoute("/prefix", endpoints...) pattern
+// (and bare GroupRoute in package miso).
+// Returns endpoints with the base path prepended to each endpoint URL, or nil.
+func processGroupRouteCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) []*ParsedEndpoint {
+	basePrefix := ""
+	basePkg := ""
+
+	switch fun := call.Fun.(type) {
+	case *dst.SelectorExpr:
+		if ident, ok := fun.X.(*dst.Ident); ok && ident.Name == "miso" && fun.Sel.Name == "GroupRoute" {
+			basePkg = "miso"
+		} else {
+			return nil
+		}
+	case *dst.Ident:
+		if fun.Name == "GroupRoute" && filePkgName == "miso" {
+			basePkg = "miso"
+		} else {
+			return nil
+		}
+	default:
+		return nil
+	}
+
+	_ = basePkg
+
+	if len(call.Args) < 2 {
+		return nil
+	}
+
+	basePrefix = wrapUnresolvedURLIdent(call.Args, 0, extractStringArg(call.Args, 0, constVars, pkg))
+	if basePrefix == "" {
+		return nil
+	}
+
+	var endpoints []*ParsedEndpoint
+	for i := 1; i < len(call.Args); i++ {
+		argCall, ok := call.Args[i].(*dst.CallExpr)
 		if !ok {
 			continue
 		}
