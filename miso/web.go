@@ -127,7 +127,7 @@ func init() {
 		prepAuthInterceptors(rail)
 		prepDebugRoutes(rail)
 		prepHealthcheckRoutes()
-		prepApiDocRoutes(rail)
+		// prepApiDocRoutes(rail)
 		return nil
 	})
 }
@@ -687,19 +687,11 @@ func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl
 
 // Document header parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocHeaderReq(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	for _, pd := range parseHeaderDoc(t) {
-		g.extra(ExtraHeaderParam, pd, extraFilterOneParamDocByName())
-	}
 	return g
 }
 
 // Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	for _, pd := range parseQueryDoc(t) {
-		g.extra(ExtraQueryParam, pd, extraFilterOneParamDocByName())
-	}
 	return g
 }
 
@@ -1483,11 +1475,11 @@ func prepDebugRoutes(rail Rail) {
 	}
 }
 
-func prepApiDocRoutes(rail Rail) {
-	if err := serveApiDocTmpl(rail); err != nil {
-		rail.Errorf("failed to server apidoc, %v", err)
-	}
-}
+// func prepApiDocRoutes(rail Rail) {
+// 	if err := serveApiDocTmpl(rail); err != nil {
+// 		rail.Errorf("failed to server apidoc, %v", err)
+// 	}
+// }
 
 func prepAuthInterceptors(rail Rail) {
 	if GetPropStrTrimmed(PropServerAuthBearer) != "" {
