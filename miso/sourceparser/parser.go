@@ -124,6 +124,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 	}
 
 	constVars := collectConstVars(f)
+	filePkgName := f.Name.Name
 
 	var endpoints []*ParsedEndpoint
 	dstutil.Apply(f, func(c *dstutil.Cursor) bool {
@@ -139,7 +140,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		}
 
 		// Handle BaseRoute("/prefix").Group(endpoints...) pattern
-		if eps := processGroupCall(call, constVars, nil); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars, nil, filePkgName); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
@@ -147,7 +148,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 			return false // Don't recurse into Group's children (already processed)
 		}
 
-		ep := analyzeCallChain(call, constVars, nil)
+		ep := analyzeCallChain(call, constVars, nil, filePkgName)
 		if ep != nil {
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
@@ -162,6 +163,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 // extraConsts (optional) provides const/var values from other files in the package.
 func ParseFileDst(f *dst.File, pkg *types.Package, extraConsts ...map[string]string) []*ParsedEndpoint {
 	constVars := collectConstVars(f)
+	filePkgName := f.Name.Name
 	if len(extraConsts) > 0 && extraConsts[0] != nil {
 		for k, v := range extraConsts[0] {
 			if _, exists := constVars[k]; !exists {
@@ -179,14 +181,14 @@ func ParseFileDst(f *dst.File, pkg *types.Package, extraConsts ...map[string]str
 		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
 			return true
 		}
-		if eps := processGroupCall(call, constVars, pkg); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars, pkg, filePkgName); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
 			}
 			return false
 		}
-		ep := analyzeCallChain(call, constVars, pkg)
+		ep := analyzeCallChain(call, constVars, pkg, filePkgName)
 		if ep != nil {
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
@@ -320,15 +322,32 @@ func collectPipelineChain(pp *ParsedPipeline, name string, args []dst.Expr) {
 
 // analyzeCallChain recursively descends through chained method calls
 // to find the root miso.Http* call and collect all chained methods.
-func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *types.Package) *ParsedEndpoint {
+func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) *ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok {
+		// Bare ident (e.g., HttpGet in package miso) — only allowed when file is package miso
+		if filePkgName == "miso" {
+			if ident, ok := call.Fun.(*dst.Ident); ok {
+				method, ok := httpMethodMap[ident.Name]
+				if !ok {
+					return nil
+				}
+				ep := &ParsedEndpoint{Method: method}
+				if len(call.Args) > 0 {
+					ep.URL = wrapUnresolvedURLIdent(call.Args, 0, extractStringArg(call.Args, 0, constVars, pkg))
+				}
+				if len(call.Args) > 1 {
+					extractHandler(call.Args[1], ep)
+				}
+				return ep
+			}
+		}
 		return nil
 	}
 
 	// If X is another CallExpr, this is a chained method call
 	if innerCall, ok := sel.X.(*dst.CallExpr); ok {
-		ep := analyzeCallChain(innerCall, constVars, pkg)
+		ep := analyzeCallChain(innerCall, constVars, pkg, filePkgName)
 		if ep == nil {
 			return nil
 		}
@@ -369,7 +388,7 @@ func extractFuncName(ep *ParsedEndpoint) {
 
 // processGroupCall handles the miso.BaseRoute("/prefix").Group(endpoints...) pattern.
 // Returns endpoints with the base path prepended to each endpoint URL, or nil.
-func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package) []*ParsedEndpoint {
+func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) []*ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok || sel.Sel.Name != "Group" {
 		return nil
@@ -401,7 +420,7 @@ func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *type
 		if !ok {
 			continue
 		}
-		ep := analyzeCallChain(argCall, constVars, pkg)
+		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName)
 		if ep != nil {
 			ep.URL = basePrefix + ep.URL
 			endpoints = append(endpoints, ep)
@@ -461,17 +480,25 @@ func collectChained(ep *ParsedEndpoint, name string, args []dst.Expr, constVars 
 func extractHandler(arg dst.Expr, ep *ParsedEndpoint) {
 	switch v := arg.(type) {
 	case *dst.CallExpr:
-		sel, ok := v.Fun.(*dst.SelectorExpr)
-		if !ok {
-			return
+		// Qualified miso.AutoHandler/miso.RawHandler/...
+		if sel, ok := v.Fun.(*dst.SelectorExpr); ok {
+			if id, ok := sel.X.(*dst.Ident); ok && id.Name == "miso" {
+				ep.Handler = sel.Sel.Name
+				if len(v.Args) > 0 {
+					if lit, ok := v.Args[0].(*dst.FuncLit); ok {
+						extractFuncType(lit.Type, ep)
+					}
+				}
+				return
+			}
 		}
-		if id, ok := sel.X.(*dst.Ident); !ok || id.Name != "miso" {
-			return
-		}
-		ep.Handler = sel.Sel.Name
-		if len(v.Args) > 0 {
-			if lit, ok := v.Args[0].(*dst.FuncLit); ok {
-				extractFuncType(lit.Type, ep)
+		// Bare (same-package) AutoHandler/RawHandler/ResHandler/...
+		if ident, ok := v.Fun.(*dst.Ident); ok {
+			ep.Handler = ident.Name
+			if len(v.Args) > 0 {
+				if lit, ok := v.Args[0].(*dst.FuncLit); ok {
+					extractFuncType(lit.Type, ep)
+				}
 			}
 		}
 	case *dst.Ident:
@@ -523,6 +550,7 @@ var DefaultSkipParamTypes = []SkipParamType{
 
 // isSkipParamType checks for injectable framework types that should be excluded
 // from the request type, using the configurable DefaultSkipParamTypes list.
+// Handles both qualified (pkg.Name) and bare (Name) references for same-package usage.
 func isSkipParamType(t dst.Expr) bool {
 	for _, st := range DefaultSkipParamTypes {
 		if st.Ptr {
@@ -530,21 +558,25 @@ func isSkipParamType(t dst.Expr) bool {
 			if !ok {
 				continue
 			}
-			sel, ok := star.X.(*dst.SelectorExpr)
-			if !ok {
-				continue
+			// Qualified: *pkg.Name
+			if sel, ok := star.X.(*dst.SelectorExpr); ok {
+				if id, ok := sel.X.(*dst.Ident); ok && id.Name == st.Pkg && sel.Sel.Name == st.Name {
+					return true
+				}
 			}
-			id, ok := sel.X.(*dst.Ident)
-			if ok && id.Name == st.Pkg && sel.Sel.Name == st.Name {
+			// Bare (same-package): *Name
+			if id, ok := star.X.(*dst.Ident); ok && id.Name == st.Name {
 				return true
 			}
 		} else {
-			sel, ok := t.(*dst.SelectorExpr)
-			if !ok {
-				continue
+			// Qualified: pkg.Name
+			if sel, ok := t.(*dst.SelectorExpr); ok {
+				if id, ok := sel.X.(*dst.Ident); ok && id.Name == st.Pkg && sel.Sel.Name == st.Name {
+					return true
+				}
 			}
-			id, ok := sel.X.(*dst.Ident)
-			if ok && id.Name == st.Pkg && sel.Sel.Name == st.Name {
+			// Bare (same-package): Name
+			if id, ok := t.(*dst.Ident); ok && id.Name == st.Name {
 				return true
 			}
 		}

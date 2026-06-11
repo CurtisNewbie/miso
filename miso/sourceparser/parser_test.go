@@ -1542,3 +1542,192 @@ func init() {
 		t.Errorf("Desc: got %q, want %q", ep.Desc, want)
 	}
 }
+
+// === Bare (Unqualified) Endpoint Registration Tests ===
+// These test endpoints declared inside `package miso` where HttpGet, RawHandler,
+// etc. are called without the `miso.` qualifier.
+
+func TestParseFile_BareHttpGet(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpGet("/metrics",
+		RawHandler(func(inb *Inbound) { handler.ServeHTTP(inb.Unwrap()) })).
+		Desc("Collect prometheus metrics information").
+		DocHeader("Authorization", "Basic authorization if enabled")
+}`)
+	if ep.Method != "GET" {
+		t.Errorf("Method = %q, want %q", ep.Method, "GET")
+	}
+	if ep.URL != "/metrics" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/metrics")
+	}
+	if ep.Handler != "RawHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "RawHandler")
+	}
+	if ep.Desc != "Collect prometheus metrics information" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "Collect prometheus metrics information")
+	}
+	if len(ep.Headers) != 1 {
+		t.Fatalf("Headers len = %d, want 1", len(ep.Headers))
+	}
+	if ep.Headers[0].Left != "Authorization" {
+		t.Errorf("Header[0].Left = %q, want %q", ep.Headers[0].Left, "Authorization")
+	}
+}
+
+func TestParseFile_BareHttpPost(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpPost("/api/users", AutoHandler(
+		func(inb *Inbound, req CreateUserReq) (CreateUserRes, error) { return CreateUserRes{}, nil },
+	)).Desc("Create user")
+}`)
+	if ep.Method != "POST" {
+		t.Errorf("Method = %q, want %q", ep.Method, "POST")
+	}
+	if ep.URL != "/api/users" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/users")
+	}
+	if ep.Handler != "AutoHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "AutoHandler")
+	}
+	if ep.RequestRef == nil {
+		t.Fatal("RequestRef is nil")
+	}
+	if ep.RequestRef.Name != "CreateUserReq" {
+		t.Errorf("RequestRef.Name = %q, want %q", ep.RequestRef.Name, "CreateUserReq")
+	}
+	if ep.ResponseRef == nil {
+		t.Fatal("ResponseRef is nil")
+	}
+	if ep.ResponseRef.Name != "CreateUserRes" {
+		t.Errorf("ResponseRef.Name = %q, want %q", ep.ResponseRef.Name, "CreateUserRes")
+	}
+}
+
+func TestParseFile_BareHttpGet_ResHandler(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpGet("/api/health", ResHandler(
+		func(inb *Inbound) (HealthRes, error) { return HealthRes{}, nil },
+	))
+}`)
+	if ep.Method != "GET" {
+		t.Errorf("Method = %q, want %q", ep.Method, "GET")
+	}
+	if ep.URL != "/api/health" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/health")
+	}
+	if ep.Handler != "ResHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "ResHandler")
+	}
+	if ep.RequestRef != nil {
+		t.Error("RequestRef should be nil for ResHandler")
+	}
+	if ep.ResponseRef == nil {
+		t.Fatal("ResponseRef is nil")
+	}
+	if ep.ResponseRef.Name != "HealthRes" {
+		t.Errorf("ResponseRef.Name = %q, want %q", ep.ResponseRef.Name, "HealthRes")
+	}
+}
+
+func TestParseFile_BareHttpPut_Chained(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpPut("/api/user/:id", AutoHandler(
+		func(inb *Inbound, req UpdateUserReq) (any, error) { return nil, nil },
+	)).Desc("Update user").Protected().Resource("user:update")
+}`)
+	if ep.Method != "PUT" {
+		t.Errorf("Method = %q, want %q", ep.Method, "PUT")
+	}
+	if ep.URL != "/api/user/:id" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/user/:id")
+	}
+	if ep.Handler != "AutoHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "AutoHandler")
+	}
+	if ep.Desc != "Update user" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "Update user")
+	}
+	if ep.Scope != "PROTECTED" {
+		t.Errorf("Scope = %q, want %q", ep.Scope, "PROTECTED")
+	}
+	if ep.Resource != "user:update" {
+		t.Errorf("Resource = %q, want %q", ep.Resource, "user:update")
+	}
+}
+
+func TestParseFile_BareHttpDelete_Direct(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpDelete("/api/user/:id", deleteUserHandler)
+}`)
+	if ep.Method != "DELETE" {
+		t.Errorf("Method = %q, want %q", ep.Method, "DELETE")
+	}
+	if ep.URL != "/api/user/:id" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/user/:id")
+	}
+	if ep.Handler != "Direct" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "Direct")
+	}
+}
+
+func TestParseFile_BareHttpGet_VariableURL(t *testing.T) {
+	ep := parseSingle(t, `package miso
+const MetricsRoute = "/metrics"
+func init() {
+	HttpGet(MetricsRoute,
+		RawHandler(func(inb *Inbound) {}),
+	)
+}`)
+	if ep.Method != "GET" {
+		t.Errorf("Method = %q, want %q", ep.Method, "GET")
+	}
+	if ep.URL != "/metrics" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/metrics")
+	}
+	if ep.Handler != "RawHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "RawHandler")
+	}
+}
+
+func TestParseFile_BareHttpAny(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpAny("/api/catchall", RawHandler(func(inb *Inbound) {}))
+}`)
+	if ep.Method != "ANY" {
+		t.Errorf("Method = %q, want %q", ep.Method, "ANY")
+	}
+	if ep.URL != "/api/catchall" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/catchall")
+	}
+	if ep.Handler != "RawHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "RawHandler")
+	}
+}
+
+func TestParseFile_BareHttpGet_DocJsonResp(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpGet("/api/data", RawHandler(loadDataFunc)).DocJsonResp(DataRes{})
+}`)
+	if ep.Method != "GET" {
+		t.Errorf("Method = %q, want %q", ep.Method, "GET")
+	}
+	if ep.URL != "/api/data" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/api/data")
+	}
+	if ep.Handler != "RawHandler" {
+		t.Errorf("Handler = %q, want %q", ep.Handler, "RawHandler")
+	}
+	if ep.ResponseRef == nil {
+		t.Fatal("ResponseRef should be set via DocJsonResp")
+	}
+	if ep.ResponseRef.Name != "DataRes" {
+		t.Errorf("ResponseRef.Name = %q, want %q", ep.ResponseRef.Name, "DataRes")
+	}
+}

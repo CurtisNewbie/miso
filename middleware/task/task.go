@@ -641,7 +641,7 @@ func registerRouteForJobTriggers() {
 			rail.Infof("Triggered task %v through api", name)
 		}
 		inb.HandleResult(nil, err)
-	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name")
+	})).DocQueryParam("name", "job name").Desc("Manually Trigger Distributed Task By Name. Enabled using prop '" + miso.PropSchedApiTriggerJobEnabled + "'.")
 }
 
 type disableTaskWorkerReq struct {
@@ -660,7 +660,7 @@ func registerRouteDisableTaskWorker() {
 			module().disableTaskWorker(rail, req.Tasks)
 			return nil, nil
 		}),
-	).Desc("Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.")
+	).Desc("Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only, this API is only registered in non-prod mode.")
 
 	miso.HttpPost("/debug/task/enable-workers",
 		miso.AutoHandler(func(inb *miso.Inbound, req disableTaskWorkerReq) (any, error) {
@@ -668,7 +668,7 @@ func registerRouteDisableTaskWorker() {
 			module().enableTaskWorker(rail, req.Tasks)
 			return nil, nil
 		}),
-	).Desc("Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.")
+	).Desc("Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered.  For debugging only, this API is only registered in non-prod mode.")
 }
 
 type worker struct {

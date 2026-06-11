@@ -387,11 +387,11 @@ func consulBootstrap(rail Rail) error {
 	rail.Debug("Using Consul based GetServerList")
 
 	if GetPropBool(PropConsulEnableDeregisterUrl) {
-		deregisterUrl := GetPropStr(PropConsulDeregisterUrl)
-		if !strutil.IsBlankStr(deregisterUrl) {
-			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", deregisterUrl)
+		consulDeregisterUrl := GetPropStr(PropConsulDeregisterUrl)
+		if !strutil.IsBlankStr(consulDeregisterUrl) {
+			rail.Infof("Enabled 'GET %v' for manual consul service deregistration", consulDeregisterUrl)
 
-			HttpGet(deregisterUrl, ResHandler(
+			HttpGet(consulDeregisterUrl, ResHandler(
 				func(inb *Inbound) (any, error) {
 					if !IsConsulServiceRegistered() {
 						rail.Info("Current instance is not registered on consul")
