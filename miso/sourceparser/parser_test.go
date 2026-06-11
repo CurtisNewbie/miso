@@ -1731,3 +1731,30 @@ func init() {
 		t.Errorf("ResponseRef.Name = %q, want %q", ep.ResponseRef.Name, "DataRes")
 	}
 }
+
+func TestParseFile_NoDoc(t *testing.T) {
+	ep := parseSingle(t, `package test
+import "github.com/curtisnewbie/miso/miso"
+func init() {
+	miso.HttpGet("/health", miso.RawHandler(func(inb *miso.Inbound) {})).
+		Desc("Health check").
+		NoDoc()
+}`)
+	if !ep.NoDoc {
+		t.Error("Expected NoDoc to be true")
+	}
+	if ep.Desc != "Health check" {
+		t.Errorf("Desc = %q, want %q", ep.Desc, "Health check")
+	}
+}
+
+func TestParseFile_BareNoDoc(t *testing.T) {
+	ep := parseSingle(t, `package miso
+func init() {
+	HttpGet("/health", RawHandler(func(inb *Inbound) {})).
+		NoDoc()
+}`)
+	if !ep.NoDoc {
+		t.Error("Expected NoDoc to be true")
+	}
+}

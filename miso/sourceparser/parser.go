@@ -43,6 +43,7 @@ type ParsedEndpoint struct {
 	FuncName      string   // from Extra(miso.ExtraName, ...) if present
 	RequestRef    *TypeRef // request type
 	ResponseRef   *TypeRef // response type
+	NoDoc         bool     // true if .NoDoc() was called
 }
 
 // ParsedPipeline holds metadata extracted from a rabbit.NewEventPipeline declaration chain.
@@ -465,6 +466,8 @@ func collectChained(ep *ParsedEndpoint, name string, args []dst.Expr, constVars 
 		if ep.HeaderReqType == "" && len(args) > 0 {
 			ep.HeaderReqType = extractTypeFromExpr(args[0])
 		}
+	case "NoDoc":
+		ep.NoDoc = true
 	case "Extra":
 		if len(args) >= 2 {
 			k := exprToValue(args[0])

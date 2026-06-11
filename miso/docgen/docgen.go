@@ -450,6 +450,11 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				return dirResult{dir: d}, nil
 			}
 
+			// Skip endpoints marked with .NoDoc()
+			eps = slutil.Filter(eps, func(ep *sourceparser.ParsedEndpoint) bool {
+				return !ep.NoDoc
+			})
+
 			resolveStart := time.Now()
 			var docs []miso.HttpRouteDoc
 			for _, ep := range eps {

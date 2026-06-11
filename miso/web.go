@@ -39,6 +39,7 @@ const (
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
 	ExtraNgTable      = "miso-NgTable"
+	ExtraNoDoc        = "miso-NoDoc"
 
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
@@ -645,6 +646,11 @@ func (g *LazyRouteDecl) Protected() *LazyRouteDecl {
 // Record the resource that the endppoint should be bound to (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) Resource(resource string) *LazyRouteDecl {
 	return g.Extra(ExtraResource, strings.TrimSpace(resource))
+}
+
+// NoDoc marks this endpoint to be skipped by misoapi doc generation.
+func (g *LazyRouteDecl) NoDoc() *LazyRouteDecl {
+	return g.Extra(ExtraNoDoc, true)
 }
 
 // Add extra info to endpoint's metadata.
