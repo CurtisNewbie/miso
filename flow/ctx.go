@@ -404,8 +404,12 @@ func (r Rail) NewTrace() Rail {
 }
 
 // Create a new Rail with a new SpanId and a new Context
+//
+// Deprecated: Since v0.4.15. This implicitly replaces underlying Context, may surprise caller when trying to cancel. If you need new Context, use
+//
+//	r = r.NewCtx().NewSpanId()
 func (r Rail) NextSpan() Rail {
-	return r.NewCtx().WithSpanId(NewSpanId())
+	return r.NewCtx().NextSpanId()
 }
 
 // Create a new Rail with a new SpanId

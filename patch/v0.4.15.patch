@@ -1,0 +1,5 @@
+@@
+var x expression
+@@
+-x.NextSpan()
++x.NewCtx().NextSpanId()
