@@ -100,44 +100,44 @@ var (
 	buildApiDocTmplOnce sync.Once
 )
 
-func init() {
-	PostServerBootstrap(func(rail Rail) error {
-		if IsProdMode() || !GetPropBool(PropServerGenerateEndpointDocEnabled) || GetPropBool(PropAppTestEnv) {
-			return nil
-		}
+// func init() {
+// 	PostServerBootstrap(func(rail Rail) error {
+// 		if IsProdMode() || !GetPropBool(PropServerGenerateEndpointDocEnabled) || GetPropBool(PropAppTestEnv) {
+// 			return nil
+// 		}
 
-		routes := GetHttpRoutes()
-		docs := buildHttpRouteDoc(routes)
-		var pipelineDoc []PipelineDoc
-		for _, f := range getPipelineDocFuncs {
-			pipelineDoc = append(pipelineDoc, f()...)
-		}
+// 		routes := GetHttpRoutes()
+// 		docs := buildHttpRouteDoc(routes)
+// 		var pipelineDoc []PipelineDoc
+// 		for _, f := range getPipelineDocFuncs {
+// 			pipelineDoc = append(pipelineDoc, f()...)
+// 		}
 
-		// misoapi now generate doc statically
-		//
-		// err := writeApiDocFile(rail, docs.routeDocs, pipelineDoc)
-		// if err != nil {
-		// 	rail.Errorf("Failed to write api-doc markdown file: %v", err)
-		// 	return err
-		// }
+// 		// misoapi now generate doc statically
+// 		//
+// 		// err := writeApiDocFile(rail, docs.routeDocs, pipelineDoc)
+// 		// if err != nil {
+// 		// 	rail.Errorf("Failed to write api-doc markdown file: %v", err)
+// 		// 	return err
+// 		// }
 
-		// TODO: deprecate, migrate to misoapi?
-		err := writeApiDocOpenApiSpec(rail, docs)
-		if err != nil {
-			rail.Errorf("Failed to write api-doc open-api 3.0 spec file: %v", err)
-			return err
-		}
+// 		// deprecate, migrate to misoapi?
+// 		// err := writeApiDocOpenApiSpec(rail, docs)
+// 		// if err != nil {
+// 		// 	rail.Errorf("Failed to write api-doc open-api 3.0 spec file: %v", err)
+// 		// 	return err
+// 		// }
 
-		// TODO: deprecate, migrate to misoapi?
-		err = writeApiDocGoFile(rail, docs.globalDoc.GoTypeDef, docs.routeDocs)
-		if err != nil {
-			rail.Errorf("Failed to write api-doc golang file: %v", err)
-			return err
-		}
+// 		// deprecate, migrate to misoapi?
+// 		// err = writeApiDocGoFile(rail, docs.globalDoc.GoTypeDef, docs.routeDocs)
+// 		// if err != nil {
+// 		// 	rail.Errorf("Failed to write api-doc golang file: %v", err)
+// 		// 	return err
+// 		// }
 
-		return nil
-	})
-}
+// 		return nil
+// 	})
+// }
 
 type ApiDocFuzzType struct {
 	PkgPath  string
