@@ -65,3 +65,22 @@ func CallWithBackoff(backoff []time.Duration, f func() error) error {
 	})
 	return err
 }
+
+// GetOneDyn retries f indefinitely until it succeeds or gapFunc returns doRetry=false.
+// gapFunc(i, err) is called with the current attempt index (1-based) and the error to determine
+// the sleep duration before the next retry and whether to continue retrying.
+func GetOneDyn[T any](f func() (T, error), gapFunc func(i int, err error) (wait time.Duration, doRetry bool)) (T, error) {
+	i := 1
+	for {
+		t, err := f()
+		if err == nil {
+			return t, nil
+		}
+		wait, doRetry := gapFunc(i, err)
+		if !doRetry {
+			return t, err
+		}
+		time.Sleep(wait)
+		i++
+	}
+}
