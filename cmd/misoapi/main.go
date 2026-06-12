@@ -109,14 +109,14 @@ var (
 var (
 	Debug      = flag.Bool("debug", false, "Enable debug log")
 	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
-	Doc        = flag.Bool("doc", true, "Generate API docs statically (markdown)")
-	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs (only with -doc)")
-	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs (only with -doc)")
-	DocAppName = flag.String("appname", "", "Application name for docs (only with -doc)")
+	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs")
+	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs")
+	DocAppName = flag.String("appname", "", "Application name for docs (falls back to conf.yml 'app.name' if unset)")
+	NoDoc      = flag.Bool("no-doc", false, "Skip generating API docs (markdown)")
 	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
 	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
-	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec (only with -doc)")
-	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec (only with -doc)")
+	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec")
+	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -198,7 +198,8 @@ func main() {
 		printlnf(strutil.Spaces(2) + "If file is not found, APIs are registered in init() func, however it's not recommended as it's implicit.")
 		printlnf(strutil.Spaces(2) + "If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should")
 		printlnf(strutil.Spaces(2) + "makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)")
-		printlnf(strutil.Spaces(2) + "Use -oas flag with -doc to also generate OpenAPI 3.0 JSON spec.")
+		printlnf("")
+		printlnf(strutil.Spaces(2) + "Use -oas flag to also generate OpenAPI 3.0 JSON spec.")
 		printlnf("")
 	})
 	flags.Parse()
@@ -234,12 +235,12 @@ func main() {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	_, err = parseFiles(files, !*Doc, skipPkgsList)
+	_, err = parseFiles(files, *NoDoc, skipPkgsList)
 	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
 
-	if *Doc {
+	if !*NoDoc {
 		if err := generateDocs(skipPkgsList); err != nil {
 			log.Errorf("generateDocs failed, %v", err)
 		}
