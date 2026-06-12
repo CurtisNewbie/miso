@@ -1526,6 +1526,9 @@ func generateDocs(skipPkgs []string) error {
 			return errs.Wrapf(err, "failed to marshal OpenAPI spec")
 		}
 
+		if err := os.MkdirAll(filepath.Dir(oasPath), 0755); err != nil {
+			return errs.Wrapf(err, "failed to create output directory for %s", oasPath)
+		}
 		if err := os.WriteFile(oasPath, oasJson, 0644); err != nil {
 			return errs.Wrapf(err, "failed to write OpenAPI spec file %s", oasPath)
 		}
@@ -1536,6 +1539,9 @@ func generateDocs(skipPkgs []string) error {
 	mdStart := time.Now()
 	markdown := miso.GenMarkDownDoc(allDocs, pipelineDocs)
 
+	if err := os.MkdirAll(filepath.Dir(*DocFile), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory for %s: %v", *DocFile, err)
+	}
 	if err := os.WriteFile(*DocFile, []byte(markdown), 0644); err != nil {
 		return fmt.Errorf("failed to write doc file %s: %v", *DocFile, err)
 	}
