@@ -15,14 +15,14 @@ func skipGoParsingType(f interface {
 
 // generate one or more golang type definitions.
 func GenGoDef(rv TypeDesc, seenTypeDef hash.Set[string]) (string, string) {
-	if rv.TypeName == "any" {
+	if rv.TypeName == "any" || rv.TypeName == "interface{}" {
 		return "", ""
 	}
 
 	if rv.TypeName == "Resp" || rv.TypeName == "GnResp" {
 		for _, f := range rv.Fields {
 			if f.GoFieldName == "Data" {
-				if f.OriginTypeName == "any" {
+				if f.OriginTypeName == "any" || f.OriginTypeName == "interface{}" {
 					return "", ""
 				}
 				deferred := make([]func(), 0, 10)

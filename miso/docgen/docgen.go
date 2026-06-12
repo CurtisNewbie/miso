@@ -505,7 +505,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger, preloade
 
 				if ep.ResponseRef != nil {
 					ref := *ep.ResponseRef
-					if ref.Name == "any" && ref.PkgName == "" {
+					if (ref.Name == "any" || ref.Name == "interface{}") && ref.PkgName == "" {
 						doc.JsonResponseDesc = buildRespTypeDesc(miso.TypeDesc{TypeName: "any"}, misoPkg)
 					} else {
 						desc := resolveTypeRef(ref, pkg, misoPkg)

@@ -872,15 +872,19 @@ func init() {
 	}
 }
 
-// Test ParseFile with any handler (HttpAny for catch-all routes).
+// Test ParseFile with HttpAny (should be ignored — HttpAny not in httpMethodMap).
 func TestParseFile_HttpAny(t *testing.T) {
-	ep := parseSingle(t, `package test
+	path := writeTestFile(t, "test.go", `package test
 import "github.com/curtisnewbie/miso/miso"
 func init() {
 	miso.HttpAny("/api/v1", miso.RawHandler(handlerFunc))
 }`)
-	if ep.Method != "ANY" {
-		t.Errorf("Method = %q, want %q", ep.Method, "ANY")
+	eps, err := ParseFile(path)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(eps) != 0 {
+		t.Errorf("expected 0 endpoints (HttpAny is excluded from httpMethodMap), got %d", len(eps))
 	}
 }
 
@@ -1706,18 +1710,16 @@ func init() {
 }
 
 func TestParseFile_BareHttpAny(t *testing.T) {
-	ep := parseSingle(t, `package miso
+	path := writeTestFile(t, "test.go", `package miso
 func init() {
 	HttpAny("/api/catchall", RawHandler(func(inb *Inbound) {}))
 }`)
-	if ep.Method != "ANY" {
-		t.Errorf("Method = %q, want %q", ep.Method, "ANY")
+	eps, err := ParseFile(path)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
 	}
-	if ep.URL != "/api/catchall" {
-		t.Errorf("URL = %q, want %q", ep.URL, "/api/catchall")
-	}
-	if ep.Handler != "RawHandler" {
-		t.Errorf("Handler = %q, want %q", ep.Handler, "RawHandler")
+	if len(eps) != 0 {
+		t.Errorf("expected 0 endpoints (HttpAny is excluded from httpMethodMap), got %d", len(eps))
 	}
 }
 

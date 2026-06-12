@@ -906,6 +906,9 @@ func exprToTypeRef(t dst.Expr) TypeRef {
 			MapValue: &val,
 		}
 
+	case *dst.InterfaceType:
+		return TypeRef{Name: "any"}
+
 	default:
 		return TypeRef{Name: fmt.Sprintf("?%T", t)}
 	}

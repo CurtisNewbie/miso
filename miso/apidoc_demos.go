@@ -295,13 +295,13 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 		reqn := buildTypeName(reqTypeName, d.JsonRequestDesc.IsPtrSlice, d.JsonRequestDesc.IsSlicePtr,
 			d.JsonRequestDesc.IsSlice, d.JsonRequestDesc.IsPtr)
 
-		if respGeneName == "any" {
+		if respGeneName == "any" || respGeneName == "interface{}" {
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) error {", mn, reqn, qh)
 		} else {
 			sl.Printlnf("func %s(rail miso.Rail, req %s%s) (%s, error) {", mn, reqn, qh, respGeneName)
 		}
 	} else {
-		if respGeneName == "any" {
+		if respGeneName == "any" || respGeneName == "interface{}" {
 			sl.Printlnf("func %s(rail miso.Rail%s) error {", mn, qh)
 		} else {
 			sl.Printlnf("func %s(rail miso.Rail%s) (%s, error) {", mn, qh, respGeneName)
@@ -345,7 +345,7 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 	sl.Printf(".\n%sJson(&res)", strutil.Tabs(2))
 
 	sl.Printlnf("if err != nil {")
-	if respGeneName == "any" {
+	if respGeneName == "any" || respGeneName == "interface{}" {
 		sl.Printlnf("%sreturn err", strutil.Tabs(1))
 	} else {
 		if strings.HasPrefix(respGeneName, "*") {
@@ -367,7 +367,7 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 	}
 	sl.Printlnf("}")
 
-	if respGeneName == "any" {
+	if respGeneName == "any" || respGeneName == "interface{}" {
 		sl.Printlnf("return nil")
 		sl.Printf("\n}")
 		return sl.String()
