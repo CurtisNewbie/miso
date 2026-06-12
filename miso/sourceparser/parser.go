@@ -24,7 +24,6 @@ var httpMethodMap = map[string]string{
 	"HttpOptions": "OPTIONS",
 	"HttpConnect": "CONNECT",
 	"HttpTrace":   "TRACE",
-	"HttpAny":     "ANY",
 }
 
 // ParsedEndpoint holds all metadata extracted from a miso endpoint registration chain.
