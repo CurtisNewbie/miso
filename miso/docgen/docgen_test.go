@@ -323,7 +323,7 @@ func TestBuildManualRouteDocs_DemoAppdemo(t *testing.T) {
 	files := []SourceFile{{Path: "api/misoapi_generated.go"}}
 	modName := "github.com/curtisnewbie/miso/demo"
 
-	docs := BuildManualRouteDocs(files, modName, nopLogger{})
+	docs := BuildManualRouteDocs(files, modName, nopLogger{}, nil, nil)
 
 	// Should find at least the auto-generated endpoints (33)
 	if len(docs) < 30 {
@@ -818,7 +818,7 @@ func TestBuildTypeDescFromType_CustomAliasTypes(t *testing.T) {
 func TestResolveTypeRef_SamePkgValueType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{Name: "PostReq"}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName != "PostReq" {
 		t.Errorf("TypeName = %q, want %q", desc.TypeName, "PostReq")
 	}
@@ -830,7 +830,7 @@ func TestResolveTypeRef_SamePkgValueType(t *testing.T) {
 func TestResolveTypeRef_SamePkgPointerType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{Name: "PostReq", IsPtr: true}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName != "PostReq" {
 		t.Errorf("TypeName = %q, want %q", desc.TypeName, "PostReq")
 	}
@@ -842,7 +842,7 @@ func TestResolveTypeRef_SamePkgPointerType(t *testing.T) {
 func TestResolveTypeRef_SamePkgSliceType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{Name: "ApiReq", IsSlice: true}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName != "ApiReq" {
 		t.Errorf("TypeName = %q, want %q", desc.TypeName, "ApiReq")
 	}
@@ -855,7 +855,7 @@ func TestResolveTypeRef_CrossPkgType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	// Use a type from another package visible via imports
 	ref := sourceparser.TypeRef{PkgName: "miso", Name: "Inbound"}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName == "" {
 		t.Error("TypeName should be non-empty for miso.Inbound")
 	}
@@ -864,7 +864,7 @@ func TestResolveTypeRef_CrossPkgType(t *testing.T) {
 func TestResolveTypeRef_BuiltInType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{Name: "string"}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName != "string" {
 		t.Errorf("TypeName = %q, want %q", desc.TypeName, "string")
 	}
@@ -877,7 +877,7 @@ func TestResolveTypeRef_MapType(t *testing.T) {
 		MapKey:   &sourceparser.TypeRef{Name: "string"},
 		MapValue: &sourceparser.TypeRef{Name: "int32"},
 	}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName == "" {
 		t.Error("map type should have a TypeName")
 	}
@@ -888,7 +888,7 @@ func TestResolveTypeRef_MapType(t *testing.T) {
 func TestResolveTypeRef_NonExistentType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{Name: "NonExistentType"}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	// Should fallback to FullString
 	if desc.TypeName != "NonExistentType" {
 		t.Errorf("TypeName = %q, want fallback %q", desc.TypeName, "NonExistentType")
@@ -898,7 +898,7 @@ func TestResolveTypeRef_NonExistentType(t *testing.T) {
 func TestResolveTypeRef_NonExistentCrossPkgType(t *testing.T) {
 	pkg := loadDemoAPIPkg(t)
 	ref := sourceparser.TypeRef{PkgName: "nonexistent", Name: "Foo"}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	// Should fallback to FullString
 	if desc.TypeName != "nonexistent.Foo" {
 		t.Errorf("TypeName = %q, want fallback %q", desc.TypeName, "nonexistent.Foo")
@@ -914,7 +914,7 @@ func TestResolveGenericTypeRef_PageResPostRes(t *testing.T) {
 		Name:     "PageRes",
 		TypeArgs: []sourceparser.TypeRef{{Name: "PostRes"}},
 	}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName == "" {
 		t.Error("PageRes[PostRes] should resolve to a TypeDesc")
 	}
@@ -934,7 +934,7 @@ func TestResolveGenericTypeRef_WrongTypeParamsCount(t *testing.T) {
 		Name:     "PageRes",
 		TypeArgs: []sourceparser.TypeRef{{Name: "string"}, {Name: "int"}},
 	}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	// Should fall back to string representation (type param count mismatch)
 	if desc.TypeName == "" {
 		t.Error("should have a fallback type name")
@@ -948,7 +948,7 @@ func TestResolveGenericTypeRef_NonExistentGenericType(t *testing.T) {
 		Name:     "GenericType",
 		TypeArgs: []sourceparser.TypeRef{{Name: "string"}},
 	}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	// Should fall back
 	if desc.TypeName == "" {
 		t.Error("should have a fallback type name for non-existent generic type")
@@ -961,7 +961,7 @@ func TestResolveGenericTypeRef_NonExistentBaseType(t *testing.T) {
 		Name:     "NonExistentBase",
 		TypeArgs: []sourceparser.TypeRef{{Name: "string"}},
 	}
-	desc := resolveTypeRef(ref, pkg)
+	desc := resolveTypeRef(ref, pkg, nil)
 	if desc.TypeName == "" {
 		t.Error("should have a fallback type name")
 	}
@@ -1095,7 +1095,7 @@ func TestExtractRequestParams_FallbackToRequestRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pkg, err := loadPackageFromDir("testpkg", dir)
+	pkg, err := loadPackageFromDir(nil, "testpkg", dir)
 	if err != nil {
 		t.Fatalf("loadPackageFromDir failed: %v", err)
 	}
@@ -1173,7 +1173,7 @@ func init() {
 	}
 
 	// Load the package
-	pkg, err := loadPackageFromDir("testmod/pkg", filepath.Join(dir, "pkg"))
+	pkg, err := loadPackageFromDir(nil, "testmod/pkg", filepath.Join(dir, "pkg"))
 	if err != nil {
 		t.Fatalf("loadPackageFromDir failed: %v", err)
 	}

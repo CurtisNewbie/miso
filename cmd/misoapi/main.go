@@ -1445,10 +1445,16 @@ func generateDocs(skipPkgs []string) error {
 
 	buildStart := time.Now()
 	docgen.LogPerf = *Perf
-	allDocs := docgen.BuildManualRouteDocs(convertedFiles, modName, log)
+	preloaded, misoPkg, err := docgen.LoadPackagesAt(".")
+	if err != nil {
+		return errs.Wrapf(err, "LoadPackagesAt failed")
+	}
+	perfLog("LoadPackagesAt elapsed: %v, %d dirs", time.Since(buildStart), len(preloaded))
+
+	allDocs := docgen.BuildManualRouteDocs(convertedFiles, modName, log, preloaded, misoPkg)
 	perfLog("BuildManualRouteDocs elapsed: %v, %d endpoints", time.Since(buildStart), len(allDocs))
 
-	pipelineDocs := docgen.BuildManualPipelineDocs(convertedFiles, modName, log)
+	pipelineDocs := docgen.BuildManualPipelineDocs(convertedFiles, modName, log, preloaded, misoPkg)
 	log.Infof("Built %d pipeline docs", len(pipelineDocs))
 
 	log.Infof("Built %d route docs", len(allDocs))

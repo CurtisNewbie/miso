@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/types"
 	"path"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -43,19 +44,49 @@ var log Logger = nopLogger{}
 // LogPerf enables performance timing logs. Set from the CLI's -perf flag.
 var LogPerf bool
 
-// cached miso package loader, reused by resolveGenericTypeRef and buildRespTypeDesc
-var (
-	misoPkgOnce  sync.Once
-	misoPkgCache *types.Package
-	misoPkgErr   error
-)
+// LoadPackagesAt loads all packages under dir via packages.Load("./...") and
+// the miso package (via its module path) concurrently. Returns a map of absolute
+// directory path → *types.Package, plus the miso *types.Package.
+func LoadPackagesAt(dir string) (map[string]*types.Package, *types.Package, error) {
+	type misoResult struct {
+		pkg *types.Package
+		err error
+	}
+	misoCh := make(chan misoResult, 1)
+	go func() {
+		cfg := &packages.Config{Mode: packages.NeedTypes}
+		pkgs, err := packages.Load(cfg, "github.com/curtisnewbie/miso/miso")
+		if err != nil || len(pkgs) == 0 || pkgs[0].Types == nil {
+			misoCh <- misoResult{err: fmt.Errorf("failed to load miso package: %w", err)}
+			return
+		}
+		misoCh <- misoResult{pkg: pkgs[0].Types}
+	}()
 
-// loadPkgCache caches loaded packages by directory, shared across
-// BuildManualRouteDocs and BuildManualPipelineDocs to avoid reloading.
-var (
-	loadPkgMu  sync.RWMutex
-	loadPkgMap = make(map[string]*types.Package)
-)
+	cfg := &packages.Config{
+		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedDeps,
+		Dir:  dir,
+	}
+	pkgs, err := packages.Load(cfg, "./...")
+	if err != nil {
+		log.Debugf("LoadPackagesAt: packages.Load failed: %v", err)
+		<-misoCh
+		return nil, nil, err
+	}
+
+	pkgMap := make(map[string]*types.Package, len(pkgs))
+	for _, p := range pkgs {
+		if p.Types != nil {
+			pkgMap[p.Dir] = p.Types
+		}
+	}
+
+	mr := <-misoCh
+	if mr.err != nil {
+		log.Debugf("LoadPackagesAt: miso package load failed, using fallback: %v", mr.err)
+	}
+	return pkgMap, mr.pkg, nil
+}
 
 // docgenPool is a lazily-initialised CPU-bound goroutine pool reused across
 // BuildManualRouteDocs calls. Uses 4 * GOMAXPROCS workers (min 8) — matches
@@ -93,7 +124,7 @@ func lookupTypeInPkg(pkg *types.Package, typeName string) types.Object {
 }
 
 // resolveTypeRef resolves a structured TypeRef (from the sourceparser) into a full TypeDesc.
-func resolveTypeRef(ref sourceparser.TypeRef, pkg *types.Package) miso.TypeDesc {
+func resolveTypeRef(ref sourceparser.TypeRef, pkg, misoPkg *types.Package) miso.TypeDesc {
 	var desc miso.TypeDesc
 
 	lookupName := ref.Name
@@ -104,7 +135,7 @@ func resolveTypeRef(ref sourceparser.TypeRef, pkg *types.Package) miso.TypeDesc 
 	// Try generic resolution first when type args are present (e.g., miso.PageRes[PostRes]).
 	// Uses the structured TypeRef directly — no string round-trip.
 	if len(ref.TypeArgs) > 0 {
-		if d, ok := resolveGenericTypeRef(ref.PkgName, ref.Name, ref.TypeArgs, pkg); ok {
+		if d, ok := resolveGenericTypeRef(ref.PkgName, ref.Name, ref.TypeArgs, pkg, misoPkg); ok {
 			desc = d
 		} else {
 			desc = miso.TypeDesc{TypeName: ref.String()}
@@ -157,23 +188,9 @@ func applyFlags(desc *miso.TypeDesc, isPtr, isSlice, isSlicePtr bool) {
 	}
 }
 
-// loadMisoPackage loads the miso package and caches the result for reuse.
-func loadMisoPackage() (*types.Package, error) {
-	misoPkgOnce.Do(func() {
-		cfg := &packages.Config{Mode: packages.NeedTypes}
-		pkgs, err := packages.Load(cfg, "github.com/curtisnewbie/miso/miso")
-		if err != nil || len(pkgs) == 0 || pkgs[0].Types == nil {
-			misoPkgErr = fmt.Errorf("failed to load miso package: %w", err)
-			return
-		}
-		misoPkgCache = pkgs[0].Types
-	})
-	return misoPkgCache, misoPkgErr
-}
-
 // resolveGenericTypeRef resolves a generic type from its structured parts.
 // Uses go/types to instantiate the base type with the given type arguments.
-func resolveGenericTypeRef(pkgName, typeName string, typeArgs []sourceparser.TypeRef, pkg *types.Package) (miso.TypeDesc, bool) {
+func resolveGenericTypeRef(pkgName, typeName string, typeArgs []sourceparser.TypeRef, pkg, misoPkg *types.Package) (miso.TypeDesc, bool) {
 	// Find the base type's package
 	var basePkg *types.Package
 	if pkgName == "" || pkgName == pkg.Name() {
@@ -186,8 +203,7 @@ func resolveGenericTypeRef(pkgName, typeName string, typeArgs []sourceparser.Typ
 			}
 		}
 		if basePkg == nil {
-			misoPkg, err := loadMisoPackage()
-			if err == nil && misoPkg.Name() == pkgName {
+			if misoPkg != nil && misoPkg.Name() == pkgName {
 				basePkg = misoPkg
 			}
 		}
@@ -264,10 +280,9 @@ func resolveTypeArgFromRef(ref sourceparser.TypeRef, pkg *types.Package) (types.
 // buildRespTypeDesc loads the Resp struct from the miso package and builds a TypeDesc
 // with the Data field replaced by the given DTO TypeDesc.
 // Falls back to a minimal hardcoded Resp if the miso package cannot be loaded.
-func buildRespTypeDesc(dto miso.TypeDesc) miso.TypeDesc {
-	misoPkg, err := loadMisoPackage()
-	if err != nil {
-		log.Infof("Failed to load miso package for Resp type: %v, using fallback", err)
+func buildRespTypeDesc(dto miso.TypeDesc, misoPkg *types.Package) miso.TypeDesc {
+	if misoPkg == nil {
+		log.Debugf("miso package not available for Resp type, using fallback")
 		return fallbackResp(dto)
 	}
 
@@ -377,7 +392,7 @@ func buildDataField(dto miso.TypeDesc) miso.FieldDesc {
 // BuildManualRouteDocs parses all Go files for manual endpoint registrations
 // and builds HttpRouteDoc objects using go/types type resolution.
 // If SourceFile.Ast is not nil, it is used directly; otherwise the file is parsed from disk.
-func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.HttpRouteDoc {
+func BuildManualRouteDocs(files []SourceFile, modName string, l Logger, preloaded map[string]*types.Package, misoPkg *types.Package) []miso.HttpRouteDoc {
 	if l != nil {
 		log = l
 	}
@@ -407,7 +422,6 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 
 	// Parallelize per directory: loadPackageFromDir, parse endpoints with
 	// *types.Package for cross-package const resolution, then resolve type refs.
-	// Each directory's package is independent; loadMisoPackage() uses sync.Once.
 	type dirResult struct {
 		dir  string
 		docs []miso.HttpRouteDoc
@@ -421,7 +435,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 			pkgPath = strings.TrimRight(pkgPath, "/")
 
 			pkgLoadStart := time.Now()
-			pkg, err := loadPackageFromDir(pkgPath, d)
+			pkg, err := loadPackageFromDir(preloaded, pkgPath, d)
 			if LogPerf {
 				log.Infof("BuildManualRouteDocs - loadPackageFromDir(%s) elapsed: %v", d, time.Since(pkgLoadStart))
 			}
@@ -484,7 +498,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				}
 
 				if ep.RequestRef != nil {
-					doc.JsonRequestDesc = resolveTypeRef(*ep.RequestRef, pkg)
+					doc.JsonRequestDesc = resolveTypeRef(*ep.RequestRef, pkg, misoPkg)
 				}
 
 				extractRequestParams(&doc, ep, pkg)
@@ -492,11 +506,11 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 				if ep.ResponseRef != nil {
 					ref := *ep.ResponseRef
 					if ref.Name == "any" && ref.PkgName == "" {
-						doc.JsonResponseDesc = buildRespTypeDesc(miso.TypeDesc{TypeName: "any"})
+						doc.JsonResponseDesc = buildRespTypeDesc(miso.TypeDesc{TypeName: "any"}, misoPkg)
 					} else {
-						desc := resolveTypeRef(ref, pkg)
+						desc := resolveTypeRef(ref, pkg, misoPkg)
 						if desc.TypeName != "" && ep.Handler != "RawHandler" {
-							desc = buildRespTypeDesc(desc)
+							desc = buildRespTypeDesc(desc, misoPkg)
 						}
 						doc.JsonResponseDesc = desc
 					}
@@ -537,7 +551,7 @@ func BuildManualRouteDocs(files []SourceFile, modName string, l Logger) []miso.H
 // BuildManualPipelineDocs parses all Go files for rabbit.NewEventPipeline declarations
 // and builds PipelineDoc objects using go/types type resolution.
 // If SourceFile.Ast is not nil, it is used directly; otherwise the file is parsed from disk.
-func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []miso.PipelineDoc {
+func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger, preloaded map[string]*types.Package, misoPkg *types.Package) []miso.PipelineDoc {
 	if l != nil {
 		log = l
 	}
@@ -577,8 +591,6 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []mis
 	var allDocs []miso.PipelineDoc
 
 	// Parallelize: loadPackageFromDir + resolveTypeRef per directory.
-	// Package loading is cached — pipelines in the same directory as endpoints
-	// reuse the already-loaded package.
 	type pipedirResult struct {
 		dir  string
 		docs []miso.PipelineDoc
@@ -591,7 +603,7 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []mis
 			pkgPath := modName + "/" + d
 			pkgPath = strings.TrimRight(pkgPath, "/")
 
-			pkg, err := loadPackageFromDir(pkgPath, d)
+			pkg, err := loadPackageFromDir(preloaded, pkgPath, d)
 			if err != nil {
 				log.Debugf("BuildManualPipelineDocs: Failed to load package %s: %v", pkgPath, err)
 				return pipedirResult{}, nil
@@ -611,7 +623,7 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger) []mis
 				}
 
 				if pp.PayloadRef != nil {
-					doc.PayloadDesc = resolveTypeRef(*pp.PayloadRef, pkg)
+					doc.PayloadDesc = resolveTypeRef(*pp.PayloadRef, pkg, misoPkg)
 				}
 
 				docs = append(docs, doc)
@@ -734,37 +746,33 @@ func hasExtra(extras []pair.StrPair, extraConst string) bool {
 	return false
 }
 
-// loadPackageFromDir loads a Go package with the specified working directory.
-// Uses NeedTypes|NeedImports (not NeedDeps) — all type lookups go through
-// pkg.Scope() or pkg.Imports(), and type walking is self-contained on
-// already-loaded types.Type objects. Avoids loading transitive deps.
-func loadPackageFromDir(pkgPath string, dir string) (*types.Package, error) {
-	// Check cache first — directories may be loaded by both BuildManualRouteDocs
-	// and BuildManualPipelineDocs.
-	loadPkgMu.RLock()
-	if pkg, ok := loadPkgMap[dir]; ok {
-		loadPkgMu.RUnlock()
-		return pkg, nil
+// loadPackageFromDir loads the Go package in dir via go/packages.
+// If preloaded is non-nil, it is checked first (read-only, no lock needed
+// since the map is populated before goroutines are spawned).
+// Uses NeedDeps so that import scopes are fully populated for cross-package
+// type resolution (e.g., resolving api.PostReq from the main package).
+func loadPackageFromDir(preloaded map[string]*types.Package, pkgPath string, dir string) (*types.Package, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		absDir = dir
 	}
-	loadPkgMu.RUnlock()
+
+	if preloaded != nil {
+		if pkg, ok := preloaded[absDir]; ok {
+			return pkg, nil
+		}
+	}
 
 	cfg := &packages.Config{
 		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedDeps,
 		Dir:  dir,
 	}
-	// Use "." to load the package in the specified directory, avoiding
-	// submodule path mismatch issues when pkgPath doesn't match the actual
-	// Go package path (e.g., demo/appdemo has its own go.mod).
 	pkgs, err := packages.Load(cfg, ".")
 	if err != nil {
 		return nil, err
 	}
 	if len(pkgs) > 0 && pkgs[0].Types != nil {
-		pkg := pkgs[0].Types
-		loadPkgMu.Lock()
-		loadPkgMap[dir] = pkg
-		loadPkgMu.Unlock()
-		return pkg, nil
+		return pkgs[0].Types, nil
 	}
 	return nil, fmt.Errorf("no types loaded for %s", pkgPath)
 }
