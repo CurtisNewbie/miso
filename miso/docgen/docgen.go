@@ -749,7 +749,7 @@ func loadPackageFromDir(pkgPath string, dir string) (*types.Package, error) {
 	loadPkgMu.RUnlock()
 
 	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedImports,
+		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedDeps,
 		Dir:  dir,
 	}
 	// Use "." to load the package in the specified directory, avoiding
