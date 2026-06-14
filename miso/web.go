@@ -39,6 +39,7 @@ const (
 	ExtraJsonRequest  = "miso-JsonRequest"
 	ExtraJsonResponse = "miso-JsonResponse"
 	ExtraNgTable      = "miso-NgTable"
+	ExtraNoDoc        = "miso-NoDoc"
 
 	ScopePublic    = "PUBLIC"
 	ScopeProtected = "PROTECTED"
@@ -127,7 +128,7 @@ func init() {
 		prepAuthInterceptors(rail)
 		prepDebugRoutes(rail)
 		prepHealthcheckRoutes()
-		prepApiDocRoutes(rail)
+		// prepApiDocRoutes(rail)
 		return nil
 	})
 }
@@ -647,6 +648,11 @@ func (g *LazyRouteDecl) Resource(resource string) *LazyRouteDecl {
 	return g.Extra(ExtraResource, strings.TrimSpace(resource))
 }
 
+// NoDoc marks this endpoint to be skipped by misoapi doc generation.
+func (g *LazyRouteDecl) NoDoc() *LazyRouteDecl {
+	return g.Extra(ExtraNoDoc, true)
+}
+
 // Add extra info to endpoint's metadata.
 func (g *LazyRouteDecl) Extra(key string, value any) *LazyRouteDecl {
 	return g.extra(key, value, nil)
@@ -687,19 +693,11 @@ func (g *LazyRouteDecl) DocHeader(headerName string, desc string) *LazyRouteDecl
 
 // Document header parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocHeaderReq(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	for _, pd := range parseHeaderDoc(t) {
-		g.extra(ExtraHeaderParam, pd, extraFilterOneParamDocByName())
-	}
 	return g
 }
 
 // Document query parameters that the endpoint expects (only serves as metadata that maybe used by some plugins).
 func (g *LazyRouteDecl) DocQueryReq(v any) *LazyRouteDecl {
-	t := reflect.TypeOf(v)
-	for _, pd := range parseQueryDoc(t) {
-		g.extra(ExtraQueryParam, pd, extraFilterOneParamDocByName())
-	}
 	return g
 }
 
@@ -822,7 +820,10 @@ func reflectSetHeaderValue(fieldVal reflect.Value, fieldType reflect.Type, heade
 		fieldVal.SetUint(vv)
 	case reflect.Pointer:
 		ptrType := fieldType.Elem()
-		reflectSetHeaderValue(fieldVal, ptrType, header)
+		if fieldVal.IsNil() {
+			fieldVal.Set(reflect.New(ptrType))
+		}
+		reflectSetHeaderValue(fieldVal.Elem(), ptrType, header)
 	}
 }
 
@@ -1483,11 +1484,11 @@ func prepDebugRoutes(rail Rail) {
 	}
 }
 
-func prepApiDocRoutes(rail Rail) {
-	if err := serveApiDocTmpl(rail); err != nil {
-		rail.Errorf("failed to server apidoc, %v", err)
-	}
-}
+// func prepApiDocRoutes(rail Rail) {
+// 	if err := serveApiDocTmpl(rail); err != nil {
+// 		rail.Errorf("failed to server apidoc, %v", err)
+// 	}
+// }
 
 func prepAuthInterceptors(rail Rail) {
 	if GetPropStrTrimmed(PropServerAuthBearer) != "" {

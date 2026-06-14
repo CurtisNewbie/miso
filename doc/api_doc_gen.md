@@ -1,10 +1,15 @@
 # API Documentation Generation
 
-In non-prod mode (`mode.production: false`), an API documentation is automatically generated and exposed on `/doc/api` endpoint. If `server.port` is 8080, then the generated documentation is accessible through: `http://localhost:8080/doc/api`.
+API documentation is generated statically using the `misoapi` CLI tool. Run it in your project directory:
 
-There are two types of documentation generated, one is simply a static webpage rendered, another one is the markdown version that can be copied and pasted to some README.md files.
+```bash
+go install github.com/curtisnewbie/miso/cmd/misoapi@v0.4.13
+misoapi
+```
 
-miso tries its best to guess all the required parameters from your endpoints, it generates doc about your request/reponse in JSON format, including query parameters, headers and so on. As it continually improves, miso now can even create a demo curl script, as well as typescript object definitions for you. But of course, you may provide extra information to describe the endpoints:
+This scans your codebase for handler functions annotated with `misoapi-*` comments, generates endpoint registration code in `misoapi_generated.go`, and produces API documentation (markdown format). No runtime `/doc/api` endpoint is needed.
+
+misoapi infers request/response types from your handler signatures, including query parameters, headers, JSON bodies, etc. It generates curl examples, TypeScript type definitions, and Angular HttpClient demos. You can provide additional metadata via endpoint configuration:
 
 e.g.,
 
@@ -54,7 +59,7 @@ func GetFileInfoEp(inb *miso.Inbound, req FileInfoReq) (api.FstoreFile, error) {
 }
 ```
 
-The resulting documentation looks like the following (this is the markdown version, but the web page version is almost the same):
+The resulting markdown documentation produced by misoapi looks like:
 
 - GET /file/info
   - Description: Fetch file info

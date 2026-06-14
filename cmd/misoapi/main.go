@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,9 +17,11 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/miso/docgen"
 	"github.com/curtisnewbie/miso/tools"
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/cli"
@@ -33,6 +36,8 @@ import (
 	"github.com/dave/dst/decorator/resolver/goast"
 	"github.com/dave/dst/decorator/resolver/gopackages"
 	"github.com/dave/dst/dstutil"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -102,12 +107,75 @@ var (
 )
 
 var (
-	Debug = flag.Bool("debug", false, "Enable debug log")
-	Run   = flag.Bool("run", false, "Run app after api generated (to generate api doc)")
-	log   = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
+	Debug      = flag.Bool("debug", false, "Enable debug log")
+	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
+	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs")
+	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs")
+	DocAppName = flag.String("appname", "", "Application name for docs (falls back to conf.yml 'app.name' if unset)")
+	NoDoc      = flag.Bool("no-doc", false, "Skip generating API docs (markdown)")
+	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
+	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
+	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec")
+	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
 )
 
+// perfLog logs at INFO level only when the -perf flag is set.
+func perfLog(format string, args ...any) {
+	if *Perf {
+		log.Infof(format, args...)
+	}
+}
+
+// loadConfYml loads conf.yml using Viper. Returns the Viper instance or nil on failure.
+func loadConfYml() *viper.Viper {
+	v := viper.New()
+	v.SetConfigFile("conf.yml")
+	if err := v.ReadInConfig(); err != nil {
+		return nil
+	}
+	return v
+}
+
+// resolveFromViper reads a key from Viper, using the raw key as a fallback
+// if nested lookup fails (keys with dots in YAML are stored flat).
+func resolveFromViper(v *viper.Viper, key string) string {
+	if v.IsSet(key) {
+		return v.GetString(key)
+	}
+	// Dotted keys in flat YAML (e.g., "app.name") may be stored as-is
+	// rather than nested. Try all keys.
+	for _, k := range v.AllKeys() {
+		if k == key {
+			return v.GetString(k)
+		}
+	}
+	return ""
+}
+
+// matchSkipPkg checks if pkgPath should be skipped based on skipPkgs patterns.
+// Patterns can be full import paths (github.com/curtisnewbie/myapp/internal/web)
+// or relative paths (internal/web). Two matching modes:
+//   - Exact pkg: pkgPath ends with the pattern (e.g., "demo" matches ".../demo")
+//   - Subtree: pattern appears as a path segment followed by "/" (e.g., "demo"
+//     matches ".../demo/appdemo/api" because "/demo/" appears in the path)
+func matchSkipPkg(pkgPath string, skipPkgs []string) bool {
+	for _, sp := range skipPkgs {
+		if sp == "" {
+			continue
+		}
+		if strings.HasSuffix(pkgPath, sp) || strings.Contains(pkgPath, "/"+sp+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
+	start := time.Now()
+	defer func() {
+		perfLog("misoapi total elapsed: %v", time.Since(start))
+	}()
+
 	flags.WithDescriptionBuilder(func(printlnf func(v string, args ...any)) {
 		printlnf("misoapi - automatically generate web endpoint in go based on misoapi-* comments\n")
 		printlnf("  Supported miso version: %v\n", version.Version)
@@ -131,30 +199,52 @@ func main() {
 		printlnf(strutil.Spaces(2) + "If the file is found, APIs are registered explicitly in PrepareWebServer(..) func, and you should")
 		printlnf(strutil.Spaces(2) + "makesure the PrepareWebServer(..) is called in miso.PreServerBootstrap(..)")
 		printlnf("")
+		printlnf(strutil.Spaces(2) + "Use -oas flag to also generate OpenAPI 3.0 JSON spec.")
+		printlnf("")
 	})
 	flags.Parse()
+
+	// If conf.yml exists and flags were not explicitly set, load defaults from it.
+	if fi, err := os.Stat("conf.yml"); err == nil && !fi.IsDir() {
+		if v := loadConfYml(); v != nil {
+			d := map[string]bool{}
+			flag.Visit(func(f *flag.Flag) { d[f.Name] = true })
+			if !d["appname"] {
+				if s := resolveFromViper(v, "app.name"); s != "" {
+					*DocAppName = s
+				}
+			}
+			if !d["port"] {
+				if s := resolveFromViper(v, "server.port"); s != "" {
+					*DocPort = s
+				}
+			}
+		}
+	}
+
+	var skipPkgsList []string
+	if *SkipPkgs != "" {
+		skipPkgsList = strings.Split(*SkipPkgs, ",")
+		for i := range skipPkgsList {
+			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
+		}
+	}
 
 	files, err := walkDir(".", ".go")
 	if err != nil {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	if err := parseFiles(files); err != nil {
+	_, err = parseFiles(files, *NoDoc, skipPkgsList)
+	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
 
-	if *Run {
-		for _, f := range files {
-			if f.File.Name() == "main.go" {
-				out, err := cli.Run("go", []string{"run", "main.go", "app.stop-on-ready=true"})
-				if err != nil {
-					panic(fmt.Sprintf("%v, %s", err, out))
-				} else {
-					println(string(out))
-				}
-				break
-			}
+	if !*NoDoc {
+		if err := generateDocs(skipPkgsList); err != nil {
+			log.Errorf("generateDocs failed, %v", err)
 		}
+		return
 	}
 }
 
@@ -171,15 +261,22 @@ type FsFile struct {
 	File fs.FileInfo
 }
 
-func parseFiles(files []FsFile) error {
+func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[string]GroupedApiDecl, error) {
+	start := time.Now()
+	defer func() {
+		perfLog("parseFiles total elapsed: %v", time.Since(start))
+	}()
+
+	astStart := time.Now()
 	dstFiles, err := parseFileAst(files)
+	perfLog("parseFileAst elapsed: %v, %d files", time.Since(astStart), len(dstFiles))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	modName, err := guessModName()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pathApiDecls := make(map[string]GroupedApiDecl)
@@ -203,6 +300,7 @@ func parseFiles(files []FsFile) error {
 		}
 	}
 
+	extractStart := time.Now()
 	for _, df := range dstFiles {
 		dir := path.Dir(path.Dir(path.Clean(df.Path)))
 		var pkgPath string
@@ -227,6 +325,7 @@ func parseFiles(files []FsFile) error {
 			},
 		)
 	}
+	perfLog("API extraction (AST walk) elapsed: %v, %d groups", time.Since(extractStart), len(pathApiDecls))
 
 	webGoPath := "." + string(os.PathSeparator) + path.Join("internal", "web", "web.go")
 	regApiDstFiles := slutil.Transform(dstFiles,
@@ -245,33 +344,39 @@ func parseFiles(files []FsFile) error {
 		log.Debugf("file %v not found, register misoapi generated code in init()", webGoPath)
 	}
 
-	genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
-	baseIndent := 1
-	for dir, v := range pathApiDecls {
-		for _, ad := range v.Apis {
-			log.Debugf("%v (%v) => %#v", dir, v.Pkg, ad)
-		}
-
-		imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
-		if err != nil {
-			log.Errorf("Generate code failed, %v", err)
-			continue
-		}
-		if code == "" {
-			continue
-		}
-
-		importSb := strings.Builder{}
-		importStrs := imports.CopyKeys()
-		sort.Slice(importStrs, func(i, j int) bool { return strings.Compare(importStrs[i], importStrs[j]) < 0 })
-		for _, s := range importStrs {
-			if importSb.Len() > 0 {
-				importSb.WriteString("\n")
+	if generateCode {
+		genStart := time.Now()
+		genPkgs := hash.NewSet[string]() // misoapi_generated.go pkg paths
+		baseIndent := 1
+		for dir, v := range pathApiDecls {
+			if matchSkipPkg(v.PkgPath, skipPkgs) {
+				log.Infof("Skipping package %v (matched by -skip-pkgs)", v.PkgPath)
+				continue
 			}
-			importSb.WriteString(strings.Repeat("\t", baseIndent) + "\"" + s + "\"")
-		}
+			for _, ad := range v.Apis {
+				log.Debugf("%v (%v) => %#v", dir, v.Pkg, ad)
+			}
 
-		out := strutil.NamedSprintf(`// auto generated by misoapi ${misoVersion} at ${nowTimeStr}, please do not modify
+			imports, code, err := genGoApiRegister(v.Apis, baseIndent, v.Imports)
+			if err != nil {
+				log.Errorf("Generate code failed, %v", err)
+				continue
+			}
+			if code == "" {
+				continue
+			}
+
+			importSb := strings.Builder{}
+			importStrs := imports.CopyKeys()
+			sort.Slice(importStrs, func(i, j int) bool { return strings.Compare(importStrs[i], importStrs[j]) < 0 })
+			for _, s := range importStrs {
+				if importSb.Len() > 0 {
+					importSb.WriteString("\n")
+				}
+				importSb.WriteString(strings.Repeat("\t", baseIndent) + "\"" + s + "\"")
+			}
+
+			out := strutil.NamedSprintf(`// auto generated by misoapi ${misoVersion} at ${nowTimeStr}, please do not modify
 package ${package}
 
 import (
@@ -282,59 +387,61 @@ func ${misoapiFnName}() {
 ${code}
 }
 `, map[string]any{
-			"misoapiFnName": misoapiFnName,
-			"misoVersion":   version.Version,
-			"nowTimeStr":    atom.Now().FormatClassicLocale(),
-			"package":       v.Pkg,
-			"code":          code,
-			"importStr":     importSb.String(),
-		})
-		genPkgs.Add(v.PkgPath)
+				"misoapiFnName": misoapiFnName,
+				"misoVersion":   version.Version,
+				"nowTimeStr":    atom.Now().FormatClassicLocale(),
+				"package":       v.Pkg,
+				"code":          code,
+				"importStr":     importSb.String(),
+			})
+			genPkgs.Add(v.PkgPath)
 
-		log.Debugf("%v (%v) => \n\n%v", dir, v.Pkg, out)
-		outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
+			log.Debugf("%v (%v) => \n\n%v", dir, v.Pkg, out)
+			outFile := fmt.Sprintf("%vmisoapi_generated.go", dir)
 
-		// if generated file already existed, check if the content is still the same
-		prev, err := os.ReadFile(outFile)
-		if err == nil {
-			prevs := strutil.UnsafeByt2Str(prev)
-			if i := strings.Index(prevs, "\n"); i > -1 && i+1 < len(prevs) {
-				prevs = prevs[i+1:]
+			// if generated file already existed, check if the content is still the same
+			prev, err := os.ReadFile(outFile)
+			if err == nil {
+				prevs := strutil.UnsafeByt2Str(prev)
+				if i := strings.Index(prevs, "\n"); i > -1 && i+1 < len(prevs) {
+					prevs = prevs[i+1:]
+				}
+				outBody := out[strings.Index(out, "\n")+1:]
+				if prevs == outBody {
+					log.Debugf("generated code remain the same, skipping %v", outFile)
+					continue
+				}
 			}
-			outBody := out[strings.Index(out, "\n")+1:]
-			if prevs == outBody {
-				log.Debugf("generated code remain the same, skipping %v", outFile)
-				continue
+
+			// flush generated code
+			f, err := osutil.OpenRWFile(outFile)
+			if err != nil {
+				return pathApiDecls, err
+			}
+			_ = f.Truncate(0)
+			_, err = f.WriteString(out)
+			f.Close()
+			if err != nil {
+				return pathApiDecls, err
+			}
+			log.Infof("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
+
+			// fix imports
+			tools.RunGoImports(outFile)
+		}
+
+		// insert func calls to register apis
+		if doInsertRegisterApiFunc {
+			sort.SliceStable(regApiDstFiles, func(i, j int) bool { return regApiDstFiles[i] < regApiDstFiles[j] })
+			if err := insertMisoApiRegisterFunc(regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
+				log.Errorf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
+				return pathApiDecls, err
 			}
 		}
-
-		// flush generated code
-		f, err := osutil.OpenRWFile(outFile)
-		if err != nil {
-			return err
-		}
-		_ = f.Truncate(0)
-		_, err = f.WriteString(out)
-		f.Close()
-		if err != nil {
-			return err
-		}
-		log.Infof("Generated code written to %v, using pkg: %v, api count: %d", outFile, v.Pkg, len(v.Apis))
-
-		// fix imports
-		tools.RunGoImports(outFile)
+		perfLog("Code generation + write elapsed: %v", time.Since(genStart))
 	}
 
-	// insert func calls to register apis
-	if doInsertRegisterApiFunc {
-		sort.SliceStable(regApiDstFiles, func(i, j int) bool { return regApiDstFiles[i] < regApiDstFiles[j] })
-		if err := insertMisoApiRegisterFunc(regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
-			log.Errorf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
-			return err
-		}
-	}
-
-	return nil
+	return pathApiDecls, nil
 }
 
 type DstFile struct {
@@ -1269,6 +1376,11 @@ func guessModName() (string, error) {
 		return "", errs.Wrap(fmt.Errorf("%s, %v", out, err))
 	}
 	modName = strings.TrimSpace(string(out))
+	// In go.work setups, go list -m may return multiple modules (one per line).
+	// We only want the module containing the current directory (the first line).
+	if i := strings.IndexByte(modName, '\n'); i > -1 {
+		modName = modName[:i]
+	}
 	return modName, nil
 }
 
@@ -1286,4 +1398,162 @@ func parseDstFile(fpath string, shortPkgName string) (*dst.File, error) {
 		return nil, errs.Wrap(err)
 	}
 	return f, nil
+}
+
+// generateDocs generates static API documentation from source code parsing.
+func generateDocs(skipPkgs []string) error {
+	start := time.Now()
+	defer func() {
+		perfLog("generateDocs total elapsed: %v", time.Since(start))
+	}()
+
+	modName, err := guessModName()
+	if err != nil {
+		return err
+	}
+
+	// If -appname not set, default to the last segment of the module name
+	// (e.g., "github.com/curtisnewbie/xxx" → "xxx").
+	if *DocAppName == "" {
+		*DocAppName = path.Base(modName)
+	}
+
+	manualFiles, err := walkDir(".", ".go")
+	if err != nil {
+		return fmt.Errorf("walkDir for docs failed: %v", err)
+	}
+
+	// Filter out files from skipped packages
+	if len(skipPkgs) > 0 {
+		manualFiles = slutil.Filter(manualFiles, func(f FsFile) bool {
+			pkgPath := modName + "/" + path.Dir(f.Path)
+			return !matchSkipPkg(pkgPath, skipPkgs)
+		})
+	}
+
+	// Parse all files once; both endpoint and pipeline extraction share the ASTs
+	// embedded in each SourceFile.
+	parseStart := time.Now()
+	convertedFiles := make([]docgen.SourceFile, 0, len(manualFiles))
+	for _, f := range manualFiles {
+		parsed, err := decorator.ParseFile(nil, f.Path, nil, parser.ParseComments)
+		if err != nil {
+			return errs.Wrapf(err, "failed to parse %s", f.Path)
+		}
+		convertedFiles = append(convertedFiles, docgen.SourceFile{Path: f.Path, Ast: parsed})
+	}
+	perfLog("Parse all files: %v, %d files", time.Since(parseStart), len(convertedFiles))
+
+	buildStart := time.Now()
+	docgen.LogPerf = *Perf
+	preloaded, misoPkg, err := docgen.LoadPackagesAt(".")
+	if err != nil {
+		return errs.Wrapf(err, "LoadPackagesAt failed")
+	}
+	perfLog("LoadPackagesAt elapsed: %v, %d dirs", time.Since(buildStart), len(preloaded))
+
+	allDocs := docgen.BuildManualRouteDocs(convertedFiles, modName, log, preloaded, misoPkg)
+	perfLog("BuildManualRouteDocs elapsed: %v, %d endpoints", time.Since(buildStart), len(allDocs))
+
+	pipelineDocs := docgen.BuildManualPipelineDocs(convertedFiles, modName, log, preloaded, misoPkg)
+	log.Infof("Built %d pipeline docs", len(pipelineDocs))
+
+	log.Infof("Built %d route docs", len(allDocs))
+	for i, d := range allDocs {
+		log.Debugf("  Doc[%d] %s %-40s (%s) reqFields=%d, respFields=%d", i, d.Method, d.Url, d.SourceFile, len(d.JsonRequestDesc.Fields), len(d.JsonResponseDesc.Fields))
+	}
+
+	// Fill generated fields for each doc
+	renderStart := time.Now()
+	seenGoTypes := hash.NewSet[string]()
+	for i := range allDocs {
+		d := &allDocs[i]
+		d.Curl = miso.GenRouteCurl(*d, *DocPort)
+
+		// Generate Go/Ts definitions for request types.
+		// Only POST/PUT have request bodies — empty structs (e.g. EmptyReq{}) are
+		// valid for these methods. Other methods never have a body.
+		// GenGoDef returns "" for primitives/non-struct types; returns
+		// "type  struct { }" for zero-value TypeDesc (TypeName="").
+		jsonReqGoDef, jsonReqGoDefTypeName := miso.GenGoDef(d.JsonRequestDesc, hash.NewSet[string]())
+		if jsonReqGoDef != "" && d.JsonRequestDesc.TypeName != "" &&
+			(d.Method == "POST" || d.Method == "PUT") {
+			d.JsonReqTsDef = miso.GenTsDef(d.JsonRequestDesc)
+			d.JsonTsDef = d.JsonReqTsDef
+			d.JsonReqGoDef = jsonReqGoDef
+			d.JsonReqGoDefTypeName = jsonReqGoDefTypeName
+		}
+		if len(d.JsonResponseDesc.Fields) > 0 {
+			d.JsonRespTsDef = miso.GenTsDef(d.JsonResponseDesc)
+			if d.JsonTsDef != "" {
+				d.JsonTsDef += "\n"
+			}
+			d.JsonTsDef += d.JsonRespTsDef
+			d.JsonRespGoDef, d.JsonRespGoDefTypeName = miso.GenGoDef(d.JsonResponseDesc, hash.NewSet[string]())
+		}
+
+		// Miso HTTP Client demo
+		d.MisoTClientDemo = miso.GenTClientDemo(*d, *DocAppName)
+		if d.JsonRespGoDef != "" {
+			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
+		}
+		if d.JsonReqGoDef != "" {
+			d.MisoTClientDemo = d.JsonReqGoDef + "\n" + d.MisoTClientDemo
+		}
+		d.MisoTClientWithoutTypes = d.MisoTClientDemo
+
+		// Angular HttpClient demo (exclude OpenAPI to keep simpler)
+		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
+
+		_ = seenGoTypes // used for global Go type defs in future
+	}
+	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))
+
+	// Generate aggregate OpenAPI 3.0 spec
+	if *Oas {
+		oasStart := time.Now()
+		oasPath := *OasFile
+		rootSpec := &openapi3.T{
+			OpenAPI: "3.0.0",
+			Info: &openapi3.Info{
+				Title:   *DocAppName,
+				Version: "1.0.0",
+			},
+		}
+		if *DocPort != "" {
+			rootSpec.AddServer(&openapi3.Server{URL: "http://localhost:" + *DocPort})
+		}
+
+		for _, d := range allDocs {
+			miso.GenOpenApiDoc(d, rootSpec)
+		}
+
+		oasJson, err := json.MarshalIndent(rootSpec, "", "  ")
+		if err != nil {
+			return errs.Wrapf(err, "failed to marshal OpenAPI spec")
+		}
+
+		if err := os.MkdirAll(filepath.Dir(oasPath), 0755); err != nil {
+			return errs.Wrapf(err, "failed to create output directory for %s", oasPath)
+		}
+		if err := os.WriteFile(oasPath, oasJson, 0644); err != nil {
+			return errs.Wrapf(err, "failed to write OpenAPI spec file %s", oasPath)
+		}
+		perfLog("OpenAPI spec generation + write elapsed: %v", time.Since(oasStart))
+		log.Infof("OpenAPI spec written to %s", oasPath)
+	}
+
+	mdStart := time.Now()
+	markdown := miso.GenMarkDownDoc(allDocs, pipelineDocs)
+
+	if err := os.MkdirAll(filepath.Dir(*DocFile), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory for %s: %v", *DocFile, err)
+	}
+	if err := os.WriteFile(*DocFile, []byte(markdown), 0644); err != nil {
+		return fmt.Errorf("failed to write doc file %s: %v", *DocFile, err)
+	}
+	perfLog("GenMarkDownDoc + write elapsed: %v", time.Since(mdStart))
+
+	log.Infof("API docs written to %s", *DocFile)
+	return nil
 }

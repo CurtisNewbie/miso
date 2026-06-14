@@ -127,11 +127,11 @@ type nacosModule struct {
 
 func (m *nacosModule) prepDeregisterUrl(rail miso.Rail) {
 	if miso.GetPropBool(PropNacosDiscoveryEnabled) && miso.GetPropBool(PropNacosDiscoveryEnableDeregisterUrl) {
-		deregisterUrl := miso.GetPropStr(PropNacosDiscoveryDeregisterUrl)
-		if !strutil.IsBlankStr(deregisterUrl) {
-			rail.Infof("Enabled 'GET %v' for manual nacos service deregistration", deregisterUrl)
+		nacosDeregisterUrl := miso.GetPropStr(PropNacosDiscoveryDeregisterUrl)
+		if !strutil.IsBlankStr(nacosDeregisterUrl) {
+			rail.Infof("Enabled 'GET %v' for manual nacos service deregistration", nacosDeregisterUrl)
 
-			miso.HttpGet(deregisterUrl, miso.ResHandler(
+			miso.HttpGet(nacosDeregisterUrl, miso.ResHandler(
 				func(inb *miso.Inbound) (any, error) {
 					_, r := inb.Unwrap()
 					rail.Infof("Deregistering nacos service registration, remote_addr: %v", r.RemoteAddr)
@@ -143,7 +143,7 @@ func (m *nacosModule) prepDeregisterUrl(rail miso.Rail) {
 					}
 					return nil, nil
 				})).
-				Desc("Endpoint used to trigger Nacos service deregistration")
+				Desc("Endpoint used to trigger Nacos service deregistration. Configurable using prop: '" + PropNacosDiscoveryEnableDeregisterUrl + "'.")
 		}
 	}
 }

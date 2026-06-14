@@ -22,3 +22,6 @@ __debug_bin*
 doc/api.md
 
 AGENTS.md
+HANDOFF.md
+plans/
+misoapi

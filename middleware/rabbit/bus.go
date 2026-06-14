@@ -2,12 +2,9 @@ package rabbit
 
 import (
 	"errors"
-	"reflect"
 	"sync"
 
 	"github.com/curtisnewbie/miso/miso"
-	"github.com/curtisnewbie/miso/util/hash"
-	"github.com/curtisnewbie/miso/util/rfutil"
 )
 
 const (
@@ -19,22 +16,14 @@ var (
 	errBusNameEmpty = errors.New("bus name cannot be empty")
 )
 
-func init() {
-	miso.AddGetPipelineDocFunc(func() []miso.PipelineDoc {
-		return buildPipelineDoc(hash.MapValues(busModule().pipelineDescMap))
-	})
-}
-
 var busModule = miso.InitAppModuleFunc(func() *eventBusModule {
 	return &eventBusModule{
-		declaredBus:     &sync.Map{},
-		pipelineDescMap: map[string]EventPipelineDesc{},
+		declaredBus: &sync.Map{},
 	}
 })
 
 type eventBusModule struct {
-	declaredBus     *sync.Map
-	pipelineDescMap map[string]EventPipelineDesc
+	declaredBus *sync.Map
 }
 
 // Send msg to event bus with "miso-rabbitmq-max-retry" header.
@@ -133,21 +122,6 @@ func (ep *EventPipeline[T]) LogPayload() *EventPipeline[T] {
 
 // Document EventPipline in the generated apidoc.
 func (ep *EventPipeline[T]) Document(name string, desc string, provider string) *EventPipeline[T] {
-	miso.PreServerBootstrap(func(rail miso.Rail) error {
-		if miso.GetPropStr(miso.PropAppName) != provider {
-			return nil
-		}
-		m := busModule()
-		m.pipelineDescMap[ep.name] = EventPipelineDesc{
-			Name:       name,
-			Desc:       desc,
-			RoutingKey: BusRoutingKey,
-			Queue:      ep.name,
-			Exchange:   ep.name,
-			PayloadVal: rfutil.NewVar[T](),
-		}
-		return nil
-	})
 	return ep
 }
 
@@ -178,7 +152,7 @@ func (ep *EventPipeline[T]) ListenerQos(v int) *EventPipeline[T] {
 
 // Call SubEventBus.
 func (ep *EventPipeline[T]) Listen(concurrency int, listener func(rail miso.Rail, t T) error) *EventPipeline[T] {
-	SubEventBusQos[T](ep.name, concurrency, ep.qos, func(rail miso.Rail, t T) error {
+	SubEventBusQos(ep.name, concurrency, ep.qos, func(rail miso.Rail, t T) error {
 		if ep.logPaylod {
 			rail.Infof("Pipeline %s receive %+v", ep.name, t)
 		} else {
@@ -196,32 +170,4 @@ func NewEventPipeline[T any](name string) *EventPipeline[T] {
 		name:     name,
 		maxRetry: -1,
 	}
-}
-
-type EventPipelineDesc struct {
-	Name       string
-	Desc       string
-	PayloadVal any
-	Exchange   string
-	RoutingKey string
-	Queue      string
-}
-
-func buildPipelineDoc(epd []EventPipelineDesc) []miso.PipelineDoc {
-	docs := make([]miso.PipelineDoc, 0, len(epd))
-	for _, pd := range epd {
-		d := miso.PipelineDoc{
-			Name:       pd.Name,
-			Desc:       pd.Desc,
-			Exchange:   pd.Exchange,
-			RoutingKey: pd.RoutingKey,
-			Queue:      pd.Queue,
-		}
-		if pd.PayloadVal != nil {
-			rv := reflect.ValueOf(pd.PayloadVal)
-			d.PayloadDesc = miso.BuildTypeDesc(rv)
-		}
-		docs = append(docs, d)
-	}
-	return docs
 }

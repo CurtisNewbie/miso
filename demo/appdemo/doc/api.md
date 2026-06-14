@@ -2,6 +2,7 @@
 
 ## Contents
 
+- [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
 - [POST /api/v1](#post-apiv1)
 - [POST /api/v2](#post-apiv2)
 - [POST /api/v3](#post-apiv3)
@@ -35,12 +36,108 @@
 - [POST /api/v31](#post-apiv31)
 - [POST /api/v32](#post-apiv32)
 - [POST /api/v33](#post-apiv33)
-- [POST /open/api/demo/grouped/open/api/demo/post](#post-openapidemogroupedopenapidemopost)
-- [GET /debug/trace/recorder/run](#get-debugtracerecorderrun)
-- [GET /debug/trace/recorder/snapshot](#get-debugtracerecordersnapshot)
-- [GET /debug/trace/recorder/stop](#get-debugtracerecorderstop)
-- [POST /debug/task/disable-workers](#post-debugtaskdisable-workers)
-- [POST /debug/task/enable-workers](#post-debugtaskenable-workers)
+
+## POST /open/api/demo/grouped/open/api/demo/post
+
+- Description: Post demo stuff
+- Header Parameter:
+  - "Authorization": Bearer Authorization
+- JSON Request:
+    - "requestId": (string) 
+- JSON Response:
+    - "errorCode": (string) error code
+    - "msg": (string) message
+    - "error": (bool) whether the request was successful
+    - "data": (PostRes) response data
+      - "resultId": (string) 
+      - "time": (int64) 
+- cURL:
+  ```sh
+  curl -X POST 'http://localhost:8080/open/api/demo/grouped/open/api/demo/post' \
+    -H 'Authorization: ' \
+    -H 'Content-Type: application/json' \
+    -d '{"requestId":""}'
+  ```
+
+- Miso HTTP Client (experimental, demo may not work):
+  ```go
+  type PostReq struct {
+  	RequestId string `json:"requestId"`
+  }
+
+  type PostRes struct {
+  	ResultId string `json:"resultId"`
+  	Time atom.Time `json:"time"`
+  }
+
+  // Post demo stuff
+  func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
+  	var res miso.GnResp[PostRes]
+  	err := miso.NewDynClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").
+  		AddHeader("authorization", authorization).
+  		PostJson(req).
+  		Json(&res)
+  	if err != nil {
+  		var dat PostRes
+  		return dat, err
+  	}
+  	return res.Data, nil
+  }
+  ```
+
+- JSON Request / Response Object In TypeScript:
+  ```ts
+  export interface PostReq {
+    requestId?: string;
+  }
+
+  export interface Resp {
+    errorCode?: string;            // error code
+    msg?: string;                  // message
+    error?: boolean;               // whether the request was successful
+    data?: PostRes;
+  }
+
+  export interface PostRes {
+    resultId?: string;
+    time?: number;
+  }
+  ```
+
+- Angular HttpClient Demo:
+  ```ts
+  import { MatSnackBar } from "@angular/material/snack-bar";
+  import { HttpClient } from "@angular/common/http";
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {}
+
+  sendPostReq() {
+    let authorization: any | null = null;
+    let req: PostReq | null = null;
+    this.http.post<any>(`/demo/open/api/demo/grouped/open/api/demo/post`, req,
+      {
+        headers: {
+          "Authorization": authorization
+        }
+      })
+      .subscribe({
+        next: (resp) => {
+          if (resp.error) {
+            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
+            return;
+          }
+          let dat: PostRes = resp.data;
+        },
+        error: (err) => {
+          console.log(err)
+          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
+        }
+      });
+  }
+  ```
 
 ## POST /api/v1
 
@@ -1460,7 +1557,7 @@
     - "errorCode": (string) error code
     - "msg": (string) message
     - "error": (bool) whether the request was successful
-    - "data": (PageRes[github.com/curtisnewbie/miso/demo/api.PostRes]) response data
+    - "data": (miso.PageRes[PostRes]) response data
       - "paging": (Paging) pagination parameters
         - "limit": (int) page limit
         - "page": (int) page number, 1-based
@@ -2628,402 +2725,6 @@
             return;
           }
           let dat: PostRes2 = resp.data;
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## POST /open/api/demo/grouped/open/api/demo/post
-
-- Description: Post demo stuff
-- Header Parameter:
-  - "Authorization": Bearer Authorization
-- JSON Request:
-    - "requestId": (string) 
-- JSON Response:
-    - "errorCode": (string) error code
-    - "msg": (string) message
-    - "error": (bool) whether the request was successful
-    - "data": (PostRes) response data
-      - "resultId": (string) 
-      - "time": (int64) 
-- cURL:
-  ```sh
-  curl -X POST 'http://localhost:8080/open/api/demo/grouped/open/api/demo/post' \
-    -H 'Authorization: ' \
-    -H 'Content-Type: application/json' \
-    -d '{"requestId":""}'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  type PostReq struct {
-  	RequestId string `json:"requestId"`
-  }
-
-  type PostRes struct {
-  	ResultId string `json:"resultId"`
-  	Time atom.Time `json:"time"`
-  }
-
-  // Post demo stuff
-  func SendPostReq(rail miso.Rail, req PostReq, authorization string) (PostRes, error) {
-  	var res miso.GnResp[PostRes]
-  	err := miso.NewDynClient(rail, "/open/api/demo/grouped/open/api/demo/post", "demo").
-  		AddHeader("authorization", authorization).
-  		PostJson(req).
-  		Json(&res)
-  	if err != nil {
-  		var dat PostRes
-  		return dat, err
-  	}
-  	return res.Data, nil
-  }
-  ```
-
-- JSON Request / Response Object In TypeScript:
-  ```ts
-  export interface PostReq {
-    requestId?: string;
-  }
-
-  export interface Resp {
-    errorCode?: string;            // error code
-    msg?: string;                  // message
-    error?: boolean;               // whether the request was successful
-    data?: PostRes;
-  }
-
-  export interface PostRes {
-    resultId?: string;
-    time?: number;
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendPostReq() {
-    let authorization: any | null = null;
-    let req: PostReq | null = null;
-    this.http.post<any>(`/demo/open/api/demo/grouped/open/api/demo/post`, req,
-      {
-        headers: {
-          "Authorization": authorization
-        }
-      })
-      .subscribe({
-        next: (resp) => {
-          if (resp.error) {
-            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
-            return;
-          }
-          let dat: PostRes = resp.data;
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## GET /debug/trace/recorder/run
-
-- Description: Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.
-- Query Parameter:
-  - "duration": Duration of the flight recording. Required. Duration cannot exceed 30 min.
-- cURL:
-  ```sh
-  curl -X GET 'http://localhost:8080/debug/trace/recorder/run?duration='
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  // Start FlightRecorder. Recorded result is written to trace.out when it's finished or stopped.
-  func SendRequest(rail miso.Rail, duration string) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynClient(rail, "/debug/trace/recorder/run", "demo").
-  		AddQuery("duration", duration).
-  		Get().
-  		Json(&res)
-  	if err != nil {
-  		return err
-  	}
-  	return nil
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendRequest() {
-    let duration: any | null = null;
-    this.http.get<any>(`/demo/debug/trace/recorder/run?duration=${duration}`)
-      .subscribe({
-        next: () => {
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## GET /debug/trace/recorder/snapshot
-
-- Description: FlightRecorder take snapshot. Recorded result is written to trace.out.
-- cURL:
-  ```sh
-  curl -X GET 'http://localhost:8080/debug/trace/recorder/snapshot'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  // FlightRecorder take snapshot. Recorded result is written to trace.out.
-  func SendRequest(rail miso.Rail) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynClient(rail, "/debug/trace/recorder/snapshot", "demo").
-  		Get().
-  		Json(&res)
-  	if err != nil {
-  		return err
-  	}
-  	return nil
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendRequest() {
-    this.http.get<any>(`/demo/debug/trace/recorder/snapshot`)
-      .subscribe({
-        next: () => {
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## GET /debug/trace/recorder/stop
-
-- Description: Stop existing FlightRecorder session.
-- cURL:
-  ```sh
-  curl -X GET 'http://localhost:8080/debug/trace/recorder/stop'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  // Stop existing FlightRecorder session.
-  func SendRequest(rail miso.Rail) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynClient(rail, "/debug/trace/recorder/stop", "demo").
-  		Get().
-  		Json(&res)
-  	if err != nil {
-  		return err
-  	}
-  	return nil
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendRequest() {
-    this.http.get<any>(`/demo/debug/trace/recorder/stop`)
-      .subscribe({
-        next: () => {
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## POST /debug/task/disable-workers
-
-- Description: Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
-- JSON Request:
-    - "tasks": ([]string) 
-- JSON Response:
-    - "errorCode": (string) error code
-    - "msg": (string) message
-    - "error": (bool) whether the request was successful
-- cURL:
-  ```sh
-  curl -X POST 'http://localhost:8080/debug/task/disable-workers' \
-    -H 'Content-Type: application/json' \
-    -d '{"tasks":[]}'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  type disableTaskWorkerReq struct {
-  	Tasks []string `json:"tasks"`
-  }
-
-  // Manually Disable Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
-  func SendDisableTaskWorkerReq(rail miso.Rail, req disableTaskWorkerReq) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynClient(rail, "/debug/task/disable-workers", "demo").
-  		PostJson(req).
-  		Json(&res)
-  	if err != nil {
-  		return err
-  	}
-  	return nil
-  }
-  ```
-
-- JSON Request / Response Object In TypeScript:
-  ```ts
-  export interface disableTaskWorkerReq {
-    tasks?: string[];
-  }
-
-  export interface Resp {
-    errorCode?: string;            // error code
-    msg?: string;                  // message
-    error?: boolean;               // whether the request was successful
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendDisableTaskWorkerReq() {
-    let req: disableTaskWorkerReq | null = null;
-    this.http.post<any>(`/demo/debug/task/disable-workers`, req)
-      .subscribe({
-        next: (resp) => {
-          if (resp.error) {
-            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
-            return;
-          }
-        },
-        error: (err) => {
-          console.log(err)
-          this.snackBar.open("Request failed, unknown error", "ok", { duration: 3000 })
-        }
-      });
-  }
-  ```
-
-## POST /debug/task/enable-workers
-
-- Description: Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
-- JSON Request:
-    - "tasks": ([]string) 
-- JSON Response:
-    - "errorCode": (string) error code
-    - "msg": (string) message
-    - "error": (bool) whether the request was successful
-- cURL:
-  ```sh
-  curl -X POST 'http://localhost:8080/debug/task/enable-workers' \
-    -H 'Content-Type: application/json' \
-    -d '{"tasks":[]}'
-  ```
-
-- Miso HTTP Client (experimental, demo may not work):
-  ```go
-  type disableTaskWorkerReq struct {
-  	Tasks []string `json:"tasks"`
-  }
-
-  // Manually enable previously disabled Distributed Task Worker By Name. Use '*' as a special placeholder for all tasks currently registered. For debugging only.
-  func SendDisableTaskWorkerReq(rail miso.Rail, req disableTaskWorkerReq) error {
-  	var res miso.GnResp[any]
-  	err := miso.NewDynClient(rail, "/debug/task/enable-workers", "demo").
-  		PostJson(req).
-  		Json(&res)
-  	if err != nil {
-  		return err
-  	}
-  	return nil
-  }
-  ```
-
-- JSON Request / Response Object In TypeScript:
-  ```ts
-  export interface disableTaskWorkerReq {
-    tasks?: string[];
-  }
-
-  export interface Resp {
-    errorCode?: string;            // error code
-    msg?: string;                  // message
-    error?: boolean;               // whether the request was successful
-  }
-  ```
-
-- Angular HttpClient Demo:
-  ```ts
-  import { MatSnackBar } from "@angular/material/snack-bar";
-  import { HttpClient } from "@angular/common/http";
-
-  constructor(
-    private snackBar: MatSnackBar,
-    private http: HttpClient
-  ) {}
-
-  sendDisableTaskWorkerReq() {
-    let req: disableTaskWorkerReq | null = null;
-    this.http.post<any>(`/demo/debug/task/enable-workers`, req)
-      .subscribe({
-        next: (resp) => {
-          if (resp.error) {
-            this.snackBar.open(resp.msg, "ok", { duration: 6000 })
-            return;
-          }
         },
         error: (err) => {
           console.log(err)

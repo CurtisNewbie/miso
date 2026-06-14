@@ -73,7 +73,6 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 		DisableDefaultHealthCheckHandler() // disable the default health check endpoint to avoid conflicts
 		DisablePrometheusBootstrap()       // bootstrap metrics and prometheus stuff manually
 		DisablePProfEndpointRegister()     // handle pprof endpoints manually
-		DisableApidocEndpointRegister()    // do not generate apidoc
 
 		SetDefProp(PropServerPropagateInboundTrace, false) // disable trace propagation, we are the entry point
 	}
