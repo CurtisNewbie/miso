@@ -81,6 +81,117 @@ func init() {
 	}
 }
 
+func TestParseFile_NamedFuncRefHandler(t *testing.T) {
+	eps, err := ParseFile("testdata/named_func_ref_handler.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(eps) != 1 {
+		t.Fatalf("expected 1 endpoint, got %d", len(eps))
+	}
+	ep := eps[0]
+	if ep.RequestRef == nil {
+		t.Fatal("expected request ref, got nil")
+	}
+	if ep.RequestRef.Name != "CreateUserReq" {
+		t.Errorf("expected request type CreateUserReq, got %s", ep.RequestRef.Name)
+	}
+	if ep.ResponseRef == nil {
+		t.Fatal("expected response ref, got nil")
+	}
+	if ep.ResponseRef.Name != "CreateUserRes" {
+		t.Errorf("expected response type CreateUserRes, got %s", ep.ResponseRef.Name)
+	}
+}
+
+func TestParseFileDst_NamedFuncRef_CrossFile(t *testing.T) {
+	// Write a temp file with just the endpoint registration
+	regPath := writeTestFile(t, "reg.go", `package testpkg
+
+import "github.com/curtisnewbie/miso/miso"
+
+func init() {
+	miso.HttpPost("/user", miso.AutoHandler(createUser)).
+		Desc("Create user")
+}
+`)
+
+	// Create a types.Package for "testpkg"
+	pkg := types.NewPackage("testpkg", "testpkg")
+
+	// Create types that the handler needs
+	reqType := types.NewNamed(
+		types.NewTypeName(token.NoPos, pkg, "CreateUserReq", nil),
+		types.NewStruct(nil, nil),
+		nil,
+	)
+	resType := types.NewNamed(
+		types.NewTypeName(token.NoPos, pkg, "CreateUserRes", nil),
+		types.NewStruct(nil, nil),
+		nil,
+	)
+
+	// Create miso.Inbound type for the skip-param check
+	misoPkg := types.NewPackage("miso", "miso")
+	inboundType := types.NewNamed(
+		types.NewTypeName(token.NoPos, misoPkg, "Inbound", nil),
+		types.NewStruct(nil, nil),
+		nil,
+	)
+
+	// Register "miso" as an import of testpkg
+	pkg.SetImports([]*types.Package{misoPkg})
+
+	// Build the createUser function signature:
+	// func createUser(inb *miso.Inbound, req CreateUserReq) (CreateUserRes, error)
+	sig := types.NewSignatureType(
+		nil, nil, nil,
+		types.NewTuple(
+			types.NewVar(token.NoPos, pkg, "inb", types.NewPointer(inboundType)),
+			types.NewVar(token.NoPos, pkg, "req", reqType),
+		),
+		types.NewTuple(
+			types.NewVar(token.NoPos, pkg, "", resType),
+			types.NewVar(token.NoPos, pkg, "", types.Universe.Lookup("error").Type()),
+		),
+		false,
+	)
+
+	fn := types.NewFunc(token.NoPos, pkg, "createUser", sig)
+	pkg.Scope().Insert(fn)
+
+	// Parse the registration file AST
+	f, err := decorator.ParseFile(token.NewFileSet(), regPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+
+	eps := ParseFileDst(f, pkg)
+	if len(eps) != 1 {
+		t.Fatalf("expected 1 endpoint, got %d", len(eps))
+	}
+
+	ep := eps[0]
+	if ep.Method != "POST" {
+		t.Errorf("Method = %q, want %q", ep.Method, "POST")
+	}
+	if ep.URL != "/user" {
+		t.Errorf("URL = %q, want %q", ep.URL, "/user")
+	}
+	if ep.RequestRef == nil {
+		t.Fatal("expected request ref, got nil")
+	}
+	if ep.RequestRef.Name != "CreateUserReq" {
+		t.Errorf("expected request type CreateUserReq, got %s", ep.RequestRef.Name)
+	}
+	if ep.ResponseRef == nil {
+		t.Fatal("expected response ref, got nil")
+	}
+	if ep.ResponseRef.Name != "CreateUserRes" {
+		t.Errorf("expected response type CreateUserRes, got %s", ep.ResponseRef.Name)
+	}
+}
+
 func TestParseFile_ResHandler(t *testing.T) {
 	ep := parseSingle(t, `package test
 import "github.com/curtisnewbie/miso/miso"

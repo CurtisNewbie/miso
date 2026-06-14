@@ -125,6 +125,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 	}
 
 	constVars := collectConstVars(f)
+	fileFuncs := collectFuncDecls(f)
 	filePkgName := f.Name.Name
 
 	var endpoints []*ParsedEndpoint
@@ -141,7 +142,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		}
 
 		// Handle BaseRoute("/prefix").Group(endpoints...) pattern
-		if eps := processGroupCall(call, constVars, nil, filePkgName); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars, nil, filePkgName, fileFuncs); len(eps) > 0 {
 			for _, ep := range eps {
 				ep.File = filePath
 				extractFuncName(ep)
@@ -151,7 +152,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 		}
 
 		// Handle GroupRoute("/prefix", endpoints...) pattern
-		if eps := processGroupRouteCall(call, constVars, nil, filePkgName); len(eps) > 0 {
+		if eps := processGroupRouteCall(call, constVars, nil, filePkgName, fileFuncs); len(eps) > 0 {
 			for _, ep := range eps {
 				ep.File = filePath
 				extractFuncName(ep)
@@ -160,7 +161,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 			return false
 		}
 
-		ep := analyzeCallChain(call, constVars, nil, filePkgName)
+		ep := analyzeCallChain(call, constVars, nil, filePkgName, fileFuncs)
 		if ep != nil {
 			ep.File = filePath
 			extractFuncName(ep)
@@ -176,6 +177,7 @@ func ParseFile(filePath string) ([]*ParsedEndpoint, error) {
 // extraConsts (optional) provides const/var values from other files in the package.
 func ParseFileDst(f *dst.File, pkg *types.Package, extraConsts ...map[string]string) []*ParsedEndpoint {
 	constVars := collectConstVars(f)
+	fileFuncs := collectFuncDecls(f)
 	filePkgName := f.Name.Name
 	if len(extraConsts) > 0 && extraConsts[0] != nil {
 		for k, v := range extraConsts[0] {
@@ -194,21 +196,21 @@ func ParseFileDst(f *dst.File, pkg *types.Package, extraConsts ...map[string]str
 		if _, ok := c.Parent().(*dst.SelectorExpr); ok {
 			return true
 		}
-		if eps := processGroupCall(call, constVars, pkg, filePkgName); len(eps) > 0 {
+		if eps := processGroupCall(call, constVars, pkg, filePkgName, fileFuncs); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
 			}
 			return false
 		}
-		if eps := processGroupRouteCall(call, constVars, pkg, filePkgName); len(eps) > 0 {
+		if eps := processGroupRouteCall(call, constVars, pkg, filePkgName, fileFuncs); len(eps) > 0 {
 			for _, ep := range eps {
 				extractFuncName(ep)
 				endpoints = append(endpoints, ep)
 			}
 			return false
 		}
-		ep := analyzeCallChain(call, constVars, pkg, filePkgName)
+		ep := analyzeCallChain(call, constVars, pkg, filePkgName, fileFuncs)
 		if ep != nil {
 			extractFuncName(ep)
 			endpoints = append(endpoints, ep)
@@ -342,7 +344,7 @@ func collectPipelineChain(pp *ParsedPipeline, name string, args []dst.Expr) {
 
 // analyzeCallChain recursively descends through chained method calls
 // to find the root miso.Http* call and collect all chained methods.
-func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) *ParsedEndpoint {
+func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string, fileFuncs map[string]*dst.FuncType) *ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok {
 		// Bare ident (e.g., HttpGet in package miso) — only allowed when file is package miso
@@ -357,7 +359,7 @@ func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *type
 					ep.URL = wrapUnresolvedURLIdent(call.Args, 0, extractStringArg(call.Args, 0, constVars, pkg))
 				}
 				if len(call.Args) > 1 {
-					extractHandler(call.Args[1], ep)
+					extractHandler(call.Args[1], ep, fileFuncs, pkg)
 				}
 				return ep
 			}
@@ -367,7 +369,7 @@ func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *type
 
 	// If X is another CallExpr, this is a chained method call
 	if innerCall, ok := sel.X.(*dst.CallExpr); ok {
-		ep := analyzeCallChain(innerCall, constVars, pkg, filePkgName)
+		ep := analyzeCallChain(innerCall, constVars, pkg, filePkgName, fileFuncs)
 		if ep == nil {
 			return nil
 		}
@@ -388,7 +390,7 @@ func analyzeCallChain(call *dst.CallExpr, constVars map[string]string, pkg *type
 		}
 		// Handler (second arg)
 		if len(call.Args) > 1 {
-			extractHandler(call.Args[1], ep)
+			extractHandler(call.Args[1], ep, fileFuncs, pkg)
 		}
 		return ep
 	}
@@ -408,7 +410,7 @@ func extractFuncName(ep *ParsedEndpoint) {
 
 // processGroupCall handles the miso.BaseRoute("/prefix").Group(endpoints...) pattern.
 // Returns endpoints with the base path prepended to each endpoint URL, or nil.
-func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) []*ParsedEndpoint {
+func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string, fileFuncs map[string]*dst.FuncType) []*ParsedEndpoint {
 	sel, ok := call.Fun.(*dst.SelectorExpr)
 	if !ok || sel.Sel.Name != "Group" {
 		return nil
@@ -440,7 +442,7 @@ func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *type
 		if !ok {
 			continue
 		}
-		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName)
+		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName, fileFuncs)
 		if ep != nil {
 			ep.URL = basePrefix + ep.URL
 			endpoints = append(endpoints, ep)
@@ -453,7 +455,7 @@ func processGroupCall(call *dst.CallExpr, constVars map[string]string, pkg *type
 // processGroupRouteCall handles the miso.GroupRoute("/prefix", endpoints...) pattern
 // (and bare GroupRoute in package miso).
 // Returns endpoints with the base path prepended to each endpoint URL, or nil.
-func processGroupRouteCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string) []*ParsedEndpoint {
+func processGroupRouteCall(call *dst.CallExpr, constVars map[string]string, pkg *types.Package, filePkgName string, fileFuncs map[string]*dst.FuncType) []*ParsedEndpoint {
 	basePrefix := ""
 	basePkg := ""
 
@@ -491,7 +493,7 @@ func processGroupRouteCall(call *dst.CallExpr, constVars map[string]string, pkg 
 		if !ok {
 			continue
 		}
-		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName)
+		ep := analyzeCallChain(argCall, constVars, pkg, filePkgName, fileFuncs)
 		if ep != nil {
 			ep.URL = basePrefix + ep.URL
 			endpoints = append(endpoints, ep)
@@ -548,9 +550,10 @@ func collectChained(ep *ParsedEndpoint, name string, args []dst.Expr, constVars 
 }
 
 // extractHandler parses the handler argument of miso.Http*.
-// Recognizes: miso.AutoHandler(func), miso.ResHandler(func),
-// miso.RawHandler(func|ident), and direct function references.
-func extractHandler(arg dst.Expr, ep *ParsedEndpoint) {
+// Recognizes: miso.AutoHandler(func), miso.AutoHandler(funcRef),
+// miso.ResHandler(func), miso.RawHandler(func|ident), and direct function references.
+// pkg (optional) provides cross-file function resolution via types.Package.Scope().
+func extractHandler(arg dst.Expr, ep *ParsedEndpoint, fileFuncs map[string]*dst.FuncType, pkg *types.Package) {
 	switch v := arg.(type) {
 	case *dst.CallExpr:
 		// Qualified miso.AutoHandler/miso.RawHandler/...
@@ -558,8 +561,24 @@ func extractHandler(arg dst.Expr, ep *ParsedEndpoint) {
 			if id, ok := sel.X.(*dst.Ident); ok && id.Name == "miso" {
 				ep.Handler = sel.Sel.Name
 				if len(v.Args) > 0 {
+					// Func literal inline
 					if lit, ok := v.Args[0].(*dst.FuncLit); ok {
 						extractFuncType(lit.Type, ep)
+					}
+					// Named function reference — same-file lookup first
+					if ident, ok := v.Args[0].(*dst.Ident); ok {
+						if ft, ok := fileFuncs[ident.Name]; ok {
+							extractFuncType(ft, ep)
+						} else if pkg != nil {
+							// Cross-file fallback via types.Package scope
+							if obj := pkg.Scope().Lookup(ident.Name); obj != nil {
+								if fn, ok := obj.(*types.Func); ok {
+									if sig := fn.Type().(*types.Signature); sig != nil {
+										extractFuncTypeFromSignature(sig, ep)
+									}
+								}
+							}
+						}
 					}
 				}
 				return
@@ -569,8 +588,24 @@ func extractHandler(arg dst.Expr, ep *ParsedEndpoint) {
 		if ident, ok := v.Fun.(*dst.Ident); ok {
 			ep.Handler = ident.Name
 			if len(v.Args) > 0 {
+				// Func literal inline
 				if lit, ok := v.Args[0].(*dst.FuncLit); ok {
 					extractFuncType(lit.Type, ep)
+				}
+				// Named function reference — same-file lookup first
+				if ident2, ok := v.Args[0].(*dst.Ident); ok {
+					if ft, ok := fileFuncs[ident2.Name]; ok {
+						extractFuncType(ft, ep)
+					} else if pkg != nil {
+						// Cross-file fallback via types.Package scope
+						if obj := pkg.Scope().Lookup(ident2.Name); obj != nil {
+							if fn, ok := obj.(*types.Func); ok {
+								if sig := fn.Type().(*types.Signature); sig != nil {
+									extractFuncTypeFromSignature(sig, ep)
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -601,6 +636,112 @@ func extractFuncType(ft *dst.FuncType, ep *ParsedEndpoint) {
 			break
 		}
 	}
+}
+
+// typeToTypeRef converts a go/types Type to a TypeRef.
+// Handles Named, Pointer, Slice, Basic, and Map types.
+func typeToTypeRef(t types.Type) TypeRef {
+	switch v := t.(type) {
+	case *types.Named:
+		pkgName := ""
+		if pkg := v.Obj().Pkg(); pkg != nil {
+			pkgName = pkg.Name()
+		}
+		ref := TypeRef{PkgName: pkgName, Name: v.Obj().Name()}
+		// Handle generic type args
+		if typeArgs := v.TypeArgs(); typeArgs != nil && typeArgs.Len() > 0 {
+			ref.TypeArgs = make([]TypeRef, typeArgs.Len())
+			for i := 0; i < typeArgs.Len(); i++ {
+				ref.TypeArgs[i] = typeToTypeRef(typeArgs.At(i))
+			}
+		}
+		return ref
+	case *types.Pointer:
+		ref := typeToTypeRef(v.Elem())
+		ref.IsPtr = true
+		return ref
+	case *types.Slice:
+		ref := typeToTypeRef(v.Elem())
+		ref.IsSlice = true
+		return ref
+	case *types.Basic:
+		return TypeRef{Name: v.Name()}
+	case *types.Map:
+		key := typeToTypeRef(v.Key())
+		val := typeToTypeRef(v.Elem())
+		return TypeRef{IsMap: true, MapKey: &key, MapValue: &val}
+	default:
+		return TypeRef{Name: v.String()}
+	}
+}
+
+// extractFuncTypeFromSignature pulls request/response types from a go/types Signature.
+func extractFuncTypeFromSignature(sig *types.Signature, ep *ParsedEndpoint) {
+	if sig.Params() != nil {
+		for i := 0; i < sig.Params().Len(); i++ {
+			v := sig.Params().At(i)
+			if isSkipParamTypeFromTypes(v.Type()) {
+				continue
+			}
+			ref := typeToTypeRef(v.Type())
+			ep.RequestRef = &ref
+			break
+		}
+	}
+	if sig.Results() != nil {
+		for i := 0; i < sig.Results().Len(); i++ {
+			v := sig.Results().At(i)
+			if isErrorTypeFromTypes(v.Type()) {
+				continue
+			}
+			ref := typeToTypeRef(v.Type())
+			ep.ResponseRef = &ref
+			break
+		}
+	}
+}
+
+// isSkipParamTypeFromTypes checks for injectable framework types using go/types.
+func isSkipParamTypeFromTypes(t types.Type) bool {
+	named, ok := t.(*types.Named)
+	if !ok {
+		// Check pointer to named
+		ptr, ok := t.(*types.Pointer)
+		if !ok {
+			return false
+		}
+		named, ok = ptr.Elem().(*types.Named)
+		if !ok {
+			return false
+		}
+	}
+	pkg := named.Obj().Pkg()
+	if pkg == nil {
+		return false
+	}
+	name := named.Obj().Name()
+	isPtr := false
+	if _, ok := t.(*types.Pointer); ok {
+		isPtr = true
+	}
+	for _, st := range DefaultSkipParamTypes {
+		if st.Ptr != isPtr {
+			continue
+		}
+		if st.Pkg == pkg.Name() && st.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// isErrorTypeFromTypes checks if a types.Type is the error type.
+func isErrorTypeFromTypes(t types.Type) bool {
+	named, ok := t.(*types.Named)
+	if !ok {
+		return false
+	}
+	return named.Obj().Pkg() == nil && named.Obj().Name() == "error"
 }
 
 // SkipParamType describes a function parameter type that should be excluded from
@@ -670,6 +811,19 @@ func isErrorType(t dst.Expr) bool {
 func collectConstVars(f *dst.File) map[string]string {
 	m := map[string]string{}
 	collectConstVarsInto(f, m)
+	return m
+}
+
+// collectFuncDecls walks a *dst.File and collects all function declarations into a map[funcName]*dst.FuncType.
+func collectFuncDecls(f *dst.File) map[string]*dst.FuncType {
+	m := map[string]*dst.FuncType{}
+	for _, decl := range f.Decls {
+		fd, ok := decl.(*dst.FuncDecl)
+		if !ok {
+			continue
+		}
+		m[fd.Name.Name] = fd.Type
+	}
 	return m
 }
 
