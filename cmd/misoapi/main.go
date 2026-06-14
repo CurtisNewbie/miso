@@ -117,6 +117,7 @@ var (
 	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
 	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec")
 	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
+	JavaDemo   = flag.Bool("doc-java-demo", false, "Generate Java HttpClient demo (OkHttp + Jackson)")
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -1506,7 +1507,9 @@ func generateDocs(skipPkgs []string) error {
 		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
 
 		// Java HttpClient demo
-		d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, *DocAppName)
+		if *JavaDemo {
+			d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, *DocAppName)
+		}
 
 		_ = seenGoTypes // used for global Go type defs in future
 	}
