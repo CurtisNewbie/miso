@@ -113,6 +113,7 @@ type HttpRouteDoc struct {
 	NgTableDemo             string           // angular table demo
 	MisoTClientDemo         string           // miso TClient demo
 	MisoTClientWithoutTypes string           // miso TClient demo without golang type definitions
+	JavaClientDemo          string           // java http client demo
 	OpenApiDoc              string
 }
 

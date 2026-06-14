@@ -377,3 +377,212 @@ func GenTClientDemo(d HttpRouteDoc, appName string) (code string) {
 	sl.Printf("\n}")
 	return sl.String()
 }
+
+func guessJavaTypeName(n string) string {
+	if n == "" {
+		return ""
+	}
+
+	isSlice := false
+	if v, ok := strings.CutPrefix(n, "[]"); ok {
+		n = v
+		isSlice = true
+	}
+
+	// *T -> T
+	if v, ok := strings.CutPrefix(n, "*"); ok {
+		n = v
+	}
+
+	// pkg.Type -> Type
+	if i := strings.LastIndexByte(n, '.'); i > -1 {
+		n = n[i+1:]
+	}
+
+	// Handle Go generics [T] -> <T>, recursively map inner types
+	if j := strings.IndexByte(n, '['); j > -1 && strings.HasSuffix(n, "]") {
+		base := n[:j]
+		inner := n[j+1 : len(n)-1]
+		inner = guessJavaTypeName(inner)
+		n = base + "<" + inner + ">"
+	}
+
+	// Map Go basic types to Java
+	switch n {
+	case "string":
+		n = "String"
+	case "int", "int8", "int16", "int32":
+		n = "Integer"
+	case "int64":
+		n = "Long"
+	case "float32", "float64":
+		n = "Double"
+	case "bool":
+		n = "Boolean"
+	}
+
+	if isSlice {
+		n = "List<" + n + ">"
+	}
+
+	return n
+}
+
+func GenJavaHttpClientDemo(d HttpRouteDoc, appName string) string {
+	var reqTypeName, respTypeName string = d.JsonRequestDesc.TypeName, d.JsonResponseDesc.TypeName
+	sl := new(strutil.SLPinter)
+
+	// Build method name
+	var mn string
+	if d.Name != "" {
+		// Strip "api"/"Api" prefix, same as Angular demo
+		name := d.Name
+		if len(name) > 3 && strings.EqualFold(name[:3], "api") {
+			name = name[3:]
+		}
+		mn = strutil.CamelCase(name)
+	} else if reqTypeName != "" {
+		cleanName := PureGoTypeName(reqTypeName)
+		if len(cleanName) > 0 {
+			mn = cleanName
+		}
+	}
+	if mn == "" {
+		mn = "sendRequest"
+	}
+	// lowerCamelCase
+	if len(mn) > 0 {
+		mn = strings.ToLower(string(mn[0])) + mn[1:]
+	}
+
+	// Determine return type, unwrap Resp/GnResp to Data field type
+	returnType := "void"
+	respJavaType := respTypeName
+	if respJavaType != "" {
+		respJavaType = guessJavaTypeName(respJavaType)
+		// Unwrap Resp/GnResp to find the Data field type
+		baseResp := respJavaType
+		if idx := strings.IndexByte(respJavaType, '<'); idx > -1 {
+			baseResp = respJavaType[:idx]
+		}
+		if baseResp == "Resp" || baseResp == "GnResp" {
+			for _, f := range d.JsonResponseDesc.Fields {
+				if f.GoFieldName == "Data" {
+					respJavaType = guessJavaTypeName(PureGoTypeName(f.TypeNameAlias))
+					break
+				}
+			}
+			if respJavaType == "Resp" || respJavaType == "GnResp" {
+				respJavaType = "Object"
+			}
+		}
+		returnType = respJavaType
+	}
+
+	// Imports
+	sl.Println("import okhttp3.*;")
+	sl.Println("import com.fasterxml.jackson.databind.ObjectMapper;")
+	sl.Builder.WriteString("\n")
+
+	// Static fields
+	sl.Println("private static final OkHttpClient client = new OkHttpClient();")
+	sl.Println("private static final ObjectMapper mapper = new ObjectMapper();")
+	sl.Println("")
+
+	// Method parameters
+	params := ""
+	hasReqBody := reqTypeName != "" && (d.Method == "POST" || d.Method == "PUT")
+	if hasReqBody {
+		rjt := guessJavaTypeName(reqTypeName)
+		params = rjt + " req"
+	}
+	for _, q := range d.QueryParams {
+		if params != "" {
+			params += ", "
+		}
+		params += fmt.Sprintf("String %s", strutil.CamelCase(q.Name))
+	}
+	for _, h := range d.Headers {
+		if params != "" {
+			params += ", "
+		}
+		params += fmt.Sprintf("String %s", strutil.CamelCase(h.Name))
+	}
+
+	// Doc comment above method
+	desc := strings.TrimSpace(d.Desc)
+	if desc != "" {
+		sl.Printlnf("// %s", desc)
+	}
+	sl.Printlnf("public %s %s(%s) throws IOException {", returnType, mn, params)
+	sl.LinePrefix = "    "
+
+	// Build URL with query params
+	sl.Printlnf("String url = \"%s\";", d.Url)
+	for i, q := range d.QueryParams {
+		cname := strutil.CamelCase(q.Name)
+		if i == 0 {
+			sl.Printlnf("url += \"?%s=\" + %s;", q.Name, cname)
+		} else {
+			sl.Printlnf("url += \"&%s=\" + %s;", q.Name, cname)
+		}
+	}
+
+	// Serialize request body for POST/PUT
+	if hasReqBody {
+		sl.Println("String json = mapper.writeValueAsString(req);")
+		sl.Println("RequestBody body = RequestBody.create(json, MediaType.get(\"application/json; charset=utf-8\"));")
+	}
+
+	// Build request
+	sl.Println("Request request = new Request.Builder()")
+	sl.LinePrefix = "        "
+	sl.Printlnf(".url(url)")
+	if hasReqBody {
+		sl.Println(".addHeader(\"Content-Type\", \"application/json\")")
+	}
+	for _, h := range d.Headers {
+		cname := strutil.CamelCase(h.Name)
+		sl.Printlnf(".addHeader(\"%s\", %s)", h.Name, cname)
+	}
+	switch d.Method {
+	case "POST":
+		sl.Println(".post(body)")
+	case "PUT":
+		sl.Println(".put(body)")
+	case "GET":
+		sl.Println(".get()")
+	case "DELETE":
+		sl.Println(".delete()")
+	default:
+		sl.Println(".get()")
+	}
+	sl.Println(".build();")
+	sl.LinePrefix = "    "
+
+	// Execute and handle response
+	if returnType != "void" {
+		sl.Println("try (Response response = client.newCall(request).execute()) {")
+		sl.LinePrefix = "        "
+		sl.Println("if (response.isSuccessful() && response.body() != null) {")
+		sl.LinePrefix = "            "
+		sl.Println("String respJson = response.body().string();")
+		sl.Printlnf("return mapper.readValue(respJson, %s.class);", returnType)
+		sl.LinePrefix = "        "
+		sl.Println("}")
+		sl.Println("return null;")
+		sl.LinePrefix = "    "
+		sl.Println("}")
+	} else {
+		sl.Println("try (Response response = client.newCall(request).execute()) {")
+		sl.LinePrefix = "    "
+		sl.Println("}")
+	}
+
+	sl.LinePrefix = ""
+	sl.Println("}")
+	// SLPinter.Println writes newline before the line, not after.
+	// Ensure the generated code ends with a newline for proper markdown formatting.
+	sl.Builder.WriteString("\n")
+	return sl.String()
+}

@@ -1505,6 +1505,9 @@ func generateDocs(skipPkgs []string) error {
 		// Angular HttpClient demo (exclude OpenAPI to keep simpler)
 		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
 
+		// Java HttpClient demo
+		d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, *DocAppName)
+
 		_ = seenGoTypes // used for global Go type defs in future
 	}
 	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))

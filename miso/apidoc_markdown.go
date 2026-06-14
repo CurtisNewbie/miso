@@ -147,6 +147,14 @@ func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 				b.WriteString(strutil.Spaces(2) + "```\n")
 			}
 
+			if r.JavaClientDemo != "" {
+				b.WriteRune('\n')
+				b.WriteString("- Java HttpClient Demo:\n")
+				b.WriteString(strutil.Spaces(2) + "```java\n")
+				b.WriteString(strutil.SAddLineIndent(r.JavaClientDemo, strutil.Spaces(2)))
+				b.WriteString(strutil.Spaces(2) + "```\n")
+			}
+
 			if r.NgTableDemo != "" {
 				b.WriteRune('\n')
 				b.WriteString("- Angular NgTable Demo:\n")
