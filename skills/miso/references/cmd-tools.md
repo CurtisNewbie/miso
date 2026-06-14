@@ -104,11 +104,8 @@ Automatically generate web endpoint registration code from `misoapi-*` comments.
 ### Usage
 
 ```bash
-# Generate endpoint registration code
+# Generate endpoint registration code and API doc
 misoapi
-
-# Generate and run app (to generate API doc)
-misoapi -run
 
 # Enable debug logging
 misoapi -debug
@@ -352,13 +349,10 @@ misogen
 // misoapi-desc: Create user
 func CreateUser(inb *miso.Inbound, req CreateUserReq) (CreateUserRes, error)
 
-# 3. Generate endpoint registration
+# 3. Generate endpoint registration and API doc
 misoapi
 
-# 4. Run and generate API doc
-misoapi -run
-
-# 5. Test with generated HTTP client
+# 4. Test with generated HTTP client
 # Copy curl from API doc, then:
 misocurl
 ```

@@ -57,11 +57,8 @@ go install github.com/curtisnewbie/miso/cmd/misoapi@latest
 ### Running misoapi
 
 ```bash
-# Generate API code
+# Generate API code and API doc
 misoapi
-
-# Generate and run the app (for API doc generation)
-misoapi -run
 ```
 
 ### Defining Endpoints

@@ -26,7 +26,7 @@ rail := flow.EmptyRail()
 rail := flow.NewRail(ctx)
 
 // Child span
-rail := rail.NextSpan()
+rail := rail.NewSpanId()
 ```
 
 ### Logging Methods
@@ -48,7 +48,7 @@ sid := rail.SpanId()
 
 // Context operations
 ctx := rail.Ctx()
-childRail := rail.NextSpan()
+childRail := rail.NewSpanId()
 
 // Timing operations
 start := time.Now()
@@ -59,7 +59,7 @@ rail.TimeOp(start, "Operation name")
 
 ```go
 // Create child span (same trace ID, new span ID)
-childRail := rail.NextSpan()
+childRail := rail.NewSpanId()
 
 // Create new trace (new trace ID, new span ID)
 newRail := rail.NewTrace()
