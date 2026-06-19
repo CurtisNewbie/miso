@@ -116,7 +116,7 @@ var (
 	DocFile         = flag.String("file", "doc/api.md", "Output file for API docs")
 	DocPort         = flag.String("port", "8080", "Server port for cURL examples in docs")
 	DocAppName      = flag.String("appname", "", "Application name for docs (falls back to conf.yml 'app.name' if unset)")
-	DocJavaDemo     = flag.Bool("java-demo", false, "Generate Java HttpClient demo (OkHttp + Jackson)")
+	DocJavaDemo     = flags.BoolVal("java-demo", false, "Generate Java HttpClient demo (OkHttp + Jackson)", false)
 	DocGoDemo       = flags.BoolVal("go-demo", true, "Generate miso.TClient demo", false)
 	DocNgClientDemo = flags.BoolVal("ngclient-demo", true, "Generate Angular HttpClient demo", false)
 	Oas             = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec (for all APIs)")
