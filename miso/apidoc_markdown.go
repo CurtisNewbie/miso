@@ -16,7 +16,14 @@ func displayURL(url string) string {
 	return strings.NewReplacer("${", "_var_", "}", "").Replace(url)
 }
 
-func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
+// MarkdownOpt holds options for GenMarkDownDoc.
+type MarkdownOpt struct {
+	ExclTClientDemo  bool
+	ExclNgClientDemo bool
+	ExclOpenApi      bool
+}
+
+func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc, opts MarkdownOpt) string {
 	b := strings.Builder{}
 	b.WriteString("# API Endpoints\n")
 
@@ -122,7 +129,7 @@ func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 
-		if r.MisoTClientDemo != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclTClientDemo) {
+		if r.MisoTClientDemo != "" && !opts.ExclTClientDemo {
 			b.WriteRune('\n')
 			b.WriteString("- Miso HTTP Client (experimental, demo may not work):\n")
 			b.WriteString(strutil.Spaces(2) + "```go\n")
@@ -138,7 +145,7 @@ func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			b.WriteString(strutil.Spaces(2) + "```\n")
 		}
 
-		if !GetPropBool(PropServerGenerateEndpointDocFileExclNgClientDemo) {
+		if !opts.ExclNgClientDemo {
 			if r.NgHttpClientDemo != "" {
 				b.WriteRune('\n')
 				b.WriteString("- Angular HttpClient Demo:\n")
@@ -164,7 +171,7 @@ func GenMarkDownDoc(hr []HttpRouteDoc, pd []PipelineDoc) string {
 			}
 		}
 
-		if r.OpenApiDoc != "" && !GetPropBool(PropServerGenerateEndpointDocFileExclOpenApi) {
+		if r.OpenApiDoc != "" && !opts.ExclOpenApi {
 			b.WriteRune('\n')
 			b.WriteString("- Open Api (experimental, demo may not work):\n")
 			b.WriteString(strutil.Spaces(2) + "```json\n")

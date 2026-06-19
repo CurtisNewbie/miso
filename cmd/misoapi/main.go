@@ -107,17 +107,22 @@ var (
 )
 
 var (
-	Debug      = flag.Bool("debug", false, "Enable debug log")
-	Perf       = flag.Bool("perf", false, "Enable performance timing logs")
-	DocFile    = flag.String("file", "doc/api.md", "Output file for API docs")
-	DocPort    = flag.String("port", "8080", "Server port for cURL examples in docs")
-	DocAppName = flag.String("appname", "", "Application name for docs (falls back to conf.yml 'app.name' if unset)")
-	NoDoc      = flag.Bool("no-doc", false, "Skip generating API docs (markdown)")
-	log        = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
-	SkipPkgs   = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
-	Oas        = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec")
-	OasFile    = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
-	JavaDemo   = flag.Bool("doc-java-demo", false, "Generate Java HttpClient demo (OkHttp + Jackson)")
+	log = cli.NewLog(cli.LogWithDebug(Debug), cli.LogWithCaller(func(level string) bool { return level != "INFO" }))
+
+	Debug           = flag.Bool("debug", false, "Enable debug log")
+	Perf            = flag.Bool("perf", false, "Enable performance timing logs")
+	SkipPkgs        = flag.String("skip-pkgs", "", "Comma-separated list of package paths to skip (e.g., 'internal/web,internal/middleware')")
+	Doc             = flags.BoolVal("doc", true, "Generate API docs, true or false (markdown)", false)
+	DocFile         = flag.String("file", "doc/api.md", "Output file for API docs")
+	DocPort         = flag.String("port", "8080", "Server port for cURL examples in docs")
+	DocAppName      = flag.String("appname", "", "Application name for docs (falls back to conf.yml 'app.name' if unset)")
+	DocJavaDemo     = flag.Bool("java-demo", false, "Generate Java HttpClient demo (OkHttp + Jackson)")
+	DocGoDemo       = flags.BoolVal("go-demo", true, "Generate miso.TClient demo", false)
+	DocNgClientDemo = flags.BoolVal("ngclient-demo", true, "Generate Angular HttpClient demo", false)
+	Oas             = flag.Bool("oas", false, "Generate OpenAPI 3.0 JSON spec (for all APIs)")
+	OasFile         = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
+	OasServer       = flag.String("oas-server", "", "Server URL for the generated OpenAPI 3.0 spec")
+	PerApiOas       = flags.BoolVal("per-api-oas", false, "Per endpoint OpenAPI JSON", false)
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -236,12 +241,12 @@ func main() {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	_, err = parseFiles(files, *NoDoc, skipPkgsList)
+	_, err = parseFiles(files, !*Doc, skipPkgsList)
 	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
 
-	if !*NoDoc {
+	if *Doc {
 		if err := generateDocs(skipPkgsList); err != nil {
 			log.Errorf("generateDocs failed, %v", err)
 		}
@@ -1507,7 +1512,7 @@ func generateDocs(skipPkgs []string) error {
 		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
 
 		// Java HttpClient demo
-		if *JavaDemo {
+		if *DocJavaDemo {
 			d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, *DocAppName)
 		}
 
@@ -1531,7 +1536,7 @@ func generateDocs(skipPkgs []string) error {
 		}
 
 		for _, d := range allDocs {
-			miso.GenOpenApiDoc(d, rootSpec)
+			miso.GenOpenApiDoc(d, rootSpec, *OasServer)
 		}
 
 		oasJson, err := json.MarshalIndent(rootSpec, "", "  ")
@@ -1550,7 +1555,11 @@ func generateDocs(skipPkgs []string) error {
 	}
 
 	mdStart := time.Now()
-	markdown := miso.GenMarkDownDoc(allDocs, pipelineDocs)
+	markdown := miso.GenMarkDownDoc(allDocs, pipelineDocs, miso.MarkdownOpt{
+		ExclTClientDemo:  !*DocGoDemo,
+		ExclNgClientDemo: !*DocNgClientDemo,
+		ExclOpenApi:      !*PerApiOas,
+	})
 
 	if err := os.MkdirAll(filepath.Dir(*DocFile), 0755); err != nil {
 		return fmt.Errorf("failed to create output directory for %s: %v", *DocFile, err)

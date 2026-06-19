@@ -5,16 +5,16 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-func GenOpenApiDoc(d HttpRouteDoc, root *openapi3.T) string {
+func GenOpenApiDoc(d HttpRouteDoc, root *openapi3.T, server string) string {
 	title := d.Desc
 	if title == "" {
 		title = d.Method + " " + d.Url
 	}
 
 	servers := openapi3.Servers{}
-	if v := GetPropStr(PropServerGenerateEndpointDocOpenApiSpecServer); v != "" {
+	if server != "" {
 		servers = openapi3.Servers{
-			&openapi3.Server{URL: v},
+			&openapi3.Server{URL: server},
 		}
 	}
 	op := &openapi3.Operation{

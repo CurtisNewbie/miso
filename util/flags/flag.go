@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,6 +65,38 @@ func Bool(name string, value bool, usage string, required bool) *bool {
 		requiredFlags[name] = struct{}{}
 	}
 	return p
+}
+
+// boolVal is a flag.Value that requires an explicit "true" or "false" argument
+// (e.g. -flag true, -flag=false) rather than the standard Go bool flag behavior
+// where -flag alone implicitly sets the value to true.
+type boolVal struct{ b *bool }
+
+func (v *boolVal) String() string {
+	if v.b == nil {
+		return "false"
+	}
+	return strconv.FormatBool(*v.b)
+}
+func (v *boolVal) Set(s string) error {
+	t, err := strconv.ParseBool(s)
+	if err != nil {
+		return fmt.Errorf("invalid bool value %q for flag, must be true or false", s)
+	}
+	*v.b = t
+	return nil
+}
+func (v *boolVal) IsBoolFlag() bool { return false }
+
+// BoolVal returns a *bool that requires an explicit "true"/"false" argument.
+// -flag alone is an error; use -flag true or -flag=false instead.
+func BoolVal(name string, value bool, usage string, required bool) *bool {
+	b := &boolVal{b: &value}
+	flag.Var(b, name, updateUsage(usage, required))
+	if required {
+		requiredFlags[name] = struct{}{}
+	}
+	return &value
 }
 
 func String(name string, value string, usage string, required bool) *string {

@@ -84,58 +84,6 @@ const (
 	// misoconfig-prop: bearer token for pprof and trace api authentication. If `server.auth.bearer` is set for all api, this prop is ignored.
 	PropServerPprofAuthBearer = "server.pprof.auth.bearer"
 
-	// misoconfig-prop: generate api doc | true
-	// misoconfig-alias: server.generate-endpoint-doc.enabled | v0.2.0
-	PropServerGenerateEndpointDocEnabled = "server.api-doc.enabled"
-
-	// misoconfig-prop: build webpage for the generated api doc | true
-	// misoconfig-alias: server.generate-endpoint-doc.web.enabled | v0.2.0
-	PropServerGenerateEndpointDocApiEnabled = "server.api-doc.web.enabled"
-
-	// misoconfig-prop: generate markdown api doc to the specified file
-	// misoconfig-alias: server.generate-endpoint-doc.file | v0.2.0
-	PropServerGenerateEndpointDocFile = "server.api-doc.file"
-
-	// misoconfig-prop: the generated markdown api doc should exclude miso.TClient demo | false
-	// misoconfig-alias: server.generate-endpoint-doc.file-excl-tclient-demo | v0.2.0
-	PropServerGenerateEndpointDocFileExclTClientDemo = "server.api-doc.file-excl-tclient-demo"
-
-	// misoconfig-prop: the generated markdown api doc should exclude Angular HttpClient demo | false
-	// misoconfig-alias: server.generate-endpoint-doc.file-excl-ng-client-demo | v0.2.0
-	PropServerGenerateEndpointDocFileExclNgClientDemo = "server.api-doc.file-excl-ngclient-demo"
-
-	// misoconfig-prop: the generated markdown api doc should exclude openapi json for each endpoint | true
-	// misoconfig-alias: server.generate-endpoint-doc.file-excl-openapi-spec | v0.2.0
-	PropServerGenerateEndpointDocFileExclOpenApi = "server.api-doc.file-excl-openapi-spec"
-
-	// misoconfig-prop: the generated endpoint documentation should include app name as the path prefix | true
-	// misoconfig-alias: server.generate-endpoint-doc.path-prefix-app | v0.2.0
-	PropServerGenerateEndpointDocInclPrefix = "server.api-doc.path-prefix-app"
-
-	// misoconfig-prop: server address specified in openapi json doc |
-	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.server | v0.2.0
-	PropServerGenerateEndpointDocOpenApiSpecServer = "server.api-doc.openapi-spec.server"
-
-	// misoconfig-prop: path to generated openapi json for all endpoints |
-	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.file | v0.2.0
-	PropServerGenerateEndpointDocOpenApiSpecFile = "server.api-doc.openapi-spec.file"
-
-	// misoconfig-prop: path patterns for endpoints in openapi json (`slice of string`) |
-	// misoconfig-alias: server.generate-endpoint-doc.openapi-spec.path-patterns | v0.2.0
-	PropServerGenerateEndpointDocOpenApiSpecPathPatterns = "server.api-doc.openapi-spec.path-patterns"
-
-	// misoconfig-prop: file that contains the generated api doc golang demo
-	PropServerApiDocGoFile = "server.api-doc.go.file"
-
-	// misoconfig-prop: whether the generated api-doc golang demo file should compile | false
-	PropServerApiDocGoCompileFile = "server.api-doc.go.compile-file"
-
-	// misoconfig-prop: path patterns for endpoints that are written to api doc golang demo file
-	PropServerApiDocGoPathPatterns = "server.api-doc.go.path-patterns"
-
-	// misoconfig-prop: path patterns excluding for endpoints that should not be written to api doc golang demo file
-	PropServerApiDocGoExclPathPatterns = "server.api-doc.go.excl-path-patterns"
-
 	// misoconfig-prop: automatically map header values to request struct | true
 	PropServerRequestAutoMapHeader = "server.request.mapping.header"
 
@@ -274,16 +222,6 @@ func init() {
 		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckInterval", "v0.2.0", PropHealthCheckInterval})
 		deprecatedProps = append(deprecatedProps, []string{"consul.healthCheckTimeout", "v0.2.0", PropHealthcheckTimeout})
 		deprecatedProps = append(deprecatedProps, []string{"server.gracefulShutdownTimeSec", "v0.2.0", PropServerGracefulShutdownTimeSec})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.enabled", "v0.2.0", PropServerGenerateEndpointDocEnabled})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.web.enabled", "v0.2.0", PropServerGenerateEndpointDocApiEnabled})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file", "v0.2.0", PropServerGenerateEndpointDocFile})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-tclient-demo", "v0.2.0", PropServerGenerateEndpointDocFileExclTClientDemo})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-ng-client-demo", "v0.2.0", PropServerGenerateEndpointDocFileExclNgClientDemo})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.file-excl-openapi-spec", "v0.2.0", PropServerGenerateEndpointDocFileExclOpenApi})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.path-prefix-app", "v0.2.0", PropServerGenerateEndpointDocInclPrefix})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.server", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecServer})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.file", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecFile})
-		deprecatedProps = append(deprecatedProps, []string{"server.generate-endpoint-doc.openapi-spec.path-patterns", "v0.2.0", PropServerGenerateEndpointDocOpenApiSpecPathPatterns})
 		for _, p := range deprecatedProps {
 			if HasProp(p[0]) {
 				Errorf("Config prop: '%v' has been deprecated since '%v', please change to '%v'", p[0], p[1], p[2])
@@ -330,13 +268,6 @@ func init() {
 	SetDefProp(PropServerRequestValidateEnabled, true)
 	SetDefProp(PropServerRequestLogEnabled, true)
 	SetDefProp(PropServerPprofEnabled, false)
-	SetDefProp(PropServerGenerateEndpointDocEnabled, true)
-	SetDefProp(PropServerGenerateEndpointDocApiEnabled, true)
-	SetDefProp(PropServerGenerateEndpointDocFileExclTClientDemo, false)
-	SetDefProp(PropServerGenerateEndpointDocFileExclNgClientDemo, false)
-	SetDefProp(PropServerGenerateEndpointDocFileExclOpenApi, true)
-	SetDefProp(PropServerGenerateEndpointDocInclPrefix, true)
-	SetDefProp(PropServerApiDocGoCompileFile, false)
 	SetDefProp(PropServerRequestAutoMapHeader, true)
 	SetDefProp(PropServerGinValidationDisabled, true)
 }
