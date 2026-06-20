@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"go/format"
@@ -11,7 +10,6 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -123,6 +121,9 @@ var (
 	OasFile         = flag.String("oas-file", "doc/openapi.json", "Output file for OpenAPI 3.0 JSON spec")
 	OasServer       = flag.String("oas-server", "", "Server URL for the generated OpenAPI 3.0 spec")
 	PerApiOas       = flags.BoolVal("per-api-oas", false, "Per endpoint OpenAPI JSON", false)
+	GoClientFile    = flag.String("go-client-file", "", "Output Go source file with type definitions and TClient demos (e.g., 'internal/client/api_client.go')")
+	GoClientApis    = flag.String("go-client-apis", "", "Comma-separated API patterns to include (format: 'METHOD:path' or 'path', e.g., 'POST:/api/user,GET:/api/order/*')")
+	GoClientCompile = flags.BoolVal("go-client-compile", false, "Whether the generated Go client file should compile (false adds //go:build miso_gen_do_not_build)", false)
 )
 
 // perfLog logs at INFO level only when the -perf flag is set.
@@ -1066,109 +1067,6 @@ func parseRef(r string) (string, bool) {
 	return strings.TrimSpace(s[1]), true
 }
 
-// Add _ imports
-//
-// e.g.,
-//
-//	var restDstFiles []string = slutil.Transform(dstFiles,
-//			slutil.MapFunc(func(f DstFile) string { return f.Path }),
-//			slutil.FilterFunc(func(p string) bool {
-//				return path.Base(p) == "main.go"
-//			}),
-//		)
-//
-//	for _, m := range restDstFiles {
-//			if err := addBlankImports(m, "web", modName, genPkgs.CopyKeys()); err != nil {
-//				log.ErrorPrintlnf("Add imports in main.go failed, %v", err)
-//				panic(err)
-//			}
-//	}
-func addBlankImports(filePath string, pkgName string, modName string, importPath []string) error {
-	dir := filepath.Dir(filePath)
-	log.Debugf("dir: %v, filePath: %v, modName: %v", dir, filePath, modName)
-
-	fset := token.NewFileSet()
-	dec := decorator.NewDecoratorWithImports(fset, pkgName, goast.New())
-
-	fc, err := osutil.ReadFileAll(filePath)
-	if err != nil {
-		return err
-	}
-
-	f, err := dec.Parse(fc)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	var importDecl *dst.GenDecl
-	for _, decl := range f.Decls {
-		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
-			importDecl = genDecl
-			break
-		}
-	}
-
-	if importDecl == nil {
-		importDecl = &dst.GenDecl{
-			Tok:   token.IMPORT,
-			Specs: []dst.Spec{},
-		}
-		newDecls := make([]dst.Decl, 0, len(f.Decls)+1)
-		newDecls = append(newDecls, importDecl)
-		newDecls = append(newDecls, f.Decls...)
-		f.Decls = newDecls
-	}
-
-	// filter already included imports
-	importPath = slutil.Filter(importPath, func(s string) bool {
-		for _, imp := range f.Imports {
-			if imp.Path.Value == fmt.Sprintf("%q", s) {
-				return false
-			}
-		}
-		return true
-	})
-	if len(importPath) < 1 {
-		return nil
-	}
-
-	// insert import specs
-	for _, imp := range importPath {
-		newImport := &dst.ImportSpec{
-			Name: &dst.Ident{
-				Name: "_",
-			},
-			Path: &dst.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("%q", imp),
-			},
-		}
-		importDecl.Specs = append(importDecl.Specs, newImport)
-	}
-
-	// restore to *ast.File
-	r := decorator.NewRestorerWithImports(modName, gopackages.New(dir))
-	fr := r.FileRestorer()
-	rstf, err := fr.RestoreFile(f)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	// write file
-	buf := &bytes.Buffer{}
-	if err := format.Node(buf, fr.Fset, rstf); err != nil {
-		return errs.Wrap(err)
-	}
-
-	if err := os.WriteFile(filePath, buf.Bytes(), 0644); err != nil {
-		return errs.Wrap(err)
-	}
-
-	log.Infof("Added import %q to %s\n", importPath, filePath)
-	tools.RunGoImports(filePath)
-	return nil
-}
-
 func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, importPath []string) error {
 	if len(importPath) < 1 {
 		return nil
@@ -1358,20 +1256,97 @@ func restoreDstFile(filePath string, modName string, f *dst.File) error {
 	return nil
 }
 
-// check if package is imported in main
-func checkImported(pkgPath string) {
-	out, err := cli.Run("grep", []string{"-r", pkgPath, "--include", "*.go"})
-	if err != nil {
-		var extErr *exec.ExitError
-		if errors.As(err, &extErr) && extErr.ExitCode() == 1 {
-			log.Infof(cli.ANSIRed+"Warning: (1) package '%v' is not imported!"+cli.ANSIReset, pkgPath)
-		} else {
-			log.Errorf("check package import failed, pkg: %v, out: %s, %v", pkgPath, out, err)
+// writeGoApiFile generates a standalone Go source file with type definitions
+// and TClient demos for APIs matching the configured patterns.
+func writeGoApiFile(allDocs []miso.HttpRouteDoc) error {
+	fp := *GoClientFile
+	if fp == "" {
+		return nil
+	}
+
+	// Build match function from include/exclude patterns
+	match := buildApiPatternMatcher(*GoClientApis)
+
+	// Collect type defs (deduplicated) and client functions for matching routes
+	seenContent := hash.NewSet[string]()
+	var typeDefs []string
+	var clientFuncs []string
+	for _, d := range allDocs {
+		if !match(d) {
+			continue
 		}
-	} else {
-		if strings.TrimSpace(string(out)) == "" {
-			log.Infof(cli.ANSIRed+"Warning: (2) package '%v' is not imported!"+cli.ANSIReset, pkgPath)
+		if d.JsonReqGoDef != "" && seenContent.Add(d.JsonReqGoDef) {
+			typeDefs = append(typeDefs, d.JsonReqGoDef)
 		}
+		if d.JsonRespGoDef != "" && seenContent.Add(d.JsonRespGoDef) {
+			typeDefs = append(typeDefs, d.JsonRespGoDef)
+		}
+		if d.MisoTClientWithoutTypes != "" {
+			clientFuncs = append(clientFuncs, d.MisoTClientWithoutTypes)
+		}
+	}
+
+	if len(clientFuncs) == 0 {
+		log.Infof("No APIs matched for Go client file generation, skipping %s", fp)
+		return nil
+	}
+
+	// Build file content
+	var b strings.Builder
+
+	// Optional build tag for non-compilable mode
+	if !*GoClientCompile {
+		b.WriteString("//go:build miso_gen_do_not_build\n\n")
+	}
+	b.WriteString("// auto generated by miso, please do not modify\n")
+
+	// Package declaration derived from output path directory
+	pkgName := path.Base(path.Dir(fp))
+	if pkgName == "." || pkgName == "/" {
+		pkgName = "main"
+	}
+	b.WriteString("\npackage " + pkgName + "\n")
+
+	// Always include miso import; goimports (run below) will add/remove as needed.
+	b.WriteString("\nimport (\n")
+	b.WriteString("\t\"github.com/curtisnewbie/miso/miso\"\n")
+	b.WriteString(")\n")
+
+	// Write type definitions
+	for _, def := range typeDefs {
+		b.WriteString("\n" + def + "\n")
+	}
+
+	// Write TClient functions
+	for _, fn := range clientFuncs {
+		b.WriteString("\n" + fn + "\n")
+	}
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(filepath.Dir(fp), 0755); err != nil {
+		return errs.Wrapf(err, "failed to create output directory for %s", fp)
+	}
+	if err := os.WriteFile(fp, []byte(b.String()), 0644); err != nil {
+		return errs.Wrapf(err, "failed to write Go client file %s", fp)
+	}
+
+	// Fix imports with goimports
+	tools.RunGoImports(fp)
+
+	log.Infof("Go client file written to %s (%d APIs, %d type defs)", fp, len(clientFuncs), len(typeDefs))
+	return nil
+}
+
+// buildApiPatternMatcher returns a function that tests whether an HttpRouteDoc
+// matches the comma-separated pattern string. Patterns use format "METHOD:path"
+// or "path". "*" in path acts as a glob wildcard.
+func buildApiPatternMatcher(patternStr string) func(d miso.HttpRouteDoc) bool {
+	patterns := strutil.SplitStr(patternStr, ",")
+	if len(patterns) == 0 {
+		return func(d miso.HttpRouteDoc) bool { return true }
+	}
+	return func(d miso.HttpRouteDoc) bool {
+		return strutil.MatchApiPatterns(d.Method, d.Url, patterns)
 	}
 }
 
@@ -1499,14 +1474,16 @@ func generateDocs(skipPkgs []string) error {
 		}
 
 		// Miso HTTP Client demo
-		d.MisoTClientDemo = miso.GenTClientDemo(*d, *DocAppName)
+		rawTClient := miso.GenTClientDemo(*d, *DocAppName)
+
+		d.MisoTClientDemo = rawTClient
 		if d.JsonRespGoDef != "" {
 			d.MisoTClientDemo = d.JsonRespGoDef + "\n" + d.MisoTClientDemo
 		}
 		if d.JsonReqGoDef != "" {
 			d.MisoTClientDemo = d.JsonReqGoDef + "\n" + d.MisoTClientDemo
 		}
-		d.MisoTClientWithoutTypes = d.MisoTClientDemo
+		d.MisoTClientWithoutTypes = rawTClient
 
 		// Angular HttpClient demo (exclude OpenAPI to keep simpler)
 		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
@@ -1519,6 +1496,13 @@ func generateDocs(skipPkgs []string) error {
 		_ = seenGoTypes // used for global Go type defs in future
 	}
 	perfLog("Per-doc rendering elapsed: %v, %d docs", time.Since(renderStart), len(allDocs))
+
+	// Generate standalone Go client file if requested
+	if *GoClientFile != "" {
+		if err := writeGoApiFile(allDocs); err != nil {
+			return err
+		}
+	}
 
 	// Generate aggregate OpenAPI 3.0 spec
 	if *Oas {

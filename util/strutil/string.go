@@ -546,6 +546,52 @@ func MatchPath(pattern, s string) bool {
 	return ok
 }
 
+// MatchApiPattern checks whether an HTTP method and URL match a pattern.
+//
+// Pattern format: "METHOD:path" (e.g., "POST:/api/user") or "path" (method-agnostic).
+// The path part uses doublestar glob semantics (* matches within a single path segment,
+// ** matches zero or more directories). Method comparison is case-insensitive.
+//
+// Examples:
+//
+//	strutil.MatchApiPattern("POST", "/api/user", "POST:/api/user")   // true
+//	strutil.MatchApiPattern("GET", "/api/user", "/api/user")          // true
+//	strutil.MatchApiPattern("GET", "/api/user", "POST:/api/user")     // false
+func MatchApiPattern(method, url, pattern string) bool {
+	methodPat, pathPat := "", pattern
+	if idx := strings.IndexByte(pattern, ':'); idx > -1 {
+		prefix := pattern[:idx]
+		if isHttpMethodStr(prefix) {
+			methodPat = prefix
+			pathPat = pattern[idx+1:]
+		}
+	}
+	if methodPat != "" && !strings.EqualFold(method, methodPat) {
+		return false
+	}
+	return MatchPath(pathPat, url)
+}
+
+// MatchApiPatterns checks whether an HTTP method and URL match any of the given patterns.
+// See [MatchApiPattern] for pattern format.
+func MatchApiPatterns(method, url string, patterns []string) bool {
+	for _, p := range patterns {
+		if MatchApiPattern(method, url, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// isHttpMethodStr checks whether s looks like an HTTP method name (case-insensitive).
+func isHttpMethodStr(s string) bool {
+	switch strings.ToUpper(s) {
+	case "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS":
+		return true
+	}
+	return false
+}
+
 func ContainsAnyStr(s string, substrings ...string) bool {
 	for _, sub := range substrings {
 		if strings.Contains(s, sub) {

@@ -374,6 +374,40 @@ func TestNamedSprintfkv(t *testing.T) {
 	t.Log(NamedSprintfkv("my name is ${name}", "name", "slim shady"))
 }
 
+func TestMatchApiPattern(t *testing.T) {
+	tests := []struct {
+		name    string
+		method  string
+		url     string
+		pattern string
+		want    bool
+	}{
+		{name: "exact match with method", method: "POST", url: "/api/user", pattern: "POST:/api/user", want: true},
+		{name: "method mismatch", method: "GET", url: "/api/user", pattern: "POST:/api/user", want: false},
+		{name: "path mismatch with method", method: "POST", url: "/api/order", pattern: "POST:/api/user", want: false},
+		{name: "glob match with method", method: "GET", url: "/api/user/123", pattern: "GET:/api/user/*", want: true},
+		{name: "glob no match path", method: "GET", url: "/api/order/456", pattern: "GET:/api/user/*", want: false},
+		{name: "no method exact match", method: "GET", url: "/api/user", pattern: "/api/user", want: true},
+		{name: "no method POST exact match", method: "POST", url: "/api/user", pattern: "/api/user", want: true},
+		{name: "glob without method", method: "DELETE", url: "/api/user/789", pattern: "/api/user/*", want: true},
+		{name: "double star matches nested", method: "GET", url: "/api/user/123/profile", pattern: "GET:/api/**", want: true},
+		{name: "double star matches root", method: "GET", url: "/api/user", pattern: "GET:/api/**", want: true},
+		{name: "lowercase method match", method: "post", url: "/api/user", pattern: "POST:/api/user", want: true},
+		{name: "leading slash matters", method: "GET", url: "api/user", pattern: "GET:/api/user", want: false},
+		{name: "both without leading slash", method: "GET", url: "api/user", pattern: "GET:api/user", want: true},
+		{name: "colon in path not method", method: "GET", url: "/api/v1", pattern: "GET:/api/v1", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MatchApiPattern(tt.method, tt.url, tt.pattern)
+			if got != tt.want {
+				t.Errorf("MatchApiPattern(%q, %q, %q) = %v, want %v", tt.method, tt.url, tt.pattern, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBuilder(t *testing.T) {
 	b := NewBuilder().
 		WithIndent(strings.Repeat(".", 2), 1).
@@ -388,4 +422,80 @@ func TestBuilder(t *testing.T) {
 		}).
 		Printlnf("}")
 	fmt.Print(b.String())
+}
+
+func TestMatchApiPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		url      string
+		patterns []string
+		want     bool
+	}{
+		{
+			name:     "empty patterns",
+			method:   "GET",
+			url:      "/api/user",
+			patterns: nil,
+			want:     false,
+		},
+		{
+			name:     "one match",
+			method:   "POST",
+			url:      "/api/user",
+			patterns: []string{"POST:/api/user"},
+			want:     true,
+		},
+		{
+			name:     "one no match",
+			method:   "GET",
+			url:      "/api/user",
+			patterns: []string{"POST:/api/user"},
+			want:     false,
+		},
+		{
+			name:     "multiple first matches",
+			method:   "POST",
+			url:      "/api/user",
+			patterns: []string{"POST:/api/user", "GET:/api/order"},
+			want:     true,
+		},
+		{
+			name:     "multiple second matches",
+			method:   "GET",
+			url:      "/api/order",
+			patterns: []string{"POST:/api/user", "GET:/api/order"},
+			want:     true,
+		},
+		{
+			name:     "multiple none match",
+			method:   "DELETE",
+			url:      "/api/other",
+			patterns: []string{"POST:/api/user", "GET:/api/order"},
+			want:     false,
+		},
+		{
+			name:     "method-agnostic pattern",
+			method:   "POST",
+			url:      "/api/user",
+			patterns: []string{"/api/user"},
+			want:     true,
+		},
+		{
+			name:     "glob pattern in list",
+			method:   "GET",
+			url:      "/api/user/123",
+			patterns: []string{"POST:/api/order", "GET:/api/user/*"},
+			want:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MatchApiPatterns(tt.method, tt.url, tt.patterns)
+			if got != tt.want {
+				t.Errorf("MatchApiPatterns(%q, %q, %v) = %v, want %v", tt.method, tt.url, tt.patterns, got, tt.want)
+			}
+		})
+	}
 }
