@@ -93,9 +93,11 @@ type MisoApp struct {
 	// channel for signaling server shutdown
 	manualSigQuit chan int
 
-	shuttingDown *atomic.Bool
-	shutdownHook []OrderedShutdownHook
-	shmu         sync.Mutex // mutex for shutdownHook
+	shuttingDown     *atomic.Bool
+	shuttingDownCh   chan struct{}
+	shuttingDownOnce sync.Once
+	shutdownHook     []OrderedShutdownHook
+	shmu             sync.Mutex // mutex for shutdownHook
 
 	serverBootrapCallbacks      []ComponentBootstrap
 	configLoader                []func(r Rail) error
@@ -120,6 +122,7 @@ func newApp() *MisoApp {
 		manualSigQuit:    make(chan int, 15), // increase size to 15 to avoid blocking multiple Shutdown() calls
 		configLoaded:     false,
 		shuttingDown:     &atomic.Bool{},
+		shuttingDownCh:   make(chan struct{}),
 		store:            &appStore{store: hash.NewStrRWMap[any]()},
 		config:           newAppConfig(),
 		fullyBoostrapped: &atomic.Bool{},
@@ -356,9 +359,15 @@ func (a *MisoApp) IsShuttingDown() bool {
 	return a.shuttingDown.Load()
 }
 
+// channel closed when server starts shutting down
+func (a *MisoApp) IsShuttingDownCh() <-chan struct{} {
+	return a.shuttingDownCh
+}
+
 // mark that the server is shutting down
 func (a *MisoApp) markServerShuttingDown() {
 	a.shuttingDown.Store(true)
+	a.shuttingDownOnce.Do(func() { close(a.shuttingDownCh) })
 }
 
 // Shutdown server
@@ -582,6 +591,11 @@ func BootstrapServer(args []string) {
 // check if the server is shutting down
 func IsShuttingDown() bool {
 	return App().IsShuttingDown()
+}
+
+// channel closed when server starts shutting down
+func IsShuttingDownCh() <-chan struct{} {
+	return App().IsShuttingDownCh()
 }
 
 // Shutdown server
