@@ -6,6 +6,7 @@ retract v1.0.12 // human mistake, miso v1 is not ready.
 
 require (
 	github.com/ChimeraCoder/gojson v1.1.0
+	github.com/RealAlexandreAI/json-repair v0.0.15
 	github.com/bmatcuk/doublestar/v4 v4.8.0
 	github.com/bsm/redislock v0.9.4
 	github.com/curtisnewbie/svc v0.0.9
