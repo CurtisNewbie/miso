@@ -242,7 +242,7 @@ func main() {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	_, err = parseFiles(files, !*Doc, skipPkgsList)
+	_, err = parseFiles(files, true, skipPkgsList)
 	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
