@@ -616,6 +616,20 @@ func StopTaskScheduler() {
 	module().stop()
 }
 
+// TriggerDistributedTask manually triggers a distributed task by name.
+//
+// The task is pushed to the Redis queue and will be picked up by any worker node
+// in the same schedule group. Unlike cron-triggered execution, this bypasses the
+// master-node check — any node calling this function will produce the task.
+//
+// Returns an error if the task name is blank or the queue operation fails.
+func TriggerDistributedTask(rail miso.Rail, name string) error {
+	if name == "" {
+		return errs.NewErrf("Task name is empty")
+	}
+	return module().produceTask(rail, name)
+}
+
 func distriTaskBootstrapCondition(rail miso.Rail) (bool, error) {
 	return module().enabled(), nil
 }
