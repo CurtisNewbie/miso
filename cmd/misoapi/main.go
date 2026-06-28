@@ -59,6 +59,7 @@ const (
 	importGorm     = "gorm.io/gorm"
 	importMySQL    = "github.com/curtisnewbie/miso/middleware/mysql"
 	importDbQuery  = "github.com/curtisnewbie/miso/middleware/dbquery"
+	importAtom     = "github.com/curtisnewbie/miso/util/atom"
 )
 
 const (
@@ -88,6 +89,8 @@ var (
 		typeGormDbPtr:      importDbQuery,
 		typeMisoInboundPtr: "",
 		typeMisoRail:       "",
+		"atom.Time":        importAtom,
+		"*atom.Time":       importAtom,
 	}
 	injectToken = map[string]string{
 		typeMisoInboundPtr: "inb",
@@ -1031,6 +1034,11 @@ func parseParamName(t dst.Expr, importSpec map[string]string, imports hash.Set[s
 	case *dst.SelectorExpr:
 		n := parseParamName(v.X, importSpec, imports)
 		guessImport(n, importSpec, imports)
+		// Normalize to canonical package name (e.g., alias "at" -> canonical "atom")
+		// to ensure generated code uses the correct package name matching the import.
+		if p, ok := importSpec[n]; ok {
+			n = path.Base(p)
+		}
 		sn := v.Sel.String()
 		if sn != "" {
 			n += "." + sn
@@ -1291,6 +1299,11 @@ func writeGoApiFile(allDocs []miso.HttpRouteDoc) error {
 		return nil
 	}
 
+	// Collect import paths from field descriptions so the generated file
+	// has correct imports (e.g., atom.Time -> github.com/curtisnewbie/miso/util/atom)
+	// instead of relying on goimports which may resolve to a wrong package.
+	importPaths := collectTypeImports(allDocs, match)
+
 	// Build file content
 	var b strings.Builder
 
@@ -1307,9 +1320,10 @@ func writeGoApiFile(allDocs []miso.HttpRouteDoc) error {
 	}
 	b.WriteString("\npackage " + pkgName + "\n")
 
-	// Always include miso import; goimports (run below) will add/remove as needed.
 	b.WriteString("\nimport (\n")
-	b.WriteString("\t\"github.com/curtisnewbie/miso/miso\"\n")
+	for _, imp := range importPaths {
+		b.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
+	}
 	b.WriteString(")\n")
 
 	// Write type definitions
@@ -1335,6 +1349,36 @@ func writeGoApiFile(allDocs []miso.HttpRouteDoc) error {
 
 	log.Infof("Go client file written to %s (%d APIs, %d type defs)", fp, len(clientFuncs), len(typeDefs))
 	return nil
+}
+
+// collectTypeImports collects unique import paths from the field descriptions
+// of matching API docs. This ensures the generated Go client file includes
+// correct imports for external types (e.g., atom.Time -> github.com/curtisnewbie/miso/util/atom)
+// instead of relying on goimports which may resolve to a wrong package.
+func collectTypeImports(allDocs []miso.HttpRouteDoc, match func(miso.HttpRouteDoc) bool) []string {
+	pkgs := hash.NewSet[string]()
+	pkgs.Add("github.com/curtisnewbie/miso/miso")
+	for _, d := range allDocs {
+		if !match(d) {
+			continue
+		}
+		collectFieldsPkgs(d.JsonRequestDesc.Fields, pkgs)
+		collectFieldsPkgs(d.JsonResponseDesc.Fields, pkgs)
+	}
+	keys := pkgs.CopyKeys()
+	sort.Strings(keys)
+	return keys
+}
+
+func collectFieldsPkgs(fields []miso.FieldDesc, pkgs hash.Set[string]) {
+	for _, f := range fields {
+		if f.TypePkg != "" {
+			pkgs.Add(f.TypePkg)
+		}
+		if len(f.Fields) > 0 {
+			collectFieldsPkgs(f.Fields, pkgs)
+		}
+	}
 }
 
 // buildApiPatternMatcher returns a function that tests whether an HttpRouteDoc
