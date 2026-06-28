@@ -214,6 +214,91 @@ func main() {
 	})
 	flags.Parse()
 
+	// Parse skip packages once (global flag)
+	var skipPkgsList []string
+	if *SkipPkgs != "" {
+		skipPkgsList = strings.Split(*SkipPkgs, ",")
+		for i := range skipPkgsList {
+			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
+		}
+	}
+
+	// Check if go.mod exists in the current directory.
+	_, goModErr := os.Stat("go.mod")
+	if goModErr == nil {
+		// Single module mode — current behavior.
+		processModule(skipPkgsList)
+		return
+	}
+
+	// Monorepo mode: no go.mod at root; scan subdirectories for Go modules.
+	modDirs := findGoModDirs(".")
+	if len(modDirs) == 0 {
+		log.Errorf("no go.mod found in current directory or subdirectories; misoapi requires a Go module")
+		return
+	}
+
+	log.Infof("Monorepo detected: %d module(s) found", len(modDirs))
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		log.Errorf("failed to get current directory: %v", err)
+		return
+	}
+
+	// Save original flag values so each module gets a clean slate for conf.yml overrides.
+	origAppName := *DocAppName
+	origPort := *DocPort
+
+	for _, modDir := range modDirs {
+		log.Infof("=== Processing module: %s ===", modDir)
+
+		// Reset flag defaults before each module so conf.yml overrides don't bleed across modules.
+		*DocAppName = origAppName
+		*DocPort = origPort
+
+		if err := os.Chdir(modDir); err != nil {
+			log.Errorf("failed to chdir to %s: %v", modDir, err)
+			continue
+		}
+		processModule(skipPkgsList)
+		if err := os.Chdir(origDir); err != nil {
+			log.Errorf("failed to chdir back to %s: %v", origDir, err)
+			return
+		}
+	}
+}
+
+// findGoModDirs recursively finds directories containing go.mod under root.
+// Nested modules are skipped — only the outermost module per subtree is returned.
+// Vendor, .git, node_modules, and testdata directories are skipped.
+func findGoModDirs(root string) []string {
+	var dirs []string
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+			return filepath.SkipDir
+		}
+		if path == root {
+			return nil // only interested in subdirectories
+		}
+		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+			dirs = append(dirs, path)
+			return filepath.SkipDir // don't recurse into module directories
+		}
+		return nil
+	})
+	return dirs
+}
+
+// processModule runs the core misoapi logic in the current working directory.
+func processModule(skipPkgsList []string) {
 	// If conf.yml exists and flags were not explicitly set, load defaults from it.
 	if fi, err := os.Stat("conf.yml"); err == nil && !fi.IsDir() {
 		if v := loadConfYml(); v != nil {
@@ -232,14 +317,6 @@ func main() {
 		}
 	}
 
-	var skipPkgsList []string
-	if *SkipPkgs != "" {
-		skipPkgsList = strings.Split(*SkipPkgs, ",")
-		for i := range skipPkgsList {
-			skipPkgsList[i] = strings.TrimSpace(skipPkgsList[i])
-		}
-	}
-
 	files, err := walkDir(".", ".go")
 	if err != nil {
 		log.Errorf("walkDir failed, %v", err)
@@ -254,7 +331,6 @@ func main() {
 		if err := generateDocs(skipPkgsList); err != nil {
 			log.Errorf("generateDocs failed, %v", err)
 		}
-		return
 	}
 }
 
