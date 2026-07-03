@@ -16,9 +16,11 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/errs"
+	"github.com/curtisnewbie/miso/util/hash"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
+	"github.com/enetx/g"
 	"github.com/enetx/surf"
 	"github.com/spf13/cast"
 	"github.com/tmaxmax/go-sse"
@@ -43,6 +45,9 @@ var (
 
 	impersonateOnce   sync.Once
 	impersonateClient *http.Client
+
+	impersonateProxyCache = hash.NewStrRWMap[*http.Client]()
+	proxyClientCache      = hash.NewStrRWMap[*http.Client]()
 )
 
 func init() {
@@ -383,24 +388,104 @@ func (t *Client) UseClient(client *http.Client) *Client {
 	return t
 }
 
+// normalizeProxyAddr normalizes a proxy address for use as a cache key and in surf/transport configuration.
+func normalizeProxyAddr(proxyAddr string) string {
+	if !strings.Contains(proxyAddr, "://") {
+		proxyAddr = "http://" + proxyAddr
+	}
+	return strings.TrimRight(proxyAddr, "/")
+}
+
 // GetImpersonateClient returns a lazily initialized Chrome-impersonating *http.Client (via github.com/enetx/surf).
 func GetImpersonateClient() *http.Client {
-	impersonateOnce.Do(func() {
-		surfClient := surf.NewClient().
+	return GetImpersonateClientWithProxy("")
+}
+
+// GetImpersonateClientWithProxy returns a lazily initialized Chrome-impersonating *http.Client with an optional proxy.
+// proxyAddr can be in "host:port" form (e.g. "localhost:7897") or a full URL (e.g. "http://proxy:8080", "socks5://proxy:1080").
+// Returns the no-proxy client if proxyAddr is empty or if the surf client fails to build with the given proxy.
+func GetImpersonateClientWithProxy(proxyAddr string) *http.Client {
+	if proxyAddr == "" {
+		impersonateOnce.Do(func() {
+			surfClient := surf.NewClient().
+				Builder().
+				Impersonate().
+				Chrome().
+				Session().
+				Build().
+				Unwrap()
+			impersonateClient = surfClient.Std()
+		})
+		return impersonateClient
+	}
+
+	proxyAddr = normalizeProxyAddr(proxyAddr)
+
+	client, cacheErr := impersonateProxyCache.GetElseErr(proxyAddr, func(k string) (*http.Client, error) {
+		result := surf.NewClient().
 			Builder().
 			Impersonate().
 			Chrome().
 			Session().
-			Build().
-			Unwrap()
-		impersonateClient = surfClient.Std()
+			Proxy(g.String(proxyAddr)).
+			Build()
+		if !result.IsOk() {
+			return nil, fmt.Errorf("surf client build failed")
+		}
+		return result.Unwrap().Std(), nil
 	})
-	return impersonateClient
+	if cacheErr != nil || client == nil {
+		return GetImpersonateClient()
+	}
+	return client
+}
+
+// GetProxyClient returns a standard *http.Client (no browser impersonation) with an optional proxy.
+func GetProxyClient(proxyAddr string) *http.Client {
+	if proxyAddr == "" {
+		return MisoDefaultClient
+	}
+	proxyAddr = normalizeProxyAddr(proxyAddr)
+	client, _ := proxyClientCache.GetElseErr(proxyAddr, func(k string) (*http.Client, error) {
+		proxyURL, err := url.Parse(proxyAddr)
+		if err != nil {
+			return nil, err
+		}
+		tr := MisoDefaultClient.Transport.(*http.Transport).Clone()
+		tr.Proxy = http.ProxyURL(proxyURL)
+		return &http.Client{
+			Transport:     tr,
+			CheckRedirect: MisoDefaultClient.CheckRedirect,
+			Jar:           MisoDefaultClient.Jar,
+			Timeout:       MisoDefaultClient.Timeout,
+		}, nil
+	})
+	if client == nil {
+		return MisoDefaultClient
+	}
+	return client
 }
 
 // Impersonate switches the underlying *http.Client to a Chrome-impersonating client (via github.com/enetx/surf).
+// This does NOT set a proxy. Use ImpersonateWithProxy to combine impersonation with a proxy.
+// For a proxy without impersonation, use WithProxy.
 func (t *Client) Impersonate() *Client {
-	t.client = GetImpersonateClient()
+	return t.ImpersonateWithProxy("")
+}
+
+// ImpersonateWithProxy switches the underlying *http.Client to a Chrome-impersonating client with an optional proxy.
+// proxy can be in "host:port" form or a full URL. Pass empty string for no proxy.
+// For a proxy without impersonation, use WithProxy.
+func (t *Client) ImpersonateWithProxy(proxy string) *Client {
+	t.client = GetImpersonateClientWithProxy(proxy)
+	return t
+}
+
+// WithProxy sets a proxy for the HTTP client without enabling browser impersonation.
+// proxy can be in "host:port" form or a full URL. Pass empty string for no proxy.
+// For impersonation with proxy, use ImpersonateWithProxy instead.
+func (t *Client) WithProxy(proxy string) *Client {
+	t.client = GetProxyClient(proxy)
 	return t
 }
 
