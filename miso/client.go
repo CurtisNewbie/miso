@@ -12,12 +12,14 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/osutil"
 	"github.com/curtisnewbie/miso/util/strutil"
+	"github.com/enetx/surf"
 	"github.com/spf13/cast"
 	"github.com/tmaxmax/go-sse"
 )
@@ -38,6 +40,9 @@ var (
 	httpProtoRegex = regexp.MustCompile(`(?i)https?://`)
 
 	MisoDefaultClient *http.Client
+
+	impersonateOnce   sync.Once
+	impersonateClient *http.Client
 )
 
 func init() {
@@ -375,6 +380,27 @@ func (t *Client) LogBody() *Client {
 // Change the underlying *http.Client
 func (t *Client) UseClient(client *http.Client) *Client {
 	t.client = client
+	return t
+}
+
+// GetImpersonateClient returns a lazily initialized Chrome-impersonating *http.Client (via github.com/enetx/surf).
+func GetImpersonateClient() *http.Client {
+	impersonateOnce.Do(func() {
+		surfClient := surf.NewClient().
+			Builder().
+			Impersonate().
+			Chrome().
+			Session().
+			Build().
+			Unwrap()
+		impersonateClient = surfClient.Std()
+	})
+	return impersonateClient
+}
+
+// Impersonate switches the underlying *http.Client to a Chrome-impersonating client (via github.com/enetx/surf).
+func (t *Client) Impersonate() *Client {
+	t.client = GetImpersonateClient()
 	return t
 }
 
