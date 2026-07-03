@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -21,6 +22,7 @@ import (
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/miso/docgen"
 	"github.com/curtisnewbie/miso/tools"
+	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/cli"
 	"github.com/curtisnewbie/miso/util/flags"
@@ -138,9 +140,9 @@ func perfLog(format string, args ...any) {
 }
 
 // loadConfYml loads conf.yml using Viper. Returns the Viper instance or nil on failure.
-func loadConfYml() *viper.Viper {
+func loadConfYml(configFile string) *viper.Viper {
 	v := viper.New()
-	v.SetConfigFile("conf.yml")
+	v.SetConfigFile(configFile)
 	if err := v.ReadInConfig(); err != nil {
 		return nil
 	}
@@ -228,7 +230,7 @@ func main() {
 	_, goModErr := os.Stat("go.mod")
 	if goModErr == nil {
 		// Single module mode — current behavior.
-		processModule(skipPkgsList)
+		processModule(".", skipPkgsList)
 		return
 	}
 
@@ -247,26 +249,20 @@ func main() {
 		return
 	}
 
-	// Save original flag values so each module gets a clean slate for conf.yml overrides.
-	origAppName := *DocAppName
-	origPort := *DocPort
-
+	// Process modules in parallel using async.AwaitFutures
+	af := async.NewAwaitFutures[struct{}](nil) // nil pool = one goroutine per module
 	for _, modDir := range modDirs {
-		log.Infof("=== Processing module: %s ===", modDir)
+		md := modDir // capture loop variable
+		absModDir := filepath.Join(origDir, md)
 
-		// Reset flag defaults before each module so conf.yml overrides don't bleed across modules.
-		*DocAppName = origAppName
-		*DocPort = origPort
-
-		if err := os.Chdir(modDir); err != nil {
-			log.Errorf("failed to chdir to %s: %v", modDir, err)
-			continue
-		}
-		processModule(skipPkgsList)
-		if err := os.Chdir(origDir); err != nil {
-			log.Errorf("failed to chdir back to %s: %v", origDir, err)
-			return
-		}
+		log.Infof("=== Processing module: %s ===", md)
+		af.SubmitAsync(func() (struct{}, error) {
+			processModule(absModDir, skipPkgsList)
+			return struct{}{}, nil
+		})
+	}
+	if err := af.AwaitAnyErr(); err != nil {
+		log.Errorf("Module processing failed: %v", err)
 	}
 }
 
@@ -298,38 +294,41 @@ func findGoModDirs(root string) []string {
 	return dirs
 }
 
-// processModule runs the core misoapi logic in the current working directory.
-func processModule(skipPkgsList []string) {
+// processModule runs the core misoapi logic in the given module directory.
+func processModule(dir string, skipPkgsList []string) {
+	appName := *DocAppName
+	port := *DocPort
+
 	// If conf.yml exists and flags were not explicitly set, load defaults from it.
-	if fi, err := os.Stat("conf.yml"); err == nil && !fi.IsDir() {
-		if v := loadConfYml(); v != nil {
+	if fi, err := os.Stat(filepath.Join(dir, "conf.yml")); err == nil && !fi.IsDir() {
+		if v := loadConfYml(filepath.Join(dir, "conf.yml")); v != nil {
 			d := map[string]bool{}
 			flag.Visit(func(f *flag.Flag) { d[f.Name] = true })
 			if !d["appname"] {
 				if s := resolveFromViper(v, "app.name"); s != "" {
-					*DocAppName = s
+					appName = s
 				}
 			}
 			if !d["port"] {
 				if s := resolveFromViper(v, "server.port"); s != "" {
-					*DocPort = s
+					port = s
 				}
 			}
 		}
 	}
 
-	files, err := walkDir(".", ".go")
+	files, err := walkDir(dir, ".go")
 	if err != nil {
 		log.Errorf("walkDir failed, %v", err)
 		return
 	}
-	_, err = parseFiles(files, true, skipPkgsList)
+	_, err = parseFiles(dir, files, true, skipPkgsList)
 	if err != nil {
 		log.Errorf("parseFiles failed, %v", err)
 	}
 
 	if *Doc {
-		if err := generateDocs(skipPkgsList); err != nil {
+		if err := generateDocs(dir, skipPkgsList, appName, port); err != nil {
 			log.Errorf("generateDocs failed, %v", err)
 		}
 	}
@@ -348,7 +347,7 @@ type FsFile struct {
 	File fs.FileInfo
 }
 
-func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[string]GroupedApiDecl, error) {
+func parseFiles(dir string, files []FsFile, generateCode bool, skipPkgs []string) (map[string]GroupedApiDecl, error) {
 	start := time.Now()
 	defer func() {
 		perfLog("parseFiles total elapsed: %v", time.Since(start))
@@ -361,7 +360,7 @@ func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[strin
 		return nil, err
 	}
 
-	modName, err := guessModName()
+	modName, err := guessModName(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -389,12 +388,16 @@ func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[strin
 
 	extractStart := time.Now()
 	for _, df := range dstFiles {
-		dir := path.Dir(path.Dir(path.Clean(df.Path)))
+		fileDir := path.Dir(path.Dir(path.Clean(df.Path)))
+		// Strip module root prefix to get module-relative dir for pkgPath
+		if dir != "." {
+			fileDir = strings.TrimPrefix(fileDir, dir+string(os.PathSeparator))
+		}
 		var pkgPath string
-		if dir == "." {
+		if fileDir == "." {
 			pkgPath = modName + "/" + df.Dst.Name.Name
 		} else {
-			pkgPath = modName + "/" + dir + "/" + df.Dst.Name.Name
+			pkgPath = modName + "/" + fileDir + "/" + df.Dst.Name.Name
 		}
 		importSepc := map[string]string{}
 		dstutil.Apply(df.Dst,
@@ -414,11 +417,11 @@ func parseFiles(files []FsFile, generateCode bool, skipPkgs []string) (map[strin
 	}
 	perfLog("API extraction (AST walk) elapsed: %v, %d groups", time.Since(extractStart), len(pathApiDecls))
 
-	webGoPath := "." + string(os.PathSeparator) + path.Join("internal", "web", "web.go")
+	webGoPath := path.Join(dir, "internal", "web", "web.go")
 	regApiDstFiles := slutil.Transform(dstFiles,
 		slutil.MapFunc(func(f DstFile) string { return f.Path }),
 		slutil.FilterFunc(func(p string) bool {
-			return webGoPath == p
+			return path.Clean(webGoPath) == path.Clean(p)
 		}),
 	)
 
@@ -534,7 +537,7 @@ ${code}
 		// insert func calls to register apis
 		if doInsertRegisterApiFunc {
 			sort.SliceStable(regApiDstFiles, func(i, j int) bool { return regApiDstFiles[i] < regApiDstFiles[j] })
-			if err := insertMisoApiRegisterFunc(regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
+			if err := insertMisoApiRegisterFunc(dir, regApiDstFiles[0], "web", modName, genPkgs.CopyKeys()); err != nil {
 				log.Errorf("Insert misoapi register func in %v failed, %v", regApiDstFiles[0], err)
 				return pathApiDecls, err
 			}
@@ -1166,13 +1169,21 @@ func parseRef(r string) (string, bool) {
 	return strings.TrimSpace(s[1]), true
 }
 
-func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, importPath []string) error {
+func insertMisoApiRegisterFunc(dir string, filePath string, pkgName string, modName string, importPath []string) error {
 	if len(importPath) < 1 {
 		return nil
 	}
 
-	dir := filepath.Dir(filePath)
-	log.Debugf("dir: %v, filePath: %v, modName: %v, importPath: %+v", dir, filePath, modName, importPath)
+	// Compute the Go import path of the package containing the web.go file
+	// (e.g., github.com/curtisnewbie/user-vault/internal/web).
+	webRelDir := path.Dir(filePath)
+	if dir != "." {
+		webRelDir = strings.TrimPrefix(webRelDir, dir+string(os.PathSeparator))
+	}
+	webImportPath := modName + "/" + webRelDir
+
+	fileDir := filepath.Dir(filePath)
+	log.Debugf("fileDir: %v, filePath: %v, modName: %v, webImportPath: %v, importPath: %+v", fileDir, filePath, modName, webImportPath, importPath)
 
 	f, err := parseDstFile(filePath, pkgName)
 	if err != nil {
@@ -1199,8 +1210,9 @@ func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, 
 		f.Decls = newDecls
 	}
 
-	// insert import specs
-	for _, imp := range slutil.Filter(append(importPath, importMiso), func(s string) bool {
+	// insert import specs (skip the web package's own import path to avoid self-import)
+	importPaths := slutil.Filter(importPath, func(imp string) bool { return imp != webImportPath })
+	for _, imp := range slutil.Filter(append(importPaths, importMiso), func(s string) bool {
 		for _, imp := range f.Imports {
 			if imp.Path.Value == fmt.Sprintf("%q", s) {
 				return false
@@ -1282,7 +1294,8 @@ func insertMisoApiRegisterFunc(filePath string, pkgName string, modName string, 
 	callFuncs := slutil.Transform(importPath,
 		slutil.MapFunc[string, Pair](func(imp string) Pair {
 			var p string
-			if !strings.HasSuffix(imp, path.Dir(filePath)) {
+			// If this is the web package itself, use bare call (no import prefix)
+			if imp != webImportPath {
 				p = imp
 			}
 			return Pair{K: p, V: "RegisterApi"}
@@ -1357,11 +1370,11 @@ func restoreDstFile(filePath string, modName string, f *dst.File) error {
 
 // writeGoApiFile generates a standalone Go source file with type definitions
 // and TClient demos for APIs matching the configured patterns.
-func writeGoApiFile(allDocs []miso.HttpRouteDoc) error {
-	fp := *GoClientFile
-	if fp == "" {
+func writeGoApiFile(dir string, allDocs []miso.HttpRouteDoc) error {
+	if *GoClientFile == "" {
 		return nil
 	}
+	fp := filepath.Join(dir, *GoClientFile)
 
 	// Build match function from include/exclude patterns
 	match := buildApiPatternMatcher(*GoClientApis)
@@ -1485,9 +1498,9 @@ func buildApiPatternMatcher(patternStr string) func(d miso.HttpRouteDoc) bool {
 	}
 }
 
-func guessModName() (string, error) {
+func guessModName(dir string) (string, error) {
 	modName := ""
-	out, err := cli.Run("go", []string{"list", "-m"})
+	out, err := cli.Run("go", []string{"list", "-m"}, func(cmd *exec.Cmd) { cmd.Dir = dir })
 	if err != nil {
 		return "", errs.Wrap(fmt.Errorf("%s, %v", out, err))
 	}
@@ -1517,24 +1530,24 @@ func parseDstFile(fpath string, shortPkgName string) (*dst.File, error) {
 }
 
 // generateDocs generates static API documentation from source code parsing.
-func generateDocs(skipPkgs []string) error {
+func generateDocs(dir string, skipPkgs []string, appName string, port string) error {
 	start := time.Now()
 	defer func() {
 		perfLog("generateDocs total elapsed: %v", time.Since(start))
 	}()
 
-	modName, err := guessModName()
+	modName, err := guessModName(dir)
 	if err != nil {
 		return err
 	}
 
 	// If -appname not set, default to the last segment of the module name
 	// (e.g., "github.com/curtisnewbie/xxx" → "xxx").
-	if *DocAppName == "" {
-		*DocAppName = path.Base(modName)
+	if appName == "" {
+		appName = path.Base(modName)
 	}
 
-	manualFiles, err := walkDir(".", ".go")
+	manualFiles, err := walkDir(dir, ".go")
 	if err != nil {
 		return fmt.Errorf("walkDir for docs failed: %v", err)
 	}
@@ -1542,7 +1555,11 @@ func generateDocs(skipPkgs []string) error {
 	// Filter out files from skipped packages
 	if len(skipPkgs) > 0 {
 		manualFiles = slutil.Filter(manualFiles, func(f FsFile) bool {
-			pkgPath := modName + "/" + path.Dir(f.Path)
+			relDir := path.Dir(f.Path)
+			if dir != "." {
+				relDir = strings.TrimPrefix(relDir, dir+string(os.PathSeparator))
+			}
+			pkgPath := modName + "/" + relDir
 			return !matchSkipPkg(pkgPath, skipPkgs)
 		})
 	}
@@ -1562,7 +1579,7 @@ func generateDocs(skipPkgs []string) error {
 
 	buildStart := time.Now()
 	docgen.LogPerf = *Perf
-	preloaded, misoPkg, err := docgen.LoadPackagesAt(".")
+	preloaded, misoPkg, err := docgen.LoadPackagesAt(dir)
 	if err != nil {
 		return errs.Wrapf(err, "LoadPackagesAt failed")
 	}
@@ -1584,7 +1601,7 @@ func generateDocs(skipPkgs []string) error {
 	seenGoTypes := hash.NewSet[string]()
 	for i := range allDocs {
 		d := &allDocs[i]
-		d.Curl = miso.GenRouteCurl(*d, *DocPort)
+		d.Curl = miso.GenRouteCurl(*d, port)
 
 		// Generate Go/Ts definitions for request types.
 		// Only POST/PUT have request bodies — empty structs (e.g. EmptyReq{}) are
@@ -1609,7 +1626,7 @@ func generateDocs(skipPkgs []string) error {
 		}
 
 		// Miso HTTP Client demo
-		rawTClient := miso.GenTClientDemo(*d, *DocAppName)
+		rawTClient := miso.GenTClientDemo(*d, appName)
 
 		d.MisoTClientDemo = rawTClient
 		if d.JsonRespGoDef != "" {
@@ -1621,11 +1638,11 @@ func generateDocs(skipPkgs []string) error {
 		d.MisoTClientWithoutTypes = rawTClient
 
 		// Angular HttpClient demo (exclude OpenAPI to keep simpler)
-		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, *DocAppName, true)
+		d.NgHttpClientDemo = miso.GenNgHttpClientDemo(*d, appName, true)
 
 		// Java HttpClient demo
 		if *DocJavaDemo {
-			d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, *DocAppName)
+			d.JavaClientDemo = miso.GenJavaHttpClientDemo(*d, appName)
 		}
 
 		_ = seenGoTypes // used for global Go type defs in future
@@ -1634,7 +1651,7 @@ func generateDocs(skipPkgs []string) error {
 
 	// Generate standalone Go client file if requested
 	if *GoClientFile != "" {
-		if err := writeGoApiFile(allDocs); err != nil {
+		if err := writeGoApiFile(dir, allDocs); err != nil {
 			return err
 		}
 	}
@@ -1642,16 +1659,16 @@ func generateDocs(skipPkgs []string) error {
 	// Generate aggregate OpenAPI 3.0 spec
 	if *Oas {
 		oasStart := time.Now()
-		oasPath := *OasFile
+		oasPath := filepath.Join(dir, *OasFile)
 		rootSpec := &openapi3.T{
 			OpenAPI: "3.0.0",
 			Info: &openapi3.Info{
-				Title:   *DocAppName,
+				Title:   appName,
 				Version: "1.0.0",
 			},
 		}
-		if *DocPort != "" {
-			rootSpec.AddServer(&openapi3.Server{URL: "http://localhost:" + *DocPort})
+		if port != "" {
+			rootSpec.AddServer(&openapi3.Server{URL: "http://localhost:" + port})
 		}
 
 		for _, d := range allDocs {
@@ -1680,14 +1697,15 @@ func generateDocs(skipPkgs []string) error {
 		ExclOpenApi:      !*PerApiOas,
 	})
 
-	if err := os.MkdirAll(filepath.Dir(*DocFile), 0755); err != nil {
-		return fmt.Errorf("failed to create output directory for %s: %v", *DocFile, err)
+	docFilePath := filepath.Join(dir, *DocFile)
+	if err := os.MkdirAll(filepath.Dir(docFilePath), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory for %s: %v", docFilePath, err)
 	}
-	if err := os.WriteFile(*DocFile, []byte(markdown), 0644); err != nil {
-		return fmt.Errorf("failed to write doc file %s: %v", *DocFile, err)
+	if err := os.WriteFile(docFilePath, []byte(markdown), 0644); err != nil {
+		return fmt.Errorf("failed to write doc file %s: %v", docFilePath, err)
 	}
 	perfLog("GenMarkDownDoc + write elapsed: %v", time.Since(mdStart))
 
-	log.Infof("API docs written to %s", *DocFile)
+	log.Infof("API docs written to %s", docFilePath)
 	return nil
 }

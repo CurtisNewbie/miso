@@ -54,7 +54,7 @@ func LoadPackagesAt(dir string) (map[string]*types.Package, *types.Package, erro
 	}
 	misoCh := make(chan misoResult, 1)
 	go func() {
-		cfg := &packages.Config{Mode: packages.NeedTypes}
+		cfg := &packages.Config{Mode: packages.NeedTypes, Dir: dir}
 		pkgs, err := packages.Load(cfg, "github.com/curtisnewbie/miso/miso")
 		if err != nil || len(pkgs) == 0 || pkgs[0].Types == nil {
 			misoCh <- misoResult{err: fmt.Errorf("failed to load miso package: %w", err)}
@@ -83,7 +83,7 @@ func LoadPackagesAt(dir string) (map[string]*types.Package, *types.Package, erro
 
 	mr := <-misoCh
 	if mr.err != nil {
-		log.Debugf("LoadPackagesAt: miso package load failed, using fallback: %v", mr.err)
+		log.Infof("LoadPackagesAt: miso package load failed, using fallback: %v", mr.err)
 	}
 	return pkgMap, mr.pkg, nil
 }
@@ -567,6 +567,9 @@ func BuildManualPipelineDocs(files []SourceFile, modName string, l Logger, prelo
 	parseStart := time.Now()
 	var totalPps int
 	for _, f := range files {
+		if f.Path == "" {
+			continue
+		}
 		dir := path.Dir(f.Path)
 		var pps []*sourceparser.ParsedPipeline
 		if f.Ast != nil {
