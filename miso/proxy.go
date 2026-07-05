@@ -278,6 +278,86 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 	Info("Registered Access Filter")
 }
 
+// WsAccessFilterConfig configures a WebSocket access filter entry.
+type WsAccessFilterConfig struct {
+	// PathPatterns to match for WebSocket upgrade requests.
+	PathPatterns []string `mapstructure:"path-patterns"`
+	// TokenQueryKey is the query parameter key name that carries the JWT token.
+	// e.g., "token" reads from ?token=xxx.
+	TokenQueryKey string `mapstructure:"token-query-key"`
+}
+
+// AddWsAccessFilter adds a filter for WebSocket upgrade requests.
+//
+// For requests that are WebSocket upgrades and whose proxy path matches
+// a configured PathPatterns entry, this filter:
+// 1. Reads the query parameter named by TokenQueryKey
+// 2. Calls checkAuth(token, pc) to validate
+// 3. If auth fails, responds with the returned statusCode (defaults to 401)
+// 4. If auth passes, proceeds to the next filter
+//
+// Non-WebSocket requests and WS requests with no matching config pass through.
+//
+// The checkAuth callback should validate the token and may set user info
+// in the proxy context via pc.SetAttr().
+func (h *HttpProxy) AddWsAccessFilter(
+	loadConfigs func() []WsAccessFilterConfig,
+	checkAuth func(token string, pc *ProxyContext) (statusCode int, ok bool),
+) {
+	h.AddFilter(func(pc *ProxyContext, next func()) {
+		_, r := pc.Inb.Unwrap()
+
+		// only interested in WebSocket upgrade requests
+		if !strings.EqualFold(r.Header.Get("Connection"), "upgrade") ||
+			!strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+			next()
+			return
+		}
+
+		proxyPath := pc.ProxyPath
+
+		for _, cfg := range loadConfigs() {
+			if !strutil.MatchPathAny(cfg.PathPatterns, proxyPath) {
+				continue
+			}
+
+			pc.Rail.Infof("WS access filter matched path: %v", proxyPath)
+
+			if cfg.TokenQueryKey == "" {
+				pc.Rail.Warnf("WS access filter: TokenQueryKey is empty in config")
+				http.Error(pc.Inb.Writer(), http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
+			token := r.URL.Query().Get(cfg.TokenQueryKey)
+			if token == "" {
+				pc.Rail.Warnf("WS access filter: token not found in query param '%v'", cfg.TokenQueryKey)
+				http.Error(pc.Inb.Writer(), http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
+			sc, authOk := checkAuth(token, pc)
+			if !authOk {
+				if sc == 0 {
+					sc = http.StatusUnauthorized
+				}
+				pc.Rail.Warnf("WS access filter auth failed, status: %v", sc)
+				http.Error(pc.Inb.Writer(), http.StatusText(sc), sc)
+				return
+			}
+
+			pc.Rail.Infof("WS access filter auth passed")
+			next()
+			return
+		}
+
+		// no matching config, pass through
+		next()
+	})
+
+	Info("Registered WS Access Filter")
+}
+
 type DynAuthRoute struct {
 	Name         string
 	Type         string // Bearer / Basic
