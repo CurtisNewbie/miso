@@ -280,9 +280,9 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 
 // WsAccessFilterConfig configures a WebSocket access filter entry.
 type WsAccessFilterConfig struct {
-	// PathPatterns to match for WebSocket upgrade requests.
+	// PathPatterns to match for WebSocket upgrade requests. If empty, match all path patterns.
 	PathPatterns []string `mapstructure:"path-patterns"`
-	// TokenQueryKey is the query parameter key name that carries the JWT token.
+	// TokenQueryKey is the query parameter key name that carries the JWT token. If empty, reject all matched requests.
 	// e.g., "token" reads from ?token=xxx.
 	TokenQueryKey string `mapstructure:"token-query-key"`
 }
@@ -317,7 +317,8 @@ func (h *HttpProxy) AddWsAccessFilter(
 		proxyPath := pc.ProxyPath
 
 		for _, cfg := range loadConfigs() {
-			if !strutil.MatchPathAny(cfg.PathPatterns, proxyPath) {
+			// empty PathPatterns matches all paths
+			if len(cfg.PathPatterns) > 0 && !strutil.MatchPathAny(cfg.PathPatterns, proxyPath) {
 				continue
 			}
 
