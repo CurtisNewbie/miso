@@ -269,7 +269,7 @@ func (f FieldDesc) goFieldTypeName() string {
 	if f.IsPointer {
 		return "*" + ptn
 	}
-	return f.OriginTypeName
+	return ptn
 }
 
 // TODO: Support map as TypeDesc
