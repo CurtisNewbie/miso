@@ -1379,19 +1379,25 @@ func writeGoApiFile(dir string, allDocs []miso.HttpRouteDoc) error {
 	// Build match function from include/exclude patterns
 	match := buildApiPatternMatcher(*GoClientApis)
 
-	// Collect type defs (deduplicated) and client functions for matching routes
-	seenContent := hash.NewSet[string]()
+	// Collect type defs (deduplicated) and client functions for matching routes.
+	// Use a shared seenTypeDef across all APIs so nested types shared by multiple
+	// APIs are only generated once (full-string dedup misses nested duplicates).
+	seenTypeDef := hash.NewSet[string]()
 	var typeDefs []string
 	var clientFuncs []string
 	for _, d := range allDocs {
 		if !match(d) {
 			continue
 		}
-		if d.JsonReqGoDef != "" && seenContent.Add(d.JsonReqGoDef) {
-			typeDefs = append(typeDefs, d.JsonReqGoDef)
+		if d.JsonRequestDesc.TypeName != "" && (d.Method == "POST" || d.Method == "PUT") {
+			if def, _ := miso.GenGoDef(d.JsonRequestDesc, seenTypeDef); def != "" {
+				typeDefs = append(typeDefs, def)
+			}
 		}
-		if d.JsonRespGoDef != "" && seenContent.Add(d.JsonRespGoDef) {
-			typeDefs = append(typeDefs, d.JsonRespGoDef)
+		if len(d.JsonResponseDesc.Fields) > 0 {
+			if def, _ := miso.GenGoDef(d.JsonResponseDesc, seenTypeDef); def != "" {
+				typeDefs = append(typeDefs, def)
+			}
 		}
 		if d.MisoTClientWithoutTypes != "" {
 			clientFuncs = append(clientFuncs, d.MisoTClientWithoutTypes)
