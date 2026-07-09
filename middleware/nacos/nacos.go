@@ -249,7 +249,7 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		if err != nil {
 			return "", errs.Wrapf(err, "failed to fetch nacos config, param: %#v", p)
 		}
-		configStr = strings.Trim(configStr, " \n\t")
+		configStr = strings.Trim(configStr, " \n\t	")
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
 			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v, %v", w.Group, w.DataId, desensitizeConfigContent(configStr), err)
 		}
