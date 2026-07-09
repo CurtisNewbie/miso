@@ -91,6 +91,34 @@ func TestUnmarshalJSON(t *testing.T) {
 	t.Logf("%v", et)
 }
 
+func TestUnmarshalJSONUnixSeconds(t *testing.T) {
+	// Dify API (and similar) return created_at as Unix seconds, not milliseconds.
+	// e.g. 1737000000 = 2025-01-16, not 1970-01-21.
+	unixSec := int64(1737000000)
+	expected := time.Unix(unixSec, 0)
+
+	var et Time
+	if err := et.UnmarshalJSON([]byte("1737000000")); err != nil {
+		t.Fatal(err)
+	}
+	if et.Unix() != expected.Unix() {
+		t.Fatalf("Unix-seconds JSON: got %v (unix=%d), want %v (unix=%d)",
+			et, et.Unix(), expected, expected.Unix())
+	}
+	t.Logf("Unix-sec 1737000000 → %v ✓", et)
+
+	// Milliseconds above threshold should still work.
+	unixMilli := int64(1744251041206)
+	expectedMilli := time.UnixMilli(unixMilli)
+	if err := et.UnmarshalJSON([]byte("1744251041206")); err != nil {
+		t.Fatal(err)
+	}
+	if et.Unix() != expectedMilli.Unix() {
+		t.Fatalf("Unix-milli JSON: got %v, want %v", et, expectedMilli)
+	}
+	t.Logf("Unix-milli 1744251041206 → %v ✓", et)
+}
+
 func TestEndOfDay(t *testing.T) {
 	var et Time
 	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))
