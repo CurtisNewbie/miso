@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -92,14 +93,69 @@ In ./doc/config.md:
 	})
 	flags.Parse()
 
-	files, err := walkDir(".", ".go")
-	if err != nil {
-		log.Errorf("walkDir failed, %v", err)
+	_, goModErr := os.Stat("go.mod")
+	if goModErr == nil {
+		// Single module mode
+		processDir(".")
 		return
 	}
-	if err := parseFiles(files); err != nil {
-		log.Errorf("parseFiles failed, %v", err)
+	if !os.IsNotExist(goModErr) {
+		log.Errorf("failed to check go.mod: %v", goModErr)
+		return
 	}
+
+	// Monorepo mode: no go.mod at root; scan subdirectories for Go modules.
+	modDirs := findGoModDirs(".")
+	if len(modDirs) == 0 {
+		log.Errorf("no go.mod found in current directory or subdirectories; misoconfig requires a Go module")
+		return
+	}
+
+	log.Infof("Monorepo detected: %d module(s) found", len(modDirs))
+	for _, modDir := range modDirs {
+		log.Infof("=== Processing module: %s ===", modDir)
+		processDir(modDir)
+	}
+}
+
+func processDir(dir string) {
+	files, err := walkDir(dir, ".go")
+	if err != nil {
+		log.Errorf("walkDir failed for %s, %v", dir, err)
+		return
+	}
+	if err := parseFiles(dir, files); err != nil {
+		log.Errorf("parseFiles failed for %s, %v", dir, err)
+	}
+}
+
+// findGoModDirs recursively finds directories containing go.mod under root.
+// Nested modules are skipped — only the outermost module per subtree is returned.
+// Vendor, .git, node_modules, and testdata directories are skipped.
+func findGoModDirs(root string) []string {
+	var dirs []string
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			log.Debugf("walkDir error at %s: %v", path, err)
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+			return filepath.SkipDir
+		}
+		if path == root {
+			return nil // only interested in subdirectories
+		}
+		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+			dirs = append(dirs, path)
+			return filepath.SkipDir // don't recurse into module directories
+		}
+		return nil
+	})
+	return dirs
 }
 
 type FsFile struct {
@@ -107,7 +163,7 @@ type FsFile struct {
 	File fs.FileInfo
 }
 
-func parseFiles(files []FsFile) error {
+func parseFiles(dir string, files []FsFile) error {
 	dstFiles, err := parseFileAst(files)
 	if err != nil {
 		return err
@@ -137,7 +193,7 @@ func parseFiles(files []FsFile) error {
 	}
 
 	log.Debugf("configs: %#v", configDecl)
-	flushConfigTable(configDecl)
+	flushConfigTable(dir, configDecl)
 	return nil
 }
 
@@ -235,8 +291,12 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 			log.Errorf("%v", err)
 			continue
 		}
-		p := n + "/" + fi.Name()
+		name := fi.Name()
+		p := filepath.Join(n, name)
 		if et.IsDir() {
+			if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+				continue
+			}
 			ff, err := walkDir(p, suffix)
 			if err == nil {
 				files = append(files, ff...)
@@ -335,7 +395,7 @@ func parseConfigDecl(cursor *dstutil.Cursor, df DstFile, section string, configs
 	return section
 }
 
-func flushConfigTable(configs map[string][]ConfigDecl) {
+func flushConfigTable(dir string, configs map[string][]ConfigDecl) {
 	if len(configs) < 1 {
 		return
 	}
@@ -357,7 +417,7 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	})
 
 	// find file
-	f, err := findConfigTableFile()
+	f, err := findConfigTableFile(dir)
 	if err != nil {
 		log.Infof("Failed to find config table file, %v", err)
 		return
@@ -573,16 +633,17 @@ func flushConfigTable(configs map[string][]ConfigDecl) {
 	}
 }
 
-func findConfigTableFile() (*os.File, error) {
+func findConfigTableFile(dir string) (*os.File, error) {
 	if *Path != "" {
 		return osutil.OpenRWFile(*Path)
 	}
 
-	if err := osutil.MkdirAll("./doc"); err != nil {
+	docDir := filepath.Join(dir, "doc")
+	if err := osutil.MkdirAll(docDir); err != nil {
 		return nil, err
 	}
 
-	files, err := walkDir("./doc", ".md")
+	files, err := walkDir(docDir, ".md")
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +653,7 @@ func findConfigTableFile() (*os.File, error) {
 			return osutil.OpenRWFile(f.Path)
 		}
 	}
-	return osutil.OpenRWFile("./doc/" + DefaultConfigurationFileName)
+	return osutil.OpenRWFile(filepath.Join(docDir, DefaultConfigurationFileName))
 }
 
 func parseEmbed(contents string, embedded string, start string, end string) (string, bool) {
