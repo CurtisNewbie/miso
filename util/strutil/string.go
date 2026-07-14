@@ -503,9 +503,28 @@ func SAddLineIndent(s string, indentChar string) string {
 	b := strings.Builder{}
 	sp := strings.Split(s, "\n")
 	for k, spt := range sp {
-		if spt == "" {
+		if spt != "" {
+			b.WriteString(indentChar + spt)
+		}
+		if k < len(sp)-1 {
+			b.WriteRune('\n')
+		}
+	}
+	return b.String()
+}
+
+// SAddFollowLineIndent keeps the first line as-is and indents all subsequent lines with indentChar.
+// If s is a single line, it is returned unchanged.
+func SAddFollowLineIndent(s string, indentChar string) string {
+	sp := strings.Split(s, "\n")
+	if len(sp) <= 1 {
+		return s
+	}
+	b := strings.Builder{}
+	for k, spt := range sp {
+		if k == 0 {
 			b.WriteString(spt)
-		} else {
+		} else if spt != "" {
 			b.WriteString(indentChar + spt)
 		}
 		if k < len(sp)-1 {

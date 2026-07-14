@@ -42,7 +42,7 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 })
 
 var (
-	desensitizeContentRegex = regexp.MustCompile(`((access-token|accessToken|password|secret|token|app-id|appId)[ "]*[=:] *)("?[^\n"]+"?)`)
+	desensitizeContentRegex = regexp.MustCompile(`((access-token|accessToken|access-key|accessKey|password|secret|token|app-id|appId|api-key|apiKey|app-secret|appSecret|sercet-key|secretKey)[ "]*[=:] *)("?[^\n"]+"?)`)
 	completeReload          = &atomic.Bool{}
 
 	_ miso.ServerList = (*NacosServerList)(nil)
@@ -249,8 +249,9 @@ func (m *nacosModule) initConfigCenter(rail miso.Rail) (bool, error) {
 		if err != nil {
 			return "", errs.Wrapf(err, "failed to fetch nacos config, param: %#v", p)
 		}
+		configStr = strings.Trim(configStr, " \n\t	")
 		if err := miso.LoadConfigFromStr(configStr, rail); err != nil {
-			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v", w.Group, w.DataId, desensitizeConfigContent(configStr))
+			rail.Errorf("Failed to merge Nacos config, %v-%v\n%v, %v", w.Group, w.DataId, desensitizeConfigContent(configStr), err)
 		}
 		rail.Tracef("Fetched nacos config, %v-%v:\n%v", w.Group, w.DataId, configStr)
 		m.configContent.Put(w.Key(), configStr)

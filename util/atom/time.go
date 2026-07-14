@@ -317,9 +317,7 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	pt := time.UnixMilli(millisec)
-	*t = WrapTime(pt)
-	return nil
+	return t.Scan(millisec)
 }
 
 // Implements sql.Scanner in database/sql.
