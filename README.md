@@ -23,6 +23,14 @@ Again, miso is an opinionated framework, it might not be suitable for mature cod
 
 You can generate a new project using `misogen` (see [CLI Tools](./doc/tools.md)).
 
+## Skills
+
+Run below command to install agent skill for miso.
+
+```sh
+npx skills add github.com/curtisnewbie/miso.git
+```
+
 ## Documentations
 
 - [CLI Tools](./doc/tools.md)
