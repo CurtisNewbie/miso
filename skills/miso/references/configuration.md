@@ -100,7 +100,7 @@ Configuration is loaded from multiple sources in priority order:
 
 1. **Default values** (`SetDefProp()`)
 2. **Configuration file** (`conf.yml`)
-3. **Environment variables** (`APP_NAME`, `SERVER_PORT`, etc.)
+3. **Environment variables** (`MISO_` prefix)
 4. **Command-line arguments**
 5. **Programmatic overrides** (`SetProp()`)
 
@@ -135,15 +135,19 @@ logging:
 
 ## Environment Variables
 
-Environment variables override configuration file values:
+Environment variables override configuration file values. Variables must use the `MISO_` prefix. Underscores (`_`) are converted to dots (`.`), and double underscores (`__`) are converted to hyphens (`-`).
 
 ```bash
-# Environment variables use uppercase and underscore
-export APP_NAME=my-app
-export SERVER_PORT=8080
-export DB_HOST=localhost
-export DB_USER=root
-export REDIS_ENABLED=true
+# Underscore → dot: 'MISO_MYSQL_DATABASE' maps to 'mysql.database'
+export MISO_APP_NAME=my-app
+export MISO_SERVER_PORT=8080
+export MISO_DB_HOST=localhost
+export MISO_DB_USER=root
+export MISO_REDIS_ENABLED=true
+
+# Double underscore → hyphen: 'MISO_MYSQL_DATABASE__NAME' maps to 'mysql.database-name'
+export MISO_MYSQL_DATABASE__NAME=mydb
+export MISO_FOO__BAR__BAZ=value  # maps to 'foo.bar-baz'
 ```
 
 ## Configuration in Bootstrap

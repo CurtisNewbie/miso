@@ -48,7 +48,13 @@ mysql:
   database: "${my-schema:my_db}"
 ```
 
-You can even overwrite configurations without using the `${}` syntax. Export environment variables that starts with `'MISO_'` and use '_' as the delimiter, e.g., `'MISO_MYSQL_DATABASE=xxx'`, which will then be converted to `'mysql.database=xxx'` and loaded into the miso app.
+You can even overwrite configurations without using the `${}` syntax. Export environment variables that start with `MISO_` and use `_` as the delimiter. Underscores (`_`) are converted to dots (`.`), and double underscores (`__`) are converted to hyphens (`-`).
+
+| Env var | Config key |
+|---|---|
+| `MISO_MYSQL_DATABASE=xxx` | `mysql.database=xxx` |
+| `MISO_MYSQL_DATABASE__NAME=xxx` | `mysql.database-name=xxx` |
+| `MISO_FOO__BAR__BAZ=xxx` | `foo.bar-baz=xxx` |
 
 The tables shown below list all configuration that you can tune. You can also read [example_conf.yml](./example_conf.yml) to get a better understanding on how these configuration properties are mapped in a yaml file.
 

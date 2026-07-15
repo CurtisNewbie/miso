@@ -767,7 +767,7 @@ func ResolveServerHost(address string) string {
 	return address
 }
 
-var argKeyValRegex = regexp.MustCompile("[_]+")
+var argKeyValRegex = regexp.MustCompile("_")
 
 // Parse CLI args to key-value map
 func ArgKeyVal(args []string) map[string][]string {
@@ -816,8 +816,11 @@ func buildArgKeyValMap(args []string, requirePrefix bool) map[string][]string {
 		}
 
 		// e.g., 'miso_nacos_server_address' becomes 'nacos.server.address'
+		// e.g., 'miso_mysql_database__name' becomes 'mysql.database-name' (__ → -)
 		if key2, ok := strutil.CutPrefixIgnoreCase(key, "miso_"); ok {
+			key2 = strings.ReplaceAll(key2, "__", "\x00")
 			key2 = argKeyValRegex.ReplaceAllLiteralString(key2, ".")
+			key2 = strings.ReplaceAll(key2, "\x00", "-")
 			doAppend(key2, val)
 		}
 	}
