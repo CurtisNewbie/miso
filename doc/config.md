@@ -131,14 +131,21 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Metrics Configuration
 
-| property                        | description                                                                      | default value  |
-| ------------------------------- | -------------------------------------------------------------------------------- | -------------- |
-| metrics.enabled                 | enable metrics collection using prometheus                                       | true           |
-| metrics.route                   | route used to expose collected metrics                                           | /metrics       |
-| metrics.auth.enabled            | enable authorization for metrics endpoint                                        | false          |
-| metrics.auth.bearer             | bearer token for metrics endpoint authorization                                  |                |
-| metrics.memstat.log.job.enabled | enable job that logs memory and cpu stats periodically (using `runtime/metrics`) | false          |
-| metrics.memstat.log.job.cron    | job cron expresson for memory stats log job                                      | 0/30 * * * * * |
+| property                               | description                                                                      | default value  |
+| -------------------------------------- | -------------------------------------------------------------------------------- | -------------- |
+| metrics.enabled                        | enable metrics collection using prometheus                                       | true           |
+| metrics.route                          | route used to expose collected metrics                                           | /metrics       |
+| metrics.auth.enabled                   | enable authorization for metrics endpoint                                        | false          |
+| metrics.auth.bearer                    | bearer token for metrics endpoint authorization                                  |                |
+| metrics.memstat.log.job.enabled        | enable job that logs memory and cpu stats periodically (using `runtime/metrics`) | false          |
+| metrics.memstat.log.job.cron           | job cron expresson for memory stats log job                                      | 0/30 * * * * * |
+| metrics.push-gateway.enabled           | enable pushing metrics to a Prometheus Pushgateway                               | false          |
+| metrics.push-gateway.url               | Pushgateway url, e.g., http://localhost:9091                                     |                |
+| metrics.push-gateway.job               | job name reported to Pushgateway                                                 | ${app.name}    |
+| metrics.push-gateway.push-interval-sec | push interval in seconds                                                         | 30             |
+| metrics.push-gateway.auth.enabled      | enable basic auth for Pushgateway requests                                       | false          |
+| metrics.push-gateway.auth.username     | username for Pushgateway basic auth                                              |                |
+| metrics.push-gateway.auth.password     | password for Pushgateway basic auth                                              |                |
 
 ## MySQL Configuration
 

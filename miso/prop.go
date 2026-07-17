@@ -163,6 +163,27 @@ const (
 
 	// misoconfig-prop: job cron expresson for memory stats log job | 0/30 * * * * *
 	PropMetricsMemStatsLogJobCron = "metrics.memstat.log.job.cron"
+
+	// misoconfig-prop: enable pushing metrics to a Prometheus Pushgateway | false
+	PropMetricsPushGatewayEnabled = "metrics.push-gateway.enabled"
+
+	// misoconfig-prop: Pushgateway url, e.g., http://localhost:9091
+	PropMetricsPushGatewayUrl = "metrics.push-gateway.url"
+
+	// misoconfig-prop: job name reported to Pushgateway | ${app.name}
+	PropMetricsPushGatewayJob = "metrics.push-gateway.job"
+
+	// misoconfig-prop: push interval in seconds | 30
+	PropMetricsPushGatewayIntervalSec = "metrics.push-gateway.push-interval-sec"
+
+	// misoconfig-prop: enable basic auth for Pushgateway requests | false
+	PropMetricsPushGatewayAuthEnabled = "metrics.push-gateway.auth.enabled"
+
+	// misoconfig-prop: username for Pushgateway basic auth
+	PropMetricsPushGatewayAuthUsername = "metrics.push-gateway.auth.username"
+
+	// misoconfig-prop: password for Pushgateway basic auth
+	PropMetricsPushGatewayAuthPassword = "metrics.push-gateway.auth.password"
 )
 
 // misoconfig-section: Logging Configuration
@@ -254,6 +275,10 @@ func init() {
 	SetDefProp(PropMetricsAuthEnabled, false)
 	SetDefProp(PropMetricsEnableMemStatsLogJob, false)
 	SetDefProp(PropMetricsMemStatsLogJobCron, "0/30 * * * * *")
+	SetDefProp(PropMetricsPushGatewayEnabled, false)
+	SetDefProp(PropMetricsPushGatewayJob, "${app.name}")
+	SetDefProp(PropMetricsPushGatewayIntervalSec, 30)
+	SetDefProp(PropMetricsPushGatewayAuthEnabled, false)
 	SetDefProp(PropServerEnabled, true)
 	SetDefProp(PropServerHost, "127.0.0.1")
 	SetDefProp(PropServerPort, 8080)
