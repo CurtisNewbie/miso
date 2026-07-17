@@ -10,15 +10,17 @@ import (
 	"github.com/curtisnewbie/miso/util/slutil"
 )
 
-func parseTag(finalPat *regexp.Regexp, halfPat *regexp.Regexp, s string) string {
+func parseTag(openTag string, closeTag string, halfPat *regexp.Regexp, s string) string {
 	_, withoutThink := ParseThink(s)
 
-	// Find all matches in the text without think blocks and use the last one
-	allMatches := finalPat.FindAllStringSubmatch(withoutThink, -1)
-	if len(allMatches) > 0 {
-		lastMatch := allMatches[len(allMatches)-1]
-		if len(lastMatch) > 1 {
-			return lastMatch[1]
+	// Find the last closing tag, then the nearest opening tag before it.
+	// This picks the final complete tag pair while staying immune to
+	// stray mentions of the tag name (e.g. in backticks) earlier in the text.
+	closeIdx := strings.LastIndex(withoutThink, closeTag)
+	if closeIdx >= 0 {
+		openIdx := strings.LastIndex(withoutThink[:closeIdx], openTag)
+		if openIdx >= 0 {
+			return withoutThink[openIdx+len(openTag) : closeIdx]
 		}
 	}
 
@@ -50,16 +52,14 @@ func (t tagContentExtractor) Content(answer string) string {
 //
 // The content between the tags must not include xml closing tags, e.g., </xxx>.
 func TagExtractor(tag string) (tagContentExtractor, error) {
-	finalPat, err := regexp.Compile(`(?s)<` + tag + `>(.*?)<\/` + tag + `>`)
-	if err != nil {
-		return nil, errs.Wrap(err)
-	}
+	openTag := "<" + tag + ">"
+	closeTag := "</" + tag + ">"
 	partialPat, err := regexp.Compile(`<` + tag + `>([^<]*(?:<[^/][^<]*)*)`)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
 	return func(answer string) (original string, extracted string) {
-		return answer, parseTag(finalPat, partialPat, answer)
+		return answer, parseTag(openTag, closeTag, partialPat, answer)
 	}, nil
 }
 

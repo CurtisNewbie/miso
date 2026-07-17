@@ -52,6 +52,8 @@ func TestTagExtractor(t *testing.T) {
 		{"<test>ab<bbbb>", "ab<bbbb>"},
 		{"<test>1 < 2", "1 < 2"},
 		{"<test>1 < 2</test>", "1 < 2"},
+		{"mentions `<test>` tag\n\n<test>real</test>", "real"},
+		{"<test>a</test> then <test>b</test>", "b"},
 	}
 	for _, v := range tab {
 		r := tx.Content(v[0])
