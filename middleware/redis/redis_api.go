@@ -306,3 +306,7 @@ func Eval(rail miso.Rail, script string, keys []string, args ...interface{}) (an
 	v, err := c.Result()
 	return v, errs.Wrap(err)
 }
+
+func Script(script string) *redis.Script {
+	return redis.NewScript(script)
+}

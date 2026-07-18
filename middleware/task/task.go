@@ -475,8 +475,7 @@ func (m *taskModule) startTaskMasterLockTicker(job string) {
 	}(tk.C)
 }
 
-func (m *taskModule) releaseMasterNodeLock(job string) {
-	v, err := redis.Eval(miso.EmptyRail(), `
+var releaseMasterLockScript = redis.Script(`
 	if (redis.call('EXISTS', KEYS[1]) == 0) then
 		return 0;
 	end;
@@ -485,7 +484,12 @@ func (m *taskModule) releaseMasterNodeLock(job string) {
 		redis.call('DEL', KEYS[1])
 		return 1;
 	end;
-	return 0;`, []string{m.getTaskMasterKey(job)}, m.nodeId)
+	return 0;`)
+
+func (m *taskModule) releaseMasterNodeLock(job string) {
+	rail := miso.EmptyRail()
+	v, err := releaseMasterLockScript.Run(rail.Context(), redis.GetRedis(), []string{m.getTaskMasterKey(job)}, m.nodeId).Result()
+	err = errs.Wrap(err)
 	if err != nil {
 		miso.Errorf("Failed to release master node lock for %v, %v", job, err)
 		return
@@ -502,15 +506,18 @@ func (m *taskModule) stopTaskMasterLockTicker(job string) {
 	prev.Stop()
 }
 
-// Refresh master lock key ttl
-func (m *taskModule) refreshTaskMasterLock(rail miso.Rail, job string) error {
-	_, err := redis.Eval(rail, `
+var refreshMasterLockScript = redis.Script(`
 	if (redis.call('GET', KEYS[1]) == tostring(ARGV[1])) then
 		redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
 		return 1;
 	end;
 	return 0;
-	`, []string{m.getTaskMasterKey(job)}, m.nodeId, defMstLockTtlSec)
+	`)
+
+// Refresh master lock key ttl
+func (m *taskModule) refreshTaskMasterLock(rail miso.Rail, job string) error {
+	_, err := refreshMasterLockScript.Run(rail.Context(), redis.GetRedis(), []string{m.getTaskMasterKey(job)}, m.nodeId, defMstLockTtlSec).Result()
+	err = errs.Wrap(err)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			rail.Debugf("Failed to refreshTaskMasterLock for %v, masterLock not obtained", job)
