@@ -21,6 +21,9 @@ func PrepareTestEnv(t *testing.T) Rail {
 			t.Fatal(err)
 		}
 	}
+
+	App().Config().OverwriteConf(os.Args)
+
 	if err := App().callConfigLoaders(rail); err != nil {
 		t.Fatal(err)
 	}
