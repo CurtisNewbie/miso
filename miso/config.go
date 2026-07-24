@@ -7,6 +7,7 @@ import (
 	"io"
 	"maps"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/curtisnewbie/miso/util/rfutil"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
+	"github.com/curtisnewbie/miso/util/testutil"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -297,10 +299,25 @@ func (a *AppConfig) defaultReadConfigFromFile(args []string, defConfigFile strin
 
 	// the load config file may specifiy extra files to be loaded
 	extraFiles := a.GetPropStrSlice(PropConfigExtraFiles)
+	inTest := InTestEnv()
+	rewriteTestPath := func(f string) (string, bool) {
+		if !inTest {
+			return f, false
+		}
+		if !filepath.IsAbs(f) && !osutil.TryFileExists(f) { // in test env, not absolute and not exists
+			tp, err := testutil.FindTestdataPath(f)
+			if err == nil {
+				return tp, true
+			}
+		}
+		return f, false
+	}
 
 	for i := range extraFiles {
 		f := extraFiles[i]
-
+		if p, ok := rewriteTestPath(f); ok {
+			f = p
+		}
 		if !loaded.Add(f) {
 			continue
 		}
