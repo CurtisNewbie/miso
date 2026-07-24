@@ -273,9 +273,19 @@ func (a *AppConfig) OverwriteConf(args []string) {
 //
 // The loaded configuration can be overriden by the cli arguments and environment variables.
 func (a *AppConfig) DefaultReadConfig(args []string) {
-	loaded := hash.NewSet[string]()
-
 	defConfigFile := GuessConfigFilePath(args)
+	a.defaultReadConfigFromFile(args, defConfigFile)
+}
+
+// Default way to read the specified config file.
+//
+// Normally, this func is called by *MisoApp. Use this only when it's necessary. and you should call this func only once.
+//
+// You should use [AppConfig.DefaultReadConfig] instead.
+//
+// The loaded configuration can be overriden by the cli arguments and environment variables.
+func (a *AppConfig) defaultReadConfigFromFile(args []string, defConfigFile string) {
+	loaded := hash.NewSet[string]()
 	loaded.Add(defConfigFile)
 
 	if err := a.LoadConfigFromFile(defConfigFile); err != nil {

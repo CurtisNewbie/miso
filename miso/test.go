@@ -14,15 +14,8 @@ import (
 func PrepareTestEnv(t *testing.T) Rail {
 	rail := EmptyRail()
 	SetProp(PropAppTestEnv, true)
-	cf := tryFindConfFile(rail, t)
-	if cf != "" {
-		err := LoadConfigFromFile(cf, rail)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
 
-	App().Config().OverwriteConf(os.Args)
+	App().Config().defaultReadConfigFromFile(os.Args, tryFindTestConfFile(rail, t))
 
 	if err := App().callConfigLoaders(rail); err != nil {
 		t.Fatal(err)
@@ -48,7 +41,7 @@ func PrepareTestEnv(t *testing.T) Rail {
 	return rail
 }
 
-func tryFindConfFile(rail Rail, t *testing.T) string {
+func tryFindTestConfFile(rail Rail, t *testing.T) string {
 	cf := "conf.yml"
 	wdir, err := os.Getwd()
 	if err != nil {
