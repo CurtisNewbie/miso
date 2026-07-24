@@ -305,7 +305,7 @@ func (a *AppConfig) defaultReadConfigFromFile(args []string, defConfigFile strin
 			return f, false
 		}
 		if !filepath.IsAbs(f) && !osutil.TryFileExists(f) { // in test env, not absolute and not exists
-			tp, err := testutil.FindTestdataPath(f)
+			tp, err := testutil.FindTestConfPath(f)
 			if err == nil {
 				return tp, true
 			}
@@ -345,6 +345,9 @@ func (a *AppConfig) defaultReadConfigFromFile(args []string, defConfigFile strin
 	extraFiles = a.GetPropStrSlice(PropConfigExtraFiles)
 	for i := range extraFiles {
 		f := extraFiles[i]
+		if p, ok := rewriteTestPath(f); ok {
+			f = p
+		}
 		if !loaded.Add(f) {
 			continue
 		}
