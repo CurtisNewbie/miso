@@ -42,13 +42,27 @@ var module = miso.InitAppModuleFunc(func() *nacosModule {
 })
 
 var (
-	desensitizeContentRegex = regexp.MustCompile(`((access-token|accessToken|access-key|accessKey|password|secret|token|app-id|appId|api-key|apiKey|app-secret|appSecret|sercet-key|secretKey)[ "]*[=:] *)("?[^\n"]+"?)`)
+	desensitizeContentRegex *regexp.Regexp
 	completeReload          = &atomic.Bool{}
 
 	_ miso.ServerList = (*NacosServerList)(nil)
 )
 
 func init() {
+	desensitizeKw := []string{"access-token", "access-key", "password", "secret", "token", "app-id", "app-key", "app-secret", "secret-key",
+		"api-key", "api-token", "api-secret", "key", "client-key", "client-secret", "client-token", "private-key", "private-token",
+	}
+	lwm := make([]string, 0, len(desensitizeKw)*2)
+	for _, k := range desensitizeKw {
+		lwm = append(lwm, k)
+		lk := strutil.CamelCase(k)
+		if lk != k {
+			lwm = append(lwm, lk)
+		}
+	}
+	kwset := strings.Join(lwm, "|")
+	desensitizeContentRegex = regexp.MustCompile(`((` + kwset + `)[ "]*[=:] *)("?[^\n"]+"?)`)
+
 	completeReload.Store(true)
 	miso.RegisterConfigLoader(func(rail miso.Rail) error {
 		err := BootstrapConfigCenter(rail)
