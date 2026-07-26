@@ -161,6 +161,7 @@ cache := miso.NewTTLCache[User](5*time.Minute, 1000)
 ```go
 import (
     "github.com/curtisnewbie/miso"
+    "github.com/curtisnewbie/miso/errs"
     "time"
 )
 
@@ -177,7 +178,7 @@ func GetUser(id string) (*User, error) {
     })
 
     if !ok {
-        return nil, fmt.Errorf("user not found")
+        return nil, errs.NewErrfCode("USER_NOT_FOUND", "User does not exist")
     }
     return user, nil
 }
@@ -237,6 +238,7 @@ cache.OnEvicted(func(key string, user User) {
 
 ```go
 import "github.com/curtisnewbie/miso"
+import "github.com/curtisnewbie/miso/errs"
 import "time"
 
 type CacheService struct {
@@ -272,7 +274,7 @@ func (cs *CacheService) GetUser(id string) (*User, error) {
     })
 
     if !ok {
-        return nil, fmt.Errorf("user not found")
+        return nil, errs.NewErrfCode("USER_NOT_FOUND", "User does not exist")
     }
     return user, nil
 }
@@ -440,6 +442,8 @@ func GetSession(token string) (*Session, error) {
 ### 2. Handle Cache Misses Gracefully
 
 ```go
+import "github.com/curtisnewbie/miso/errs"
+
 user, ok := cache.Get(id, func() (*User, bool) {
     user, err := loadUserFromDB(id)
     if err != nil {
@@ -450,7 +454,7 @@ user, ok := cache.Get(id, func() (*User, bool) {
 })
 
 if !ok {
-    return nil, fmt.Errorf("user not found")
+    return nil, errs.NewErrfCode("USER_NOT_FOUND", "User does not exist")
 }
 ```
 

@@ -257,6 +257,8 @@ Framework automatically wraps responses for JSON serialization with standard res
 
 MisoErr provides structured error handling with error codes, messages, internal messages, and stack traces.
 
+Always use the `errs` package instead of `fmt.Errorf` for stack traces and error codes. See [error-handling.md](error-handling.md).
+
 **Package:** `github.com/curtisnewbie/miso/errs`
 
 ### Creating Errors

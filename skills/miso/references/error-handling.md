@@ -4,6 +4,26 @@ Comprehensive error handling patterns using the `errs` package and Rail logging.
 
 ## Creating Errors
 
+### Error Creation Rules
+
+Always create errors using the `errs` package — never use `fmt.Errorf` or `errors.New`. The `errs` package provides stack traces, error codes, and structured internal messages that `fmt.Errorf` cannot.
+
+| Rule | Prefer | Avoid |
+|------|--------|-------|
+| Create new error | `errs.NewErrf("...")` | `fmt.Errorf("...")` |
+| Create error with code | `errs.NewErrfCode("CODE", "...")` | `fmt.Errorf("[CODE] ...")` |
+| Wrap existing error | `errs.WrapErr(err, "...")` | `fmt.Errorf("...: %w", err)` |
+| Wrap with formatted message | `errs.WrapErrf(err, "...")` | `fmt.Errorf("...: %w", err)` |
+
+**Why:**
+
+- `errs.NewErrf` captures a full stack trace automatically — `fmt.Errorf` does not
+- `errs.NewErrfCode` attaches a machine-readable error code for API responses and client handling
+- `errs.WrapErr`/`errs.WrapErrf` preserve the original error's stack trace and add context
+- The framework auto-converts `MisoErr` types to structured JSON responses, but `fmt.Errorf` produces opaque strings
+
+The 3 `fmt.Errorf` calls in the skill (in caching.md) are documented outliers that should use `errs.NewErrfCode` instead.
+
 ### Simple Error
 
 ```go
