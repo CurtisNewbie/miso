@@ -310,3 +310,165 @@ func Eval(rail miso.Rail, script string, keys []string, args ...interface{}) (an
 func Script(script string) *redis.Script {
 	return redis.NewScript(script)
 }
+
+func Del(rail miso.Rail, keys ...string) (int64, error) {
+	c := GetRedis().Del(rail.Context(), keys...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func TTL(rail miso.Rail, key string) (time.Duration, error) {
+	c := GetRedis().TTL(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HSet(rail miso.Rail, key string, values ...interface{}) (int64, error) {
+	c := GetRedis().HSet(rail.Context(), key, values...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HGet(rail miso.Rail, key, field string) (string, bool, error) {
+	c := GetRedis().HGet(rail.Context(), key, field)
+	v, err := c.Result()
+	if err == nil {
+		return v, true, nil
+	}
+	if errors.Is(err, redis.Nil) {
+		return v, false, nil
+	}
+	return v, false, errs.Wrap(err)
+}
+
+func HGetAll(rail miso.Rail, key string) (map[string]string, error) {
+	c := GetRedis().HGetAll(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HDel(rail miso.Rail, key string, fields ...string) (int64, error) {
+	c := GetRedis().HDel(rail.Context(), key, fields...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HExists(rail miso.Rail, key, field string) (bool, error) {
+	c := GetRedis().HExists(rail.Context(), key, field)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HKeys(rail miso.Rail, key string) ([]string, error) {
+	c := GetRedis().HKeys(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HVals(rail miso.Rail, key string) ([]string, error) {
+	c := GetRedis().HVals(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HLen(rail miso.Rail, key string) (int64, error) {
+	c := GetRedis().HLen(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func HGetJson[T any](rail miso.Rail, key, field string) (T, bool, error) {
+	var t T
+	s, ok, err := HGet(rail, key, field)
+	if err != nil || !ok {
+		return t, ok, err
+	}
+	t, err = json.SParseJsonAs[T](s)
+	return t, true, err
+}
+
+func HSetJson(rail miso.Rail, key, field string, val interface{}) error {
+	s, err := json.SWriteJson(val)
+	if err != nil {
+		return err
+	}
+	_, err = HSet(rail, key, field, s)
+	return err
+}
+
+func HIncrBy(rail miso.Rail, key, field string, incr int64) (int64, error) {
+	c := GetRedis().HIncrBy(rail.Context(), key, field, incr)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func SAdd(rail miso.Rail, key string, members ...interface{}) (int64, error) {
+	c := GetRedis().SAdd(rail.Context(), key, members...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func SMembers(rail miso.Rail, key string) ([]string, error) {
+	c := GetRedis().SMembers(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func SIsMember(rail miso.Rail, key, member string) (bool, error) {
+	c := GetRedis().SIsMember(rail.Context(), key, member)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func SRem(rail miso.Rail, key string, members ...interface{}) (int64, error) {
+	c := GetRedis().SRem(rail.Context(), key, members...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func SCard(rail miso.Rail, key string) (int64, error) {
+	c := GetRedis().SCard(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func LLen(rail miso.Rail, key string) (int64, error) {
+	c := GetRedis().LLen(rail.Context(), key)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func LRange(rail miso.Rail, key string, start, stop int64) ([]string, error) {
+	c := GetRedis().LRange(rail.Context(), key, start, stop)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func LRem(rail miso.Rail, key string, count int64, value interface{}) (int64, error) {
+	c := GetRedis().LRem(rail.Context(), key, count, value)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func MGet(rail miso.Rail, keys ...string) ([]interface{}, error) {
+	c := GetRedis().MGet(rail.Context(), keys...)
+	v, err := c.Result()
+	return v, errs.Wrap(err)
+}
+
+func MSet(rail miso.Rail, values ...interface{}) error {
+	c := GetRedis().MSet(rail.Context(), values...)
+	return errs.Wrap(c.Err())
+}
+
+func GetDel(rail miso.Rail, key string) (string, bool, error) {
+	c := GetRedis().GetDel(rail.Context(), key)
+	v, err := c.Result()
+	if err == nil {
+		return v, true, nil
+	}
+	if errors.Is(err, redis.Nil) {
+		return v, false, nil
+	}
+	return v, false, errs.Wrap(err)
+}
