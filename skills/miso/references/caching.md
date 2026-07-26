@@ -501,4 +501,4 @@ redis:
   password: ""
 ```
 
-See [Redis middleware](https://github.com/CurtisNewbie/miso/blob/main/doc/rabbitmq.md) for full configuration.
+See [Redis API](redis.md) for full Redis configuration and raw API operations.

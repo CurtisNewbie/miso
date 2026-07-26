@@ -57,3 +57,6 @@ miso is a Go framework for building microservices with:
 
 **Caching:** [caching.md](references/caching.md)
 - Local cache, TTL cache, Redis cache, cache patterns
+
+**Redis API:** [redis.md](references/redis.md)
+- Raw Redis operations, hash/list/set, distributed locks, scripting
