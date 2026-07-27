@@ -32,7 +32,7 @@ func Distinct(l []string) []string {
 	for _, v := range l {
 		s[v] = struct{}{}
 	}
-	var keys []string = make([]string, len(s))
+	var keys []string = make([]string, 0, len(s))
 	for k := range s {
 		keys = append(keys, k)
 	}
