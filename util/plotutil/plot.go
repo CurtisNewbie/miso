@@ -27,6 +27,7 @@ type plotLineConf struct {
 	XTickNames []string
 	LineLabel  *string
 	Format     *string
+	LastN      *int
 }
 
 func WithXLabel(v string) plotLineConfFunc {
@@ -71,6 +72,12 @@ func WithFormat(v string) plotLineConfFunc {
 	}
 }
 
+func WithLastN(v int) plotLineConfFunc {
+	return func(pgc *plotLineConf) {
+		pgc.LastN = &v
+	}
+}
+
 type plotLineConfFunc func(*plotLineConf)
 
 func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfFunc) error {
@@ -86,6 +93,7 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 		plotWidth  = 10 * vg.Inch
 		plotHeight = plotWidth / 2
 		format     = "png"
+		lastN      = 0
 	)
 	if pgc.XLabel != nil {
 		xlabel = *pgc.XLabel
@@ -104,6 +112,9 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 	}
 	if pgc.Format != nil {
 		format = *pgc.Format
+	}
+	if pgc.LastN != nil {
+		lastN = *pgc.LastN
 	}
 
 	p := plot.New()
@@ -133,7 +144,7 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 
 	// draw line on plot
 	if len(plots) > 0 {
-		drawLine(p, plots, 1, lineLabel)
+		drawLine(p, plots, 1, lineLabel, lastN)
 	}
 
 	c, err := p.WriterTo(plotWidth, plotHeight, format)
@@ -144,9 +155,12 @@ func PlotLine(title string, plots plotter.XYs, w io.Writer, ops ...plotLineConfF
 	return err
 }
 
-func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error {
-
-	// find min, max
+// valueLabelIndices returns the data indices that should receive value labels:
+// min (if min < max), last N points (excluding min/max), and max.
+func valueLabelIndices(dat plotter.XYs, lastN int) []int {
+	if len(dat) == 0 {
+		return nil
+	}
 	var min, max float64 = math.MaxFloat64, 0
 	var mini, maxi int
 	for i, xy := range dat {
@@ -160,6 +174,27 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 		}
 	}
 
+	seen := map[int]bool{}
+	var indices []int
+
+	if min < max {
+		seen[mini] = true
+		indices = append(indices, mini)
+	}
+
+	for i := len(dat) - lastN; i < len(dat); i++ {
+		if i < 0 || seen[i] || i == maxi {
+			continue
+		}
+		seen[i] = true
+		indices = append(indices, i)
+	}
+
+	indices = append(indices, maxi)
+	return indices
+}
+
+func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string, lastN int) error {
 	line, err := plotter.NewLine(dat)
 	if err != nil {
 		return errs.Wrap(err)
@@ -168,22 +203,10 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 	line.LineStyle.Color = plotutil.Color(color)
 	p.Add(line)
 
-	if min < max {
+	for _, i := range valueLabelIndices(dat, lastN) {
 		lineLabels, err := plotter.NewLabels(plotter.XYLabels{
-			XYs:    []plotter.XY{{X: float64(mini), Y: min}},
-			Labels: []string{cast.ToString(min)},
-		})
-		if err != nil {
-			return err
-		}
-		p.Add(lineLabels)
-	}
-
-	last := dat[len(dat)-1]
-	if last.Y != min && last.Y != max {
-		lineLabels, err := plotter.NewLabels(plotter.XYLabels{
-			XYs:    []plotter.XY{{X: float64(len(dat) - 1), Y: last.Y}},
-			Labels: []string{cast.ToString(last.Y)},
+			XYs:    []plotter.XY{{X: float64(i), Y: dat[i].Y}},
+			Labels: []string{cast.ToString(dat[i].Y)},
 		})
 		if err != nil {
 			return err
@@ -192,15 +215,6 @@ func drawLine(p *plot.Plot, dat plotter.XYs, color int, lineLabel string) error 
 	}
 
 	lineLabels, err := plotter.NewLabels(plotter.XYLabels{
-		XYs:    []plotter.XY{{X: float64(maxi), Y: max}},
-		Labels: []string{cast.ToString(max)},
-	})
-	if err != nil {
-		return err
-	}
-	p.Add(lineLabels)
-
-	lineLabels, err = plotter.NewLabels(plotter.XYLabels{
 		XYs:    []plotter.XY{{X: float64(1), Y: dat[0].Y}},
 		Labels: []string{lineLabel},
 	})
