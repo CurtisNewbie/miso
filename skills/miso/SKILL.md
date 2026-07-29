@@ -60,3 +60,6 @@ miso is a Go framework for building microservices with:
 
 **Redis API:** [redis.md](references/redis.md)
 - Raw Redis operations, hash/list/set, distributed locks, scripting
+
+**Prometheus Metrics:** [prometheus.md](references/prometheus.md)
+- Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
