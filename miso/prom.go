@@ -33,7 +33,7 @@ func PrometheusHandler() http.Handler {
 
 // Timer based on prometheus.Histogram.
 //
-// Duration is measured in millisecond.
+// Duration is measured in seconds.
 //
 // Use NewHistTimer to create a new one, and each timer can only be used for once.
 type HistTimer struct {
@@ -47,7 +47,7 @@ func (t *HistTimer) Reset() {
 
 func (t *HistTimer) ObserveDuration() time.Duration {
 	d := time.Since(t.begin)
-	t.hist.Observe(float64(d.Milliseconds()))
+	t.hist.Observe(d.Seconds())
 	return d
 }
 
@@ -116,7 +116,7 @@ func DisablePrometheusBootstrap() {
 
 // Timer based on prometheus.HistogramVec.
 //
-// Duration is measured in millisecond.
+// Duration is measured in seconds.
 //
 // Use NewVecTimer to create a new one, and each timer can only be used for once.
 type VecTimer struct {
@@ -130,7 +130,7 @@ func (t *VecTimer) Reset() {
 
 func (t *VecTimer) ObserveDuration(labels ...string) time.Duration {
 	d := time.Since(t.begin)
-	t.histVec.WithLabelValues(labels...).Observe(float64(d.Milliseconds()))
+	t.histVec.WithLabelValues(labels...).Observe(d.Seconds())
 	return d
 }
 
