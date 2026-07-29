@@ -66,7 +66,7 @@ func NewHistTimer(hist prometheus.Histogram) *HistTimer {
 //
 // The created Histogram is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromHisto(name string) prometheus.Histogram {
-	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name})
+	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name, Buckets: append(prometheus.DefBuckets, 20, 30, 45, 60)})
 	if e := prometheus.DefaultRegisterer.Register(hist); e != nil {
 		panic(fmt.Errorf("failed to register histogram %v, %w", name, e))
 	}
@@ -149,7 +149,7 @@ func NewVecTimer(vec *prometheus.HistogramVec) *VecTimer {
 //
 // The HistogramVec is automatically registered to the prometheus.DefaultRegisterer.
 func NewPromHistoVec(name string, labels []string) *prometheus.HistogramVec {
-	vec := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, labels)
+	vec := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name, Buckets: append(prometheus.DefBuckets, 20, 30, 45, 60)}, labels)
 	if e := prometheus.DefaultRegisterer.Register(vec); e != nil {
 		panic(fmt.Errorf("failed to register HistogramVec %v, %v", name, e))
 	}
