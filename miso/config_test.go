@@ -301,31 +301,33 @@ test:
 }
 
 func TestPropFunc(t *testing.T) {
+	ac := newAppConfig()
+
 	// Test 1: RegisterPropFunc + GetPropStr resolves
-	RegisterPropFunc("encrypt", func(arg string) (string, error) {
+	ac.RegisterPropFunc("encrypt", func(arg string) (string, error) {
 		return "encrypted:" + arg, nil
 	})
-	SetProp("secret", "encrypt(mysecret)")
-	resolved := GetPropStr("secret")
+	ac.SetProp("secret", "encrypt(mysecret)")
+	resolved := ac.GetPropStr("secret")
 	if resolved != "encrypted:mysecret" {
 		t.Fatalf("expected 'encrypted:mysecret', got '%s'", resolved)
 	}
 	t.Logf("Test 1 passed: resolved = %s", resolved)
 
 	// Test 2: Non-matching value returns as-is
-	SetProp("plain", "plaintext")
-	plain := GetPropStr("plain")
+	ac.SetProp("plain", "plaintext")
+	plain := ac.GetPropStr("plain")
 	if plain != "plaintext" {
 		t.Fatalf("expected 'plaintext', got '%s'", plain)
 	}
 	t.Logf("Test 2 passed: plain = %s", plain)
 
 	// Test 3: Error returns empty string
-	RegisterPropFunc("fail", func(arg string) (string, error) {
+	ac.RegisterPropFunc("fail", func(arg string) (string, error) {
 		return "", fmt.Errorf("intentional error")
 	})
-	SetProp("failprop", "fail(something)")
-	failResult := GetPropStr("failprop")
+	ac.SetProp("failprop", "fail(something)")
+	failResult := ac.GetPropStr("failprop")
 	if failResult != "" {
 		t.Fatalf("expected empty string on error, got '%s'", failResult)
 	}
@@ -339,18 +341,18 @@ func TestPropFunc(t *testing.T) {
 			Value string
 		}
 	}
-	err := LoadConfigFromStr(`
+	err := ac.LoadConfigFromStr(`
 nested:
   name: "normal"
   secret: "encrypt(nested-secret)"
   inner:
     value: "encrypt(inner-value)"
-`, EmptyRail())
+`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var cfg NestedConfig
-	UnmarshalFromPropKey("nested", &cfg)
+	ac.UnmarshalFromPropKey("nested", &cfg)
 	if cfg.Name != "normal" {
 		t.Fatalf("expected 'normal', got '%s'", cfg.Name)
 	}
@@ -363,19 +365,19 @@ nested:
 	t.Logf("Test 4 passed: nested struct resolved, cfg = %+v", cfg)
 
 	// Test 5: Multiple registered funcs
-	RegisterPropFunc("vault", func(arg string) (string, error) {
+	ac.RegisterPropFunc("vault", func(arg string) (string, error) {
 		return "vault:" + arg, nil
 	})
-	RegisterPropFunc("decrypt", func(arg string) (string, error) {
+	ac.RegisterPropFunc("decrypt", func(arg string) (string, error) {
 		return "decrypted:" + arg, nil
 	})
-	SetProp("vault-secret", "vault(secret/path)")
-	SetProp("decrypt-secret", "decrypt(cipher)")
-	vaultResult := GetPropStr("vault-secret")
+	ac.SetProp("vault-secret", "vault(secret/path)")
+	ac.SetProp("decrypt-secret", "decrypt(cipher)")
+	vaultResult := ac.GetPropStr("vault-secret")
 	if vaultResult != "vault:secret/path" {
 		t.Fatalf("expected 'vault:secret/path', got '%s'", vaultResult)
 	}
-	decryptResult := GetPropStr("decrypt-secret")
+	decryptResult := ac.GetPropStr("decrypt-secret")
 	if decryptResult != "decrypted:cipher" {
 		t.Fatalf("expected 'decrypted:cipher', got '%s'", decryptResult)
 	}
