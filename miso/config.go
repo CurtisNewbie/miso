@@ -45,6 +45,9 @@ type AppConfig struct {
 	// key is always the real key not the alias
 	fastBoolCache *hash.StrRWMap[bool]
 
+	// registered prop functions for resolving config value expressions
+	propFuncs *hash.StrRWMap[func(string) (string, error)]
+
 	// aliases of keys
 	// alias -> key
 	// aliases map[string]string
@@ -223,7 +226,7 @@ e.g, for "name" : "${secretName}".
 This func will attempt to resolve the actual value for '${secretName}'.
 */
 func (a *AppConfig) GetPropStr(prop string) string {
-	return a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) }))
+	return a.resolvePropFunc(a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) })))
 }
 
 // Same as GetPropStr() except the returned string is trimmed
@@ -248,6 +251,7 @@ func (a *AppConfig) UnmarshalFromProp(ptr any) {
 			Warnf("failed to UnmarshalFromProp, %v", err)
 		}
 	})
+	a.resolveStructStringFields(ptr)
 }
 
 // Unmarshal configuration from a speicific key.
@@ -259,6 +263,7 @@ func (a *AppConfig) UnmarshalFromPropKey(key string, ptr any) {
 			Warnf("failed to UnmarshalFromPropKey, %v", err)
 		}
 	})
+	a.resolveStructStringFields(ptr)
 }
 
 // Overwrite existing conf using environment and cli args.
@@ -525,11 +530,114 @@ func (a *AppConfig) ResolveArg(arg string) string {
 	})
 }
 
+// RegisterPropFunc registers a prop function that resolves config value expressions.
+//
+// The registered function is called when a config value matches the pattern "funcName(arg)".
+// For example, after registering "encrypt", a config value "encrypt(cipher...)" will be resolved
+// by calling the registered function with "cipher..." as the argument.
+func (a *AppConfig) RegisterPropFunc(name string, fn func(string) (string, error)) error {
+	if name == "" || strings.ContainsAny(name, "()") {
+		return errs.NewErrf("invalid prop func name: %q", name)
+	}
+	a.propFuncs.Put(name, fn)
+	return nil
+}
+
+// resolvePropFunc checks if the value matches any registered prop function pattern and resolves it.
+//
+// If the value matches "funcName(arg)" for a registered function, the function is called with the arg.
+// On error, an empty string is returned and the error is logged.
+// If no match is found, the original value is returned.
+func (a *AppConfig) resolvePropFunc(value string) string {
+	if value == "" {
+		return value
+	}
+
+	// extract func name: everything before the first '('
+	idx := strings.Index(value, "(")
+	if idx <= 0 || !strings.HasSuffix(value, ")") {
+		return value
+	}
+	name := value[:idx]
+	fn, ok := a.propFuncs.Get(name)
+	if !ok {
+		return value
+	}
+	arg := value[idx+1 : len(value)-1]
+	result, err := fn(arg)
+	if err != nil {
+		Errorf("prop func '%s' failed to resolve '%s': %v", name, value, err)
+		return ""
+	}
+	return result
+}
+
+// resolveStructStringFields walks a struct using reflection and resolves prop functions for all string fields.
+func (a *AppConfig) resolveStructStringFields(ptr any) {
+	if a.propFuncs.Len() == 0 {
+		return
+	}
+	v := reflect.ValueOf(ptr)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return
+	}
+	a.resolveStructValue(v.Elem())
+}
+
+func (a *AppConfig) resolveStructValue(v reflect.Value) {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+
+		if !field.CanSet() {
+			continue
+		}
+
+		switch field.Kind() {
+		case reflect.String:
+			resolved := a.resolvePropFunc(field.String())
+			field.SetString(resolved)
+		case reflect.Slice:
+			if field.Type().Elem().Kind() == reflect.String {
+				for j := 0; j < field.Len(); j++ {
+					resolved := a.resolvePropFunc(field.Index(j).String())
+					field.Index(j).SetString(resolved)
+				}
+			}
+		case reflect.Map:
+			if field.Type().Key().Kind() == reflect.String && field.Type().Elem().Kind() == reflect.String {
+				iter := field.MapRange()
+				for iter.Next() {
+					resolved := a.resolvePropFunc(iter.Value().String())
+					field.SetMapIndex(iter.Key(), reflect.ValueOf(resolved))
+				}
+			}
+		case reflect.Struct:
+			a.resolveStructValue(field)
+		case reflect.Ptr:
+			if !field.IsNil() {
+				a.resolveStructValue(field)
+			}
+		}
+	}
+}
+
 func newAppConfig() *AppConfig {
 	ac := &AppConfig{
 		vp:            viper.New(),
 		rwmu:          &sync.RWMutex{},
 		fastBoolCache: hash.NewStrRWMap[bool](),
+		propFuncs:     hash.NewStrRWMap[func(string) (string, error)](),
 		// aliases:       map[string]string{},
 	}
 	ac.vp.SetConfigType("yml")
@@ -760,6 +868,15 @@ func InTestEnv() bool {
 // Resolve '${someArg}' style variables.
 func ResolveArg(arg string) string {
 	return globalConfig().ResolveArg(arg)
+}
+
+// RegisterPropFunc registers a prop function that resolves config value expressions.
+//
+// The registered function is called when a config value matches the pattern "funcName(arg)".
+// For example, after registering "encrypt", a config value "encrypt(cipher...)" will be resolved
+// by calling the registered function with "cipher..." as the argument.
+func RegisterPropFunc(name string, fn func(string) (string, error)) error {
+	return globalConfig().RegisterPropFunc(name, fn)
 }
 
 // call with viper lock

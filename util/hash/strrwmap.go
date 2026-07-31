@@ -56,6 +56,15 @@ func (r *StrRWMap[V]) GetElseErr(k string, elseFunc func(k string) (V, error)) (
 	return r.shard(k).GetElseErr(k, elseFunc)
 }
 
+// Len returns the total number of entries across all shards.
+func (r *StrRWMap[V]) Len() int {
+	n := 0
+	for _, st := range r.storage {
+		n += st.Len()
+	}
+	return n
+}
+
 func (r *StrRWMap[V]) Keys() []string {
 	keys := make([]string, 0, 10)
 	for _, st := range r.storage {

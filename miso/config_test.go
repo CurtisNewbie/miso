@@ -2,6 +2,7 @@ package miso
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -297,4 +298,86 @@ test:
 	for i, v := range GetPropChild("test") {
 		t.Logf("%v, %v", i, v)
 	}
+}
+
+func TestPropFunc(t *testing.T) {
+	// Test 1: RegisterPropFunc + GetPropStr resolves
+	RegisterPropFunc("encrypt", func(arg string) (string, error) {
+		return "encrypted:" + arg, nil
+	})
+	SetProp("secret", "encrypt(mysecret)")
+	resolved := GetPropStr("secret")
+	if resolved != "encrypted:mysecret" {
+		t.Fatalf("expected 'encrypted:mysecret', got '%s'", resolved)
+	}
+	t.Logf("Test 1 passed: resolved = %s", resolved)
+
+	// Test 2: Non-matching value returns as-is
+	SetProp("plain", "plaintext")
+	plain := GetPropStr("plain")
+	if plain != "plaintext" {
+		t.Fatalf("expected 'plaintext', got '%s'", plain)
+	}
+	t.Logf("Test 2 passed: plain = %s", plain)
+
+	// Test 3: Error returns empty string
+	RegisterPropFunc("fail", func(arg string) (string, error) {
+		return "", fmt.Errorf("intentional error")
+	})
+	SetProp("failprop", "fail(something)")
+	failResult := GetPropStr("failprop")
+	if failResult != "" {
+		t.Fatalf("expected empty string on error, got '%s'", failResult)
+	}
+	t.Logf("Test 3 passed: error returns empty string")
+
+	// Test 4: UnmarshalFromPropKey resolves nested string fields
+	type NestedConfig struct {
+		Name   string
+		Secret string
+		Inner  struct {
+			Value string
+		}
+	}
+	err := LoadConfigFromStr(`
+nested:
+  name: "normal"
+  secret: "encrypt(nested-secret)"
+  inner:
+    value: "encrypt(inner-value)"
+`, EmptyRail())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg NestedConfig
+	UnmarshalFromPropKey("nested", &cfg)
+	if cfg.Name != "normal" {
+		t.Fatalf("expected 'normal', got '%s'", cfg.Name)
+	}
+	if cfg.Secret != "encrypted:nested-secret" {
+		t.Fatalf("expected 'encrypted:nested-secret', got '%s'", cfg.Secret)
+	}
+	if cfg.Inner.Value != "encrypted:inner-value" {
+		t.Fatalf("expected 'encrypted:inner-value', got '%s'", cfg.Inner.Value)
+	}
+	t.Logf("Test 4 passed: nested struct resolved, cfg = %+v", cfg)
+
+	// Test 5: Multiple registered funcs
+	RegisterPropFunc("vault", func(arg string) (string, error) {
+		return "vault:" + arg, nil
+	})
+	RegisterPropFunc("decrypt", func(arg string) (string, error) {
+		return "decrypted:" + arg, nil
+	})
+	SetProp("vault-secret", "vault(secret/path)")
+	SetProp("decrypt-secret", "decrypt(cipher)")
+	vaultResult := GetPropStr("vault-secret")
+	if vaultResult != "vault:secret/path" {
+		t.Fatalf("expected 'vault:secret/path', got '%s'", vaultResult)
+	}
+	decryptResult := GetPropStr("decrypt-secret")
+	if decryptResult != "decrypted:cipher" {
+		t.Fatalf("expected 'decrypted:cipher', got '%s'", decryptResult)
+	}
+	t.Logf("Test 5 passed: multiple funcs work, vault = %s, decrypt = %s", vaultResult, decryptResult)
 }

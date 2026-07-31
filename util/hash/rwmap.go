@@ -21,6 +21,12 @@ func (r *RWMap[K, V]) Get(k K) (V, bool) {
 	return r.GetElse(k, nil)
 }
 
+func (r *RWMap[K, V]) Len() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.storage)
+}
+
 func (r *RWMap[K, V]) Keys() []K {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
