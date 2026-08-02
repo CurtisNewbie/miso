@@ -62,6 +62,32 @@ func NewHistTimer(hist prometheus.Histogram) *HistTimer {
 	}
 }
 
+// Predefined bucket boundaries (upper bounds, in seconds) for HTTP request latency.
+//
+// 5ms to 30s, with a tail for slow endpoints.
+func HttpRequestBuckets() []float64 {
+	return []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 20, 30}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for DB query latency.
+//
+// Typical queries start around 1ms, slow ones can reach 10-30s (1ms - 30s).
+func DBQueryBuckets() []float64 {
+	return []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for long-running task
+// durations, e.g. cron jobs and batch processing (1s - 2h).
+func LongTaskBuckets() []float64 {
+	return []float64{1, 5, 15, 30, 60, 300, 600, 1800, 3600, 7200}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for LLM response
+// latency, e.g. chat completions and other inference calls (5s - 5m).
+func LLMResponseBuckets() []float64 {
+	return []float64{5, 10, 15, 30, 45, 60, 80, 100, 120, 150, 300}
+}
+
 // Create new Histogram.
 //
 // The created Histogram is automatically registered to the prometheus.DefaultRegisterer.

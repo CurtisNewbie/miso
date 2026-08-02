@@ -17,6 +17,13 @@ counter := miso.NewPromCounter("my_events_total")
 // Histogram with custom bucket boundaries (upper bounds, in seconds).
 // Defaults to prometheus.DefBuckets + 20, 30, 45, 60 when omitted.
 hist := miso.NewPromHisto("db_query_seconds", .005, .01, .05, .1, .5, 1, 2.5, 5, 10, 30)
+
+// Or use a predefined bucket set for a common use case:
+//   miso.HttpRequestBuckets() — HTTP request latency, 5ms-30s
+//   miso.DBQueryBuckets()     — DB query latency, 1ms-30s
+//   miso.LongTaskBuckets()    — long-running tasks, 1s-2h
+//   miso.LLMResponseBuckets() — LLM response latency, 5s-5m
+hist := miso.NewPromHisto("http_request_seconds", miso.HttpRequestBuckets()...)
 ```
 
 Call these at package init or once at startup — panics on duplicate registration.
