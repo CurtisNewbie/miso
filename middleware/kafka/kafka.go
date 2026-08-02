@@ -7,16 +7,15 @@ import (
 	"math"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/strutil"
 	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/protocol"
 )
 
-//lint:ignore U1000 for future use
 var mod = miso.InitAppModuleFunc(func() *kafkaModule {
 	return &kafkaModule{
 		mu:            &sync.RWMutex{},
@@ -44,8 +43,11 @@ type kafkaModule struct {
 }
 
 type KafkaReaderConfig struct {
-	Topic       string
-	GroupId     string
+	Topic   string
+	GroupId string
+	// Number of Kafka Readers (consumer group members) to create, each consuming with a single
+	// goroutine. Defaults to 1. Partitions are exclusively assigned to each member, so messages
+	// within a partition are always processed in order. Should not exceed the topic's partition count.
 	Concurrency int
 	Listen      func(rail miso.Rail, m Message) error
 }
@@ -77,12 +79,24 @@ func NewReader(addrs []string, groupId string, topic string) *kafka.Reader {
 		Brokers:               addrs,
 		GroupID:               groupId,
 		Topic:                 topic,
-		MaxAttempts:           math.MaxInt, // retry forever?
-		MaxBytes:              10e6,        // 10MB
+		StartOffset:           startOffset(), // only applies to consumer groups without committed offsets
+		MaxAttempts:           math.MaxInt,   // retry forever
+		MaxBytes:              10e6,          // 10MB
 		Logger:                kafkaInfoLogger{},
 		ErrorLogger:           kafkaErrorLogger{},
 		WatchPartitionChanges: true,
 	})
+}
+
+// Resolve the start offset for new consumer groups, defaults to the latest offset
+// so that first deployment of a consumer group does not replay the entire topic history.
+func startOffset() int64 {
+	switch miso.GetPropStr(PropKafkaStartOffset) {
+	case "first":
+		return kafka.FirstOffset
+	default:
+		return kafka.LastOffset
+	}
 }
 
 func WriteMessageJson(rail miso.Rail, topic string, key string, value any) error {
@@ -99,13 +113,19 @@ func WriteMessage(rail miso.Rail, topic string, key string, value []byte) error 
 		return errs.NewErrf("failed to obtain Kafka Writer")
 	}
 
-	// propogate trace through headers
+	// propagate trace through headers
 	headers := []kafka.Header{}
 	miso.UsePropagationKeys(func(key string) {
-		headers = append(headers, protocol.Header{Key: key, Value: []byte(rail.CtxValStr(key))})
+		headers = append(headers, kafka.Header{Key: key, Value: []byte(rail.CtxValStr(key))})
 	})
 
-	err := w.WriteMessages(context.Background(), kafka.Message{
+	// bound the write so a slow or unreachable broker cannot stall the caller indefinitely.
+	// note: a timed-out write may still be delivered by the broker, so the returned error
+	// does not guarantee the message was not written — callers retrying may produce duplicates
+	ctx, cancel := context.WithTimeout(context.Background(), miso.GetPropDuration(PropKafkaWriteTimeout))
+	defer cancel()
+
+	err := w.WriteMessages(ctx, kafka.Message{
 		Topic:   topic,
 		Headers: headers,
 		Key:     []byte(key),
@@ -123,6 +143,15 @@ func GetWriter() *kafka.Writer {
 }
 
 // Register Kafka Listener.
+//
+// The message is committed only after Listen returns nil. If Listen returns an error or panics,
+// the message is not committed and is only redelivered after a rebalance or process restart.
+//
+// Concurrency Kafka Readers (consumer group members) are created for this listener, each running
+// a single goroutine. Kafka partitions are exclusively assigned to one member, so messages within
+// a partition are always processed and committed in order. Concurrency effectively limits how many
+// partitions are processed in parallel — values greater than the topic's partition count leave some
+// members idle, so it should not exceed the partition count.
 //
 // Notice that, internally miso uses kafka-go, which doesn't support CooperativeStickyAssigner and StickyPartitioner, while these are used by default in cpp and java client.
 //
@@ -153,12 +182,12 @@ func bootstrapKafka(rail miso.Rail) error {
 		} else {
 			miso.Debug("Kafka Writer closed")
 		}
+		m.mu.Lock()
 		m.w = nil
+		m.mu.Unlock()
 	})
 
 	for _, rc := range m.readerConfigs {
-		r := NewReader(addrs, rc.GroupId, rc.Topic)
-
 		// wrap provided listener, make sure it's panic free
 		listen := func(rail miso.Rail, m Message) (err error) {
 			defer func() {
@@ -172,18 +201,23 @@ func bootstrapKafka(rail miso.Rail) error {
 			return
 		}
 
-		miso.AddAsyncShutdownHook(func() {
-			if err := r.Close(); err != nil {
-				miso.Warnf("Failed to close kafka Reader (%v, %v), %v", rc.GroupId, rc.Topic, err)
-			} else {
-				miso.Debugf("Kafka Reader closed (%v, %v)", rc.GroupId, rc.Topic)
-			}
-		})
-		if rc.Concurrency < 1 {
-			rc.Concurrency = 1
+		conc := rc.Concurrency
+		if conc < 1 {
+			conc = 1
 		}
-		for i := 0; i < rc.Concurrency; i++ {
+		for i := 0; i < conc; i++ {
+			r := NewReader(addrs, rc.GroupId, rc.Topic)
+
+			miso.AddAsyncShutdownHook(func() {
+				if err := r.Close(); err != nil {
+					miso.Warnf("Failed to close kafka Reader (%v, %v), %v", rc.GroupId, rc.Topic, err)
+				} else {
+					miso.Debugf("Kafka Reader closed (%v, %v)", rc.GroupId, rc.Topic)
+				}
+			})
+
 			go func() {
+				backoff := 1 * time.Second
 				for {
 					rail := miso.EmptyRail()
 					km, err := r.FetchMessage(rail.Context())
@@ -192,11 +226,18 @@ func bootstrapKafka(rail miso.Rail) error {
 							rail.Infof("Kafka Reader for (%v, %v) closed, exiting", rc.GroupId, rc.Topic)
 							return
 						}
-						rail.Errorf("Failed to read Kafka message, %v", err)
-						return
+						// errors surfaced by the reader (e.g. unhandled broker error codes) would
+						// otherwise kill this consumer permanently, retry with backoff instead
+						rail.Errorf("Failed to read Kafka message (%v, %v), retrying in %v, %v", rc.GroupId, rc.Topic, backoff, err)
+						time.Sleep(backoff)
+						if backoff < 30*time.Second {
+							backoff *= 2
+						}
+						continue
 					}
+					backoff = 1 * time.Second
 
-					// retriving trace info from headers
+					// retrieving trace info from headers
 					tracedHeaders := map[string]string{}
 					for _, k := range miso.GetPropagationKeys() {
 						tracedHeaders[k] = ""
@@ -222,16 +263,20 @@ func bootstrapKafka(rail miso.Rail) error {
 					}
 
 					if err := r.CommitMessages(rail.Context(), km); err != nil {
+						if errors.Is(err, io.ErrClosedPipe) {
+							return // reader closed, shutting down
+						}
 						rail.Errorf("Failed to commit Kafka message (%v, %v), offset: %v, %v", rc.GroupId, rc.Topic, km.Offset, err)
+						time.Sleep(backoff) // avoid hot-looping on persistent commit rejection
 						continue
 					}
 
-					rail.Infof("Kafka message commited at topic: %v, partition: %v, offset: %v", km.Topic, km.Partition, km.Offset)
+					rail.Infof("Kafka message committed at topic: %v, partition: %v, offset: %v", km.Topic, km.Partition, km.Offset)
 				}
 			}()
 		}
 
-		rail.Infof("Created Kafka Reader for (%v, %v), currency: %v", rc.GroupId, rc.Topic, rc.Concurrency)
+		rail.Infof("Created %v Kafka Reader(s) for (%v, %v), one goroutine per reader", conc, rc.GroupId, rc.Topic)
 	}
 
 	return nil
