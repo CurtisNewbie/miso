@@ -22,8 +22,11 @@ miso is a Go framework for building microservices with:
 
 ## Quick Reference
 
-**Core Concepts:** [core-concepts.md](references/core-concepts.md)
-- Tracing, Bootstrap, Request Handling, Error Handling
+**Rail (Tracing & Logging):** [rail.md](references/rail.md)
+- Rail creation, span lifecycle, trace propagation, logging methods
+
+**Bootstrap (Component Lifecycle):** [bootstrap.md](references/bootstrap.md)
+- Order levels, component registration, lifecycle callbacks, shutdown hooks
 
 **Web Development:** [web-development.md](references/web-development.md)
 - Routing, API patterns, middleware, misoapi code generation
