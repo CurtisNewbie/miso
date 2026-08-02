@@ -389,6 +389,39 @@ func init() {
 }
 ```
 
+## Global Bearer Auth
+
+Set `server.auth.bearer` to protect **every** endpoint (including pprof/trace debug routes) with a fixed bearer token:
+
+```yaml
+server:
+  auth:
+    bearer: "your-secret-token"
+```
+
+The token is checked by an auto-registered interceptor; requests without a matching `Authorization: Bearer <token>` header are rejected.
+
+## Route Grouping and Introspection
+
+```go
+// Group routes under a URL prefix (mirrors the controller's context path)
+miso.GroupRoute("/api/v1",
+    miso.HttpGet("/users", ListUsersHandler),
+    miso.HttpPost("/users", CreateUserHandler),
+)
+
+// Register the same handler for all HTTP methods
+miso.HttpAny("/callback", WebhookHandler)
+
+// Basic auth for the whole server
+miso.EnableBasicAuth(func(username, password, url, method string) bool {
+    return username == "admin" && password == "secret"
+})
+
+// Introspect registered routes + metadata
+routes := miso.GetHttpRoutes() // []HttpRoute
+```
+
 ## Interceptors
 
 Add request interceptors for authentication, logging, etc.:
@@ -454,6 +487,54 @@ func CustomHandler(inb *miso.Inbound) error {
 }
 ```
 
+## Global Response Model
+
+All endpoint responses share a uniform JSON body — `{errorCode, msg, error, data}` — produced by the framework's `WrapResp`. The response model types are available for client-side unmarshalling:
+
+```go
+type Resp struct {
+    ErrorCode string      `json:"errorCode"`
+    Msg       string      `json:"msg"`
+    Error     bool        `json:"error"`
+    Data      interface{} `json:"data"`
+}
+
+// Generic version
+type GnResp[T any] struct {
+    ErrorCode string `json:"errorCode"`
+    Msg       string `json:"msg"`
+    Error     bool   `json:"error"`
+    Data      T      `json:"data"`
+}
+```
+
+```go
+var r miso.GnResp[User]
+err := miso.NewClient(rail, "https://api.example.com/user").
+    Get().
+    Json(&r)
+if err != nil {
+    return err
+}
+user, err := r.Res() // (T, error), error from ErrorCode/Msg if Error
+if err != nil {
+    return errs.Wrapf(err, "failed to load user")
+}
+
+// Map error codes to typed errors
+user, err = r.MappedRes(map[string]error{
+    "USER_NOT_FOUND": errs.NewErrfCode("USER_NOT_FOUND", "User does not exist"),
+})
+
+// Build response bodies
+okResp := miso.OkResp()
+okData := miso.OkRespWData(data)
+errResp := miso.ErrorResp("Something went wrong")
+errCodeResp := miso.ErrorRespWCode("DB_ERROR", "Database error")
+```
+
+**Replacing the default wrapper:** use `miso.SetResultBodyBuilder(builder)` to change how the global response body is built (e.g., custom error/msg/ok shapes).
+
 ## Middleware
 
 ```go
@@ -514,7 +595,7 @@ err := miso.NewClient(rail, "https://api.example.com/data").
     Json(&result)
 
 if err != nil {
-    return errs.WrapErr(err, "HTTP request failed")
+    return errs.Wrapf(err, "HTTP request failed")
 }
 ```
 
@@ -533,7 +614,7 @@ err := miso.NewClient(rail, "https://api.example.com/data").
     Json(&data)
 
 if err != nil {
-    return errs.WrapErr(err, "HTTP request failed")
+    return errs.Wrapf(err, "HTTP request failed")
 }
 
 // resp.StatusCode, resp.RespHeader also available
@@ -551,7 +632,7 @@ err := miso.NewDynClient(rail, "/api/data", "user-vault").
     Json(&resp)
 
 if err != nil {
-    return errs.WrapErr(err, "HTTP request failed")
+    return errs.Wrapf(err, "HTTP request failed")
 }
 ```
 
@@ -564,9 +645,110 @@ err := miso.NewClient(rail, "https://api.example.com/file").
     WriteTo(writer)
 
 if err != nil {
-    return errs.WrapErr(err, "HTTP request failed")
+    return errs.Wrapf(err, "HTTP request failed")
 }
 ```
+
+### Advanced Client Features
+
+```go
+// Chrome TLS-fingerprint impersonation (anti-bot detection)
+resp := miso.NewClient(rail, "https://api.example.com/data").
+    Impersonate().
+    Require2xx().
+    Get()
+
+// Route through an HTTP proxy
+miso.NewClient(rail, "https://api.example.com/data").WithProxy("http://proxy:8080")
+
+// Per-request service discovery (like NewDynClient)
+miso.NewClient(rail, "https://api.example.com/data").EnableServiceDiscovery("user-vault")
+
+// Attach trace headers manually for downstream calls
+miso.NewClient(rail, "https://api.example.com/data").EnableTracing()
+
+// Log request/response bodies
+miso.NewClient(rail, "https://api.example.com/data").LogBody()
+
+// Bearer auth
+miso.NewClient(rail, "https://api.example.com/data").AddAuthBearer(token)
+
+// Multipart upload
+err := miso.NewClient(rail, "https://api.example.com/upload").
+    Require2xx().
+    PostFormData(map[string]io.Reader{
+        "file": miso.NewReaderFile(f, "report.pdf"),
+        "note": strings.NewReader("hello"),
+    }).
+    Json(&resp)
+
+// Response inspection without JSON
+tr := miso.NewClient(rail, "https://api.example.com/data").Require2xx().Get()
+if tr.Ok() != nil { /* not 2xx */ }
+if tr.Is2xx() { /* 2xx */ }
+data, err := tr.JsonStr(&resp) // returns raw JSON string too
+n, err := tr.WriteToFile("download.bin") // save response body to file
+```
+
+## HTTP Reverse Proxy
+
+Proxy requests to backend servers, with filter chains for auth/rate limiting/metrics.
+
+```go
+// Static target: proxy /proxy/** to localhost:8081
+miso.NewHttpProxy("/proxy", func(rail miso.Rail, proxyPath string) (string, error) {
+    return "http://localhost:8081" + proxyPath, nil
+})
+```
+
+**Gateway pattern with service discovery** — route `/{serviceName}/path` to a registered service:
+
+```go
+miso.NewHttpProxy("/", miso.NewDynProxyTargetResolver())
+```
+
+**Filters** (run in registration order):
+
+```go
+p := miso.NewHttpProxy("/proxy", resolver)
+
+// Path-scoped filter
+p.AddPathFilter([]string{"/admin/**"}, func(pc *miso.ProxyContext, next func()) {
+    // ... auth check, then next()
+})
+
+// Whitelist + auth check for the whole proxy
+p.AddAccessFilter(func() []string { return whitelistPatterns },
+    func(pc *miso.ProxyContext) (statusCode int, ok bool) { return 0, checkAuth(pc) })
+
+// IP blacklist (returns fake 200 for blacklisted IPs)
+p.AddIPBlacklistFilter(func(ip string) bool { return isBlacklisted(ip) })
+
+// Request-time logging filter (exclude specific paths)
+p.AddReqTimeLogFilter(func(proxyPath string) bool { return proxyPath == "/health" })
+
+// Prometheus histogram metrics
+p.AddMetricsFilter(histogram, nil)
+
+// WebSocket upgrade auth via ?token=xxx query param
+p.AddWsAccessFilter(func() []miso.WsAccessFilterConfig {
+    return []miso.WsAccessFilterConfig{{
+        PathPatterns:  []string{"/ws/**"},
+        TokenQueryKey: "token",
+    }}
+}, func(token string, pc *miso.ProxyContext) (statusCode int, ok bool) {
+    return 0, validateWsToken(token)
+})
+
+// Share state between filters via the proxy context
+pc.SetAttr("user", u)
+```
+
+**Notes:**
+- Must be called before server bootstrap
+- If `proxiedPath` is `/`, default health/prometheus/pprof/apidoc handlers are disabled and inbound trace propagation is turned off (the proxy is the entry point)
+- `ProxyTargetResolver` may return `miso.ProxyHttpStatusError`/`GatewayError` to respond with a specific status code
+- Default proxy client: 5s connect timeout, 30s response-header timeout, 100 max idle conns per host, 500 max conns per host
 
 ## Static Files
 

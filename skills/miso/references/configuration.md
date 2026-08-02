@@ -80,6 +80,19 @@ miso.SetDefProp(PropServerPort, 8080)
 miso.SetDefProp(PropAppName, "default-app")
 ```
 
+### Custom Config Value Resolvers
+
+Register a resolver that transforms config values, e.g., decrypting secrets:
+
+```go
+miso.RegisterPropFunc("decrypt", func(v string) (string, error) {
+    return decryptSecret(v)
+})
+
+// conf.yml: db.password: "decrypt(abc123...)"
+// GetPropStr("db.password") returns the decrypted value
+```
+
 ## Checking Configuration
 
 ```go
@@ -131,6 +144,23 @@ redis:
 logging:
   level: info
   file: logs/app.log
+```
+
+## Rolling File Logs
+
+Write logs to rotating files (lumberjack-based, rotated by a scheduled cron job):
+
+```yaml
+logging:
+  rolling:
+    file: "logs/app.log"        # log file path (enables rolling file logs)
+  file:
+    append-ip-suffix: false     # append host IP suffix to the log filename
+    log-file-only: false        # only write to file, no console output
+    max-size: 50                # max size in megabytes before rotation
+    max-age: 0                  # max days to retain old files (0 = keep forever)
+    max-backups: 0              # max number of old files to retain (0 = keep all)
+    rotate-daily: true          # rotate daily at midnight
 ```
 
 ## Environment Variables

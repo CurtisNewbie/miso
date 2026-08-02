@@ -16,7 +16,7 @@ func TestNewSpan(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
-		cc := ec.NextSpan()
+		cc := ec.NewCtx().NextSpanId()
 		wg.Add(1)
 		go func(j int) {
 			defer wg.Done()

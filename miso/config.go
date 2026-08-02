@@ -533,7 +533,7 @@ func (a *AppConfig) ResolveArg(arg string) string {
 // RegisterPropFunc registers a prop function that resolves config value expressions.
 //
 // The registered function is called when a config value matches the pattern "funcName(arg)".
-// For example, after registering "encrypt", a config value "encrypt(cipher...)" will be resolved
+// For example, after registering "decrypt", a config value "decrypt(cipher...)" will be resolved
 // by calling the registered function with "cipher..." as the argument.
 func (a *AppConfig) RegisterPropFunc(name string, fn func(string) (string, error)) error {
 	if name == "" || strings.ContainsAny(name, "()") {

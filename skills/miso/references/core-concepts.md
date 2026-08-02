@@ -49,7 +49,7 @@ tid := rail.TraceId()
 sid := rail.SpanId()
 
 // Context operations
-ctx := rail.Ctx()
+ctx := rail.Context()
 childRail := rail.NewSpanId()
 
 // Timing operations
@@ -185,6 +185,38 @@ miso.AddOrderedShutdownHook(1, func() {
 })
 ```
 
+Async variants run shutdown logic without blocking the shutdown sequence (sync hooks run sequentially, async hooks run in parallel within their order group):
+
+```go
+miso.AddAsyncShutdownHook(func() { /* non-blocking cleanup */ })
+miso.AddOrderedAsyncShutdownHook(miso.DefShutdownOrder-1, func() { /* ... */ })
+```
+
+### Lifecycle Extras
+
+```go
+// Runs right after config is loaded, before PreServerBootstrap
+// (used by Nacos config center to load remote config)
+miso.RegisterConfigLoader(func(rail miso.Rail) error { return nil })
+
+// Runs after all PostServerBootstrap callbacks complete
+miso.OnAppReady(func(rail miso.Rail) error {
+    rail.Infof("Application ready")
+    return nil
+})
+
+// Graceful-shutdown awareness for long-running code
+if miso.IsShuttingDown() {
+    // stop accepting new work
+}
+<-miso.IsShuttingDownCh() // blocks until shutdown begins
+
+// Programmatic shutdown
+miso.Shutdown()
+```
+
+`PropServerGracefulShutdownTimeSec` (default 30s) sets the global timeout for shutdown hooks + HTTP graceful shutdown.
+
 ## Inbound (Request Context)
 
 Inbound encapsulates HTTP request/response with automatic error handling and tracing.
@@ -287,14 +319,13 @@ err := errs.NewErrfCode("DB_ERROR", "Database operation failed").
 
 ```go
 // Wrap existing error
-return errs.WrapErr(err, "failed to process request")
+return errs.Wrapf(err, "failed to process request")
 
 // Wrap with formatted message
-return errs.WrapErrf(err, "failed to load user: %s", userID)
+return errs.Wrapf(err, "failed to load user: %s", userID)
 
 // Wrap with additional context
-err := errs.WrapErr(err, "database query failed").
-    WithInternalMsg("query: SELECT * FROM users WHERE id = ?", userID)
+return ErrUnknownError.Wrapf(err, "query: SELECT * FROM users WHERE id = ?", userID)
 ```
 
 ### Error Methods
