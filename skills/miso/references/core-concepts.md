@@ -31,6 +31,8 @@ rail := rail.NewSpanId()
 
 ### Logging Methods
 
+Log messages must start with a capital letter. Consistent capitalization makes logs scannable in the console and searchable in log aggregation tools.
+
 ```go
 rail.Infof("Processing request: %v", req)
 rail.Debugf("Debug info: %v", data)
