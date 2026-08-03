@@ -108,6 +108,14 @@ The tables shown below list all configuration that you can tune. You can also re
 | scheduler.api.trigger-job.enabled | enable API to manually trigger jobs (and tasks on current node) | false         |
 | scheduler.time-zone               | cron scheduler time-zone name, e.g., `Europe/Paris`.            | Local         |
 
+## KMS Configuration
+
+| property    | description                                      | default value |
+| ----------- | ------------------------------------------------ | ------------- |
+| kms.enabled | enable KMS integration                           | false         |
+| kms.region  | Alicloud KMS region ID (e.g., cn-hangzhou)       |               |
+| kms.key-id  | KMS master key ID or ARN for envelope encryption |               |
+
 ## Kafka Configuration
 
 | property          | description                    | default value  |
