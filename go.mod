@@ -16,6 +16,7 @@ require (
 	github.com/bsm/redislock v0.9.4
 	github.com/curtisnewbie/svc v0.0.9
 	github.com/dave/dst v0.27.3
+	github.com/dgraph-io/ristretto/v2 v2.4.2
 	github.com/enetx/g v1.0.216
 	github.com/enetx/surf v1.0.196
 	github.com/expr-lang/expr v1.17.6
@@ -85,9 +86,10 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/campoy/embedmd v1.0.0 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/enetx/http v1.0.28 // indirect
 	github.com/enetx/http2 v1.0.26 // indirect
 	github.com/enetx/http3 v1.0.7 // indirect

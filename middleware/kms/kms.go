@@ -18,6 +18,7 @@ import (
 	"github.com/aliyun/credentials-go/credentials"
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/dgraph-io/ristretto/v2"
 )
 
 const (
@@ -65,6 +66,7 @@ type kmsModule struct {
 	mu     sync.RWMutex
 	client *kms.Client
 	keyId  string
+	cache  *ristretto.Cache[string, string]
 }
 
 func newModule() *kmsModule {
@@ -115,6 +117,32 @@ func (m *kmsModule) lazyInit() error {
 	m.client = client
 	m.keyId = keyId
 	miso.Infof("KMS client initialized, region: %s, keyId: %s", region, keyId)
+
+	// Init decrypt cache
+	maxCost := int64(miso.GetPropInt(PropKmsCacheMaxCost))
+	if maxCost <= 0 {
+		maxCost = 30 * 1024 * 1024
+	}
+	c, err := ristretto.NewCache(&ristretto.Config[string, string]{
+		NumCounters: maxCost / 100 * 10, // 10x maxCost, recommended by Ristretto
+		MaxCost:     maxCost,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return errs.Wrapf(err, "failed to create KMS decrypt cache")
+	}
+	m.cache = c
+	miso.Infof("KMS decrypt cache enabled, maxCost: %d bytes", maxCost)
+
+	miso.AddShutdownHook(func() {
+		m.mu.RLock()
+		cache := m.cache
+		m.mu.RUnlock()
+		if cache != nil {
+			cache.Close()
+		}
+	})
+
 	return nil
 }
 
@@ -232,6 +260,13 @@ func (m *kmsModule) decrypt(encoded string) (string, error) {
 		return "", err
 	}
 
+	// Check cache before any parsing
+	if m.cache != nil {
+		if cached, found := m.cache.Get(encoded); found {
+			return cached, nil
+		}
+	}
+
 	// 1. base64 decode → DER bytes
 	derBytes, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
@@ -306,6 +341,12 @@ func (m *kmsModule) decrypt(encoded string) (string, error) {
 	// 9. Zero plaintext data key
 	for i := range plainDEK {
 		plainDEK[i] = 0
+	}
+
+	// Cache result
+	if m.cache != nil {
+		ttl := miso.GetPropDuration(PropKmsCacheTTL)
+		m.cache.SetWithTTL(encoded, string(plaintext), int64(len(plaintext)), ttl)
 	}
 
 	return string(plaintext), nil

@@ -110,11 +110,13 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## KMS Configuration
 
-| property    | description                                      | default value |
-| ----------- | ------------------------------------------------ | ------------- |
-| kms.enabled | enable KMS integration                           | false         |
-| kms.region  | Alicloud KMS region ID (e.g., cn-hangzhou)       |               |
-| kms.key-id  | KMS master key ID or ARN for envelope encryption |               |
+| property           | description                                          | default value |
+| ------------------ | ---------------------------------------------------- | ------------- |
+| kms.enabled        | enable KMS integration                               | false         |
+| kms.region         | Alicloud KMS region ID (e.g., cn-hangzhou)           |               |
+| kms.key-id         | KMS master key ID or ARN for envelope encryption     |               |
+| kms.cache.max-cost | KMS decrypt cache max cost in bytes, default to 30MB | 31457280      |
+| kms.cache.ttl      | KMS decrypt cache TTL                                | 300s          |
 
 ## Kafka Configuration
 
