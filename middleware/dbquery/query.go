@@ -882,7 +882,10 @@ func (q *Query) serializeValue(serializer string, fv reflect.Value, val any) (an
 		ser, ok := schema.GetSerializer(serializer)
 		if ok {
 			// last resort, unfortunately, field can't be provided for now
-			ser.Value(context.Background(), nil, fv, val)
+			v, err := ser.Value(context.Background(), nil, fv, val)
+			if err == nil {
+				return v, true
+			}
 		}
 	}
 	return val, false
