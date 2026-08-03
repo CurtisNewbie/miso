@@ -118,10 +118,12 @@ The tables shown below list all configuration that you can tune. You can also re
 
 ## Kafka Configuration
 
-| property          | description                    | default value  |
-| ----------------- | ------------------------------ | -------------- |
-| kafka.enabled     | Enable kafka client            | false          |
-| kafka.server.addr | list of kafka server addresses | localhost:9092 |
+| property            | description                                         | default value  |
+| ------------------- | --------------------------------------------------- | -------------- |
+| kafka.enabled       | Enable kafka client                                 | false          |
+| kafka.server.addr   | list of kafka server addresses                      | localhost:9092 |
+| kafka.start.offset  | start offset for new consumer groups, first or last | last           |
+| kafka.write.timeout | timeout for a single kafka write                    | 5s             |
 
 ## Logging Configuration
 

@@ -6,24 +6,35 @@ Miso auto-bootstraps a `/metrics` endpoint (prometheus scrape target) when `metr
 
 ```go
 // Histogram — durations, distributions
-hist := miso.NewPromHisto("my_op_ms")
+hist := miso.NewPromHisto("my_op_seconds")
 
 // Histogram with labels
-vec := miso.NewPromHistoVec("my_op_ms", []string{"status", "method"})
+vec := miso.NewPromHistoVec("my_op_seconds", []string{"status", "method"})
 
 // Counter — monotonically increasing totals
 counter := miso.NewPromCounter("my_events_total")
+
+// Histogram with custom bucket boundaries (upper bounds, in seconds).
+// Defaults to prometheus.DefBuckets + 20, 30, 45, 60 when omitted.
+hist := miso.NewPromHisto("db_query_seconds", .005, .01, .05, .1, .5, 1, 2.5, 5, 10, 30)
+
+// Or use a predefined bucket set for a common use case:
+//   miso.HttpRequestBuckets() — HTTP request latency, 5ms-30s
+//   miso.DBQueryBuckets()     — DB query latency, 1ms-30s
+//   miso.LongTaskBuckets()    — long-running tasks, 1s-2h
+//   miso.LLMResponseBuckets() — LLM response latency, 5s-5m
+hist := miso.NewPromHisto("http_request_seconds", miso.HttpRequestBuckets()...)
 ```
 
 Call these at package init or once at startup — panics on duplicate registration.
 
 ## Timers
 
-Timers measure duration in **milliseconds** and observe into the underlying histogram.
+Timers measure duration in **seconds** (`ObserveDuration` records `d.Seconds()`) and observe into the underlying histogram.
 
 ```go
 // Single histogram timer
-hist := miso.NewPromHisto("db_query_ms")
+hist := miso.NewPromHisto("db_query_seconds")
 
 func DoQuery(rail miso.Rail) error {
     t := miso.NewHistTimer(hist)
@@ -32,7 +43,7 @@ func DoQuery(rail miso.Rail) error {
 }
 
 // HistogramVec timer (with labels)
-vec := miso.NewPromHistoVec("http_request_ms", []string{"route", "status"})
+vec := miso.NewPromHistoVec("http_request_seconds", []string{"route", "status"})
 
 func HandleRequest(rail miso.Rail, route string) {
     t := miso.NewVecTimer(vec)
@@ -41,9 +52,13 @@ func HandleRequest(rail miso.Rail, route string) {
 ```
 
 Timer methods:
-- `ObserveDuration() time.Duration` — records elapsed ms, returns duration
+- `ObserveDuration() time.Duration` — records elapsed seconds, returns duration
 - `ObserveDuration(labels ...string) time.Duration` — labeled variant for `VecTimer`
 - `Reset()` — restarts the timer without creating a new one
+
+## Naming Conventions
+
+Unit suffix is **optional** (Prometheus SHOULD-level best practice, not enforced at ingestion). If used, it must be a **base unit** (`_seconds`, `_bytes`) — never `_ms` or `_milliseconds`, both fail `promtool check metrics` (promlint: "abbreviated units" / "use base unit seconds"). Counters should end with `_total` (`my_events_total`).
 
 ## Configuration
 

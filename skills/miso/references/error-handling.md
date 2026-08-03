@@ -12,17 +12,15 @@ Always create errors using the `errs` package — never use `fmt.Errorf` or `err
 |------|--------|-------|
 | Create new error | `errs.NewErrf("...")` | `fmt.Errorf("...")` |
 | Create error with code | `errs.NewErrfCode("CODE", "...")` | `fmt.Errorf("[CODE] ...")` |
-| Wrap existing error | `errs.WrapErr(err, "...")` | `fmt.Errorf("...: %w", err)` |
-| Wrap with formatted message | `errs.WrapErrf(err, "...")` | `fmt.Errorf("...: %w", err)` |
+| Wrap existing error | `errs.Wrapf(err, "...")` | `fmt.Errorf("...: %w", err)` |
+| Wrap with formatted message | `errs.Wrapf(err, "...: %s", arg)` | `fmt.Errorf("...: %w", err)` |
 
 **Why:**
 
 - `errs.NewErrf` captures a full stack trace automatically — `fmt.Errorf` does not
 - `errs.NewErrfCode` attaches a machine-readable error code for API responses and client handling
-- `errs.WrapErr`/`errs.WrapErrf` preserve the original error's stack trace and add context
+- `errs.Wrapf` preserves the original error's stack trace and adds context (plain `errs.Wrap(err)` wraps without adding a message)
 - The framework auto-converts `MisoErr` types to structured JSON responses, but `fmt.Errorf` produces opaque strings
-
-The 3 `fmt.Errorf` calls in the skill (in caching.md) are documented outliers that should use `errs.NewErrfCode` instead.
 
 ### Simple Error
 
@@ -90,20 +88,22 @@ err := errs.NewErrfCode("DB_ERROR", "Database operation failed").
 ### Wrap Existing Error
 
 ```go
-return errs.WrapErr(err, "failed to process request")
+return errs.Wrapf(err, "failed to process request")
 ```
 
 ### Wrap with Formatted Message
 
 ```go
-return errs.WrapErrf(err, "failed to load user: %s", userID)
+return errs.Wrapf(err, "failed to load user: %s", userID)
 ```
 
 ### Wrap with Internal Message
 
 ```go
-err := errs.WrapErr(dbErr, "database query failed").
-    WithInternalMsg("query: SELECT * FROM users WHERE id = ?, args: [123]")
+err := errs.Wrapf(dbErr, "database query failed")
+if me, ok := err.(*errs.MisoErr); ok {
+    me.WithInternalMsg("query: SELECT * FROM users WHERE id = ?, args: [123]")
+}
 ```
 
 ## Error Methods
@@ -123,6 +123,20 @@ stackTrace := err.StackTrace()
 
 // Convert to standard error
 stdErr := err.Error()
+```
+
+## Logging Errors with Rail
+
+`rail.Errorf`/`rail.Warnf` automatically append the wrapped error's stack trace when the error is a `*errs.MisoErr` — no manual `StackTrace()` handling needed:
+
+```go
+// The MisoErr stack trace is included in the log automatically
+rail.Errorf("Failed to process request, %v", err)
+rail.Warnf("Failed to load user, %v", err)
+
+// Single-error variants (Error/Warn) also append the stack
+rail.Error(err)
+rail.Warn(err)
 ```
 
 ## Checking Errors
@@ -197,9 +211,9 @@ type CreateUserReq struct {
 func CreateUser(inb *miso.Inbound, req CreateUserReq) (CreateUserRes, error) {
     if err := miso.Validate(req); err != nil {
         if ve, ok := err.(*miso.ValidationError); ok {
-            return errs.WrapErrf(err, "validation failed: %s", ve.Error())
+            return errs.Wrapf(err, "validation failed: %s", ve.Error())
         }
-        return errs.WrapErr(err, "validation failed")
+        return errs.Wrapf(err, "validation failed")
     }
     // ...
 }

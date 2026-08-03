@@ -62,11 +62,43 @@ func NewHistTimer(hist prometheus.Histogram) *HistTimer {
 	}
 }
 
+// Predefined bucket boundaries (upper bounds, in seconds) for HTTP request latency.
+//
+// 5ms to 30s, with a tail for slow endpoints.
+func HttpRequestBuckets() []float64 {
+	return []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 20, 30}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for DB query latency.
+//
+// Typical queries start around 1ms, slow ones can reach 10-30s (1ms - 30s).
+func DBQueryBuckets() []float64 {
+	return []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for long-running task
+// durations, e.g. cron jobs and batch processing (1s - 2h).
+func LongTaskBuckets() []float64 {
+	return []float64{1, 5, 15, 30, 60, 300, 600, 1800, 3600, 7200}
+}
+
+// Predefined bucket boundaries (upper bounds, in seconds) for LLM response
+// latency, e.g. chat completions and other inference calls (5s - 5m).
+func LLMResponseBuckets() []float64 {
+	return []float64{5, 10, 15, 30, 45, 60, 80, 100, 120, 150, 300}
+}
+
 // Create new Histogram.
 //
 // The created Histogram is automatically registered to the prometheus.DefaultRegisterer.
-func NewPromHisto(name string) prometheus.Histogram {
-	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name, Buckets: append(prometheus.DefBuckets, 20, 30, 45, 60)})
+//
+// Custom bucket boundaries (upper bounds) can be provided as seconds, otherwise the
+// default buckets (prometheus.DefBuckets + 20, 30, 45, 60) are used.
+func NewPromHisto(name string, buckets ...float64) prometheus.Histogram {
+	if len(buckets) == 0 {
+		buckets = append(prometheus.DefBuckets, 20, 30, 45, 60)
+	}
+	hist := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name, Buckets: buckets})
 	if e := prometheus.DefaultRegisterer.Register(hist); e != nil {
 		panic(fmt.Errorf("failed to register histogram %v, %w", name, e))
 	}
@@ -148,8 +180,14 @@ func NewVecTimer(vec *prometheus.HistogramVec) *VecTimer {
 // Create new HistogramVec.
 //
 // The HistogramVec is automatically registered to the prometheus.DefaultRegisterer.
-func NewPromHistoVec(name string, labels []string) *prometheus.HistogramVec {
-	vec := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name, Buckets: append(prometheus.DefBuckets, 20, 30, 45, 60)}, labels)
+//
+// Custom bucket boundaries (upper bounds) can be provided as seconds, otherwise the
+// default buckets (prometheus.DefBuckets + 20, 30, 45, 60) are used.
+func NewPromHistoVec(name string, labels []string, buckets ...float64) *prometheus.HistogramVec {
+	if len(buckets) == 0 {
+		buckets = append(prometheus.DefBuckets, 20, 30, 45, 60)
+	}
+	vec := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name, Buckets: buckets}, labels)
 	if e := prometheus.DefaultRegisterer.Register(vec); e != nil {
 		panic(fmt.Errorf("failed to register HistogramVec %v, %v", name, e))
 	}

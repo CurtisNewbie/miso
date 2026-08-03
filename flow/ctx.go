@@ -417,6 +417,11 @@ func (r Rail) NextSpanId() Rail {
 	return r.WithSpanId(NewSpanId())
 }
 
+// Create a new Rail with a new SpanId
+func (r Rail) NewSpanId() Rail {
+	return r.WithSpanId(NewSpanId())
+}
+
 // Create a new Rail with a new Context
 func (r Rail) NewCtx() Rail {
 	prev := r.ctx

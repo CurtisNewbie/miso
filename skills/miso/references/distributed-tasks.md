@@ -42,11 +42,10 @@ This ensures idempotency and prevents resource conflicts when tasks overlap.
 ```go
 type Job struct {
     Name                   string                // Unique job name
-    Cron                   string                // Cron expression
+    Cron                   string                // Cron expression (6-field with seconds or 5-field, auto-detected)
     Run                    func(rail Rail) error // Execution logic
-    CronWithSeconds        bool                  // Include seconds in cron (default false)
     LogJobExec             bool                  // Log job execution (errors always logged)
-    TriggeredOnBootstraped bool                  // Trigger on server startup
+    TriggeredOnBoostrapped bool                  // Trigger on server startup
     LogErrWarnLevel        bool                  // Use WARN level for errors (default ERROR)
 }
 ```
@@ -64,8 +63,7 @@ func main() {
 
     // Register distributed task
     err := task.ScheduleDistributedTask(miso.Job{
-        Cron:            "*/15 * * * *",        // Every 15 minutes
-        CronWithSeconds: false,                 // Standard 5-field cron
+        Cron:            "*/15 * * * *",        // Standard 5-field cron (6-field with seconds also supported)
         Name:            "MyDistributedTask",
         Run: func(rail miso.Rail) error {
             return doSomething(rail)
@@ -107,7 +105,7 @@ See [config.md](https://github.com/CurtisNewbie/miso/blob/main/doc/config.md) fo
 
 ### Bootstrapping
 
-- Tasks with `TriggeredOnBootstraped: true` run once after full bootstrap
+- Tasks with `TriggeredOnBoostrapped: true` run once after full bootstrap
 - Scheduler starts automatically if `task.scheduling.enabled: true`
 - Stops gracefully on shutdown
 
@@ -117,13 +115,13 @@ See [config.md](https://github.com/CurtisNewbie/miso/blob/main/doc/config.md) fo
 
 ```go
 // Pre-execution hook
-miso.RegisterPreJobHook(func(rail miso.Rail, inf miso.JobInf) error {
+miso.PreJobExec(func(rail miso.Rail, inf miso.JobInf) error {
     rail.Infof("Job '%s' about to run", inf.Name)
     return nil
 })
 
 // Post-execution hook
-miso.RegisterPostJobHook(func(rail miso.Rail, inf miso.JobInf, stats miso.JobExecStats) error {
+miso.PostJobExec(func(rail miso.Rail, inf miso.JobInf, stats miso.JobExecStats) error {
     rail.Infof("Job '%s' completed in %s", inf.Name, stats.Time)
     if stats.Err != nil {
         // Handle error
@@ -137,6 +135,28 @@ miso.RegisterPostJobHook(func(rail miso.Rail, inf miso.JobInf, stats miso.JobExe
 ```go
 // Trigger distributed task by name via API
 GET /debug/task/trigger?name=MyDistributedTask
+```
+
+### Triggering Local Jobs Manually
+
+Manually trigger a locally-scheduled cron job by name (also exposes a debug API when enabled):
+
+```go
+// Programmatic trigger (by job name)
+err := miso.TriggerJob(rail, "MyCronJob")
+```
+
+```yaml
+# conf.yml — enable the debug API
+scheduler:
+  api:
+    trigger-job:
+      enabled: true
+```
+
+```go
+// Trigger via API
+GET /debug/job/trigger?name=MyCronJob
 ```
 
 ### Debugging Tools
@@ -192,7 +212,7 @@ err := task.ScheduleDistributedTask(miso.Job{
     Run: func(rail miso.Rail) error {
         var users []User
         if err := dbquery.GetDB().Find(&users).Error; err != nil {
-            return errs.WrapErr(err, "failed to fetch users")
+            return errs.Wrapf(err, "failed to fetch users")
         }
 
         for _, user := range users {

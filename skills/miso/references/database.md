@@ -41,15 +41,19 @@ db := sqlite.GetDB()
 
 ## Model Definition
 
+**Use `atom.Time` instead of `time.Time`** for all time fields (JSON epoch-millis, GORM-friendly scanning — see [util.md](util.md)). `atom.Time` wraps `time.Time` and works with `gorm:"autoCreateTime"` etc.
+
 ```go
+import "github.com/curtisnewbie/miso/util/atom"
+
 type User struct {
-    ID        string    `json:"id" gorm:"primaryKey"`
-    Name      string    `json:"name" gorm:"not null;size:100"`
-    Email     string    `json:"email" gorm:"uniqueIndex;not null;size:255"`
-    Age       int       `json:"age" gorm:"default:0"`
-    Status    string    `json:"status" gorm:"default:active;size:20"`
-    CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
-    UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+    ID        string     `json:"id" gorm:"primaryKey"`
+    Name      string     `json:"name" gorm:"not null;size:100"`
+    Email     string     `json:"email" gorm:"uniqueIndex;not null;size:255"`
+    Age       int        `json:"age" gorm:"default:0"`
+    Status    string     `json:"status" gorm:"default:active;size:20"`
+    CreatedAt atom.Time  `json:"createdAt" gorm:"autoCreateTime"`
+    UpdatedAt atom.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 
 // Specify table name
@@ -63,6 +67,8 @@ func (User) TableName() string {
 For automatic audit tracking, add these fields to your models:
 
 ```go
+import "github.com/curtisnewbie/miso/util/atom"
+
 type User struct {
     ID        string    `json:"id" gorm:"primaryKey"`
     Name      string    `json:"name" gorm:"not null;size:100"`
@@ -72,8 +78,8 @@ type User struct {
     UpdatedBy string    `json:"updatedBy" gorm:"size:100"`
     TraceId   string    `json:"traceId" gorm:"size:64"`
 
-    CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
-    UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+    CreatedAt atom.Time `json:"createdAt" gorm:"autoCreateTime"`
+    UpdatedAt atom.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 ```
 
@@ -171,7 +177,7 @@ func init() {
         if db.Where("name = ?", "admin").First(&User{}).Error == gorm.ErrRecordNotFound {
             admin := User{Name: "admin", Email: "admin@example.com"}
             if err := db.Create(&admin).Error; err != nil {
-                return errs.WrapErr(err, "failed to seed admin user")
+                return errs.Wrapf(err, "failed to seed admin user")
             }
         }
 
@@ -192,7 +198,7 @@ import (
 
 var users []User
 if err := dbquery.NewQuery(rail, mysql.GetMySQL()).Table("users").Scan(&users); err != nil {
-    return errs.WrapErr(err, "failed to fetch users")
+    return errs.Wrapf(err, "failed to fetch users")
 }
 ```
 
@@ -209,7 +215,7 @@ if err != nil {
     if errs.IsNoneErr(err) {
         return errs.NewErrfCode("USER_NOT_FOUND", "User does not exist")
     }
-    return errs.WrapErr(err, "failed to fetch user")
+    return errs.Wrapf(err, "failed to fetch user")
 }
 ```
 
@@ -281,7 +287,7 @@ user := User{
 }
 
 if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).Table("users").Create(&user); err != nil {
-    return errs.WrapErr(err, "failed to create user")
+    return errs.Wrapf(err, "failed to create user")
 }
 ```
 
@@ -294,7 +300,7 @@ users := []User{
 }
 
 if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).Table("users").Create(&users); err != nil {
-    return errs.WrapErr(err, "failed to create users")
+    return errs.Wrapf(err, "failed to create users")
 }
 ```
 
@@ -313,7 +319,7 @@ if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     Table("users").
     Where("id = ?", userID).
     Update("email", "new@example.com"); err != nil {
-    return errs.WrapErr(err, "failed to update user email")
+    return errs.Wrapf(err, "failed to update user email")
 }
 ```
 
@@ -327,7 +333,7 @@ if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).
         "name":  "John Updated",
         "email": "john.updated@example.com",
     }); err != nil {
-    return errs.WrapErr(err, "failed to update user")
+    return errs.Wrapf(err, "failed to update user")
 }
 ```
 
@@ -363,27 +369,27 @@ Soft delete is **strongly recommended** over hard delete in most scenarios (99% 
 
 ```go
 import (
-    "time"
+    "github.com/curtisnewbie/miso/util/atom"
     "github.com/curtisnewbie/miso/middleware/mysql"
     "github.com/curtisnewbie/miso/middleware/dbquery"
 )
 
 // Define your model with soft delete field
 type User struct {
-    ID        string    `json:"id" gorm:"primaryKey"`
-    Name      string    `json:"name"`
-    DeletedAt *time.Time `json:"deletedAt"` // soft delete marker (application-defined)
-    Deleted   bool      `json:"deleted"`    // alternative soft delete marker
+    ID        string     `json:"id" gorm:"primaryKey"`
+    Name      string     `json:"name"`
+    DeletedAt *atom.Time `json:"deletedAt"` // soft delete marker (application-defined)
+    Deleted   bool       `json:"deleted"`   // alternative soft delete marker
 }
 
 // Soft delete by setting both deleted_at and deleted
 if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     Table("users").
     Where("id = ?", userID).
-    Set("deleted_at", time.Now()).
+    Set("deleted_at", atom.Now()).
     Set("deleted", true).
     Update(); err != nil {
-    return errs.WrapErr(err, "failed to soft delete user")
+    return errs.Wrapf(err, "failed to soft delete user")
 }
 
 // When querying, exclude soft-deleted records
@@ -393,7 +399,7 @@ if err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     IsNull("deleted_at").
     Ne("deleted", true).
     Scan(&users); err != nil {
-    return errs.WrapErr(err, "failed to fetch users")
+    return errs.Wrapf(err, "failed to fetch users")
 }
 ```
 
@@ -407,7 +413,7 @@ if _, err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     Table("users").
     Where("id = ?", userID).
     Delete(); err != nil {
-    return errs.WrapErr(err, "failed to hard delete user")
+    return errs.Wrapf(err, "failed to hard delete user")
 }
 ```
 
@@ -434,7 +440,7 @@ err := dbquery.NewQuery(rail, mysql.GetMySQL()).Transaction(func(tx *dbquery.Que
 })
 
 if err != nil {
-    return errs.WrapErr(err, "transaction failed")
+    return errs.Wrapf(err, "transaction failed")
 }
 ```
 
@@ -456,16 +462,16 @@ defer func() {
 
 if _, err := tx.Table("users").Create(&user); err != nil {
     tx.Rollback()
-    return errs.WrapErr(err, "failed to create user")
+    return errs.Wrapf(err, "failed to create user")
 }
 
 if _, err := tx.Table("profiles").Create(&profile); err != nil {
     tx.Rollback()
-    return errs.WrapErr(err, "failed to create profile")
+    return errs.Wrapf(err, "failed to create profile")
 }
 
 if err := tx.Commit(); err != nil {
-    return errs.WrapErr(err, "failed to commit transaction")
+    return errs.Wrapf(err, "failed to commit transaction")
 }
 ```
 
@@ -513,7 +519,7 @@ if err != nil {
     if errs.IsNoneErr(err) {
         return errs.NewErrfCode("USER_NOT_FOUND", "User does not exist")
     }
-    return errs.WrapErr(err, "database query failed")
+    return errs.Wrapf(err, "database query failed")
 }
 ```
 
@@ -584,18 +590,19 @@ Uses indexed `WHERE column > last_value` instead:
 
 ```go
 import (
+    "github.com/curtisnewbie/miso/util/atom"
     "github.com/curtisnewbie/miso/middleware/mysql"
     "github.com/curtisnewbie/miso/middleware/dbquery"
 )
 
 type Record struct {
-    RecTime time.Time `json:"rec_time"`
+    RecTime atom.Time `json:"rec_time"`
     RecId   string    `json:"rec_id"`
     Data    string    `json:"data"`
 }
 
 func ListRecords(rail miso.Rail, forEachPage func(v []Record) error) error {
-    return dbquery.IterateAllByOffset1(rail, mysql.GetMySQL(), dbquery.IterateByOffset1Param[Record, time.Time]{
+    return dbquery.IterateAllByOffset1(rail, mysql.GetMySQL(), dbquery.IterateByOffset1Param[Record, atom.Time]{
         OffsetCol: "rec_time",
         Limit:     100,
         BuildQuery: func(rail miso.Rail, q *dbquery.Query) *dbquery.Query {
@@ -606,7 +613,7 @@ func ListRecords(rail miso.Rail, forEachPage func(v []Record) error) error {
         ForEachPage: func(p []Record) (stop bool, err error) {
             return false, forEachPage(p)
         },
-        GetOffset: func(v Record) time.Time {
+        GetOffset: func(v Record) atom.Time {
             return v.RecTime
         },
     })
@@ -617,7 +624,7 @@ func ListRecords(rail miso.Rail, forEachPage func(v []Record) error) error {
 
 ```go
 func ListRecords(rail miso.Rail, forEachPage func(v []Record) error) error {
-    return dbquery.IterateAllByOffset2(rail, mysql.GetMySQL(), dbquery.IterateByOffset2Param[Record, time.Time, string]{
+    return dbquery.IterateAllByOffset2(rail, mysql.GetMySQL(), dbquery.IterateByOffset2Param[Record, atom.Time, string]{
         OffsetCol1: "rec_time",
         OffsetCol2: "rec_id",
         Limit:      100,
@@ -629,7 +636,7 @@ func ListRecords(rail miso.Rail, forEachPage func(v []Record) error) error {
         ForEachPage: func(p []Record) (stop bool, err error) {
             return false, forEachPage(p)
         },
-        GetOffset: func(v Record) (time.Time, string) {
+        GetOffset: func(v Record) (atom.Time, string) {
             return v.RecTime, v.RecId
         },
     })

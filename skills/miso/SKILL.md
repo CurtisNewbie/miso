@@ -1,6 +1,6 @@
 ---
 name: miso
-description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies"
+description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies, (14) Kafka messaging, (15) Utility middleware (crypto, JWT, expr, Lua, money, ZooKeeper), (16) Util packages (atom.Time, json, strutil, slutil, retry, randutil, async, osutil, testutil, flags, excel, copyutil)"
 ---
 
 # Miso Framework
@@ -22,8 +22,11 @@ miso is a Go framework for building microservices with:
 
 ## Quick Reference
 
-**Core Concepts:** [core-concepts.md](references/core-concepts.md)
-- Tracing, Bootstrap, Request Handling, Error Handling
+**Rail (Tracing & Logging):** [rail.md](references/rail.md)
+- Rail creation, span lifecycle, trace propagation, logging methods
+
+**Bootstrap (Component Lifecycle):** [bootstrap.md](references/bootstrap.md)
+- Order levels, component registration, lifecycle callbacks, shutdown hooks
 
 **Web Development:** [web-development.md](references/web-development.md)
 - Routing, API patterns, middleware, misoapi code generation
@@ -60,6 +63,15 @@ miso is a Go framework for building microservices with:
 
 **Redis API:** [redis.md](references/redis.md)
 - Raw Redis operations, hash/list/set, distributed locks, scripting
+
+**Kafka:** [kafka.md](references/kafka.md)
+- Produce/consume messages, listener semantics, partition ordering, trace propagation
+
+**Utility Middleware:** [middleware-utils.md](references/middleware-utils.md)
+- crypto, JWT, expr, Lua, money, ZooKeeper leader election
+
+**Util Packages:** [util.md](references/util.md)
+- atom.Time (always use instead of time.Time), json, strutil, slutil, retry, randutil, IDs, async, osutil, testutil, flags, excel, copyutil
 
 **Prometheus Metrics:** [prometheus.md](references/prometheus.md)
 - Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
