@@ -324,6 +324,11 @@ func (m *taskModule) pullTasksAny(rail miso.Rail) error {
 		keys = append(keys, m.getTaskQueueKey(t.Name))
 	}
 
+	if len(keys) == 0 {
+		rail.Debugf("No active task queues to pull from")
+		return nil
+	}
+
 	rail.Debugf("Pulling tasks from %d queues", len(keys))
 
 	// BRPopAny blocks up to 10 seconds until a task is available from any queue
