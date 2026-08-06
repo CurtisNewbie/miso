@@ -6,6 +6,7 @@ Database operations with GORM integration in miso framework.
 - Getting Database Instance
 - Model Definition
 - Automatic Audit Fields
+- Recommended Default DDL Schema
 - Bootstrap Database
 - Query Operations
 - Create Operations
@@ -132,6 +133,26 @@ err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     Set("name", "New Name").
     Update()
 ```
+
+## Recommended Default DDL Schema
+
+Use this as the default table structure for new tables. It carries the audit columns (`trace_id`, `created_by`, `updated_by`) that work with the automatic audit field hooks above, and the `deleted` column for application-defined soft delete (see [Soft Delete](#delete-operations)).
+
+```sql
+CREATE TABLE `` (
+    `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+
+    `trace_id` varchar(32) NOT NULL DEFAULT '' COMMENT 'trace_id',
+    `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'created at',
+    `created_by` varchar(255) NOT NULL DEFAULT '' COMMENT 'created by',
+    `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated at',
+    `updated_by` varchar(255) NOT NULL DEFAULT '' COMMENT 'updated by',
+    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'record deleted',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='';
+```
+
+Fill in the table name, add business columns after the base columns, and set `COMMENT` on the table.
 
 ## Bootstrap Database
 

@@ -32,7 +32,7 @@ miso is a Go framework for building microservices with:
 - Routing, API patterns, middleware, misoapi code generation
 
 **Database:** [database.md](references/database.md)
-- GORM usage, transactions, migrations, dbquery API
+- GORM usage, transactions, migrations, dbquery API, recommended default DDL schema
 
 **Configuration:** [configuration.md](references/configuration.md)
 - Viper-based config, property constants, default values
