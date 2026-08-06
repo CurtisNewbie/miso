@@ -194,6 +194,16 @@ func (a *AppConfig) GetPropDuration(prop string) time.Duration {
 	return cast.ToDuration(a.GetPropStr(prop))
 }
 
+// Get prop as time.Duration slice
+func (a *AppConfig) GetPropDurations(prop string) []time.Duration {
+	strs := a.GetPropStrSlice(prop)
+	durations := make([]time.Duration, len(strs))
+	for i, s := range strs {
+		durations[i] = cast.ToDuration(s)
+	}
+	return durations
+}
+
 // Get prop as any
 func (a *AppConfig) GetPropAny(prop string) any {
 	return returnWithReadLock(a, func() any {
@@ -712,6 +722,11 @@ func GetPropDur(prop string, unit time.Duration) time.Duration {
 // Get prop as time.Duration
 func GetPropDuration(prop string) time.Duration {
 	return globalConfig().GetPropDuration(prop)
+}
+
+// Get prop as time.Duration slice
+func GetPropDurations(prop string) []time.Duration {
+	return globalConfig().GetPropDurations(prop)
 }
 
 // Get prop as bool
