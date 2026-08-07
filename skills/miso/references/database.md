@@ -8,6 +8,7 @@ Database operations with GORM integration in miso framework.
 - Automatic Audit Fields
 - Recommended Default DDL Schema
 - Bootstrap Database
+- Best Practice: Table Name Constants
 - Query Operations
 - Create Operations
 - Update Operations
@@ -205,6 +206,40 @@ func init() {
         return nil
     })
 }
+```
+
+## Best Practice: Table Name Constants
+
+Define each table name as a constant and reuse it for every query against that table — in `.Table(...)`, raw SQL, and the audit hook table filters. Scattered string literals invite typos that surface only at runtime, and renaming a table later forces a hunt through every query.
+
+```go
+const (
+    TableUser   = "users"
+    TableOrder  = "orders"
+    TableProfile = "profiles"
+)
+```
+
+Use the constants consistently across queries:
+
+```go
+dbquery.NewQuery(rail, mysql.GetMySQL()).
+    Table(TableUser).
+    Where("id = ?", userID).
+    Scan(&user)
+
+dbquery.NewQuery(rail, mysql.GetMySQL()).
+    Table(TableOrder).
+    Where("user_id = ?", userID).
+    Scan(&orders)
+```
+
+The same constants work in the audit hook table filters:
+
+```go
+dbquery.PrepareCreateModelHook(func(table string) bool {
+    return table == TableUser || table == TableOrder
+})
 ```
 
 ## Query Operations
