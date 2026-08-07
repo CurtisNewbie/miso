@@ -241,15 +241,18 @@ Also: `RCacheV2` for complex key types (struct with `String()`), `GroupCache` fo
 
 ## Distributed Locks (RLock)
 
-```go
-// Lock-Run-Release
-redis.RLockExec(rail, "lock:task:123", func() error {
-    return doExport()
-})
+Prefer `TryLock` with a bounded `WithBackoff` timeout — `Lock()` blocks retrying for the full backoff window (default ~30s), while `TryLock` returns `locked=false` on contention so the caller can handle it explicitly:
 
-// Manual
-lock := redis.NewRLock(rail, "lock:task:123")
-lock.Lock()
+```go
+// TryLock — bounded wait, explicit contention handling
+lock := redis.NewRLock(rail, "lock:account:123")
+locked, err := lock.TryLock(redis.WithBackoff(3 * time.Second))
+if err != nil {
+    return err
+}
+if !locked {
+    return nil // lock busy — skip or handle contention
+}
 defer lock.Unlock()
 ```
 

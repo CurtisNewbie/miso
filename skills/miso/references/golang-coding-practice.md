@@ -220,18 +220,18 @@ err := dbquery.NewQuery(rail, mysql.GetMySQL()).
     Scan(&account)
 ```
 
-**Redis lock (RLock)** when the critical section spans multiple operations or services, or the shared resource isn't a DB row (see [redis.md](redis.md)):
+**Redis lock (RLock)** when the critical section spans multiple operations or services, or the shared resource isn't a DB row (see [redis.md](redis.md)). Prefer `TryLock` with a bounded `WithBackoff` timeout: `Lock()` blocks retrying for the full backoff window (default ~30s), stalling the caller even when the lock is held elsewhere, while `TryLock` returns `locked=false` so contention is handled explicitly:
 
 ```go
-// Lock-run-release
-err := redis.RLockExec(rail, "lock:account:123", func() error {
-    return updateAccount(rail, accountID)
-})
-
-// Manual lock/unlock
+// TryLock — bounded wait, explicit contention handling
 lock := redis.NewRLock(rail, "lock:account:123")
-if err := lock.Lock(); err != nil {
+locked, err := lock.TryLock(redis.WithBackoff(3 * time.Second))
+if err != nil {
     return err
+}
+if !locked {
+    // lock busy — skip or return conflict, don't block the caller
+    return nil
 }
 defer lock.Unlock()
 ```
