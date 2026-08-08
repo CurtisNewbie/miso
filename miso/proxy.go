@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/miso/errs"
+	"github.com/curtisnewbie/miso/flow"
 	"github.com/curtisnewbie/miso/util/async"
 	"github.com/curtisnewbie/miso/util/slutil"
 	"github.com/curtisnewbie/miso/util/strutil"
@@ -232,7 +233,7 @@ func (h *HttpProxy) JoinCheckAuth(checkAuth ...func(pc *ProxyContext) (statusCod
 
 // Add Access Filter.
 //
-// See [HttpProxy.WithBearerAuthCheck].
+// See [HttpProxy.WithDynAuthCheck].
 func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool)) {
 
 	h.AddFilter(func(pc *ProxyContext, next func()) {
@@ -360,14 +361,32 @@ func (h *HttpProxy) AddWsAccessFilter(
 }
 
 type DynAuthRoute struct {
-	Name         string
-	Type         string // Bearer / Basic
-	Bearer       string
-	Username     string
-	Password     string
+	// Name of the auth route, used for logging.
+	Name string
+	// Type of authentication, 'Bearer' or 'Basic'.
+	Type string
+	// Bearer token to match against when Type is 'Bearer'.
+	Bearer string
+	// Username used to build the Basic auth credentials when Type is 'Basic'.
+	Username string
+	// Password used to build the Basic auth credentials when Type is 'Basic'.
+	Password string
+	// PathPatterns that this auth route applies to.
 	PathPatterns []string
 
+	// Trace info propagated downstream via trace when the request is authenticated.
+	Trace DynAuthTrace
+
 	basic string `mapstructure:"-"`
+}
+
+// DynAuthTrace configures the trace info propagated downstream via trace when the request is authenticated.
+type DynAuthTrace struct {
+	// Username propagated downstream via trace when the request is authenticated.
+	Username string
+	// Role propagated downstream via trace when the request is authenticated.
+	// Useful when there is no full user system (no userno/roleno) available, e.g., only basic auth.
+	Role string
 }
 
 func (d *DynAuthRoute) BuildBasic() string {
@@ -418,6 +437,9 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 
 // Check Authorization With dynamically loaded DynAuthRoute.
 //
+// When a request is authenticated, the configured user info (e.g., Role) is stored in the
+// trace and propagated to downstream services.
+//
 // E.g.,
 //
 //	var h *miso.HttpProxy
@@ -438,6 +460,14 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 			matched, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath)
 			if ok {
 				pc.Inb.Infof("Matched '%v' Bearer Authrization Path Pattern: '%v'", bar.Name, matched)
+
+				if bar.Trace.Username != "" {
+					*pc.Rail = pc.Rail.WithCtxVal(flow.XUsername, bar.Trace.Username)
+				}
+				if bar.Trace.Role != "" {
+					*pc.Rail = pc.Rail.WithCtxVal(flow.XRole, bar.Trace.Role)
+				}
+
 				return 0, true
 			}
 		}
@@ -461,6 +491,9 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 //	    type: "basic"
 //	    username: "myuser"
 //	    password: "mypassword"
+//	    trace:
+//	      username: "trace-user"
+//	      role: "myrole"
 //	    path-patterns:
 //	      - "/path4"
 //	      - "/path5"

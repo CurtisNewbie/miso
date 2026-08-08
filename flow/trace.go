@@ -11,10 +11,11 @@ const (
 	XUsername = "x-username"
 	XUserNo   = "x-userno"
 	XRoleNo   = "x-roleno"
+	XRole     = "x-role"
 )
 
 var (
-	propagationKeys = PropagationKeys{keys: hash.NewSyncSet(XTraceId, XSpanId, XUsername, XUserNo, XRoleNo)}
+	propagationKeys = PropagationKeys{keys: hash.NewSyncSet(XTraceId, XSpanId, XUsername, XUserNo, XRoleNo, XRole)}
 )
 
 type PropagationKeys struct {
