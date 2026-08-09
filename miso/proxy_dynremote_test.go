@@ -188,7 +188,75 @@ func TestMapRemoteAuthResult(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			code, ok, user := mapRemoteAuthResult(c.data, cfg)
+			code, ok, user := mapRemoteAuthResult(EmptyRail(), c.data, cfg)
+			if code != c.wantCode || ok != c.wantOk {
+				t.Fatalf("code = %v, ok = %v, want %v, %v", code, ok, c.wantCode, c.wantOk)
+			}
+			if user.UserNo != c.wantUser {
+				t.Fatalf("user.UserNo = '%v', want '%v'", user.UserNo, c.wantUser)
+			}
+		})
+	}
+}
+
+func TestMapRemoteAuthResultPlainResponse(t *testing.T) {
+	// plain (non-GnResp-wrapped) response body, paths resolved against the full body
+	cfg := DynRemoteAuthConfig{
+		DecisionField: "valid",
+		User: DynRemoteUserMapping{
+			UserNo:   "userno",
+			Username: "username",
+			RoleNo:   "roleno",
+			Role:     "role",
+		},
+	}
+	cases := []struct {
+		name     string
+		data     map[string]any
+		wantCode int
+		wantOk   bool
+		wantUser string
+	}{
+		{name: "plain allowed", data: map[string]any{"valid": true, "userno": "u1", "username": "un1", "roleno": "r1", "role": "admin"}, wantCode: 0, wantOk: true, wantUser: "u1"},
+		{name: "plain denied with user -> 403", data: map[string]any{"valid": false, "userno": "u1"}, wantCode: 403, wantOk: false, wantUser: "u1"},
+		{name: "plain denied no user -> 401", data: map[string]any{"valid": false}, wantCode: 401, wantOk: false, wantUser: ""},
+		{name: "plain missing decision field -> 502", data: map[string]any{"userno": "u1"}, wantCode: 502, wantOk: false, wantUser: ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			code, ok, user := mapRemoteAuthResult(EmptyRail(), c.data, cfg)
+			if code != c.wantCode || ok != c.wantOk {
+				t.Fatalf("code = %v, ok = %v, want %v, %v", code, ok, c.wantCode, c.wantOk)
+			}
+			if user.UserNo != c.wantUser {
+				t.Fatalf("user.UserNo = '%v', want '%v'", user.UserNo, c.wantUser)
+			}
+		})
+	}
+}
+
+func TestMapRemoteAuthResultGnResp(t *testing.T) {
+	// GnResp-wrapped response {error, errorCode, msg, data}, paths resolved against the full body
+	cfg := DynRemoteAuthConfig{
+		DecisionField: "data.valid",
+		User: DynRemoteUserMapping{
+			UserNo: "data.userno",
+		},
+	}
+	cases := []struct {
+		name     string
+		data     map[string]any
+		wantCode int
+		wantOk   bool
+		wantUser string
+	}{
+		{name: "wrapped allowed", data: map[string]any{"error": false, "data": map[string]any{"valid": true, "userno": "u1"}}, wantCode: 0, wantOk: true, wantUser: "u1"},
+		{name: "wrapped denied -> 401", data: map[string]any{"error": false, "data": map[string]any{"valid": false}}, wantCode: 401, wantOk: false, wantUser: ""},
+		{name: "wrapped missing decision field -> 502", data: map[string]any{"error": false, "data": map[string]any{}}, wantCode: 502, wantOk: false, wantUser: ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			code, ok, user := mapRemoteAuthResult(EmptyRail(), c.data, cfg)
 			if code != c.wantCode || ok != c.wantOk {
 				t.Fatalf("code = %v, ok = %v, want %v, %v", code, ok, c.wantCode, c.wantOk)
 			}

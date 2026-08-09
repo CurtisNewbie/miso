@@ -1,6 +1,6 @@
 ---
 name: miso
-description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies, (14) Kafka messaging, (15) Utility middleware (crypto, JWT, expr, Lua, money, ZooKeeper), (16) Util packages (atom.Time, json, strutil, slutil, retry, randutil, async, osutil, testutil, flags, excel, copyutil)"
+description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies, (14) Kafka messaging, (15) Utility middleware (crypto, JWT, expr, Lua, money, ZooKeeper), (16) Util packages (atom.Time, json, strutil, slutil, retry, randutil, async, osutil, testutil, flags, excel, copyutil), (17) HTTP reverse proxy (HttpProxy) with filter pipelines, config-driven dynamic access filters (whitelist, bearer/basic/remote auth), and WebSocket access control"
 ---
 
 # Miso Framework
@@ -45,6 +45,9 @@ miso is a Go framework for building microservices with:
 
 **Service Discovery:** [service-discovery.md](references/service-discovery.md)
 - Nacos/Consul service registration, HTTP client with service discovery
+
+**HTTP Proxy:** [http-proxy.md](references/http-proxy.md)
+- HttpProxy reverse proxy, filter pipeline, AddConfDynAccessFilter config-driven dynamic access control (whitelist, bearer/basic/remote auth)
 
 **CLI Tools:** [cmd-tools.md](references/cmd-tools.md)
 - misogen, misoapi, misocurl, misopatch, misoconfig

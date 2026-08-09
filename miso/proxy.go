@@ -330,7 +330,7 @@ type DynAccessFilterConfig struct {
 //	          authorization: "token"
 //	          path: "url"
 //	          method: "method"
-//	        decision-field: "data.valid"
+//	        decision-field: "data.valid" # dotted path into the response body, doesn't have to be GnResp-wrapped
 //	        user:
 //	          userno: "data.userno"
 //	          username: "data.username"
@@ -537,7 +537,10 @@ type DynRemoteAuthConfig struct {
 	// BodyMap maps source values to field names of the auth request body.
 	BodyMap DynRemoteBodyMap
 
-	// DecisionField is the dotted path (e.g. "data.valid") into the response body (GnResp-wrapped: {error, errorCode, msg, data}) that holds the allow/deny boolean.
+	// DecisionField is the dotted path (e.g. "data.valid") into the response body that holds
+	// the allow/deny boolean. Paths are resolved against the full response body, so for
+	// GnResp-wrapped responses ({error, errorCode, msg, data}) they must include the "data."
+	// prefix, while plain responses use paths like "valid".
 	DecisionField string
 
 	// User mapping from response body dotted paths to the user stored in trace via flow.StoreUser when the request is allowed.
@@ -695,10 +698,10 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 // checkRemoteAuth delegates authentication AND authorization to a downstream auth service
 // for the given remote auth route.
 //
-// The downstream auth service is called via service discovery, and its GnResp-wrapped
-// response body is used to determine the decision:
+// The downstream auth service is called via service discovery, and its response body
+// (doesn't have to be GnResp-wrapped, any JSON object works) is used to determine the decision:
 //
-//   - response error -> 503
+//   - request error -> 503
 //   - decision field missing -> 502
 //   - decision false -> 403 if a user is present in the response, otherwise 401
 //   - decision true -> user info (if any) stored in trace via flow.StoreUser, request allowed
@@ -727,7 +730,7 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 	}
 
 	// call downstream auth service, 'lb:service-name/...' paths are resolved via service discovery
-	var res GnResp[map[string]any]
+	var res map[string]any
 	err := NewClient(*rail, bar.Remote.Path).
 		EnableTracing().
 		Require2xx().
@@ -737,13 +740,9 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 		rail.Warnf("Remote auth request failed, %v", err)
 		return http.StatusServiceUnavailable, false
 	}
-	if res.Error {
-		rail.Warnf("Remote auth returned error: %v, %v", res.ErrorCode, res.Msg)
-		return http.StatusServiceUnavailable, false
-	}
 
 	// decision
-	sc, ok, user := mapRemoteAuthResult(res.Data, bar.Remote)
+	sc, ok, user := mapRemoteAuthResult(*rail, res, bar.Remote)
 	if !ok {
 		return sc, false
 	}
@@ -757,22 +756,27 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 
 // mapRemoteAuthResult maps the downstream auth response to a decision.
 //
+// Dotted paths (decision-field, user.*) are resolved against the full response body,
+// so for GnResp-wrapped responses ({error, errorCode, msg, data}) they must include the
+// "data." prefix (e.g. "data.valid"), while plain responses use paths like "valid".
+//
 // When denied (ok=false), the returned status code is the response code:
-//   - decision field missing -> 502
+//   - decision field missing -> 502 (warning logged with the response body)
 //   - decision false -> 403 if user info is present in the response, otherwise 401
 //
 // When allowed (ok=true), the user info (if any) is returned so it can be
 // propagated downstream via trace.
-func mapRemoteAuthResult(data map[string]any, cfg DynRemoteAuthConfig) (statusCode int, ok bool, user flow.User) {
-	dv, found := readDottedPath(data, cfg.DecisionField)
+func mapRemoteAuthResult(rail Rail, body map[string]any, cfg DynRemoteAuthConfig) (statusCode int, ok bool, user flow.User) {
+	dv, found := readDottedPath(body, cfg.DecisionField)
 	if !found {
+		rail.Warnf("Remote auth: decision field '%v' not found in response, body: %v", cfg.DecisionField, body)
 		return http.StatusBadGateway, false, flow.User{}
 	}
 	user = flow.User{
-		Username: readDottedPathStr(data, cfg.User.Username),
-		UserNo:   readDottedPathStr(data, cfg.User.UserNo),
-		RoleNo:   readDottedPathStr(data, cfg.User.RoleNo),
-		Role:     readDottedPathStr(data, cfg.User.Role),
+		Username: readDottedPathStr(body, cfg.User.Username),
+		UserNo:   readDottedPathStr(body, cfg.User.UserNo),
+		RoleNo:   readDottedPathStr(body, cfg.User.RoleNo),
+		Role:     readDottedPathStr(body, cfg.User.Role),
 	}
 	if !cast.ToBool(dv) {
 		// denied: 403 if an authenticated user is present in the response, otherwise 401
@@ -847,7 +851,7 @@ func readDottedPathStr(m map[string]any, path string) string {
 //	        authorization: "token"
 //	        path: "url"
 //	        method: "method"
-//	      decision-field: "data.valid"
+//	      decision-field: "data.valid" # dotted path into the response body, doesn't have to be GnResp-wrapped
 //	      user:
 //	        userno: "data.userno"
 //	        username: "data.username"
