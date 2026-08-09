@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -96,6 +97,23 @@ func NewHttpProxy(proxiedPath string, targetResolver ProxyTargetResolver) *HttpP
 	return p
 }
 
+// isSuspiciousProxyPath reports whether the proxy path contains dot-segment traversal
+// (e.g. "..", "..;") or backslashes.
+//
+// gin already percent-decodes the path, so "%2e%2e" arrives as "..". Backend servers
+// (Tomcat, nginx, Spring, etc.) normalize such paths differently than the gateway's
+// pattern matcher (e.g. "/open/api/../admin" may be served as "/admin" by the backend),
+// so forwarding them verbatim could bypass the access filters. They are rejected here
+// at the gateway, which must be the single normalization point.
+func isSuspiciousProxyPath(p string) bool {
+	for _, seg := range strings.Split(p, "/") {
+		if strings.HasPrefix(seg, "..") || strings.Contains(seg, "\\") {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	_rail := inb.Rail()
 
@@ -104,6 +122,14 @@ func (h *HttpProxy) proxyRequestHandler(inb *Inbound) {
 	// proxy path
 	proxyPath := inb.Engine().(*gin.Context).Param("proxyPath")
 	pc.ProxyPath = proxyPath
+
+	// reject suspicious paths (dot-segment traversal, backslashes) before they reach
+	// the access filters or get forwarded, see [isSuspiciousProxyPath]
+	if isSuspiciousProxyPath(proxyPath) {
+		pc.Rail.Warnf("Rejecting request with suspicious proxy path: %v", proxyPath)
+		pc.Inb.Status(http.StatusBadRequest)
+		return
+	}
 
 	defer pc.Rail.Debugf("Proxy request processed")
 
@@ -587,6 +613,10 @@ func (d *DynAuthRoute) BuildBasic() string {
 func (d *DynAuthRoute) CheckAuth(v *dynAuthReq) bool {
 	switch strings.ToLower(d.Type) {
 	case "basic":
+		if d.Username == "" || d.Password == "" {
+			// never valid without credentials, e.g. "Basic " + base64(":") must not authenticate
+			return false
+		}
 		return v.CheckBasic(d.BuildBasic())
 	default:
 		return v.CheckBearer(d.Bearer)
@@ -611,7 +641,8 @@ func (d *dynAuthReq) Bearer() (string, bool) {
 }
 
 func (d *dynAuthReq) CheckBasic(auth string) bool {
-	return d.auth == auth
+	// constant-time comparison to avoid timing side-channels on credentials
+	return subtle.ConstantTimeCompare([]byte(d.auth), []byte(auth)) == 1
 }
 
 func (d *dynAuthReq) CheckBearer(bearer string) bool {
@@ -619,7 +650,8 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 	if !ok {
 		return false
 	}
-	return bearer == v
+	// constant-time comparison to avoid timing side-channels on bearer tokens
+	return subtle.ConstantTimeCompare([]byte(bearer), []byte(v)) == 1
 }
 
 // Check Authorization With dynamically loaded DynAuthRoute.

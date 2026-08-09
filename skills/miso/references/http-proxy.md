@@ -55,6 +55,8 @@ type ProxyContext struct {
 }
 ```
 
+`ProxyPath` is the percent-decoded path (gin decodes `%2e%2e` → `..`). Suspicious paths are rejected with `400` before any filter runs: any segment starting with `..` (dot-segment traversal, e.g. `..`, `..;`) or containing a backslash. This is a security boundary — backends normalize such paths differently than the gateway's pattern matcher (e.g. `/open/../admin` may be served as `/admin`), so forwarding them could bypass the access filters. The gateway is the single normalization point.
+
 `ProxyContext` supports attribute storage for cross-filter communication:
 
 ```go
@@ -277,6 +279,7 @@ This ensures downstream services see the proxy's own trace context, not attacker
 4. When proxying the root path, re-register health check (`AddHealthcheckFilter`), metrics (`AddMetricsFilter`) and debug (`AddDebugFilter`) filters explicitly, since the default handlers are disabled
 5. Use `ProxyHttpStatusError` from the target resolver to distinguish "not found" from other failures
 6. Return `GatewayError`/custom status from resolvers instead of raw errors to control the client-visible status code
+7. Don't rely on `**` patterns to confine access — path-based patterns match the raw path, and dot-segment traversal (`/open/../admin`) is rejected by the gateway with 400, but a backend that normalizes differently is still a mismatch risk; keep whitelists and auth path-patterns as narrow as possible
 
 ## Reference Files
 
