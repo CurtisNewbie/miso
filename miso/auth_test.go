@@ -36,4 +36,15 @@ func TestParseBearer(t *testing.T) {
 	if ok {
 		t.Fatal("should not parse bearer")
 	}
+
+	// header shorter than the bearer prefix must not panic (auth.go guards the slice)
+	_, ok = ParseBearer("Basic")
+	if ok {
+		t.Fatal("should not parse bearer")
+	}
+
+	_, ok = ParseBearer("B")
+	if ok {
+		t.Fatal("should not parse bearer")
+	}
 }

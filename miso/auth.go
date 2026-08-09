@@ -15,6 +15,9 @@ func ParseBearer(authorization string) (string, bool) {
 	if authorization == "" {
 		return "", false
 	}
+	if len(authorization) < bearerLen {
+		return "", false
+	}
 	if !strings.EqualFold(strings.ToLower(authorization[0:bearerLen]), Bearer) {
 		return "", false
 	}
