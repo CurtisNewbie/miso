@@ -3,6 +3,7 @@ package miso
 import (
 	"container/list"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -321,4 +322,85 @@ func (p *lruCacheEvictStrategy[T]) OnItemRemoved(key string) {
 			return
 		}
 	}
+}
+
+// refreshedCache is a single-value, fast access cache.
+//
+// The value of type T is loaded via the provided loader on creation, and then refreshed in the
+// background every refreshEvery. Get() returns the cached value immediately without loading it again,
+// so frequent reads are fast, and the value is never outdated for longer than refreshEvery.
+//
+// If refreshEvery <= 0, the value is loaded only once and no background refresh is scheduled.
+type refreshedCache[T any] struct {
+	// loader for the cached value
+	loadFunc func() T
+
+	// cached value of type T, loaded atomically
+	val atomic.Value
+
+	stopC    chan struct{}
+	stopOnce sync.Once
+}
+
+// NewRefreshedCache creates a new refreshedCache[T].
+//
+// The value is loaded via the provided loader immediately, and refreshed in the background every
+// refreshEvery.
+//
+// Call [refreshedCache.Stop] to stop the background refresh when the cache is no longer needed.
+//
+// If refreshEvery <= 0, the value is loaded only once and no background refresh is scheduled.
+func NewRefreshedCache[T any](refreshEvery time.Duration, load func() T) *refreshedCache[T] {
+	if load == nil {
+		panic("load cannot be nil")
+	}
+	c := &refreshedCache[T]{
+		loadFunc: load,
+		stopC:    make(chan struct{}),
+	}
+	c.load()
+	if refreshEvery > 0 {
+		go c.refreshLoop(refreshEvery)
+	}
+	return c
+}
+
+func (c *refreshedCache[T]) refreshLoop(refreshEvery time.Duration) {
+	tk := time.NewTicker(refreshEvery)
+	defer tk.Stop()
+	for {
+		select {
+		case <-tk.C:
+			c.load()
+		case <-c.stopC:
+			return
+		}
+	}
+}
+
+func (c *refreshedCache[T]) load() {
+	// a panic in the loader must not kill the process, the cache keeps the last good value
+	defer func() {
+		if r := recover(); r != nil {
+			Errorf("failed to load value for refreshedCache, %v", r)
+		}
+	}()
+	c.val.Store(c.loadFunc())
+}
+
+// Get returns the latest cached value, it doesn't unmarshal the config.
+func (c *refreshedCache[T]) Get() T {
+	v := c.val.Load()
+	if v == nil {
+		var t T
+		return t
+	}
+	return v.(T)
+}
+
+// Stop stops the background refresh of the cached value, the cached value can still be read via Get().
+func (c *refreshedCache[T]) Stop() {
+	c.stopOnce.Do(func() {
+		close(c.stopC)
+	})
 }

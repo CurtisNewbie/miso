@@ -60,28 +60,24 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 			"type":          "remote",
 			"path-patterns": []string{"/api/**"},
 			"remote": map[string]any{
-				"service":        "auth-service",
-				"path":           "/open/api/auth",
+				"path":           "lb://auth-service/open/api/auth",
 				"decision-field": "data.valid",
 				"body-map":       map[string]any{"authorization": "token", "path": "url", "method": "method"},
 				"user":           map[string]any{"userno": "data.userNo", "username": "data.username", "roleno": "data.roleNo", "role": "data.role"},
 			},
 		},
 		map[string]any{
-			"name":          "remote-no-service",
+			"name":          "remote-no-path",
 			"type":          "remote",
 			"path-patterns": []string{"/api/**"},
-			"remote": map[string]any{
-				"path": "/open/api/auth",
-			},
+			"remote":        map[string]any{},
 		},
 		map[string]any{
 			"name":          "remote-unknown-bodymap-key",
 			"type":          "remote",
 			"path-patterns": []string{"/api/**"},
 			"remote": map[string]any{
-				"service":        "auth-service",
-				"path":           "/open/api/auth",
+				"path":           "lb://auth-service/open/api/auth",
 				"decision-field": "data.valid",
 				"body-map":       map[string]any{"bad-key": "token"},
 			},
@@ -90,8 +86,7 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 			"name": "remote-no-path-patterns",
 			"type": "remote",
 			"remote": map[string]any{
-				"service":        "auth-service",
-				"path":           "/open/api/auth",
+				"path":           "lb://auth-service/open/api/auth",
 				"decision-field": "data.valid",
 			},
 		},
@@ -99,7 +94,7 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 
 	h := &HttpProxy{}
 	routes := h.LoadDynAuthRouteFromProp("test.dynremote.routes")
-	// remote-no-service is filtered out; unknown body-map key is ignored; remote without path-patterns is kept
+	// remote-no-path is filtered out; unknown body-map key is ignored; remote without path-patterns is kept
 	if len(routes) != 3 {
 		t.Fatalf("expected exactly 3 valid remote routes, got %v", len(routes))
 	}
@@ -111,7 +106,7 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 	if d.Name != "remote-ok" {
 		t.Fatalf("name = '%v', want 'remote-ok'", d.Name)
 	}
-	if d.Remote.Service != "auth-service" || d.Remote.Path != "/open/api/auth" || d.Remote.DecisionField != "data.valid" {
+	if d.Remote.Path != "lb://auth-service/open/api/auth" || d.Remote.DecisionField != "data.valid" {
 		t.Fatalf("remote config not loaded correctly: %+v", d.Remote)
 	}
 	if d.Remote.BodyMap.Authorization != "token" || d.Remote.BodyMap.Path != "url" || d.Remote.BodyMap.Method != "method" {
@@ -121,6 +116,45 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 		t.Fatalf("user mapping not loaded correctly: %+v", d.Remote.User)
 	}
 	t.Logf("loaded route: %+v", d)
+}
+
+func TestAddConfDynAccessFilter(t *testing.T) {
+	SetProp("test.dynaccess", map[string]any{
+		"whitelist": []string{"/health", "/open/api/**"},
+		"auth-routes": []any{
+			map[string]any{
+				"name":          "remote-ok",
+				"type":          "remote",
+				"path-patterns": []string{"/api/**"},
+				"remote": map[string]any{
+					"path":           "lb://auth-service/open/api/auth",
+					"decision-field": "data.valid",
+				},
+			},
+			map[string]any{
+				"name": "remote-no-decision-field",
+				"type": "remote",
+				"remote": map[string]any{
+					"path": "lb://auth-service/open/api/auth",
+				},
+			},
+		},
+	})
+
+	h := &HttpProxy{}
+	h.AddConfDynAccessFilter("test.dynaccess", 0)
+	if len(h.filters) != 1 {
+		t.Fatalf("expected 1 filter registered, got %d", len(h.filters))
+	}
+
+	// config keys must unmarshal into DynAccessFilterConfig
+	cfg := UnmarshalFromPropKeyAs[DynAccessFilterConfig]("test.dynaccess")
+	if len(cfg.Whitelist) != 2 {
+		t.Fatalf("expected 2 whitelist patterns, got %+v", cfg.Whitelist)
+	}
+	if len(cfg.AuthRoutes) != 2 {
+		t.Fatalf("expected 2 auth routes, got %+v", cfg.AuthRoutes)
+	}
 }
 
 func TestMapRemoteAuthResult(t *testing.T) {

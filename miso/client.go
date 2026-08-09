@@ -492,25 +492,33 @@ func (t *Client) WithProxy(proxy string) *Client {
 func (t *Client) prepReqUrl() (string, error) {
 	url := t.Url
 
-	// Check if URL starts with "lb:" for load balancer/service discovery
+	// Check if URL starts with "lb:" or "lb://" for load balancer/service discovery
 	// Only process if discoverService is not already set (e.g., by EnableServiceDiscovery)
-	if strings.HasPrefix(url, "lb:") && !t.discoverService {
-		// Extract service name from "lb:SERVICE_NAME/..." pattern
-		rest := strings.TrimPrefix(url, "lb:")
-		if idx := strings.Index(rest, "/"); idx >= 0 {
-			t.serviceName = rest[:idx]
-			t.discoverService = true
-			url = rest[idx:] // Use the rest starting from "/"
-		} else {
-			// No "/" found, the entire thing is the service name
-			t.serviceName = rest
-			t.discoverService = true
-			url = "/"
+	if !t.discoverService {
+		var rest string
+		var lb bool
+		if r, ok := strings.CutPrefix(url, "lb://"); ok {
+			rest, lb = r, true
+		} else if r, ok := strings.CutPrefix(url, "lb:"); ok {
+			rest, lb = r, true
 		}
+		if lb {
+			// Extract service name from "lb://SERVICE_NAME/..." pattern
+			if idx := strings.Index(rest, "/"); idx >= 0 {
+				t.serviceName = rest[:idx]
+				t.discoverService = true
+				url = rest[idx:] // Use the rest starting from "/"
+			} else {
+				// No "/" found, the entire thing is the service name
+				t.serviceName = rest
+				t.discoverService = true
+				url = "/"
+			}
 
-		// Validate service name is not empty
-		if t.serviceName == "" {
-			return "", UnknownErrMsgf("malformed 'lb:' URL: service name is empty, expected format 'lb:SERVICE_NAME/path'")
+			// Validate service name is not empty
+			if t.serviceName == "" {
+				return "", UnknownErrMsgf("malformed 'lb:' URL: service name is empty, expected format 'lb://SERVICE_NAME/path' or 'lb:SERVICE_NAME/path'")
+			}
 		}
 	}
 
@@ -520,7 +528,7 @@ func (t *Client) prepReqUrl() (string, error) {
 			return "", UnknownErrMsgf("service discovery enabled, but no service registry available")
 		}
 
-		resolved, err := sr.ResolveUrl(t.Rail, t.serviceName, t.Url)
+		resolved, err := sr.ResolveUrl(t.Rail, t.serviceName, url)
 		if err != nil {
 			return "", UnknownErrf(err, "Resolve service address failed, service: %v", t.serviceName)
 		}
@@ -553,8 +561,8 @@ func (t *Client) Require2xx() *Client {
 //	    Get()
 //	→ Resolves "user-service" to "http://10.0.0.1:8080/api/users"
 //
-//	// Method 2: Using "lb:" prefix (alternative, no need to call EnableServiceDiscovery)
-//	miso.NewClient(rail, "lb:user-service/api/users").Get()
+//	// Method 2: Using the "lb://" prefix (alternative, no need to call EnableServiceDiscovery)
+//	miso.NewClient(rail, "lb://user-service/api/users").Get()
 //	→ Same result as Method 1
 func (t *Client) EnableServiceDiscovery(serviceName string) *Client {
 	t.serviceName = serviceName

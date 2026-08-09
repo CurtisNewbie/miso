@@ -279,6 +279,123 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 	Info("Registered Access Filter")
 }
 
+// DynAccessFilterConfig is the configuration loaded by [HttpProxy.AddConfDynAccessFilter] from a
+// single prop root key.
+type DynAccessFilterConfig struct {
+	// Whitelist path patterns, requests matching these paths are allowed without authentication.
+	Whitelist []string
+	// AuthRoutes loaded dynamically, see [HttpProxy.LoadDynAuthRouteFromProp] for the route format.
+	AuthRoutes []DynAuthRoute
+}
+
+// AddConfDynAccessFilter adds an access filter with whitelist path patterns and dynamically loaded
+// auth routes, both loaded from the configuration under a single prop root key, unmarshalled into
+// [DynAccessFilterConfig].
+//
+// E.g., for prop root key "proxy.access.filter":
+//
+//	proxy.access.filter:
+//	  whitelist:
+//	    - "/health"
+//	    - "/open/api/**"
+//	  auth-routes:
+//	    - name: "myauth1"
+//	      type: "bearer"
+//	      bearer: "mybearer1"
+//	      trace:
+//	        username: "trace-user"
+//	        role: "myrole"
+//	      path-patterns:
+//	        - "/path1"
+//	        - "/path2"
+//	        - "/path3"
+//	    - name: "myauth2"
+//	      type: "basic"
+//	      username: "myuser"
+//	      password: "mypassword"
+//	      trace:
+//	        username: "trace-user"
+//	        role: "myrole"
+//	      path-patterns:
+//	        - "/path4"
+//	        - "/path5"
+//	        - "/path6"
+//	    - name: "myauth3"
+//	      type: "remote"
+//	      path-patterns: # may be omitted, remote routes without path-patterns match all paths
+//	        - "/path7"
+//	      remote:
+//	        path: "lb://auth-service/open/api/auth/check" # lb:// prefix resolves the address via service discovery
+//	        body-map:
+//	          authorization: "token"
+//	          path: "url"
+//	          method: "method"
+//	        decision-field: "data.valid"
+//	        user:
+//	          userno: "data.userno"
+//	          username: "data.username"
+//	          roleno: "data.roleno"
+//	          role: "data.role"
+//
+// The whitelist and the dyn auth routes are loaded together, cached, and refreshed in the background
+// every refreshEvery, so frequent requests don't have to read the configuration every time, and the
+// values are never outdated for longer than the refresh interval.
+//
+// If refreshEvery <= 0, both are loaded only once.
+//
+// E.g.,
+//
+//	var h *miso.HttpProxy
+//	h.AddConfDynAccessFilter("access.filter", 5*time.Second)
+func (h *HttpProxy) AddConfDynAccessFilter(propRootKey string, refreshEvery time.Duration) {
+	c := NewRefreshedCache(refreshEvery, func() DynAccessFilterConfig {
+		cfg := UnmarshalFromPropKeyAs[DynAccessFilterConfig](propRootKey)
+		cfg.AuthRoutes = filterDynAuthRoutes(cfg.AuthRoutes)
+		return cfg
+	})
+	h.AddAccessFilter(func() []string {
+		return c.Get().Whitelist
+	}, h.WithDynAuthCheck(func() []DynAuthRoute {
+		return c.Get().AuthRoutes
+	}))
+}
+
+// filterDynAuthRoutes validates and filters DynAuthRoutes, dropping invalid routes.
+func filterDynAuthRoutes(p []DynAuthRoute) []DynAuthRoute {
+	return slutil.CopyFilterUpdate(p, func(d DynAuthRoute) (_d DynAuthRoute, incl bool) {
+		// remote routes may omit path-patterns to match all paths, other routes require them
+		if len(d.PathPatterns) < 1 && !strings.EqualFold(d.Type, DynAuthTypeRemote) {
+			return d, false
+		}
+
+		if d.Type == "" {
+			if d.Bearer != "" {
+				d.Type = DynAuthTypeBearer
+			} else {
+				d.Type = DynAuthTypeBasic
+			}
+		}
+
+		switch strings.ToLower(d.Type) {
+		case DynAuthTypeBasic:
+			if d.Username == "" || d.Password == "" {
+				return d, false
+			}
+		case DynAuthTypeBearer:
+			if d.Bearer == "" {
+				return d, false
+			}
+		case DynAuthTypeRemote:
+			if d.Remote.Path == "" || d.Remote.DecisionField == "" {
+				return d, false
+			}
+		default:
+			return d, false
+		}
+		return d, true
+	})
+}
+
 // WsAccessFilterConfig configures a WebSocket access filter entry.
 type WsAccessFilterConfig struct {
 	// PathPatterns to match for WebSocket upgrade requests. If empty, match all path patterns.
@@ -378,19 +495,27 @@ type DynAuthRoute struct {
 	// Type of authentication, 'bearer', 'basic' or 'remote'.
 	Type string
 
-	// Bearer token to match against when Type is 'Bearer'.
+	// Bearer token to match against when Type is 'bearer'.
 	Bearer string
 
-	// Username used to build the Basic auth credentials when Type is 'Basic'.
+	// Username used to build the Basic auth credentials when Type is 'basic'.
 	Username string
 
-	// Password used to build the Basic auth credentials when Type is 'Basic'.
+	// Password used to build the Basic auth credentials when Type is 'basic'.
 	Password string
 
 	// PathPatterns that this auth route applies to.
+	//
+	// Bearer and basic routes must define at least one path pattern, routes without any are filtered
+	// out when the configuration is loaded. Remote routes may omit path-patterns, in which case they
+	// match all paths.
 	PathPatterns []string
 
 	// Trace info propagated downstream via trace when the request is authenticated.
+	//
+	// Only used by bearer and basic routes. When the route matches and the field is non-empty, the
+	// value is stored in the trace and propagated to downstream services. Remote routes propagate
+	// user info from the auth response instead, see [DynRemoteUserMapping].
 	Trace DynAuthTrace
 
 	// Remote configures remote authentication/authorization, only used when Type is 'remote'.
@@ -402,10 +527,11 @@ type DynAuthRoute struct {
 // DynRemoteAuthConfig configures a remote authentication/authorization route that
 // delegates authentication AND authorization to a downstream auth service in a single call.
 type DynRemoteAuthConfig struct {
-	// Service of the downstream auth service, resolved via service discovery.
-	Service string
 
 	// Path of the endpoint on the downstream auth service.
+	// Use the 'lb://service-name/...' syntax to resolve the address via service discovery
+	// (the 'lb:service-name/...' form is also supported), or a full URL
+	// (e.g., 'http://host:port/...') to call it directly.
 	Path string
 
 	// BodyMap maps source values to field names of the auth request body.
@@ -425,29 +551,26 @@ type DynRemoteAuthConfig struct {
 // field of the auth request body. Empty value means the source is not sent.
 type DynRemoteBodyMap struct {
 	// Authorization - raw Authorization header, without any scheme-specific parsing.
-	Authorization string `mapstructure:"authorization"`
+	Authorization string
 
 	// Path - proxy path, without query string.
-	Path string `mapstructure:"path"`
+	Path string
 
 	// Method - HTTP method.
-	Method string `mapstructure:"method"`
+	Method string
 }
 
 type DynRemoteUserMapping struct {
-	UserNo   string `mapstructure:"userno"`
-	Username string `mapstructure:"username"`
-	RoleNo   string `mapstructure:"roleno"`
-	Role     string `mapstructure:"role"`
+	UserNo   string
+	Username string
+	RoleNo   string
+	Role     string
 }
 
 // DynAuthTrace configures the trace info propagated downstream via trace when the request is authenticated.
 type DynAuthTrace struct {
-	// Username propagated downstream via trace when the request is authenticated.
 	Username string
-	// Role propagated downstream via trace when the request is authenticated.
-	// Useful when there is no full user system (no userno/roleno) available, e.g., only basic auth.
-	Role string
+	Role     string
 }
 
 func (d *DynAuthRoute) BuildBasic() string {
@@ -504,11 +627,10 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 // E.g.,
 //
 //	var h *miso.HttpProxy
-//	h.WithDynAuthCheck(func() []DynAuthRoute{
-//		return h.LoadDynAuthRouteFromProp("root-prop")
-//	})
+//	h.AddConfDynAccessFilter("access.filter", 5*time.Second)
 //
 // See [HttpProxy.AddAccessFilter].
+// See [HttpProxy.AddConfDynAccessFilter].
 func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
 	return func(pc *ProxyContext) (statusCode int, isBearer bool) {
 		authHeader := pc.Inb.Header("Authorization")
@@ -582,7 +704,7 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 //   - decision true -> user info (if any) stored in trace via flow.StoreUser, request allowed
 func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bool) {
 	rail := pc.Rail
-	_, r := pc.Inb.Unwrap()
+	r := pc.Inb.Request()
 
 	// extract vocabulary values, the raw Authorization header is sent as-is,
 	// any scheme-specific parsing is up to the downstream auth service
@@ -604,9 +726,10 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 		body[dst] = r.Method
 	}
 
-	// call downstream auth service via service discovery
+	// call downstream auth service, 'lb:service-name/...' paths are resolved via service discovery
 	var res GnResp[map[string]any]
-	err := NewDynClient(*rail, bar.Remote.Path, bar.Remote.Service).
+	err := NewClient(*rail, bar.Remote.Path).
+		EnableTracing().
 		Require2xx().
 		PostJson(body).
 		Json(&res)
@@ -696,6 +819,9 @@ func readDottedPathStr(m map[string]any, path string) string {
 //	  - name: "myauth1"
 //	    type: "bearer"
 //	    bearer: "mybearer1"
+//	    trace:
+//	      username: "trace-user"
+//	      role: "myrole"
 //	    path-patterns:
 //	      - "/path1"
 //	      - "/path2"
@@ -716,8 +842,7 @@ func readDottedPathStr(m map[string]any, path string) string {
 //	    path-patterns: # may be omitted, remote routes without path-patterns match all paths
 //	      - "/path7"
 //	    remote:
-//	      service: "auth-service"
-//	      path: "/open/api/auth/check"
+//	      path: "lb://auth-service/open/api/auth/check" # lb:// prefix resolves the address via service discovery
 //	      body-map:
 //	        authorization: "token"
 //	        path: "url"
@@ -730,38 +855,7 @@ func readDottedPathStr(m map[string]any, path string) string {
 //	        role: "data.role"
 func (h *HttpProxy) LoadDynAuthRouteFromProp(rootProp string) []DynAuthRoute {
 	p := UnmarshalFromPropKeyAs[[]DynAuthRoute](rootProp)
-	return slutil.CopyFilterUpdate(p, func(d DynAuthRoute) (_d DynAuthRoute, incl bool) {
-		// remote routes may omit path-patterns to match all paths, other routes require them
-		if len(d.PathPatterns) < 1 && !strings.EqualFold(d.Type, DynAuthTypeRemote) {
-			return d, false
-		}
-
-		if d.Type == "" {
-			if d.Bearer != "" {
-				d.Type = DynAuthTypeBearer
-			} else {
-				d.Type = DynAuthTypeBasic
-			}
-		}
-
-		switch strings.ToLower(d.Type) {
-		case DynAuthTypeBasic:
-			if d.Username == "" || d.Password == "" {
-				return d, false
-			}
-		case DynAuthTypeBearer:
-			if d.Bearer == "" {
-				return d, false
-			}
-		case DynAuthTypeRemote:
-			if d.Remote.Service == "" || d.Remote.Path == "" || d.Remote.DecisionField == "" {
-				return d, false
-			}
-		default:
-			return d, false
-		}
-		return d, true
-	})
+	return filterDynAuthRoutes(p)
 }
 
 type ReqTimeLogUnit struct {

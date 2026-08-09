@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestResolveArg(t *testing.T) {
@@ -297,6 +298,76 @@ test:
 	t.Logf("<> %+v", GetPropAny("test"))
 	for i, v := range GetPropChild("test") {
 		t.Logf("%v, %v", i, v)
+	}
+}
+
+func TestPropKeyCache(t *testing.T) {
+	err := LoadConfigFromStr(`
+prop-cache-test:
+  name: "v1"
+  count: 1
+`, EmptyRail())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type Cfg struct {
+		Name  string
+		Count int
+	}
+
+	c := NewRefreshedCache[Cfg](50*time.Millisecond, func() Cfg {
+		return UnmarshalFromPropKeyAs[Cfg]("prop-cache-test")
+	})
+	defer c.Stop()
+
+	// value loaded on creation
+	v := c.Get()
+	if v.Name != "v1" || v.Count != 1 {
+		t.Fatalf("unexpected: %+v", v)
+	}
+
+	// update config, cache should refresh within refreshEvery
+	SetProp("prop-cache-test.name", "v2")
+	SetProp("prop-cache-test.count", 2)
+
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		v = c.Get()
+		if v.Name == "v2" && v.Count == 2 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("cache not refreshed in time: %+v", v)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestPropKeyCacheNoRefresh(t *testing.T) {
+	err := LoadConfigFromStr(`
+prop-cache-test-no-refresh:
+  name: "v1"
+`, EmptyRail())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type Cfg struct {
+		Name string
+	}
+
+	// refreshEvery <= 0, no background refresh
+	c := NewRefreshedCache[Cfg](0, func() Cfg {
+		return UnmarshalFromPropKeyAs[Cfg]("prop-cache-test-no-refresh")
+	})
+	defer c.Stop()
+
+	SetProp("prop-cache-test-no-refresh.name", "v2")
+
+	time.Sleep(100 * time.Millisecond)
+	if v := c.Get(); v.Name != "v1" {
+		t.Fatalf("expected stale value 'v1', got '%s'", v.Name)
 	}
 }
 
