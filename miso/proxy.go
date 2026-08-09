@@ -360,24 +360,85 @@ func (h *HttpProxy) AddWsAccessFilter(
 	Info("Registered WS Access Filter")
 }
 
+const (
+	// DynAuthTypeBearer, bearer token authentication.
+	DynAuthTypeBearer = "bearer"
+
+	// DynAuthTypeBasic, basic authentication.
+	DynAuthTypeBasic = "basic"
+
+	// DynAuthTypeRemote, authentication/authorization delegated to a downstream auth service.
+	DynAuthTypeRemote = "remote"
+)
+
 type DynAuthRoute struct {
 	// Name of the auth route, used for logging.
 	Name string
-	// Type of authentication, 'Bearer' or 'Basic'.
+
+	// Type of authentication, 'bearer', 'basic' or 'remote'.
 	Type string
+
 	// Bearer token to match against when Type is 'Bearer'.
 	Bearer string
+
 	// Username used to build the Basic auth credentials when Type is 'Basic'.
 	Username string
+
 	// Password used to build the Basic auth credentials when Type is 'Basic'.
 	Password string
+
 	// PathPatterns that this auth route applies to.
 	PathPatterns []string
 
 	// Trace info propagated downstream via trace when the request is authenticated.
 	Trace DynAuthTrace
 
+	// Remote configures remote authentication/authorization, only used when Type is 'remote'.
+	Remote DynRemoteAuthConfig
+
 	basic string `mapstructure:"-"`
+}
+
+// DynRemoteAuthConfig configures a remote authentication/authorization route that
+// delegates authentication AND authorization to a downstream auth service in a single call.
+type DynRemoteAuthConfig struct {
+	// Service of the downstream auth service, resolved via service discovery.
+	Service string
+
+	// Path of the endpoint on the downstream auth service.
+	Path string
+
+	// BodyMap maps source values to field names of the auth request body.
+	BodyMap DynRemoteBodyMap
+
+	// DecisionField is the dotted path (e.g. "data.valid") into the response body (GnResp-wrapped: {error, errorCode, msg, data}) that holds the allow/deny boolean.
+	DecisionField string
+
+	// User mapping from response body dotted paths to the user stored in trace via flow.StoreUser when the request is allowed.
+	User DynRemoteUserMapping
+}
+
+// DynRemoteBodyMap maps source values to field names of the auth request body.
+//
+// The value of each field is the field name in the auth request body, e.g.
+// 'authorization: "token"' sends the raw Authorization header as the 'token'
+// field of the auth request body. Empty value means the source is not sent.
+type DynRemoteBodyMap struct {
+	// Authorization - raw Authorization header, without any scheme-specific parsing.
+	Authorization string `mapstructure:"authorization"`
+
+	// Path - proxy path, without query string.
+	Path string `mapstructure:"path"`
+
+	// Method - HTTP method.
+	Method string `mapstructure:"method"`
+}
+
+type DynRemoteUserMapping struct {
+	UserNo   string `mapstructure:"userno"`
+	Username string `mapstructure:"username"`
+	RoleNo   string `mapstructure:"roleno"`
+	Role     string `mapstructure:"role"`
 }
 
 // DynAuthTrace configures the trace info propagated downstream via trace when the request is authenticated.
@@ -446,14 +507,23 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 //	h.WithDynAuthCheck(func() []DynAuthRoute{
 //		return h.LoadDynAuthRouteFromProp("root-prop")
 //	})
+//
+// See [HttpProxy.AddAccessFilter].
 func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
 	return func(pc *ProxyContext) (statusCode int, isBearer bool) {
 		authHeader := pc.Inb.Header("Authorization")
+
+		// all auth routes require an Authorization header
 		if strutil.IsBlankStr(authHeader) {
 			return 0, false
 		}
+
 		cand := &dynAuthReq{auth: authHeader}
-		for _, bar := range load() {
+		bars := load()
+		for _, bar := range bars {
+			if strings.EqualFold(bar.Type, DynAuthTypeRemote) { // handle basic/bearer first
+				continue
+			}
 			if !bar.CheckAuth(cand) {
 				continue
 			}
@@ -471,8 +541,151 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 				return 0, true
 			}
 		}
+
+		// remote auth routes are evaluated after all non-remote routes, in config order
+		for _, bar := range bars {
+			if !strings.EqualFold(bar.Type, DynAuthTypeRemote) {
+				continue
+			}
+			matched := true
+			var matchedPath string
+			if len(bar.PathPatterns) > 0 {
+				matched = false
+				if mp, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath); ok {
+					matchedPath = mp
+					matched = true
+				}
+			}
+
+			if matched {
+				if matchedPath != "" {
+					pc.Inb.Infof("Matched '%v' Remote Auth Path Pattern: '%v'", bar.Name, matchedPath)
+				} else {
+					pc.Inb.Infof("Matched '%v' Remote Auth", bar.Name)
+				}
+				return h.checkRemoteAuth(pc, bar)
+			}
+		}
 		return 0, false
 	}
+}
+
+// checkRemoteAuth delegates authentication AND authorization to a downstream auth service
+// for the given remote auth route.
+//
+// The downstream auth service is called via service discovery, and its GnResp-wrapped
+// response body is used to determine the decision:
+//
+//   - response error -> 503
+//   - decision field missing -> 502
+//   - decision false -> 403 if a user is present in the response, otherwise 401
+//   - decision true -> user info (if any) stored in trace via flow.StoreUser, request allowed
+func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bool) {
+	rail := pc.Rail
+	_, r := pc.Inb.Unwrap()
+
+	// extract vocabulary values, the raw Authorization header is sent as-is,
+	// any scheme-specific parsing is up to the downstream auth service
+	authHeader := pc.Inb.Header("Authorization")
+	if strutil.IsBlankStr(authHeader) {
+		rail.Warnf("Remote auth: missing Authorization header")
+		return http.StatusUnauthorized, false
+	}
+
+	// build auth request body from body-map
+	body := map[string]any{}
+	if dst := bar.Remote.BodyMap.Authorization; dst != "" {
+		body[dst] = authHeader
+	}
+	if dst := bar.Remote.BodyMap.Path; dst != "" {
+		body[dst] = pc.ProxyPath
+	}
+	if dst := bar.Remote.BodyMap.Method; dst != "" {
+		body[dst] = r.Method
+	}
+
+	// call downstream auth service via service discovery
+	var res GnResp[map[string]any]
+	err := NewDynClient(*rail, bar.Remote.Path, bar.Remote.Service).
+		Require2xx().
+		PostJson(body).
+		Json(&res)
+	if err != nil {
+		rail.Warnf("Remote auth request failed, %v", err)
+		return http.StatusServiceUnavailable, false
+	}
+	if res.Error {
+		rail.Warnf("Remote auth returned error: %v, %v", res.ErrorCode, res.Msg)
+		return http.StatusServiceUnavailable, false
+	}
+
+	// decision
+	sc, ok, user := mapRemoteAuthResult(res.Data, bar.Remote)
+	if !ok {
+		return sc, false
+	}
+
+	// allowed: store user in trace for downstream propagation (skip when the
+	// auth response carries no user info, so that upstream trace identity is preserved)
+	*pc.Rail = flow.StoreUser(*pc.Rail, user)
+
+	return 0, true
+}
+
+// mapRemoteAuthResult maps the downstream auth response to a decision.
+//
+// When denied (ok=false), the returned status code is the response code:
+//   - decision field missing -> 502
+//   - decision false -> 403 if user info is present in the response, otherwise 401
+//
+// When allowed (ok=true), the user info (if any) is returned so it can be
+// propagated downstream via trace.
+func mapRemoteAuthResult(data map[string]any, cfg DynRemoteAuthConfig) (statusCode int, ok bool, user flow.User) {
+	dv, found := readDottedPath(data, cfg.DecisionField)
+	if !found {
+		return http.StatusBadGateway, false, flow.User{}
+	}
+	user = flow.User{
+		Username: readDottedPathStr(data, cfg.User.Username),
+		UserNo:   readDottedPathStr(data, cfg.User.UserNo),
+		RoleNo:   readDottedPathStr(data, cfg.User.RoleNo),
+		Role:     readDottedPathStr(data, cfg.User.Role),
+	}
+	if !cast.ToBool(dv) {
+		// denied: 403 if an authenticated user is present in the response, otherwise 401
+		if user.Username != "" || user.UserNo != "" || user.RoleNo != "" || user.Role != "" {
+			return http.StatusForbidden, false, user
+		}
+		return http.StatusUnauthorized, false, user
+	}
+	return 0, true, user
+}
+
+// readDottedPath reads a value from a decoded JSON object using a dotted path, e.g. "data.valid".
+func readDottedPath(m map[string]any, path string) (any, bool) {
+	if path == "" || m == nil {
+		return nil, false
+	}
+	var cur any = m
+	for _, seg := range strings.Split(path, ".") {
+		mm, ok := cur.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		v, ok := mm[seg]
+		if !ok {
+			return nil, false
+		}
+		cur = v
+	}
+	return cur, true
+}
+
+func readDottedPathStr(m map[string]any, path string) string {
+	if v, ok := readDottedPath(m, path); ok {
+		return cast.ToString(v)
+	}
+	return ""
 }
 
 // Load DynAuthRoute from configuration.
@@ -498,28 +711,50 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 //	      - "/path4"
 //	      - "/path5"
 //	      - "/path6"
+//	  - name: "myauth3"
+//	    type: "remote"
+//	    path-patterns: # may be omitted, remote routes without path-patterns match all paths
+//	      - "/path7"
+//	    remote:
+//	      service: "auth-service"
+//	      path: "/open/api/auth/check"
+//	      body-map:
+//	        authorization: "token"
+//	        path: "url"
+//	        method: "method"
+//	      decision-field: "data.valid"
+//	      user:
+//	        userno: "data.userno"
+//	        username: "data.username"
+//	        roleno: "data.roleno"
+//	        role: "data.role"
 func (h *HttpProxy) LoadDynAuthRouteFromProp(rootProp string) []DynAuthRoute {
 	p := UnmarshalFromPropKeyAs[[]DynAuthRoute](rootProp)
 	return slutil.CopyFilterUpdate(p, func(d DynAuthRoute) (_d DynAuthRoute, incl bool) {
-		if len(d.PathPatterns) < 1 {
+		// remote routes may omit path-patterns to match all paths, other routes require them
+		if len(d.PathPatterns) < 1 && !strings.EqualFold(d.Type, DynAuthTypeRemote) {
 			return d, false
 		}
 
 		if d.Type == "" {
 			if d.Bearer != "" {
-				d.Type = "bearer"
+				d.Type = DynAuthTypeBearer
 			} else {
-				d.Type = "basic"
+				d.Type = DynAuthTypeBasic
 			}
 		}
 
 		switch strings.ToLower(d.Type) {
-		case "basic":
+		case DynAuthTypeBasic:
 			if d.Username == "" || d.Password == "" {
 				return d, false
 			}
-		case "bearer":
+		case DynAuthTypeBearer:
 			if d.Bearer == "" {
+				return d, false
+			}
+		case DynAuthTypeRemote:
+			if d.Remote.Service == "" || d.Remote.Path == "" || d.Remote.DecisionField == "" {
 				return d, false
 			}
 		default:
