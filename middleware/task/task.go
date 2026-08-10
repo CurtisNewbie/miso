@@ -23,6 +23,7 @@ const (
 	// default ttl for master lock key in redis (1 min)
 	defMstLockTtl    = 1 * time.Minute
 	defMstLockTtlSec = 60
+	taskPollBackoff  = 200 * time.Millisecond
 )
 
 var (
@@ -326,6 +327,7 @@ func (m *taskModule) pullTasksAny(rail miso.Rail) error {
 
 	if len(keys) == 0 {
 		rail.Debugf("No active task queues to pull from")
+		time.Sleep(taskPollBackoff)
 		return nil
 	}
 

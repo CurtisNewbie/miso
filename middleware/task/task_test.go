@@ -7,7 +7,26 @@ import (
 
 	"github.com/curtisnewbie/miso/middleware/redis"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/hash"
+	"github.com/curtisnewbie/miso/util/slutil"
 )
+
+func TestPullTasksAnyAllDisabled(t *testing.T) {
+	m := &taskModule{
+		dtasks:        slutil.NewSyncSlice[miso.Job](1),
+		disabledTasks: hash.NewStrRWMap[struct{}](),
+	}
+	m.dtasks.Append(miso.Job{Name: "disabled"})
+	m.disabledTasks.Put("disabled", struct{}{})
+
+	started := time.Now()
+	if err := m.pullTasksAny(miso.EmptyRail()); err != nil {
+		t.Fatal(err)
+	}
+	if elapsed := time.Since(started); elapsed < taskPollBackoff {
+		t.Fatalf("all-disabled poll returned too quickly: %v", elapsed)
+	}
+}
 
 func TestTaskScheduling(t *testing.T) {
 	rail := miso.EmptyRail()
