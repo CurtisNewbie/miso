@@ -31,6 +31,12 @@ Run below command to install agent skill for miso.
 npx skills add github.com/curtisnewbie/miso.git
 ```
 
+To install the skill from a local checkout, run from the repository root:
+
+```sh
+npx skills add ./skills/miso -g
+```
+
 ## Documentations
 
 - [CLI Tools](./doc/tools.md)
