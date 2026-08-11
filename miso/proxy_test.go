@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/curtisnewbie/miso/flow"
+	"github.com/gin-gonic/gin"
 )
 
 func TestDynAuthRouteCheckAuth(t *testing.T) {
@@ -136,8 +137,18 @@ func TestWithDynAuthCheckWWWAuthenticate(t *testing.T) {
 		}
 	})
 
-	t.Run("missing authorization header -> no challenge", func(t *testing.T) {
+	t.Run("missing authorization header but basic path matched -> challenge", func(t *testing.T) {
 		code, hdr := run(t, "", []DynAuthRoute{basicRoute})
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != wantChallenge {
+			t.Fatalf("WWW-Authenticate = %q, want %q", got, wantChallenge)
+		}
+	})
+
+	t.Run("missing authorization header and no basic route matched -> no challenge", func(t *testing.T) {
+		code, hdr := run(t, "", []DynAuthRoute{bearerRoute})
 		if code != http.StatusUnauthorized {
 			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
 		}
@@ -163,6 +174,58 @@ func TestWithDynAuthCheckWWWAuthenticate(t *testing.T) {
 		}
 		if got := hdr.Get("WWW-Authenticate"); got != "" {
 			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
+}
+
+// TestProxyWWWAuthenticateOnTheWire verifies end-to-end through a real gin engine that the
+// WWW-Authenticate challenge is actually sent on the 401 response.
+func TestProxyWWWAuthenticateOnTheWire(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	h := &HttpProxy{}
+	h.resolveTarget = func(rail Rail, proxyPath string) (string, error) {
+		return "http://localhost:9999" + proxyPath, nil
+	}
+	h.AddAccessFilter(func() []string { return nil }, h.WithDynAuthCheck(func() []DynAuthRoute {
+		return []DynAuthRoute{
+			{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/protected/**"}},
+		}
+	}))
+
+	e := gin.New()
+	e.Any("/proxy/*proxyPath", newRawTRouteHandler(h.proxyRequestHandler))
+
+	run := func(authHeader string) (int, http.Header) {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/proxy/protected/foo", nil)
+		if authHeader != "" {
+			req.Header.Set("Authorization", authHeader)
+		}
+		e.ServeHTTP(rec, req)
+		return rec.Code, rec.Header()
+	}
+
+	const wantChallenge = "Basic realm=\"Username and Password\""
+
+	t.Run("wrong basic credentials", func(t *testing.T) {
+		code, hdr := run("Basic dTp4")
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != wantChallenge {
+			t.Fatalf("WWW-Authenticate = %q, want %q", got, wantChallenge)
+		}
+	})
+
+	t.Run("no credentials at all", func(t *testing.T) {
+		code, hdr := run("")
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != wantChallenge {
+			t.Fatalf("WWW-Authenticate = %q, want %q", got, wantChallenge)
 		}
 	})
 }

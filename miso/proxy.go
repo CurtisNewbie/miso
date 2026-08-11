@@ -670,14 +670,9 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 	return func(pc *ProxyContext) (statusCode int, isBearer bool) {
 		authHeader := pc.Inb.Header("Authorization")
 
-		// all auth routes require an Authorization header
-		if strutil.IsBlankStr(authHeader) {
-			return 0, false
-		}
-
 		cand := &dynAuthReq{auth: authHeader}
 		bars := load()
-		basicMatched := false // a basic auth route's path pattern matched, but its credentials were rejected
+		basicMatched := false // a basic auth route's path pattern matched, but the request was not authenticated
 		for _, bar := range bars {
 			if strings.EqualFold(bar.Type, DynAuthTypeRemote) { // handle basic/bearer first
 				continue
@@ -687,6 +682,12 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 
 				if strings.EqualFold(bar.Type, DynAuthTypeBasic) {
 					basicMatched = true
+				}
+
+				// all auth routes require an Authorization header, but keep tracking
+				// basicMatched so that the client is still challenged below
+				if strutil.IsBlankStr(authHeader) {
+					continue
 				}
 
 				if !bar.CheckAuth(cand) {
@@ -731,7 +732,7 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 			}
 		}
 
-		// a basic auth route's path pattern was matched but the credentials were rejected,
+		// a basic auth route's path pattern was matched but the request was not authenticated,
 		// challenge the client (e.g., for browsers to show the username/password prompt)
 		if basicMatched {
 			w, _ := pc.Inb.Unwrap()
