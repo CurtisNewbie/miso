@@ -40,23 +40,40 @@ func ServeStatic(inb *Inbound, fs embed.FS, file string) {
 //
 // Static files are all served by paths with prefix '/static'.
 //
+//   - fs: the embedded filesystem containing the static files.
+//   - dir: the directory in the embedded filesystem where the static files are located.
+//   - hostPrefix: optional prefix that the app is hosted under (e.g. when it's mounted behind a gateway),
+//     it's prepended to the redirect URLs, must NOT be included in the actual route paths.
+//
 // Notice that index.html must be renamed to index.htm or else it won't work.
 //
 // If you are using Angular framework, you may add extra build param as follows. The idea is still the same for other frameworks.
 //
 //	ng build --baseHref=/static/
 func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
+	PrepareWebStaticFsWithPrefix(fs, dir, "/static", hostPrefix...)
+}
+
+// PrepareWebStaticFsWithPrefix prepares embedded static files under the given urlPrefix.
+//
+//   - fs: the embedded filesystem containing the static files.
+//   - dir: the directory in the embedded filesystem where the static files are located.
+//   - urlPrefix: the url prefix under which the static files are served, e.g. '/static', leading/trailing slashes are normalized.
+//   - hostPrefix: optional prefix that the app is hosted under (e.g. when it's mounted behind a gateway),
+//     it's prepended to the redirect URLs, must NOT be included in the actual route paths.
+//
+// Notice that index.html must be renamed to index.htm or else it won't work.
+func PrepareWebStaticFsWithPrefix(fs embed.FS, dir string, urlPrefix string, hostPrefix ...string) {
+	urlPrefix = normalizeWebStaticPrefix(urlPrefix)
+
 	serveStaticFile := func(c *gin.Context, fp string) {
 		Debugf("Serving static file: %v", fp)
 		c.FileFromFS(path.Join(dir, fp), http.FS(fs))
 	}
 
-	var hp string
+	var host string
 	if v, ok := slutil.First(hostPrefix); ok {
-		hp = v
-	}
-	if hp != "" && !strings.HasPrefix(hp, "/") {
-		hp = "/" + hp
+		host = normalizeWebStaticPrefix(v)
 	}
 
 	setNoRouteHandler(func(ctx *gin.Context, rail Rail) {
@@ -65,9 +82,11 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 		// https://stackoverflow.com/questions/69462376/serving-react-static-files-in-golang-gin-gonic-using-goembed-giving-404-error-o
 		// https://cs.opensource.google/go/go/+/refs/tags/go1.21.5:src/net/http/fs.go;l=604
 		// https://github.com/gin-contrib/static/issues/19
-		if ctx.Request.Method == "GET" {
-			if ctx.Request.RequestURI == "/" || strings.HasPrefix(ctx.Request.RequestURI, "/static") {
-				ctx.Redirect(http.StatusTemporaryRedirect, hp+"/static/index.htm")
+		redirectURL := host + urlPrefix + "/index.htm"
+		if ctx.Request.Method == http.MethodGet {
+			requestPath := ctx.Request.URL.Path
+			if requestPath == "/" || hasWebStaticPrefix(requestPath, urlPrefix) {
+				ctx.Redirect(http.StatusTemporaryRedirect, redirectURL)
 				return
 			}
 		}
@@ -75,7 +94,7 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 	})
 
 	BeforeWebRouteRegister(func(rail Rail) error {
-		HttpGet("/static/*filepath", RawHandler(func(inb *Inbound) {
+		HttpGet(urlPrefix+"/*filepath", RawHandler(func(inb *Inbound) {
 			c := inb.Engine().(*gin.Context)
 			cp := c.Param("filepath")
 			if cp == "" {
@@ -85,6 +104,21 @@ func PrepareWebStaticFs(fs embed.FS, dir string, hostPrefix ...string) {
 		}))
 		return nil
 	})
+}
+
+func normalizeWebStaticPrefix(prefix string) string {
+	prefix = strings.Trim(prefix, "/")
+	if prefix == "" {
+		return ""
+	}
+	return "/" + prefix
+}
+
+func hasWebStaticPrefix(requestPath string, urlPrefix string) bool {
+	if urlPrefix == "" {
+		return true
+	}
+	return requestPath == urlPrefix || strings.HasPrefix(requestPath, urlPrefix+"/")
 }
 
 func MustCompile(fs embed.FS, s string) *template.Template {
