@@ -97,7 +97,10 @@ func PrepareWebStaticFsWithPrefix(fs embed.FS, dir string, urlPrefix string, hos
 		HttpGet(urlPrefix+"/*filepath", RawHandler(func(inb *Inbound) {
 			c := inb.Engine().(*gin.Context)
 			cp := c.Param("filepath")
-			if cp == "" {
+			// empty path or path ending with '/' resolves to a directory,
+			// serving it via FileFromFS would cause redirect loops (e.g. /internal/web/ -> ./),
+			// fall back to index.htm instead
+			if cp == "" || strings.HasSuffix(cp, "/") {
 				cp = "index.htm"
 			}
 			serveStaticFile(c, cp)
