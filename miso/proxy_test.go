@@ -1,6 +1,13 @@
 package miso
 
-import "testing"
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/curtisnewbie/miso/flow"
+)
 
 func TestDynAuthRouteCheckAuth(t *testing.T) {
 	cases := []struct {
@@ -64,4 +71,98 @@ func TestIsSuspiciousProxyPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithDynAuthCheckWWWAuthenticate(t *testing.T) {
+	const wantChallenge = "Basic realm=\"Username and Password\""
+	const proxyPath = "/protected/foo"
+
+	run := func(t *testing.T, authHeader string, routes []DynAuthRoute) (int, http.Header) {
+		t.Helper()
+		h := &HttpProxy{}
+		checkAuth := h.WithDynAuthCheck(func() []DynAuthRoute { return routes })
+
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, proxyPath, nil)
+		if authHeader != "" {
+			r.Header.Set("Authorization", authHeader)
+		}
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = proxyPath
+
+		code, ok := checkAuth(pc)
+		if !ok {
+			if code == 0 {
+				code = http.StatusUnauthorized // AddAccessFilter default
+			}
+		} else {
+			code = http.StatusOK
+		}
+		return code, rec.Header()
+	}
+
+	basicRoute := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/protected/**"}}
+	bearerRoute := DynAuthRoute{Type: "bearer", Bearer: "tok", PathPatterns: []string{"/protected/**"}}
+
+	t.Run("basic credentials rejected -> WWW-Authenticate challenge", func(t *testing.T) {
+		code, hdr := run(t, "Basic dTp4", []DynAuthRoute{basicRoute}) // wrong password
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != wantChallenge {
+			t.Fatalf("WWW-Authenticate = %q, want %q", got, wantChallenge)
+		}
+	})
+
+	t.Run("bearer rejected -> no basic challenge", func(t *testing.T) {
+		code, hdr := run(t, "Bearer wrong", []DynAuthRoute{bearerRoute})
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != "" {
+			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
+
+	t.Run("path not matched -> no challenge", func(t *testing.T) {
+		code, hdr := run(t, "Basic dTp4", []DynAuthRoute{DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/other/**"}}})
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != "" {
+			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
+
+	t.Run("missing authorization header -> no challenge", func(t *testing.T) {
+		code, hdr := run(t, "", []DynAuthRoute{basicRoute})
+		if code != http.StatusUnauthorized {
+			t.Fatalf("status = %v, want %v", code, http.StatusUnauthorized)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != "" {
+			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
+
+	t.Run("basic credentials accepted -> no challenge", func(t *testing.T) {
+		code, hdr := run(t, "Basic dTpw", []DynAuthRoute{basicRoute}) // valid creds
+		if code != http.StatusOK {
+			t.Fatalf("status = %v, want %v", code, http.StatusOK)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != "" {
+			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
+
+	t.Run("basic path matched but rejected, bearer route authenticates -> no challenge", func(t *testing.T) {
+		code, hdr := run(t, "Bearer tok", []DynAuthRoute{basicRoute, bearerRoute})
+		if code != http.StatusOK {
+			t.Fatalf("status = %v, want %v", code, http.StatusOK)
+		}
+		if got := hdr.Get("WWW-Authenticate"); got != "" {
+			t.Fatalf("WWW-Authenticate = %q, want empty", got)
+		}
+	})
 }
