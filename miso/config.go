@@ -594,6 +594,8 @@ func (a *AppConfig) resolveStructStringFields(ptr any) {
 	a.resolveStructValue(v.Elem())
 }
 
+// resolveStructValue resolves prop functions for the given value, descending into
+// structs, slices and maps, e.g., []ChatAppConfig, map[string]ChatAppConfig, []map[string]string.
 func (a *AppConfig) resolveStructValue(v reflect.Value) {
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
@@ -602,10 +604,24 @@ func (a *AppConfig) resolveStructValue(v reflect.Value) {
 		v = v.Elem()
 	}
 
-	if v.Kind() != reflect.Struct {
-		return
+	switch v.Kind() {
+	case reflect.Slice:
+		for j := 0; j < v.Len(); j++ {
+			e := v.Index(j)
+			if e.Kind() == reflect.String {
+				e.SetString(a.resolvePropFunc(e.String()))
+			} else {
+				a.resolveStructValue(e)
+			}
+		}
+	case reflect.Map:
+		a.resolveMapValue(v)
+	case reflect.Struct:
+		a.resolveStructFields(v)
 	}
+}
 
+func (a *AppConfig) resolveStructFields(v reflect.Value) {
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 
@@ -617,27 +633,39 @@ func (a *AppConfig) resolveStructValue(v reflect.Value) {
 		case reflect.String:
 			resolved := a.resolvePropFunc(field.String())
 			field.SetString(resolved)
-		case reflect.Slice:
-			if field.Type().Elem().Kind() == reflect.String {
-				for j := 0; j < field.Len(); j++ {
-					resolved := a.resolvePropFunc(field.Index(j).String())
-					field.Index(j).SetString(resolved)
-				}
-			}
-		case reflect.Map:
-			if field.Type().Key().Kind() == reflect.String && field.Type().Elem().Kind() == reflect.String {
-				iter := field.MapRange()
-				for iter.Next() {
-					resolved := a.resolvePropFunc(iter.Value().String())
-					field.SetMapIndex(iter.Key(), reflect.ValueOf(resolved))
-				}
-			}
-		case reflect.Struct:
+		case reflect.Slice, reflect.Map, reflect.Struct:
 			a.resolveStructValue(field)
 		case reflect.Ptr:
 			if !field.IsNil() {
 				a.resolveStructValue(field)
 			}
+		}
+	}
+}
+
+// resolveMapValue resolves prop functions in the values of a string-keyed map.
+// Map values are not addressable, so struct/pointer values are cloned, resolved
+// and written back with SetMapIndex.
+func (a *AppConfig) resolveMapValue(v reflect.Value) {
+	if v.Type().Key().Kind() != reflect.String {
+		return
+	}
+
+	et := v.Type().Elem()
+	switch et.Kind() {
+	case reflect.String:
+		iter := v.MapRange()
+		for iter.Next() {
+			resolved := a.resolvePropFunc(iter.Value().String())
+			v.SetMapIndex(iter.Key(), reflect.ValueOf(resolved))
+		}
+	case reflect.Struct, reflect.Ptr:
+		iter := v.MapRange()
+		for iter.Next() {
+			val := reflect.New(et).Elem()
+			val.Set(iter.Value())
+			a.resolveStructValue(val)
+			v.SetMapIndex(iter.Key(), val)
 		}
 	}
 }

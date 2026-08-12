@@ -280,7 +280,7 @@ func TestAlias(t *testing.T) {
 
 func TestGetParentNodeAsAsSlice(t *testing.T) {
 	err := LoadConfigFromStr(`
-test:
+parent-node-test:
   node-a:
     name: "a"
   node-b:
@@ -291,12 +291,12 @@ test:
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := GetPropAny("test")
+	m := GetPropAny("parent-node-test")
 	t.Logf("< %+v", m)
 	m.(map[string]any)["node-a"] = "wut"
 	t.Logf("> %+v", m)
-	t.Logf("<> %+v", GetPropAny("test"))
-	for i, v := range GetPropChild("test") {
+	t.Logf("<> %+v", GetPropAny("parent-node-test"))
+	for i, v := range GetPropChild("parent-node-test") {
 		t.Logf("%v, %v", i, v)
 	}
 }
@@ -453,4 +453,137 @@ nested:
 		t.Fatalf("expected 'decrypted:cipher', got '%s'", decryptResult)
 	}
 	t.Logf("Test 5 passed: multiple funcs work, vault = %s, decrypt = %s", vaultResult, decryptResult)
+
+	// Test 6: UnmarshalFromPropKey for slice of structs resolves prop funcs in elements
+	type ChatAppConfig struct {
+		Name      string
+		AppSecret string
+		Inner     struct {
+			Value string
+		}
+	}
+	err = ac.LoadConfigFromStr(`
+chat-apps:
+  - name: "app-a"
+    app-secret: "encrypt(app-a-secret)"
+    inner:
+      value: "encrypt(app-a-inner)"
+  - name: "app-b"
+    app-secret: "encrypt(app-b-secret)"
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var apps []ChatAppConfig
+	ac.UnmarshalFromPropKey("chat-apps", &apps)
+	if len(apps) != 2 {
+		t.Fatalf("expected 2 apps, got %d", len(apps))
+	}
+	if apps[0].Name != "app-a" || apps[0].AppSecret != "encrypted:app-a-secret" {
+		t.Fatalf("unexpected apps[0]: %+v", apps[0])
+	}
+	if apps[0].Inner.Value != "encrypted:app-a-inner" {
+		t.Fatalf("unexpected apps[0].Inner: %+v", apps[0].Inner)
+	}
+	if apps[1].Name != "app-b" || apps[1].AppSecret != "encrypted:app-b-secret" {
+		t.Fatalf("unexpected apps[1]: %+v", apps[1])
+	}
+	t.Logf("Test 6 passed: slice of structs resolved, apps = %+v", apps)
+
+	// Test 7: map[string]Struct and []map[string]string resolve prop funcs
+	type AppCfg struct {
+		Secret string
+	}
+	err = ac.LoadConfigFromStr(`
+app-map:
+  a:
+    secret: "encrypt(a-secret)"
+  b:
+    secret: "encrypt(b-secret)"
+props-list:
+  - name: "encrypt(list-name)"
+    token: "encrypt(list-token)"
+  - name: "plain-name"
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]AppCfg
+	ac.UnmarshalFromPropKey("app-map", &m)
+	if m["a"].Secret != "encrypted:a-secret" || m["b"].Secret != "encrypted:b-secret" {
+		t.Fatalf("unexpected map resolution: %+v", m)
+	}
+	var l []map[string]string
+	ac.UnmarshalFromPropKey("props-list", &l)
+	if len(l) != 2 || l[0]["name"] != "encrypted:list-name" || l[0]["token"] != "encrypted:list-token" || l[1]["name"] != "plain-name" {
+		t.Fatalf("unexpected slice-of-map resolution: %+v", l)
+	}
+	t.Logf("Test 7 passed: map[string]struct + []map[string]string resolved, m = %+v, l = %+v", m, l)
+
+	// Test 8: regression coverage for resolver shapes: []string / map[string]string
+	// struct fields, pointer fields, []*T, map[string]*T and [][]string
+	type Inner struct {
+		Token string
+	}
+	type AppCfg2 struct {
+		Name    string
+		Aliases []string
+		Labels  map[string]string
+		Inner   *Inner
+	}
+	err = ac.LoadConfigFromStr(`
+shapes:
+  name: "shapes-name"
+  aliases: ["encrypt(alias-1)", "plain-alias"]
+  labels:
+    k1: "encrypt(label-1)"
+    k2: "plain-label"
+  inner:
+    token: "encrypt(ptr-token)"
+apps-ptr:
+  - name: "app-x"
+    inner:
+      token: "encrypt(x-token)"
+ptr-map:
+  x:
+    name: "app-y"
+    inner:
+      token: "encrypt(y-token)"
+nested-strs:
+  - ["encrypt(n1)", "plain-n2"]
+  - ["encrypt(n3)"]
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var shapes AppCfg2
+	ac.UnmarshalFromPropKey("shapes", &shapes)
+	if shapes.Name != "shapes-name" {
+		t.Fatalf("unexpected shapes.Name: %+v", shapes)
+	}
+	if len(shapes.Aliases) != 2 || shapes.Aliases[0] != "encrypted:alias-1" || shapes.Aliases[1] != "plain-alias" {
+		t.Fatalf("unexpected shapes.Aliases: %+v", shapes.Aliases)
+	}
+	if shapes.Labels["k1"] != "encrypted:label-1" || shapes.Labels["k2"] != "plain-label" {
+		t.Fatalf("unexpected shapes.Labels: %+v", shapes.Labels)
+	}
+	if shapes.Inner == nil || shapes.Inner.Token != "encrypted:ptr-token" {
+		t.Fatalf("unexpected shapes.Inner: %+v", shapes.Inner)
+	}
+	var apps2 []*AppCfg2
+	ac.UnmarshalFromPropKey("apps-ptr", &apps2)
+	if len(apps2) != 1 || apps2[0].Name != "app-x" || apps2[0].Inner == nil || apps2[0].Inner.Token != "encrypted:x-token" {
+		t.Fatalf("unexpected apps2: %+v", apps2)
+	}
+	var pm map[string]*AppCfg2
+	ac.UnmarshalFromPropKey("ptr-map", &pm)
+	if pm["x"] == nil || pm["x"].Name != "app-y" || pm["x"].Inner == nil || pm["x"].Inner.Token != "encrypted:y-token" {
+		t.Fatalf("unexpected ptr-map: %+v", pm)
+	}
+	var ns [][]string
+	ac.UnmarshalFromPropKey("nested-strs", &ns)
+	if len(ns) != 2 || ns[0][0] != "encrypted:n1" || ns[0][1] != "plain-n2" || ns[1][0] != "encrypted:n3" {
+		t.Fatalf("unexpected nested-strs: %+v", ns)
+	}
+	t.Logf("Test 8 passed: resolver shapes verified, shapes = %+v, apps2 = %+v, pm = %+v, ns = %+v", shapes, apps2, pm, ns)
 }
