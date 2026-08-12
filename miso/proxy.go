@@ -362,6 +362,18 @@ type DynAccessFilterConfig struct {
 //	          username: "data.username"
 //	          roleno: "data.roleno"
 //	          role: "data.role"
+//	    - name: "myauth4"
+//	      type: "remote"
+//	      path-patterns:
+//	        - "/ws/**"
+//	      remote:
+//	        path: "lb://auth-service/open/api/auth/check"
+//	        token-query-key: "token" # ws clients can't send the Authorization header, read the credential from this query param instead
+//	        body-map:
+//	          token: "token" # the query-param token is sent as this field of the auth request body
+//	          path: "url"
+//	          method: "method"
+//	        decision-field: "data.valid"
 //
 // The whitelist and the dyn auth routes are loaded together, cached, and refreshed in the background
 // every refreshEvery, so frequent requests don't have to read the configuration every time, and the
@@ -412,7 +424,8 @@ func filterDynAuthRoutes(p []DynAuthRoute) []DynAuthRoute {
 				return d, false
 			}
 		case DynAuthTypeRemote:
-			if d.Remote.Path == "" || d.Remote.DecisionField == "" {
+			if d.Remote.Path == "" || d.Remote.DecisionField == "" ||
+				(d.Remote.TokenQueryKey != "" && d.Remote.BodyMap.Token == "") {
 				return d, false
 			}
 		default:
@@ -560,6 +573,14 @@ type DynRemoteAuthConfig struct {
 	// (e.g., 'http://host:port/...') to call it directly.
 	Path string
 
+	// TokenQueryKey is the query parameter key name that carries the credential token.
+	//
+	// When set, the credential is read from the query parameter (e.g. for WebSocket upgrade
+	// requests, where the client can't send an Authorization header) instead of the
+	// Authorization header, and sent in the auth request body as the field mapped by
+	// [DynRemoteBodyMap.Token].
+	TokenQueryKey string
+
 	// BodyMap maps source values to field names of the auth request body.
 	BodyMap DynRemoteBodyMap
 
@@ -581,6 +602,11 @@ type DynRemoteAuthConfig struct {
 type DynRemoteBodyMap struct {
 	// Authorization - raw Authorization header, without any scheme-specific parsing.
 	Authorization string
+
+	// Token - token extracted from the query parameter named by
+	// [DynRemoteAuthConfig.TokenQueryKey], sent as this field of the auth request body.
+	// Empty value means the token is not sent.
+	Token string
 
 	// Path - proxy path, without query string.
 	Path string
@@ -752,6 +778,12 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 //   - decision field missing -> 502
 //   - decision false -> 403 if a user is present in the response, otherwise 401
 //   - decision true -> user info (if any) stored in trace via flow.StoreUser, request allowed
+//
+// The credential is sent in the auth request body via the body-map. By default the raw
+// Authorization header is used, but when [DynRemoteAuthConfig.TokenQueryKey] is set, the token
+// is read from that query parameter instead (e.g. for WebSocket upgrade requests, where the
+// client can't send an Authorization header) and sent as the field mapped by
+// [DynRemoteBodyMap.Token].
 func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bool) {
 	rail := pc.Rail
 	r := pc.Inb.Request()
@@ -759,7 +791,17 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 	// extract vocabulary values, the raw Authorization header is sent as-is,
 	// any scheme-specific parsing is up to the downstream auth service
 	authHeader := pc.Inb.Header("Authorization")
-	if strutil.IsBlankStr(authHeader) {
+
+	// when TokenQueryKey is set, the credential is read from the query parameter instead
+	// (e.g. for WebSocket upgrade requests, where the client can't send an Authorization header)
+	token := ""
+	if tqk := bar.Remote.TokenQueryKey; tqk != "" {
+		token = r.URL.Query().Get(tqk)
+		if strutil.IsBlankStr(token) {
+			rail.Warnf("Remote auth: token not found in query param '%v'", tqk)
+			return http.StatusUnauthorized, false
+		}
+	} else if strutil.IsBlankStr(authHeader) {
 		rail.Warnf("Remote auth: missing Authorization header")
 		return http.StatusUnauthorized, false
 	}
@@ -768,6 +810,9 @@ func (h *HttpProxy) checkRemoteAuth(pc *ProxyContext, bar DynAuthRoute) (int, bo
 	body := map[string]any{}
 	if dst := bar.Remote.BodyMap.Authorization; dst != "" {
 		body[dst] = authHeader
+	}
+	if dst := bar.Remote.BodyMap.Token; dst != "" {
+		body[dst] = token
 	}
 	if dst := bar.Remote.BodyMap.Path; dst != "" {
 		body[dst] = pc.ProxyPath

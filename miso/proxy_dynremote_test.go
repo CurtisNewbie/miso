@@ -1,8 +1,14 @@
 package miso
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
+	"github.com/curtisnewbie/miso/flow"
 	"github.com/spf13/cast"
 )
 
@@ -90,13 +96,33 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 				"decision-field": "data.valid",
 			},
 		},
+		map[string]any{
+			"name": "remote-ws-token",
+			"type": "remote",
+			"remote": map[string]any{
+				"path":            "lb://auth-service/open/api/auth",
+				"token-query-key": "token",
+				"decision-field":  "data.valid",
+				"body-map":        map[string]any{"token": "token"},
+			},
+		},
+		map[string]any{
+			"name": "remote-ws-token-no-body-map",
+			"type": "remote",
+			"remote": map[string]any{
+				"path":            "lb://auth-service/open/api/auth",
+				"token-query-key": "token",
+				"decision-field":  "data.valid",
+			},
+		},
 	})
 
 	h := &HttpProxy{}
 	routes := h.LoadDynAuthRouteFromProp("test.dynremote.routes")
-	// remote-no-path is filtered out; unknown body-map key is ignored; remote without path-patterns is kept
-	if len(routes) != 3 {
-		t.Fatalf("expected exactly 3 valid remote routes, got %v", len(routes))
+	// remote-no-path is filtered out; unknown body-map key is ignored; remote without path-patterns is kept;
+	// remote with token-query-key but no body-map token destination is filtered out
+	if len(routes) != 4 {
+		t.Fatalf("expected exactly 4 valid remote routes, got %v", len(routes))
 	}
 
 	d := routes[0]
@@ -116,6 +142,14 @@ func TestLoadDynAuthRouteRemote(t *testing.T) {
 		t.Fatalf("user mapping not loaded correctly: %+v", d.Remote.User)
 	}
 	t.Logf("loaded route: %+v", d)
+
+	d = routes[3]
+	if d.Name != "remote-ws-token" {
+		t.Fatalf("routes[3] = '%v', want 'remote-ws-token'", d.Name)
+	}
+	if d.Remote.TokenQueryKey != "token" || d.Remote.BodyMap.Token != "token" {
+		t.Fatalf("ws token config not loaded correctly: %+v", d.Remote)
+	}
 }
 
 func TestAddConfDynAccessFilter(t *testing.T) {
@@ -265,4 +299,93 @@ func TestMapRemoteAuthResultGnResp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCheckRemoteAuthTokenQueryKey(t *testing.T) {
+	// downstream auth service captures the request body and allows when the decision field is true
+	var gotBody map[string]any
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"valid":true}}`))
+	}))
+	defer srv.Close()
+
+	run := func(t *testing.T, cfg DynRemoteAuthConfig, setup func(r *http.Request)) (int, bool) {
+		t.Helper()
+		h := &HttpProxy{}
+		rail := flow.NewRail(context.Background())
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/ws/chat?token=query-token", nil)
+		if setup != nil {
+			setup(r)
+		}
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = "/ws/chat"
+		return h.checkRemoteAuth(pc, DynAuthRoute{Type: "remote", Remote: cfg})
+	}
+
+	base := DynRemoteAuthConfig{
+		Path:          srv.URL + "/auth/check",
+		DecisionField: "data.valid",
+		BodyMap: DynRemoteBodyMap{
+			Token:  "token",
+			Path:   "url",
+			Method: "method",
+		},
+	}
+
+	t.Run("token read from query param", func(t *testing.T) {
+		gotBody = nil
+		calls.Store(0)
+		cfg := base
+		cfg.TokenQueryKey = "token"
+		code, ok := run(t, cfg, nil)
+		if !ok || code != 0 {
+			t.Fatalf("code = %v, ok = %v, want allowed", code, ok)
+		}
+		if calls.Load() != 1 {
+			t.Fatalf("downstream called %v times, want 1", calls.Load())
+		}
+		if gotBody == nil || gotBody["token"] != "query-token" || gotBody["url"] != "/ws/chat" || gotBody["method"] != http.MethodGet {
+			t.Fatalf("unexpected auth request body: %+v", gotBody)
+		}
+	})
+
+	t.Run("missing query token -> 401, downstream not called", func(t *testing.T) {
+		calls.Store(0)
+		cfg := base
+		cfg.TokenQueryKey = "missing-key"
+		code, ok := run(t, cfg, nil)
+		if ok || code != http.StatusUnauthorized {
+			t.Fatalf("code = %v, ok = %v, want 401 denied", code, ok)
+		}
+		if calls.Load() != 0 {
+			t.Fatalf("downstream called %v times, want 0", calls.Load())
+		}
+	})
+
+	t.Run("authorization header still used when token-query-key empty", func(t *testing.T) {
+		gotBody = nil
+		calls.Store(0)
+		cfg := base
+		cfg.TokenQueryKey = ""
+		cfg.BodyMap.Token = ""
+		cfg.BodyMap.Authorization = "token"
+		code, ok := run(t, cfg, func(r *http.Request) {
+			r.Header.Set("Authorization", "Bearer header-token")
+		})
+		if !ok || code != 0 {
+			t.Fatalf("code = %v, ok = %v, want allowed", code, ok)
+		}
+		if calls.Load() != 1 {
+			t.Fatalf("downstream called %v times, want 1", calls.Load())
+		}
+		if gotBody == nil || gotBody["token"] != "Bearer header-token" {
+			t.Fatalf("unexpected auth request body: %+v", gotBody)
+		}
+	})
 }

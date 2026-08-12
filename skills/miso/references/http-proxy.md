@@ -174,6 +174,18 @@ proxy:
               username: "data.username"
               roleno: "data.roleno"
               role: "data.role"
+        - name: "myauth4"        # ws upgrade auth via remote type
+          type: "remote"
+          path-patterns:
+            - "/ws/**"
+          remote:
+            path: "lb://auth-service/open/api/auth/check"
+            token-query-key: "token"   # ws clients can't send the Authorization header, read the credential from this query param instead
+            body-map:
+              token: "token"           # the query-param token is sent as this field of the auth request body
+              path: "url"
+              method: "method"
+            decision-field: "data.valid"
 ```
 
 ```go
@@ -187,7 +199,7 @@ h.AddConfDynAccessFilter("proxy.access.filter", 5*time.Second)
 
 - Bearer and basic routes must define at least one path pattern; remote routes may omit them (match all paths)
 - `type` may be omitted: inferred as `bearer` when `bearer` is set, otherwise `basic`
-- `basic` routes require both `username` and `password`; `bearer` routes require `bearer`; `remote` routes require `remote.path` and `remote.decision-field`; unknown types are dropped
+- `basic` routes require both `username` and `password`; `bearer` routes require `bearer`; `remote` routes require `remote.path` and `remote.decision-field`, and a remote route with `remote.token-query-key` must also map `body-map.token`; unknown types are dropped
 
 **Evaluation order** (per request, handled by `WithDynAuthCheck`):
 
@@ -202,6 +214,7 @@ h.AddConfDynAccessFilter("proxy.access.filter", 5*time.Second)
 
 - The auth request is a `POST` JSON to `remote.path`; the `lb://service-name/...` prefix (also `lb:service-name/...`) resolves the address via service discovery, a full URL calls it directly. Tracing is enabled and 2xx responses are required.
 - The request body is built from `body-map`: `authorization` sends the raw `Authorization` header (no scheme parsing), `path` the proxy path, `method` the HTTP method. Empty value means the source is not sent.
+- **WebSocket / query-param credentials:** when `remote.token-query-key` is set, the credential is read from that query parameter instead of the `Authorization` header (browsers can't set headers on ws upgrade requests), and `body-map.token` maps it into the auth request body. When `token-query-key` is set but no token is present in the query, the request is rejected with `401` before calling the auth service.
 - The response does **not** have to be GnResp-wrapped — any JSON object works. Dotted paths (`decision-field`, `user.*`) resolve against the full response body: for GnResp-wrapped responses (`{error, errorCode, msg, data}`) include the `data.` prefix (e.g. `data.valid`), plain responses use paths like `valid`.
 - On allow, user info mapped via `user` (dotted paths) is stored in the trace with `flow.StoreUser` and propagated downstream. Note: `StoreUser` is applied unconditionally — when the response carries no user info, the trace user fields are overwritten with empty values and no user headers are emitted downstream.
 
@@ -213,7 +226,7 @@ Status code mapping for remote auth:
 | Decision field missing in response (warning logged with the response body) | 502 |
 | Decision `false`, user info present in response | 403 |
 | Decision `false`, no user info | 401 |
-| Missing `Authorization` header | 401 |
+| Missing `Authorization` header (or missing query token when `token-query-key` is set) | 401 |
 | Decision `true` | allow |
 
 ### AddWsAccessFilter
@@ -230,6 +243,8 @@ type WsAccessFilterConfig struct {
 - Only requests with `Connection: upgrade` + `Upgrade: websocket` headers are filtered; everything else passes through
 - The first config whose path patterns match is used; empty `TokenQueryKey` or missing token → `401`
 - `checkAuth(token, pc)` decides; failure responds with the returned status code (default `401`). The callback may store user info via `pc.SetAttr()`
+
+For config-driven ws auth (no callback), use a remote auth route with `token-query-key` + `body-map.token` instead — see [Remote Auth Routes](#remote-auth-routes).
 
 ## Other Built-in Filters
 

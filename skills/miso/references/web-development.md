@@ -739,6 +739,9 @@ p.AddWsAccessFilter(func() []miso.WsAccessFilterConfig {
 }, func(token string, pc *miso.ProxyContext) (statusCode int, ok bool) {
     return 0, validateWsToken(token)
 })
+```
+
+For config-driven ws auth, use a remote auth route with `token-query-key` + `body-map.token` in `AddConfDynAccessFilter` — no callback needed, the credential is read from the query param and forwarded to the downstream auth service in the request body.
 
 // Share state between filters via the proxy context
 pc.SetAttr("user", u)
