@@ -438,7 +438,7 @@ func init() {
 		Name:      "Bootstrap KMS",
 		Bootstrap: kmsBootstrap,
 		Condition: kmsBootstrapCondition,
-		Order:     miso.BootstrapOrderL1,
+		Order:     miso.BootstrapOrderL1 - 100,
 	})
 
 	// Register "kms" prop func for config value decryption
