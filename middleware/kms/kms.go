@@ -210,9 +210,8 @@ func (m *kmsModule) encrypt(plaintext []byte) (string, error) {
 	}
 
 	// 5. Body encryption
-	// AAD = encryptionContext serialized (empty context: just 4 bytes: 0)
-	var contextAAD []byte
-	contextAAD = binary.BigEndian.AppendUint32(contextAAD, 0)
+	// AAD = encryptionContext serialized; empty context serializes to empty bytes,
+	contextAAD := serializeContext(nil)
 
 	// AES-GCM encrypt: returns ciphertext+tag concatenated
 	result := gcm.Seal(nil, bodyIV, plaintext, contextAAD)
@@ -381,6 +380,11 @@ func serializeHeaderFields(version, algorithm int, ctx []encryptionContextEntry,
 // serializeContext builds the raw binary big-endian serialization of
 // encryption context entries for use as AAD in body encryption.
 func serializeContext(ctx []encryptionContextEntry) []byte {
+	// Empty context serializes to empty bytes
+	if len(ctx) == 0 {
+		return []byte{}
+	}
+
 	// Sort by key bytes ascending
 	sorted := make([]encryptionContextEntry, len(ctx))
 	copy(sorted, ctx)
