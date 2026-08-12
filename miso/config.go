@@ -576,7 +576,7 @@ func (a *AppConfig) resolvePropFunc(value string) string {
 	arg := value[idx+1 : len(value)-1]
 	result, err := fn(arg)
 	if err != nil {
-		Errorf("prop func '%s' failed to resolve '%s': %v", name, value, err)
+		Errorf("prop func '%s' failed to resolve '%s': %v", name, arg, err)
 		return ""
 	}
 	return result
