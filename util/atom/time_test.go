@@ -119,6 +119,31 @@ func TestUnmarshalJSONUnixSeconds(t *testing.T) {
 	t.Logf("Unix-milli 1744251041206 → %v ✓", et)
 }
 
+func TestMarshalJSONZero(t *testing.T) {
+	var et Time
+	b, err := et.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != "null" {
+		t.Fatalf("zero Time should marshal to null, got %s", b)
+	}
+	t.Logf("zero Time → %s ✓", b)
+}
+
+func TestUnmarshalJSONNegativeEpoch(t *testing.T) {
+	// Zero Time re-marshaled as epoch milli is -62135596800000 (year 1).
+	// It must be treated as zero instead of producing an out-of-range year.
+	var et Time
+	if err := et.UnmarshalJSON([]byte("-62135596800000")); err != nil {
+		t.Fatal(err)
+	}
+	if !et.IsZero() {
+		t.Fatalf("negative epoch should unmarshal to zero Time, got %v", et)
+	}
+	t.Logf("negative epoch → zero Time ✓")
+}
+
 func TestEndOfDay(t *testing.T) {
 	var et Time
 	err := et.UnmarshalJSON([]byte("2025-04-09 09:40:10.123"))

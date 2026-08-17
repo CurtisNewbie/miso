@@ -288,6 +288,9 @@ func (t Time) String() string {
 
 // Implements encoding/json Marshaler
 func (t Time) MarshalJSON() ([]byte, error) {
+	if t.IsZero() {
+		return []byte("null"), nil
+	}
 	var v string
 	if etimeMarshalFormat != "" {
 		v = strutil.QuoteStr(t.Unwrap().Format(etimeMarshalFormat)) // other format configured
@@ -315,6 +318,10 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 		} else {
 			return nil
 		}
+	}
+
+	if millisec < 0 { // negative epoch (e.g. zero Time re-marshaled as -62135596800000) is not a valid timestamp, treat as zero
+		return nil
 	}
 
 	return t.Scan(millisec)
