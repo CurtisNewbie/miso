@@ -178,6 +178,177 @@ func TestWithDynAuthCheckWWWAuthenticate(t *testing.T) {
 	})
 }
 
+func TestWithDynAuthCheckPathPatternGroup(t *testing.T) {
+	const proxyPath = "/protected/foo"
+
+	run := func(t *testing.T, authHeader string, routes []DynAuthRoute, loadGroups ...func() []PathPatternGroup) bool {
+		t.Helper()
+		h := &HttpProxy{}
+		checkAuth := h.WithDynAuthCheck(func() []DynAuthRoute { return routes }, loadGroups...)
+
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, proxyPath, nil)
+		if authHeader != "" {
+			r.Header.Set("Authorization", authHeader)
+		}
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = proxyPath
+
+		_, ok := checkAuth(pc)
+		return ok
+	}
+
+	t.Run("basic route matches via group only", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatternGroup: "g1"}
+		loadGroups := func() []PathPatternGroup {
+			return []PathPatternGroup{{Name: "g1", PathPatterns: []string{"/protected/**"}}}
+		}
+		if ok := run(t, "Basic dTpw", []DynAuthRoute{route}, loadGroups); !ok {
+			t.Fatalf("expected match via group, got no match")
+		}
+	})
+
+	t.Run("basic route with unresolved group and no literal patterns never matches", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatternGroup: "missing"}
+		if ok := run(t, "Basic dTpw", []DynAuthRoute{route}); ok {
+			t.Fatalf("expected no match, unresolved group must fail closed")
+		}
+	})
+
+	t.Run("basic route merges literal PathPatterns and group patterns", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/other/**"}, PathPatternGroup: "g1"}
+		loadGroups := func() []PathPatternGroup {
+			return []PathPatternGroup{{Name: "g1", PathPatterns: []string{"/protected/**"}}}
+		}
+		if ok := run(t, "Basic dTpw", []DynAuthRoute{route}, loadGroups); !ok {
+			t.Fatalf("expected match via merged group pattern")
+		}
+	})
+
+	t.Run("remote route with unresolved group fails closed, does not match-all", func(t *testing.T) {
+		route := DynAuthRoute{Type: "remote", PathPatternGroup: "missing"}
+		if ok := run(t, "Bearer x", []DynAuthRoute{route}); ok {
+			t.Fatalf("expected no match, unresolved group on remote route must fail closed, not match-all")
+		}
+	})
+
+	t.Run("duplicate group name across loaders, first loader wins", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatternGroup: "g1"}
+		loadA := func() []PathPatternGroup {
+			return []PathPatternGroup{{Name: "g1", PathPatterns: []string{"/protected/**"}}}
+		}
+		loadB := func() []PathPatternGroup {
+			return []PathPatternGroup{{Name: "g1", PathPatterns: []string{"/other/**"}}}
+		}
+		if ok := run(t, "Basic dTpw", []DynAuthRoute{route}, loadA, loadB); !ok {
+			t.Fatalf("expected match via first loader's group pattern")
+		}
+	})
+}
+
+func TestLoadDynAuthRoutePathPatternGroupRequirement(t *testing.T) {
+	SetProp("test.dynauth.pprule", []any{
+		map[string]any{
+			"name":               "basic-with-group-only",
+			"type":               "basic",
+			"username":           "u",
+			"password":           "p",
+			"path-pattern-group": "shared",
+		},
+		map[string]any{
+			"name":     "basic-without-any-selector",
+			"type":     "basic",
+			"username": "u",
+			"password": "p",
+		},
+		map[string]any{
+			"name":   "bearer-without-any-selector",
+			"type":   "bearer",
+			"bearer": "tok",
+		},
+	})
+
+	h := &HttpProxy{}
+	routes := h.LoadDynAuthRouteFromProp("test.dynauth.pprule")
+	// only the route with path-pattern-group set satisfies the "at least one path selector" rule;
+	// basic/bearer routes without PathPatterns nor PathPatternGroup must be filtered out
+	if len(routes) != 1 {
+		t.Fatalf("expected exactly 1 valid route, got %v: %+v", len(routes), routes)
+	}
+	if routes[0].Name != "basic-with-group-only" || routes[0].PathPatternGroup != "shared" {
+		t.Fatalf("unexpected route kept: %+v", routes[0])
+	}
+}
+
+func TestAddConfDynAccessFilterPathPatternGroup(t *testing.T) {
+	SetProp("test.dynaccess.group", map[string]any{
+		"whitelist": []string{},
+		"path-pattern-groups": []any{
+			map[string]any{
+				"name":          "shared",
+				"path-patterns": []string{"/protected/**"},
+			},
+		},
+		"auth-routes": []any{
+			map[string]any{
+				"name":               "grouped-basic",
+				"type":               "basic",
+				"username":           "u",
+				"password":           "p",
+				"path-pattern-group": "shared",
+			},
+		},
+	})
+
+	h := &HttpProxy{}
+	h.AddConfDynAccessFilter("test.dynaccess.group", 0)
+	if len(h.filters) != 1 {
+		t.Fatalf("expected 1 filter registered, got %d", len(h.filters))
+	}
+
+	// config keys must unmarshal into DynAccessFilterConfig, including the new fields
+	cfg := UnmarshalFromPropKeyAs[DynAccessFilterConfig]("test.dynaccess.group")
+	if len(cfg.PathPatternGroups) != 1 || cfg.PathPatternGroups[0].Name != "shared" || len(cfg.PathPatternGroups[0].PathPatterns) != 1 {
+		t.Fatalf("path-pattern-groups not unmarshaled correctly: %+v", cfg.PathPatternGroups)
+	}
+	if len(cfg.AuthRoutes) != 1 || cfg.AuthRoutes[0].PathPatternGroup != "shared" {
+		t.Fatalf("auth route path-pattern-group not unmarshaled correctly: %+v", cfg.AuthRoutes)
+	}
+
+	// end-to-end: the registered filter must resolve the auth route's PathPatternGroup against
+	// the path-pattern-groups loaded from the same config, and authenticate accordingly
+	run := func(t *testing.T, authHeader, path string) int {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		if authHeader != "" {
+			r.Header.Set("Authorization", authHeader)
+		}
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = path
+		nextCalled := false
+		h.filters[0](pc, func() { nextCalled = true })
+		if nextCalled {
+			return http.StatusOK
+		}
+		return rec.Code
+	}
+
+	if code := run(t, "Basic dTpw", "/protected/foo"); code != http.StatusOK {
+		t.Fatalf("valid creds on grouped path: code = %v, want 200 (next called)", code)
+	}
+	if code := run(t, "Basic dTp4", "/protected/foo"); code != http.StatusUnauthorized {
+		t.Fatalf("wrong creds on grouped path: code = %v, want 401", code)
+	}
+	if code := run(t, "Basic dTpw", "/unrelated/foo"); code != http.StatusUnauthorized {
+		t.Fatalf("valid creds but path outside group: code = %v, want 401", code)
+	}
+}
+
 // TestProxyWWWAuthenticateOnTheWire verifies end-to-end through a real gin engine that the
 // WWW-Authenticate challenge is actually sent on the 401 response.
 func TestProxyWWWAuthenticateOnTheWire(t *testing.T) {

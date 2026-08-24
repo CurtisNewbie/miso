@@ -312,6 +312,18 @@ type DynAccessFilterConfig struct {
 	Whitelist []string
 	// AuthRoutes loaded dynamically, see [HttpProxy.LoadDynAuthRouteFromProp] for the route format.
 	AuthRoutes []DynAuthRoute
+	// PathPatternGroups, named groups of path patterns that DynAuthRoute may reference by name via
+	// [DynAuthRoute.PathPatternGroup], so the same set of path patterns can be shared among auth routes.
+	PathPatternGroups []PathPatternGroup
+}
+
+// PathPatternGroup is a named group of path patterns, referenced by [DynAuthRoute.PathPatternGroup]
+// so the same set of path patterns can be shared among multiple auth routes.
+type PathPatternGroup struct {
+	// Name of the group, matched against [DynAuthRoute.PathPatternGroup].
+	Name string
+	// PathPatterns in this group.
+	PathPatterns []string
 }
 
 // AddConfDynAccessFilter adds an access filter with whitelist path patterns and dynamically loaded
@@ -374,12 +386,21 @@ type DynAccessFilterConfig struct {
 //	          path: "url"
 //	          method: "method"
 //	        decision-field: "data.valid"
+//	    - name: "myauth5"
+//	      type: "bearer"
+//	      bearer: "mybearer5"
+//	      path-pattern-group: "shared-group" # resolved against path-pattern-groups below, merged with path-patterns (if any)
+//	  path-pattern-groups:
+//	    - name: "shared-group"
+//	      path-patterns:
+//	        - "/path8"
+//	        - "/path9"
 //
-// The whitelist and the dyn auth routes are loaded together, cached, and refreshed in the background
-// every refreshEvery, so frequent requests don't have to read the configuration every time, and the
-// values are never outdated for longer than the refresh interval.
+// The whitelist, the dyn auth routes, and the path pattern groups are loaded together, cached, and
+// refreshed in the background every refreshEvery, so frequent requests don't have to read the
+// configuration every time, and the values are never outdated for longer than the refresh interval.
 //
-// If refreshEvery <= 0, both are loaded only once.
+// If refreshEvery <= 0, all are loaded only once.
 //
 // E.g.,
 //
@@ -395,14 +416,16 @@ func (h *HttpProxy) AddConfDynAccessFilter(propRootKey string, refreshEvery time
 		return c.Get().Whitelist
 	}, h.WithDynAuthCheck(func() []DynAuthRoute {
 		return c.Get().AuthRoutes
+	}, func() []PathPatternGroup {
+		return c.Get().PathPatternGroups
 	}))
 }
 
 // filterDynAuthRoutes validates and filters DynAuthRoutes, dropping invalid routes.
 func filterDynAuthRoutes(p []DynAuthRoute) []DynAuthRoute {
 	return slutil.CopyFilterUpdate(p, func(d DynAuthRoute) (_d DynAuthRoute, incl bool) {
-		// remote routes may omit path-patterns to match all paths, other routes require them
-		if len(d.PathPatterns) < 1 && !strings.EqualFold(d.Type, DynAuthTypeRemote) {
+		// remote routes may omit path-patterns/path-pattern-group to match all paths, other routes require at least one
+		if len(d.PathPatterns) < 1 && d.PathPatternGroup == "" && !strings.EqualFold(d.Type, DynAuthTypeRemote) {
 			return d, false
 		}
 
@@ -545,10 +568,16 @@ type DynAuthRoute struct {
 
 	// PathPatterns that this auth route applies to.
 	//
-	// Bearer and basic routes must define at least one path pattern, routes without any are filtered
-	// out when the configuration is loaded. Remote routes may omit path-patterns, in which case they
-	// match all paths.
+	// Bearer and basic routes must define at least one path pattern (via PathPatterns and/or
+	// PathPatternGroup), routes without any are filtered out when the configuration is loaded.
+	// Remote routes may omit both, in which case they match all paths.
 	PathPatterns []string
+
+	// PathPatternGroup is the name of a [PathPatternGroup] (see [DynAccessFilterConfig.PathPatternGroups])
+	// whose PathPatterns are merged with this route's PathPatterns, so the same set of path patterns
+	// can be shared among auth routes. If the named group can't be resolved, only the literal
+	// PathPatterns (if any) are used; the route never matches based on the unresolved group alone.
+	PathPatternGroup string
 
 	// Trace info propagated downstream via trace when the request is authenticated.
 	//
@@ -685,6 +714,14 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 // When a request is authenticated, the configured user info (e.g., Role) is stored in the
 // trace and propagated to downstream services.
 //
+// loadGroups is optional. When provided, each DynAuthRoute may reference a group by name via
+// [DynAuthRoute.PathPatternGroup]; the group's PathPatterns are merged with the route's own
+// PathPatterns for matching, so the same set of path patterns can be shared among auth routes.
+// Groups are resolved by name across all loadGroups loaders, in the order given; if the same
+// name appears in more than one loader, the first one wins. If a route references a group name
+// that can't be resolved, only its literal PathPatterns (if any) are used for matching; the
+// route never matches based on the unresolved group reference alone.
+//
 // E.g.,
 //
 //	var h *miso.HttpProxy
@@ -692,18 +729,20 @@ func (d *dynAuthReq) CheckBearer(bearer string) bool {
 //
 // See [HttpProxy.AddAccessFilter].
 // See [HttpProxy.AddConfDynAccessFilter].
-func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyContext) (statusCode int, ok bool) {
+func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute, loadGroups ...func() []PathPatternGroup) func(pc *ProxyContext) (statusCode int, ok bool) {
 	return func(pc *ProxyContext) (statusCode int, isBearer bool) {
 		authHeader := pc.Inb.Header("Authorization")
 
 		cand := &dynAuthReq{auth: authHeader}
 		bars := load()
+		groups := resolvePathPatternGroups(loadGroups)
 		basicMatched := false // a basic auth route's path pattern matched, but the request was not authenticated
 		for _, bar := range bars {
 			if strings.EqualFold(bar.Type, DynAuthTypeRemote) { // handle basic/bearer first
 				continue
 			}
-			matched, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath)
+			patterns, _ := resolveBarPathPatterns(pc.Rail, bar, groups)
+			matched, ok := strutil.MatchPathAnyVal(patterns, pc.ProxyPath)
 			if ok {
 
 				if strings.EqualFold(bar.Type, DynAuthTypeBasic) {
@@ -738,11 +777,12 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 			if !strings.EqualFold(bar.Type, DynAuthTypeRemote) {
 				continue
 			}
+			patterns, hasSelector := resolveBarPathPatterns(pc.Rail, bar, groups)
 			matched := true
 			var matchedPath string
-			if len(bar.PathPatterns) > 0 {
+			if hasSelector {
 				matched = false
-				if mp, ok := strutil.MatchPathAnyVal(bar.PathPatterns, pc.ProxyPath); ok {
+				if mp, ok := strutil.MatchPathAnyVal(patterns, pc.ProxyPath); ok {
 					matchedPath = mp
 					matched = true
 				}
@@ -766,6 +806,44 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute) func(pc *ProxyC
 		}
 		return 0, false
 	}
+}
+
+// resolvePathPatternGroups builds a name -> [PathPatternGroup] lookup by calling each loader in
+// order. If the same name appears in more than one loader (or more than once within the same
+// loader), the first occurrence wins.
+func resolvePathPatternGroups(loadGroups []func() []PathPatternGroup) map[string]PathPatternGroup {
+	if len(loadGroups) == 0 {
+		return nil
+	}
+	groups := map[string]PathPatternGroup{}
+	for _, load := range loadGroups {
+		for _, g := range load() {
+			if _, ok := groups[g.Name]; ok {
+				continue
+			}
+			groups[g.Name] = g
+		}
+	}
+	return groups
+}
+
+// resolveBarPathPatterns merges bar's literal PathPatterns with the PathPatterns of the named
+// PathPatternGroup it references (if any). hasSelector reports whether the route configured
+// a path selector at all (literal PathPatterns and/or PathPatternGroup), regardless of whether
+// the referenced group could be resolved; callers use this to distinguish "no selector
+// configured" (may default to match-all, e.g. for remote routes) from "selector configured but
+// unresolved" (fail closed, never matches).
+func resolveBarPathPatterns(rail *Rail, bar DynAuthRoute, groups map[string]PathPatternGroup) (patterns []string, hasSelector bool) {
+	hasSelector = len(bar.PathPatterns) > 0 || bar.PathPatternGroup != ""
+	patterns = bar.PathPatterns
+	if bar.PathPatternGroup != "" {
+		if g, ok := groups[bar.PathPatternGroup]; ok {
+			patterns = append(append([]string{}, patterns...), g.PathPatterns...)
+		} else {
+			rail.Warnf("DynAuthRoute '%v' references unknown PathPatternGroup '%v'", bar.Name, bar.PathPatternGroup)
+		}
+	}
+	return patterns, hasSelector
 }
 
 // checkRemoteAuth delegates authentication AND authorization to a downstream auth service
