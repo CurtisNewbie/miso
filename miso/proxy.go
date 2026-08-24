@@ -257,10 +257,22 @@ func (h *HttpProxy) JoinCheckAuth(checkAuth ...func(pc *ProxyContext) (statusCod
 	}
 }
 
+// AccessFilterHooks are optional hooks for [HttpProxy.AddAccessFilter] and
+// [HttpProxy.AddConfDynAccessFilter].
+type AccessFilterHooks struct {
+	// OnReject is called right before a request is rejected (after whitelist and checkAuth both
+	// failed to authorize it). If it returns a non-zero statusCode, it overrides the status code
+	// that would otherwise be sent (the checkAuth status, or 401 by default). Returning 0 keeps
+	// the existing status code unchanged.
+	OnReject func() (statusCode int)
+}
+
 // Add Access Filter.
 //
+// hooks is optional, see [AccessFilterHooks].
+//
 // See [HttpProxy.WithDynAuthCheck].
-func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool)) {
+func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth func(pc *ProxyContext) (statusCode int, ok bool), hooks ...AccessFilterHooks) {
 
 	h.AddFilter(func(pc *ProxyContext, next func()) {
 		w, r := pc.Inb.Unwrap()
@@ -288,6 +300,12 @@ func (h *HttpProxy) AddAccessFilter(whitelistPatterns func() []string, checkAuth
 		}
 
 		if !valid {
+			if hk, ok := slutil.First(hooks); ok && hk.OnReject != nil {
+				if sc := hk.OnReject(); sc != 0 {
+					invalidStatusCode = sc
+				}
+			}
+
 			var body string = "***"
 			if r.Body != nil && ContentTypeLoggable(r.Header.Get("content-type")) {
 				if buf, err := io.ReadAll(r.Body); err == nil {
@@ -402,11 +420,13 @@ type PathPatternGroup struct {
 //
 // If refreshEvery <= 0, all are loaded only once.
 //
+// hooks is optional, see [AccessFilterHooks].
+//
 // E.g.,
 //
 //	var h *miso.HttpProxy
 //	h.AddConfDynAccessFilter("access.filter", 5*time.Second)
-func (h *HttpProxy) AddConfDynAccessFilter(propRootKey string, refreshEvery time.Duration) {
+func (h *HttpProxy) AddConfDynAccessFilter(propRootKey string, refreshEvery time.Duration, hooks ...AccessFilterHooks) {
 	c := NewRefreshedCache(refreshEvery, func() DynAccessFilterConfig {
 		cfg := UnmarshalFromPropKeyAs[DynAccessFilterConfig](propRootKey)
 		cfg.AuthRoutes = filterDynAuthRoutes(cfg.AuthRoutes)
@@ -418,7 +438,7 @@ func (h *HttpProxy) AddConfDynAccessFilter(propRootKey string, refreshEvery time
 		return c.Get().AuthRoutes
 	}, func() []PathPatternGroup {
 		return c.Get().PathPatternGroups
-	}))
+	}), hooks...)
 }
 
 // filterDynAuthRoutes validates and filters DynAuthRoutes, dropping invalid routes.

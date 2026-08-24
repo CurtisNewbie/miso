@@ -349,6 +349,98 @@ func TestAddConfDynAccessFilterPathPatternGroup(t *testing.T) {
 	}
 }
 
+func TestAddAccessFilterOnRejectHook(t *testing.T) {
+	run := func(t *testing.T, checkAuthOk bool, checkAuthCode int, hooks ...AccessFilterHooks) int {
+		t.Helper()
+		h := &HttpProxy{}
+		h.AddAccessFilter(func() []string { return nil }, func(pc *ProxyContext) (int, bool) {
+			return checkAuthCode, checkAuthOk
+		}, hooks...)
+
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/protected/foo", nil)
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = "/protected/foo"
+
+		nextCalled := false
+		h.filters[0](pc, func() { nextCalled = true })
+		if nextCalled {
+			return http.StatusOK
+		}
+		return rec.Code
+	}
+
+	t.Run("no hook -> default 401", func(t *testing.T) {
+		if code := run(t, false, 0); code != http.StatusUnauthorized {
+			t.Fatalf("code = %v, want 401", code)
+		}
+	})
+
+	t.Run("hook overrides status code on reject", func(t *testing.T) {
+		hooks := AccessFilterHooks{OnReject: func() int { return http.StatusForbidden }}
+		if code := run(t, false, 0, hooks); code != http.StatusForbidden {
+			t.Fatalf("code = %v, want 403 (hook override)", code)
+		}
+	})
+
+	t.Run("hook returning 0 does not override checkAuth status", func(t *testing.T) {
+		hooks := AccessFilterHooks{OnReject: func() int { return 0 }}
+		if code := run(t, false, http.StatusPaymentRequired, hooks); code != http.StatusPaymentRequired {
+			t.Fatalf("code = %v, want 402 (checkAuth status preserved)", code)
+		}
+	})
+
+	t.Run("hook not called when access allowed", func(t *testing.T) {
+		called := false
+		hooks := AccessFilterHooks{OnReject: func() int { called = true; return http.StatusForbidden }}
+		if code := run(t, true, 0, hooks); code != http.StatusOK {
+			t.Fatalf("code = %v, want 200", code)
+		}
+		if called {
+			t.Fatalf("OnReject must not be called when access is allowed")
+		}
+	})
+}
+
+func TestAddConfDynAccessFilterOnRejectHook(t *testing.T) {
+	SetProp("test.dynaccess.hook", map[string]any{
+		"whitelist": []string{},
+		"auth-routes": []any{
+			map[string]any{
+				"name":          "basic1",
+				"type":          "basic",
+				"username":      "u",
+				"password":      "p",
+				"path-patterns": []string{"/protected/**"},
+			},
+		},
+	})
+
+	h := &HttpProxy{}
+	hookCalled := false
+	h.AddConfDynAccessFilter("test.dynaccess.hook", 0, AccessFilterHooks{
+		OnReject: func() int { hookCalled = true; return http.StatusForbidden },
+	})
+
+	rec := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/protected/foo", nil)
+	r.Header.Set("Authorization", "Basic dTp4") // wrong password
+	rail := flow.NewRail(context.Background())
+	inb := &Inbound{erail: rail, w: rec, r: r}
+	pc := newProxyContext(&rail, inb)
+	pc.ProxyPath = "/protected/foo"
+
+	h.filters[0](pc, func() {})
+	if !hookCalled {
+		t.Fatalf("OnReject hook was not called")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("code = %v, want 403 from hook override", rec.Code)
+	}
+}
+
 // TestProxyWWWAuthenticateOnTheWire verifies end-to-end through a real gin engine that the
 // WWW-Authenticate challenge is actually sent on the 401 response.
 func TestProxyWWWAuthenticateOnTheWire(t *testing.T) {
