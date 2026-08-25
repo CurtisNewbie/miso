@@ -178,6 +178,64 @@ func TestWithDynAuthCheckWWWAuthenticate(t *testing.T) {
 	})
 }
 
+func TestWithDynAuthCheckBasicTraceUsername(t *testing.T) {
+	const proxyPath = "/protected/foo"
+
+	run := func(t *testing.T, route DynAuthRoute) string {
+		t.Helper()
+		h := &HttpProxy{}
+		checkAuth := h.WithDynAuthCheck(func() []DynAuthRoute { return []DynAuthRoute{route} })
+
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, proxyPath, nil)
+		r.Header.Set("Authorization", "Basic dTpw") // u:p
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = proxyPath
+
+		if _, ok := checkAuth(pc); !ok {
+			t.Fatalf("expected auth to pass")
+		}
+		return pc.Rail.Username()
+	}
+
+	t.Run("Trace.Username empty falls back to basic auth username", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/protected/**"}}
+		if got := run(t, route); got != "u" {
+			t.Fatalf("trace username = %q, want %q", got, "u")
+		}
+	})
+
+	t.Run("Trace.Username set takes precedence over basic auth username", func(t *testing.T) {
+		route := DynAuthRoute{Type: "basic", Username: "u", Password: "p", PathPatterns: []string{"/protected/**"}, Trace: DynAuthTrace{Username: "trace-user"}}
+		if got := run(t, route); got != "trace-user" {
+			t.Fatalf("trace username = %q, want %q", got, "trace-user")
+		}
+	})
+
+	t.Run("bearer route with empty Trace.Username does not fall back", func(t *testing.T) {
+		route := DynAuthRoute{Type: "bearer", Bearer: "tok", PathPatterns: []string{"/protected/**"}}
+		h := &HttpProxy{}
+		checkAuth := h.WithDynAuthCheck(func() []DynAuthRoute { return []DynAuthRoute{route} })
+
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, proxyPath, nil)
+		r.Header.Set("Authorization", "Bearer tok")
+		rail := flow.NewRail(context.Background())
+		inb := &Inbound{erail: rail, w: rec, r: r}
+		pc := newProxyContext(&rail, inb)
+		pc.ProxyPath = proxyPath
+
+		if _, ok := checkAuth(pc); !ok {
+			t.Fatalf("expected auth to pass")
+		}
+		if got := pc.Rail.Username(); got != "" {
+			t.Fatalf("trace username = %q, want empty", got)
+		}
+	})
+}
+
 func TestWithDynAuthCheckPathPatternGroup(t *testing.T) {
 	const proxyPath = "/protected/foo"
 

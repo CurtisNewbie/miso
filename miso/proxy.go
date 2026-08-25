@@ -781,8 +781,12 @@ func (h *HttpProxy) WithDynAuthCheck(load func() []DynAuthRoute, loadGroups ...f
 
 				pc.Inb.Infof("Matched '%v' Bearer Authrization Path Pattern: '%v'", bar.Name, matched)
 
-				if bar.Trace.Username != "" {
-					*pc.Rail = pc.Rail.WithCtxVal(flow.XUsername, bar.Trace.Username)
+				traceUsername := bar.Trace.Username
+				if traceUsername == "" && strings.EqualFold(bar.Type, DynAuthTypeBasic) {
+					traceUsername = bar.Username
+				}
+				if traceUsername != "" {
+					*pc.Rail = pc.Rail.WithCtxVal(flow.XUsername, traceUsername)
 				}
 				if bar.Trace.Role != "" {
 					*pc.Rail = pc.Rail.WithCtxVal(flow.XRole, bar.Trace.Role)
