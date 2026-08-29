@@ -1,6 +1,6 @@
 module github.com/curtisnewbie/miso
 
-go 1.24.4
+go 1.26.5
 
 retract v1.0.12 // human mistake, miso v1 is not ready.
 
