@@ -79,5 +79,8 @@ miso is a Go framework for building microservices with:
 **Prometheus Metrics:** [prometheus.md](references/prometheus.md)
 - Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
 
+**Testing:** [testing.md](references/testing.md)
+- miso.PrepareTestEnv test bootstrap, conf.yml discovery, InTestEnv, database testing with transaction + rollback cleanup, testutil fixtures
+
 **Golang Coding Practice:** [golang-coding-practice.md](references/golang-coding-practice.md)
 - Defer close resources, never panic, compile regexp once, functional options, shutdown-aware tasks, lock-based concurrency protection
