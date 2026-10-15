@@ -587,3 +587,40 @@ nested-strs:
 	}
 	t.Logf("Test 8 passed: resolver shapes verified, shapes = %+v, apps2 = %+v, pm = %+v, ns = %+v", shapes, apps2, pm, ns)
 }
+
+func TestResolveArgCyclicReference(t *testing.T) {
+	ac := newAppConfig()
+
+	// self reference must not recurse forever
+	ac.SetProp("cycle.self", "${cycle.self}")
+	if v := ac.GetPropStr("cycle.self"); v != "" {
+		t.Fatalf("self ref: expected '', got '%s'", v)
+	}
+
+	// mutual reference must not recurse forever
+	ac.SetProp("cycle.x", "${cycle.y}")
+	ac.SetProp("cycle.y", "${cycle.x}")
+	if v := ac.GetPropStr("cycle.x"); v != "" {
+		t.Fatalf("mutual ref: expected '', got '%s'", v)
+	}
+
+	// default value is used when a reference is cyclic
+	ac.SetProp("cycle.d", "${cycle.d:fallback}")
+	if v := ac.GetPropStr("cycle.d"); v != "fallback" {
+		t.Fatalf("default on cycle: expected 'fallback', got '%s'", v)
+	}
+
+	// reusing the same sibling key is PATH semantics, not a cycle
+	ac.SetProp("cycle.b", "hello")
+	ac.SetProp("cycle.a", "${cycle.b}-${cycle.b}")
+	if v := ac.GetPropStr("cycle.a"); v != "hello-hello" {
+		t.Fatalf("sibling reuse: expected 'hello-hello', got '%s'", v)
+	}
+
+	// normal expansion still works
+	ac.SetProp("cycle.name", "world")
+	ac.SetProp("cycle.greet", "hi ${cycle.name}")
+	if v := ac.GetPropStr("cycle.greet"); v != "hi world" {
+		t.Fatalf("normal: expected 'hi world', got '%s'", v)
+	}
+}

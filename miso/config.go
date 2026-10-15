@@ -236,7 +236,16 @@ e.g, for "name" : "${secretName}".
 This func will attempt to resolve the actual value for '${secretName}'.
 */
 func (a *AppConfig) GetPropStr(prop string) string {
-	return a.resolvePropFunc(a.ResolveArg(returnWithReadLock(a, func() string { return a.vp.GetString(prop) })))
+	return a.getPropStr(prop, nil)
+}
+
+// getPropStr is the internal implementation of GetPropStr.
+//
+// seen tracks the config keys on the current resolution path so that cyclic
+// references (e.g., a: "${a}") are detected instead of recursing forever.
+func (a *AppConfig) getPropStr(prop string, seen map[string]struct{}) string {
+	raw := returnWithReadLock(a, func() string { return a.vp.GetString(prop) })
+	return a.resolvePropFunc(a.resolveArg(raw, seen))
 }
 
 // Same as GetPropStr() except the returned string is trimmed
@@ -518,6 +527,19 @@ func (a *AppConfig) IsProdMode() bool {
 
 // Resolve argument, e.g., for arg like '${someArg}', it will in fact look for 'someArg' in os.Env
 func (a *AppConfig) ResolveArg(arg string) string {
+	return a.resolveArg(arg, nil)
+}
+
+// resolveArg is the internal implementation of ResolveArg.
+//
+// seen tracks the config keys on the current resolution path so that cyclic
+// references (e.g., a: "${b}" and b: "${a}") are detected instead of recursing
+// forever. It uses path semantics: a key is removed once its subtree has been
+// resolved, so a legitimate DAG such as a: "${b}-${b}" is not treated as cyclic.
+func (a *AppConfig) resolveArg(arg string, seen map[string]struct{}) string {
+	if !strings.Contains(arg, "${") {
+		return arg
+	}
 	return resolveArgRegexp.ReplaceAllStringFunc(arg, func(s string) string {
 		r := []rune(s)
 		key := string(r[2 : len(r)-1])
@@ -531,7 +553,17 @@ func (a *AppConfig) ResolveArg(arg string) string {
 		}
 		val := GetEnv(key)
 		if val == "" {
-			val = a.GetPropStr(key)
+			if _, cyclic := seen[key]; cyclic {
+				Warnf("cyclic config reference detected: %v", key)
+				val = defVal
+			} else {
+				if seen == nil {
+					seen = make(map[string]struct{})
+				}
+				seen[key] = struct{}{}
+				val = a.getPropStr(key, seen)
+				delete(seen, key)
+			}
 		}
 		if val == "" {
 			val = defVal
