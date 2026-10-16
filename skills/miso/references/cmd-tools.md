@@ -111,6 +111,14 @@ misoapi
 misoapi -debug
 ```
 
+### When to run it
+
+Run `misoapi` in the service directory after changing a handler's signature, its
+request/response type, or its `misoapi-*` comments. It rewrites in place both the generated
+registration file beside the handlers and the API doc (`doc/api.md`, or the `-file` target);
+the step is done when both are committed with the change. A stale `doc/api.md` is worse than a
+missing one — callers code against field names the API no longer has.
+
 ### Supported Comments
 
 Place these comments above your API handler functions:
@@ -279,6 +287,15 @@ misoconfig -path ./docs/configuration.md
 # Enable debug logging
 misoconfig -debug
 ```
+
+### When to run it
+
+Run `misoconfig` in the service directory after adding, changing, or removing a
+`misoconfig-prop` or `misoconfig-section` annotation, or the default value it documents. It
+rewrites in place both the config table (`doc/config.md`, or the `-path` target) and the
+initialization block between the `misoconfig-default-start` and `misoconfig-default-end`
+markers in the source. A forgotten run costs more than stale docs: the property's default is
+never registered, so the service runs with different values than its source declares.
 
 ### Supported Comments
 
