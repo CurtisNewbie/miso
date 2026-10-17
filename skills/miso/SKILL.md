@@ -20,6 +20,24 @@ miso is a Go framework for building microservices with:
 - **Error Handling** - Structured error types with context and stack traces
 - **HTTP Client** - Service discovery and HTTP client utilities
 
+## Project Layout
+
+`main.go` is the only file at the root; every other package lives under `internal/`:
+
+```
+main.go                 // only server.BootstrapServer()
+internal/server/        // bootstrap wiring: callbacks, hooks, listeners
+internal/config/        // prop constants, defaults, config structs
+internal/web/           // gin handlers, PrepareWebServer
+internal/repo/          // persistence
+internal/domain/        // domain logic
+internal/<feature>/     // one package per feature
+```
+
+`internal/server/server.go` registers the lifecycle callbacks and calls
+`miso.BootstrapServer(os.Args)`; `main.go` holds nothing else. misogen scaffolds this layout —
+see [cmd-tools.md](references/cmd-tools.md).
+
 ## Quick Reference
 
 **Rail (Tracing & Logging):** [rail.md](references/rail.md)

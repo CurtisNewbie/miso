@@ -58,7 +58,7 @@ misogen -name github.com/username/myapp [flags]
 
 ### Generated Structure
 
-Standard web project:
+Standard web project (see [SKILL.md project structure](../SKILL.md) for what lives where):
 ```
 myapp/
 ├── main.go

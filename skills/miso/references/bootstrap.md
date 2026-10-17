@@ -121,6 +121,33 @@ miso.AddOrderedAsyncShutdownHook(miso.DefShutdownOrder-1, func() { /* ... */ })
 
 Hooks run in **ascending order value** — use `AddOrderedShutdownHook(order, ...)` to sequence them; within the same order, execution order is unspecified.
 
+## Callback Errors
+
+A lifecycle callback that returns an error does not stop the process. `Bootstrap` logs it, skips
+the remaining bootstrap stages, runs the shutdown hooks, and returns normally — `main` falls
+through and the process exits 0:
+
+```go
+miso.PreServerBootstrap(func(rail miso.Rail) error {
+    return errors.New("invalid config") // logged, then the process exits 0
+})
+```
+
+Abort with a non-zero exit by logging fatally: `rail.Fatalf` goes through logrus and calls
+`os.Exit(1)`.
+
+```go
+miso.PreServerBootstrap(func(rail miso.Rail) error {
+    if err := loadConfig(); err != nil {
+        rail.Fatalf("invalid configuration: %v", err) // exits 1
+    }
+    return nil
+})
+```
+
+`Bootstrap` checks `app.name` the same way, before any callback runs, so a wrong or missing
+`configFile` surfaces as `Property 'app.name' is required` rather than a config-path error.
+
 ## Graceful Shutdown
 
 ```go

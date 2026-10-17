@@ -66,7 +66,37 @@ timeout := miso.GetPropFloat("request.timeout")
 
 // Duration values
 readTimeout := miso.GetPropDuration("server.read-timeout")
+
+// Slice values
+bypass := miso.GetPropStrSlice("homeproxy.bypass")
 ```
+
+### Binding a subtree
+
+`UnmarshalFromPropKeyAs` decodes a whole subtree into a struct or slice, which is how a list of
+records is read:
+
+```yaml
+homeproxy:
+  users:
+    - name: phone
+      secret: s3cret
+```
+
+```go
+type Credential struct {
+    Name   string
+    Secret string
+}
+
+creds := miso.UnmarshalFromPropKeyAs[[]Credential]("homeproxy.users")
+```
+
+A key cannot be both a scalar and a parent. `homeproxy.upstream: host:port` and
+`homeproxy.upstream.username: user` cannot coexist in one YAML file: the first makes the key a
+string, the second makes it a mapping. Nest the children under their own key instead —
+`homeproxy.upstream.address`, `homeproxy.upstream.username`, `homeproxy.upstream.password` — and
+declare the whole subtree as a struct.
 
 ## Setting Configuration
 
