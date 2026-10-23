@@ -102,3 +102,6 @@ see [cmd-tools.md](references/cmd-tools.md).
 
 **Golang Coding Practice:** [golang-coding-practice.md](references/golang-coding-practice.md)
 - Defer close resources, never panic, compile regexp once, functional options, shutdown-aware tasks, lock-based concurrency protection
+
+**Code Review Checklist:** [code-review-checklist.md](references/code-review-checklist.md)
+- Repeated mistakes to walk through when reviewing a diff or PR: `rail.Context()` over `rail`, `errs` over `fmt.Errorf`, `ErrX.New()` over returning `ErrX`, `redis.Set` over `redis.GetRedis().Set`, `dbquery` over `GetMySQL().Raw`, `atom.Time` over `time.Time`, no panics in business code

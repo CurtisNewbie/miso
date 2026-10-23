@@ -41,6 +41,8 @@ db := mysql.GetMySQL()
 db := sqlite.GetDB()
 ```
 
+The returned `*gorm.DB` is the escape hatch, not the entry point. Write queries through `dbquery.NewQuery(rail, mysql.GetMySQL())`: it runs the statement on `rail.Context()`, logs SQL with the trace, applies the audit-field hooks, and wraps errors in `errs` — none of which a bare `GetMySQL()` call gives you.
+
 ## Model Definition
 
 **Use `atom.Time` instead of `time.Time`** for all time fields (JSON epoch-millis, GORM-friendly scanning — see [util.md](util.md)). `atom.Time` wraps `time.Time` and works with `gorm:"autoCreateTime"` etc.
@@ -532,6 +534,8 @@ if err := tx.Commit(); err != nil {
 ```
 
 ## Raw SQL
+
+Reach for `Raw` only when the builder cannot express the query — multi-table joins, window functions, subqueries. Build the rest with `Table`/`Eq`/`In`/`Where` first; `Raw` is still chained onto `dbquery.NewQuery` so the rail context, SQL logging, and error wrapping apply.
 
 ```go
 import (
