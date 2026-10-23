@@ -131,7 +131,7 @@ func processDir(dir string) {
 
 // findGoModDirs recursively finds directories containing go.mod under root.
 // Nested modules are skipped — only the outermost module per subtree is returned.
-// Vendor, .git, node_modules, and testdata directories are skipped.
+// Vendor, .git, .slim, node_modules, and testdata directories are skipped.
 func findGoModDirs(root string) []string {
 	var dirs []string
 	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -143,7 +143,7 @@ func findGoModDirs(root string) []string {
 			return nil
 		}
 		name := d.Name()
-		if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+		if name == "vendor" || name == ".git" || name == ".slim" || name == "node_modules" || name == "testdata" {
 			return filepath.SkipDir
 		}
 		if path == root {
@@ -294,7 +294,7 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 		name := fi.Name()
 		p := filepath.Join(n, name)
 		if et.IsDir() {
-			if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+			if name == "vendor" || name == ".git" || name == ".slim" || name == "node_modules" || name == "testdata" {
 				continue
 			}
 			ff, err := walkDir(p, suffix)

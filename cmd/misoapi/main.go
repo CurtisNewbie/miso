@@ -268,7 +268,7 @@ func main() {
 
 // findGoModDirs recursively finds directories containing go.mod under root.
 // Nested modules are skipped — only the outermost module per subtree is returned.
-// Vendor, .git, node_modules, and testdata directories are skipped.
+// Vendor, .git, .slim, node_modules, and testdata directories are skipped.
 func findGoModDirs(root string) []string {
 	var dirs []string
 	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -279,7 +279,7 @@ func findGoModDirs(root string) []string {
 			return nil
 		}
 		name := d.Name()
-		if name == "vendor" || name == ".git" || name == "node_modules" || name == "testdata" {
+		if skipScanDir(name) {
 			return filepath.SkipDir
 		}
 		if path == root {
@@ -1087,6 +1087,16 @@ func parseFileAst(files []FsFile) ([]DstFile, error) {
 	return parsed, nil
 }
 
+// skipScanDir reports whether a directory should be excluded from code scans.
+// vendor, .git, .slim, node_modules and testdata never contain source we want.
+func skipScanDir(name string) bool {
+	switch name {
+	case "vendor", ".git", ".slim", "node_modules", "testdata":
+		return true
+	}
+	return false
+}
+
 func walkDir(n string, suffix string) ([]FsFile, error) {
 	entries, err := os.ReadDir(n)
 	if err != nil {
@@ -1101,6 +1111,9 @@ func walkDir(n string, suffix string) ([]FsFile, error) {
 		}
 		p := n + "/" + fi.Name()
 		if et.IsDir() {
+			if skipScanDir(fi.Name()) {
+				continue
+			}
 			ff, err := walkDir(p, suffix)
 			if err == nil {
 				files = append(files, ff...)
