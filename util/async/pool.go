@@ -3,7 +3,6 @@ package async
 import (
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/curtisnewbie/miso/util/ptr"
@@ -14,6 +13,9 @@ import (
 var (
 	_ AsyncPool = (*BoundedAsyncPool)(nil)
 	_ AsyncPool = (*AntsAsyncPool)(nil)
+
+	_ taskAcceptor = (*BoundedAsyncPool)(nil)
+	_ taskAcceptor = (*AntsAsyncPool)(nil)
 )
 
 const (
@@ -35,24 +37,40 @@ type AsyncPool interface {
 // BoundedAsyncPool internally maintains a task queue with limited size and limited number of workers.
 //
 // By default, if the task queue is full and all workers are busy, the caller of *BoundedAsyncPool.Go is blocked indefinitively until the task can be processed.
-// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
+// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour. A task refused by a
+// fallback that discards work completes its [Future] with [ErrTaskDropped].
+//
+// Stopping blocks new queue entries and drains the tasks already accepted. A task submitted after stop
+// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
 type BoundedAsyncPool struct {
 	*asyncPoolCommon
-	stopped  int32
-	stopOnce *sync.Once
-	tasks    chan func()
-	workers  chan struct{}
-	idleDur  time.Duration
+
+	// stateMu guards stopped. Stop takes it for writing, every submission takes
+	// it for reading, so wg.Add happens either before Stop starts or is skipped
+	// by the stopped check. Dispatch happens outside the lock; the stop channel
+	// case in goTask plus the inflight barrier keep the stop contract.
+	stateMu sync.RWMutex
+	stopped bool
+	stopCh  chan struct{}
+
+	// inflight counts producers that are dispatching a task. Workers wait for it
+	// before draining on stop, so an accepted task cannot be enqueued after the
+	// drain has finished.
+	inflight sync.WaitGroup
+
+	tasks   chan func()
+	workers chan struct{}
+	idleDur time.Duration
 }
 
 type asyncPoolCommon struct {
-	doWhenPoolFull    func(task func())
+	doWhenPoolFull    func(task func()) bool
 	blockWhenPoolFull bool
 	wg                *sync.WaitGroup
 }
 
 type asyncPoolOptions struct {
-	doWhenPoolFull    func(task func())
+	doWhenPoolFull    func(task func()) bool
 	blockWhenPoolFull *bool
 	wg                *sync.WaitGroup
 
@@ -77,7 +95,11 @@ type asyncPoolOption func(a *asyncPoolOptions)
 // The maxWorkers determines the max number of workers.
 //
 // By default, if the task queue is full and all workers are busy, the caller of *AsyncPool.Go is blocked indefinitively until the task can be processed.
-// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour.
+// You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour. A task refused by a
+// fallback that discards work completes its [Future] with [ErrTaskDropped].
+//
+// Stopping blocks new queue entries and drains the tasks already accepted. A task submitted after stop
+// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
 //
 // Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *BoundedAsyncPool {
@@ -88,13 +110,12 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 		maxWorkers = 0
 	}
 	ap := &BoundedAsyncPool{
-		tasks:    make(chan func(), maxTasks),
-		workers:  make(chan struct{}, maxWorkers),
-		stopped:  0,
-		stopOnce: &sync.Once{},
-		idleDur:  idleDur,
+		tasks:   make(chan func(), maxTasks),
+		workers: make(chan struct{}, maxWorkers),
+		stopCh:  make(chan struct{}),
+		idleDur: idleDur,
 		asyncPoolCommon: &asyncPoolCommon{
-			doWhenPoolFull:    func(task func()) {},
+			doWhenPoolFull:    callerRunFallback,
 			blockWhenPoolFull: true,
 		},
 	}
@@ -121,24 +142,33 @@ func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) 
 	return ap
 }
 
+// default fallback: run the task on the caller instead of discarding it.
+func callerRunFallback(task func()) bool {
+	utillog.DebugLog("Pool is full, caller runs task")
+	task()
+	return true
+}
+
 // Create new Goroutine to run the task when pool is full.
 func FallbackNewGoroutine() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
-		ap.doWhenPoolFull = func(task func()) {
+		ap.doWhenPoolFull = func(task func()) bool {
 			utillog.DebugLog("Pool is full, run in new Goroutine")
 			go task()
+			return true
 		}
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
 	}
 }
 
 // Drop task when pool is full.
+//
+// The task's Future completes with [ErrTaskDropped].
 func FallbackDropTask() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
-		ap.wg = &sync.WaitGroup{}
-		ap.doWhenPoolFull = func(task func()) {
+		ap.doWhenPoolFull = func(task func()) bool {
 			utillog.DebugLog("Pool is full, task dropped")
-			ap.wg.Done()
+			return false
 		}
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
 	}
@@ -147,9 +177,10 @@ func FallbackDropTask() asyncPoolOption {
 // Fallback to caller runs when pool is full.
 func FallbackCallerRun() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
-		ap.doWhenPoolFull = func(task func()) {
+		ap.doWhenPoolFull = func(task func()) bool {
 			utillog.DebugLog("Pool is full, caller runs task")
 			task()
+			return true
 		}
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
 	}
@@ -197,47 +228,58 @@ func NewIOAsyncPool() AsyncPool {
 
 // Stop the pool.
 //
-// Once the pool is stopped, new tasks submitted are executed directly by the caller.
+// Stopping blocks new queue entries and drains the tasks already accepted. Tasks
+// submitted after stop run inline when the pool blocks on a full queue, and go
+// through the configured fallback otherwise.
 func (p *BoundedAsyncPool) Stop() {
-	if atomic.CompareAndSwapInt32(&p.stopped, 0, 1) {
-		p.stopOnce.Do(func() { close(p.tasks) })
+	p.stateMu.Lock()
+	defer p.stateMu.Unlock()
+	if p.stopped {
+		return
 	}
+	p.stopped = true
+	close(p.stopCh)
 }
 
 // Stop the pool and wait until existing workers drain all the remaining tasks.
-//
-// Once the pool is stopped, new tasks submitted are executed directly by the caller.
 func (p *BoundedAsyncPool) StopAndWait() {
 	p.Stop()
 	p.wg.Wait()
 }
 
-func (p *BoundedAsyncPool) isStopped() bool {
-	return atomic.LoadInt32(&p.stopped) == 1
-}
-
-func (p *BoundedAsyncPool) Run(f func() error) Future[struct{}] {
-	return Submit(p, func() (struct{}, error) { return struct{}{}, f() })
-}
-
-// Submit task to the pool.
+// Run task on the pool.
 //
-// If the pool is closed, caller will execute the submitted task directly.
-func (p *BoundedAsyncPool) Go(f func()) {
+// Returns false if the task was dropped, so that the task's Future can be
+// completed with [ErrTaskDropped]. A dropped task is never run.
+func (p *BoundedAsyncPool) goTask(f func()) bool {
+	p.stateMu.RLock()
 
-	if p.isStopped() {
-		if p.blockWhenPoolFull {
-			f() // caller runs the task
-		} else {
-			p.doWhenPoolFull(f)
+	if p.stopped {
+		blockWhenPoolFull := p.blockWhenPoolFull
+		p.stateMu.RUnlock()
+
+		// post-stop submissions are outside the stop barrier: they are not
+		// counted by wg, incrementing it after StopAndWait may race Wait at
+		// counter zero.
+		if blockWhenPoolFull {
+			PanicSafeFunc(f)()
+			return true
 		}
-		return
+		return p.doWhenPoolFull(PanicSafeFunc(f))
 	}
 
 	p.wg.Add(1)
+	p.inflight.Add(1)
+	stopCh := p.stopCh
+	p.stateMu.RUnlock()
+
+	// no lock is held from here on: dispatching may block on a full pool, and
+	// the fallback may run arbitrary user code
+	defer p.inflight.Done()
+
 	wrp := func() {
 		defer p.wg.Done()
-		f()
+		PanicSafeFunc(f)()
 	}
 
 	if p.blockWhenPoolFull {
@@ -254,38 +296,68 @@ func (p *BoundedAsyncPool) Go(f func()) {
 				go p.spawn(nil)
 			default:
 			}
-			return
+		case <-stopCh:
+			// stopped while dispatching, run the task inline so it stays counted
+			wrp()
 		}
-	} else {
+		return true
+	}
+
+	select {
+	case p.workers <- struct{}{}:
+		go p.spawn(wrp)
+		return true
+	case p.tasks <- wrp:
+		// channel select is completely random
+		// extra select is to make sure that we have at least one worker running
+		// or else tasks may be put straight into the task queue without any worker
+		// conc package has the same problem as well :(, but the way we use the pool is different.
 		select {
 		case p.workers <- struct{}{}:
-			go p.spawn(wrp)
-		case p.tasks <- wrp:
-			// channel select is completely random
-			// extra select is to make sure that we have at least one worker running
-			// or else tasks may be put straight into the task queue without any worker
-			// conc package has the same problem as well :(, but the way we use the pool is different.
-			select {
-			case p.workers <- struct{}{}:
-				go p.spawn(nil)
-			default:
-			}
-			return
+			go p.spawn(nil)
 		default:
-			// when workers are all busy and queue is full
-			defer p.wg.Done()
-			p.doWhenPoolFull(PanicSafeFunc(f))
 		}
+		return true
+	case <-stopCh:
+		// stopped while dispatching: the fallback runs without any lock held
+		ran := p.doWhenPoolFull(wrp)
+		if !ran {
+			p.wg.Done()
+		}
+		return ran
+	default:
+		// when workers are all busy and queue is full
+		ran := p.doWhenPoolFull(wrp)
+		if !ran {
+			p.wg.Done()
+		}
+		return ran
 	}
+}
+
+func (p *BoundedAsyncPool) Run(f func() error) Future[struct{}] {
+	return Submit(p, func() (struct{}, error) { return struct{}{}, f() })
+}
+
+// Submit task to the pool.
+//
+// If the pool is stopped, the caller will execute the submitted task directly.
+func (p *BoundedAsyncPool) Go(f func()) {
+	p.goTask(f)
 }
 
 // spawn a new worker.
 func (p *BoundedAsyncPool) spawn(first func()) {
-	defer func() { <-p.workers }()
+	released := false
+	defer func() {
+		if !released {
+			<-p.workers
+		}
+	}()
 	utillog.DebugLog("AyncPool created worker")
 
 	if first != nil {
-		PanicSafeFunc(first)()
+		first()
 	}
 
 	idleTimer := time.NewTimer(p.idleDur)
@@ -293,20 +365,68 @@ func (p *BoundedAsyncPool) spawn(first func()) {
 	for {
 		idleTimer.Reset(p.idleDur)
 		select {
-		case f, ok := <-p.tasks:
-			if !ok {
-				return
-			}
-			PanicSafeFunc(f)()
+		case <-p.stopCh:
+			// wait for producers that are still dispatching, so nothing can be
+			// enqueued after the drain
+			p.inflight.Wait()
+			p.drainTasks()
+			return
+		case f := <-p.tasks:
+			f()
 		case <-idleTimer.C:
 			utillog.DebugLog("AsyncPool.Worker has been idle for %v, release worker", p.idleDur)
+			select {
+			case <-p.stopCh:
+				p.inflight.Wait()
+			default:
+				// idle exit that is not stopping must not wait for producers
+			}
+			p.drainTasks()
+
+			// release the slot before the final queue check, so a producer that
+			// enqueues now finds the slot free and can spawn a worker
+			<-p.workers
+			released = true
+
+			if len(p.tasks) > 0 {
+				select {
+				case p.workers <- struct{}{}:
+					released = false
+					continue
+				default:
+					return
+				}
+			}
 			return
 		}
 	}
 }
 
+// drainTasks runs the queued tasks without blocking.
+func (p *BoundedAsyncPool) drainTasks() {
+	for {
+		select {
+		case f := <-p.tasks:
+			f()
+		default:
+			return
+		}
+	}
+}
+
+// A bounded pool of goroutines backed by ants.
+//
+// Stopping blocks new submissions and releases the ants pool. A task submitted
+// after stop runs inline when the pool blocks on a full queue, and goes through
+// the configured fallback otherwise.
 type AntsAsyncPool struct {
 	*asyncPoolCommon
+
+	// stateMu guards stopped and submission, mirroring BoundedAsyncPool.
+	stateMu sync.RWMutex
+	stopped bool
+	stopCh  chan struct{}
+
 	p *ants.Pool
 }
 
@@ -314,26 +434,72 @@ func (p *AntsAsyncPool) Run(f func() error) Future[struct{}] {
 	return Submit(p, func() (struct{}, error) { return struct{}{}, f() })
 }
 
-func (a *AntsAsyncPool) Go(f func()) {
+// Run task on the pool.
+//
+// Returns false if the task was dropped, so that the task's Future can be
+// completed with [ErrTaskDropped]. A dropped task is never run.
+func (a *AntsAsyncPool) goTask(f func()) bool {
+	a.stateMu.RLock()
+
+	if a.stopped {
+		blockWhenPoolFull := a.blockWhenPoolFull
+		a.stateMu.RUnlock()
+
+		// post-stop submissions are outside the stop barrier: they are not
+		// counted by wg, incrementing it after StopAndWait may race Wait at
+		// counter zero.
+		if blockWhenPoolFull {
+			PanicSafeFunc(f)()
+			return true
+		}
+		return a.doWhenPoolFull(PanicSafeFunc(f))
+	}
+
 	a.wg.Add(1)
+	a.stateMu.RUnlock()
+
 	wrp := func() {
 		defer a.wg.Done()
-		PanicSafeRun(f)
+		PanicSafeFunc(f)()
 	}
+
+	// no lock is held from here on: ants may block, and the fallback may run
+	// arbitrary user code
 	err := a.p.Submit(wrp)
 	if err != nil {
 		utillog.DebugLog("AntsAsyncPool is full or closed, calling fallback, %v", err)
-		a.doWhenPoolFull(wrp)
-		return
+		if !a.doWhenPoolFull(wrp) {
+			a.wg.Done()
+			return false
+		}
+	}
+	return true
+}
+
+func (a *AntsAsyncPool) Go(f func()) {
+	a.goTask(f)
+}
+
+// Stop the pool.
+//
+// Stopping blocks new submissions. A task submitted after stop runs inline when
+// the pool blocks on a full queue, and goes through the configured fallback
+// otherwise.
+func (a *AntsAsyncPool) Stop() {
+	a.stateMu.Lock()
+	stopped := a.stopped
+	if !stopped {
+		a.stopped = true
+		close(a.stopCh)
+	}
+	a.stateMu.Unlock()
+	if !stopped {
+		a.p.Release()
 	}
 }
 
-func (a *AntsAsyncPool) Stop() {
-	a.p.Release()
-}
-
 func (a *AntsAsyncPool) StopAndWait() {
-	a.p.Release()
+	a.Stop()
 	if a.wg == nil {
 		panic("missing wg")
 	}
@@ -356,8 +522,9 @@ func (a *AntsAsyncPool) StopAndWait() {
 // Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 	ap := &AntsAsyncPool{
+		stopCh: make(chan struct{}),
 		asyncPoolCommon: &asyncPoolCommon{
-			doWhenPoolFull:    func(task func()) {},
+			doWhenPoolFull:    callerRunFallback,
 			blockWhenPoolFull: true,
 		},
 	}
@@ -398,7 +565,11 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 // In cases where you want an extra task queue, e.g., so that the task producers won't block so frequently when pool is
 // exhausted, use [WithTaskQueue] to specify the task queue size. Decide whether you need a task queue based on your use case.
 //
-// You can also use [FallbackDropTask] or [FallbackCallerRun] to customize fallback behaviour.
+// You can also use [FallbackDropTask] or [FallbackCallerRun] to customize fallback behaviour. A task
+// refused by a fallback that discards work completes its [Future] with [ErrTaskDropped].
+//
+// Stopping blocks new submissions and drains the work already accepted. A task submitted after stop
+// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
 //
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N might be 10; in web server connection pool, N can be 258 and so on.
 //
