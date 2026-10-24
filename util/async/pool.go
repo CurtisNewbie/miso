@@ -384,10 +384,11 @@ func (p *BoundedAsyncPool) spawn(first func()) {
 			}
 			p.drainTasks()
 
-			// Invariant: a worker holds a workers token exactly while a live worker
-			// goroutine reads p.tasks. Release the token before the final queue
-			// check, so a producer that enqueues in this window finds the slot free
-			// and spawns a replacement through the extra-spawn path.
+			// Invariant: while a worker holds a workers token, a live worker
+			// goroutine owns that slot and returns to read p.tasks after its
+			// current task. Release the token before the final queue check, so a
+			// producer that enqueues in this window finds the slot free and
+			// spawns a replacement through the extra-spawn path.
 			<-p.workers
 			released = true
 
