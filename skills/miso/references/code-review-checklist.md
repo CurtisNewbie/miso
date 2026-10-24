@@ -12,6 +12,7 @@ Read this when reviewing miso code — a diff, a PR, your own changes before han
 - mysql.GetMySQL().Raw(...)
 - time.Time
 - Panic in business code
+- Editing generated output
 
 ## rail.Context()
 
@@ -99,6 +100,21 @@ if err != nil {
 ## Panic in business code
 
 Return an `errs` error. `panic` earns its place only at startup — misconfiguration and `regexp.MustCompile`. See [golang-coding-practice.md](golang-coding-practice.md).
+
+## Editing generated output
+
+`misoapi` writes `misoapi_generated.go` and the registration block inside `PrepareWebServer`; `misoconfig` writes the `<!-- misoconfig-table-start -->` / `-end` tables. All of it is derived from `misoapi-*` / `misoconfig-*` comments — hand-edit the output and the next run overwrites it, while the comment it should have come from stays wrong. Change the source comment, then rerun the tool.
+
+```go
+// Wrong — patching the generated artifact
+// misoapi_generated.go:  miso.Post("/user", ...)   ← edited by hand
+
+// Right — annotate the handler, run misoapi
+// misoapi-http: POST /user
+func CreateUser(inb *miso.Inbound, req CreateUserReq) (CreateUserRes, error) {
+```
+
+Same for docs: `misoconfig -path doc/config.md`, never the table rows. See [cmd-tools.md](cmd-tools.md).
 
 ## Growing this list
 
