@@ -110,33 +110,54 @@ func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 
 // AwaitFutures represent tasks that are submitted to the pool asynchronously whose results are awaited together.
 //
-// AwaitFutures should only be used once for the same group of tasks.
+// A group is sealed on the first Await: Await returns a copy of the Futures, and
+// submitting to a sealed group panics.
 //
 // Use [NewAwaitFutures] to create one.
 type AwaitFutures[T any] struct {
+	// mu guards the pool, the futures and the sealed flag
+	mu      sync.Mutex
 	pool    AsyncPool
-	wg      sync.WaitGroup
+	sealed  bool
 	futures []Future[T]
 }
 
 // Submit task to AwaitFutures.
+//
+// Panics if the group is already sealed by a call to Await.
 func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
-	a.wg.Add(1)
-	delegate := func() (T, error) {
-		defer a.wg.Done()
-		return task()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.sealed {
+		panic("AwaitFutures.SubmitAsync called after Await, the group is sealed")
 	}
+
 	if a.pool != nil {
-		a.futures = append(a.futures, Submit[T](a.pool, delegate))
+		a.futures = append(a.futures, Submit[T](a.pool, task))
 	} else {
-		a.futures = append(a.futures, Run[T](delegate))
+		a.futures = append(a.futures, Run[T](task))
 	}
 }
 
 // Await results of all tasks.
+//
+// The returned slice is a copy, so the caller cannot observe later submissions,
+// and repeated calls return the same sealed set.
 func (a *AwaitFutures[T]) Await() []Future[T] {
-	a.wg.Wait()
-	return a.futures
+	a.mu.Lock()
+	a.sealed = true
+	futures := make([]Future[T], len(a.futures))
+	copy(futures, a.futures)
+	a.mu.Unlock()
+
+	for _, f := range futures {
+		// Only completion matters here. The value and the error are read by the
+		// callers that need them: AwaitAnyErr, AwaitResultAnyErr, AwaitResultAll
+		// and any caller iterating the returned Futures.
+		_, _ = f.Get()
+	}
+	return futures
 }
 
 // Await results of all tasks and return any error that is found in the task Futures.
