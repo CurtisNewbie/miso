@@ -19,18 +19,19 @@ func (s *SignalOnce) Wait() {
 }
 
 func (s *SignalOnce) TimedWait(timeout time.Duration) (isTimeout bool) {
-	isTimeout = false
 	if timeout < 1 {
 		<-s.c.Done()
-	} else {
-		select {
-		case <-s.c.Done():
-		case <-time.After(timeout):
-			isTimeout = true
-			return
-		}
+		return false
 	}
-	return
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-s.c.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }
 
 func (s *SignalOnce) Notify() {

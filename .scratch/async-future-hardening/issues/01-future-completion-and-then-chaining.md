@@ -4,14 +4,14 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A timed get that times out returns the zero value and `ErrGetTimeout`, and the existing timeout test passes under the race detector.
-- [ ] Completion publishes value and error before waking waiters; every reader observes the completion signal or holds the mutex.
-- [ ] `Then` returns a future, and chained callbacks run in registration order.
-- [ ] A panicking callback is recovered and logged, and the value and error passed down the chain are unchanged.
-- [ ] Two `Then` calls on one future both fire, with no second-call panic.
-- [ ] `Then` on an already completed future fires immediately and returns a completed future, and a future created from a completed value behaves the same.
-- [ ] Fire-and-forget with a nil logging handle does not panic.
-- [ ] A timed wait stops its timer instead of leaking it.
-- [ ] `ErrTaskDropped` exists, and submission can complete a future with it when the pool reports a rejection.
+- [x] A timed get that times out returns the zero value and `ErrGetTimeout`, and the existing timeout test passes under the race detector.
+- [x] Completion publishes value and error before waking waiters; every reader observes the completion signal or holds the mutex.
+- [x] `Then` returns a future, and chained callbacks run in registration order.
+- [x] A panicking callback is recovered and logged, and the value and error passed down the chain are unchanged.
+- [x] Two `Then` calls on one future both fire, with no second-call panic.
+- [x] `Then` on an already completed future fires immediately and returns a completed future, and a future created from a completed value behaves the same.
+- [x] Fire-and-forget with a nil logging handle does not panic.
+- [x] A timed wait stops its timer instead of leaking it.
+- [x] `ErrTaskDropped` exists, and submission can complete a future with it when the pool reports a rejection.
