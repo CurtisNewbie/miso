@@ -53,10 +53,12 @@ type Future[T any] interface {
 	// synchronously in the caller and a completed Future is returned.
 	Then(tf func(T, error)) Future[T]
 
-	// Then callback to be invoked when the Future is completed.
+	// Then callback to be invoked when the Future is completed. Only the error is
+	// passed to the callback.
 	//
 	// Multiple callbacks are supported, each runs once when the Future completes.
-	ThenErr(tf func(error))
+	// It returns a derived Future with the same result, like [Future.Then].
+	ThenErr(tf func(error)) Future[T]
 }
 
 // Fire async task on new goroutine and forget about it.
@@ -339,8 +341,8 @@ func (f *future[T]) Then(tf func(T, error)) Future[T] {
 	return derived
 }
 
-func (f *future[T]) ThenErr(tf func(error)) {
-	f.Then(func(t T, err error) {
+func (f *future[T]) ThenErr(tf func(error)) Future[T] {
+	return f.Then(func(t T, err error) {
 		tf(err)
 	})
 }
@@ -424,6 +426,6 @@ func (f *completedFuture[T]) Then(tf func(T, error)) Future[T] {
 	return f
 }
 
-func (f *completedFuture[T]) ThenErr(tf func(error)) {
-	f.Then(func(t T, err error) { tf(err) })
+func (f *completedFuture[T]) ThenErr(tf func(error)) Future[T] {
+	return f.Then(func(t T, err error) { tf(err) })
 }

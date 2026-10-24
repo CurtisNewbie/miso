@@ -447,3 +447,24 @@ func TestTimedGetTimeoutReturnsZeroValueAndErrGetTimeout(t *testing.T) {
 		t.Fatalf("expected 7, got %v", v)
 	}
 }
+
+func TestThenErrReturnsDerivedFuture(t *testing.T) {
+	parentErr := errors.New("boom")
+	f := Run(func() (int, error) { return 7, parentErr })
+
+	var seenErr error
+	derived := f.ThenErr(func(err error) { seenErr = err })
+
+	v, err := derived.Get()
+	if v != 7 || !errors.Is(err, parentErr) {
+		t.Fatalf("expected (7, parent error), got (%v, %v)", v, err)
+	}
+	if !errors.Is(seenErr, parentErr) {
+		t.Fatalf("expected callback to see the parent error, got %v", seenErr)
+	}
+
+	completed := NewCompletedFuture(3, parentErr)
+	if v, err := completed.ThenErr(func(error) {}).Get(); v != 3 || !errors.Is(err, parentErr) {
+		t.Fatalf("completed future: expected (3, parent error), got (%v, %v)", v, err)
+	}
+}
