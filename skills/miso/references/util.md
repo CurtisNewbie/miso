@@ -216,11 +216,14 @@ Goroutine/async utilities: futures, pools, panic-safe runners.
 **Package:** `github.com/curtisnewbie/miso/util/async`
 
 ```go
-// Future
+// Future: completes exactly once, result published before waiters wake
 fut := async.Run(func() (User, error) { return loadUser() })
 user, err := fut.Get()
-user, err = fut.TimedGet(3000) // timeout in milliseconds, returns async.ErrGetTimeout
-fut.Then(func(u User, err error) { ... })
+user, err = fut.TimedGet(3000) // ms; on timeout: zero value + async.ErrGetTimeout
+if errors.Is(err, async.ErrGetTimeout) { /* no result, task may still finish */ }
+
+// Then returns a derived future, so callbacks chain in registration order
+fut.Then(func(u User, err error) { ... }).Then(func(u User, err error) { ... })
 
 // Fire-and-forget with rail error logging
 async.Fire(rail, func() error { return cleanup() })
@@ -228,11 +231,16 @@ async.Fire(rail, func() error { return cleanup() })
 // Pool (prefer NewAsyncPool; NewCpuAsyncPool/NewIOAsyncPool/NewBoundedAsyncPool are deprecated)
 pool := async.NewAsyncPool(100)
 fut = async.Submit(pool, func() (User, error) { return loadUser() })
+user, err = fut.Get()
+if errors.Is(err, async.ErrTaskDropped) { /* pool refused the task, it will never run */ }
 
-// Batch futures
+// Await group: seals on first Await, which returns a copy of its futures; submitting after that panics
 await := async.NewAwaitFutures[User](pool)
 await.SubmitAsync(func() (User, error) { ... })
 users, err := await.AwaitResultAnyErr()
+
+// Stop blocks new submissions and drains accepted work; post-stop work runs inline or via fallback
+pool.StopAndWait()
 
 // Panic safety
 err := async.CapturePanicErr(func() { ... })

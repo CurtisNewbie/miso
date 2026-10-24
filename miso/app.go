@@ -501,6 +501,7 @@ func (a *MisoApp) RegisterConfigLoader(callback ...func(rail Rail) error) {
 
 func (a *MisoApp) configureLogging() error {
 	utillog.ErrorLog = Errorf
+	utillog.WarnLog = Warnf
 	utillog.DebugLog = Debugf
 	c := a.Config()
 

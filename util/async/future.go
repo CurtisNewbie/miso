@@ -21,7 +21,19 @@ var (
 
 var (
 	ErrGetTimeout = errors.New("future.TimedGet timeout")
+
+	// ErrTaskDropped reports that a pool refused to run a task, so the task never
+	// produced a result of its own. It is a coded *errs.MisoErr with code
+	// "ASYNC_TASK_DROPPED"; compare with errors.Is.
+	ErrTaskDropped = errs.NewErrfCode("ASYNC_TASK_DROPPED", "async task dropped, pool is full or stopped")
 )
+
+// taskAcceptor is an optional capability of an AsyncPool. It reports whether the
+// pool accepted the task, so that a rejected task can complete its Future instead
+// of leaving it pending forever.
+type taskAcceptor interface {
+	goTask(func()) bool
+}
 
 // Result of a asynchronous task.
 type Future[T any] interface {
@@ -34,25 +46,39 @@ type Future[T any] interface {
 
 	// Then callback to be invoked when the Future is completed.
 	//
-	// Then callback should only be set once for every Future.
-	Then(tf func(T, error))
+	// A derived Future is returned; it completes with the same value and error once
+	// the callback returns, so callbacks can be chained. Callbacks registered before
+	// or during completion run in registration order on the goroutine that completes
+	// the Future. A callback registered after completion has drained runs
+	// synchronously in the caller and a completed Future is returned.
+	Then(tf func(T, error)) Future[T]
 
-	// Then callback to be invoked when the Future is completed.
+	// Then callback to be invoked when the Future is completed. Only the error is
+	// passed to the callback.
 	//
-	// Then callback should only be set once for every Future.
-	ThenErr(tf func(error))
+	// Multiple callbacks are supported, each runs once when the Future completes.
+	// It returns a derived Future with the same result, like [Future.Then].
+	ThenErr(tf func(error)) Future[T]
 }
 
 // Fire async task on new goroutine and forget about it.
+//
+// A custom runner owns execution. When the runner is a pool that drops the task,
+// the pool logs a warning; Fire itself cannot observe the drop.
 func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ...func(func())) {
 	start := time.Now()
 	caller := src.GetCallerFn()
-	fut, wrp := buildFuture(rail, func() (struct{}, error) {
+	fut := newFuture[struct{}]()
+	wrp := fut.taskRunner(rail, func() (struct{}, error) {
 		return struct{}{}, task()
 	})
 	fut.ThenErr(func(err error) {
 		if err != nil {
-			rail.Errorf("Async task failed (%v), took: %v, %v", caller, time.Since(start), err)
+			if rail != nil {
+				rail.Errorf("Async task failed (%v), took: %v, %v", caller, time.Since(start), err)
+			} else {
+				utillog.ErrorLog("Async task failed (%v), took: %v, %v", caller, time.Since(start), err)
+			}
 		} else if rrail, ok := rail.(interface{ Infof(string, ...any) }); ok {
 			rrail.Infof("Async task completed (%v), took: %v", caller, time.Since(start))
 		}
@@ -67,47 +93,94 @@ func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ..
 
 // Create Future, once the future is created, it starts running on a new goroutine.
 func Run[T any](task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(nil, task)
-	go wrp()
+	fut := newFuture[T]()
+	launch(nil, fut, task)
 	return fut
 }
 
-// Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
+// Create Future, once the future is created, it starts running on a separate goroutine from the pool.
+//
+// If the pool reports that it refused the task, the returned Future completes with [ErrTaskDropped].
+// A nil pool runs the task on a new goroutine, same as [Run].
 func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(nil, task)
-	pool.Go(wrp)
+	fut := newFuture[T]()
+	launch(pool, fut, task)
 	return fut
+}
+
+// launch builds the runner for an already created future and hands it to the
+// pool, or to a new goroutine when the pool is nil.
+func launch[T any](pool AsyncPool, fut *future[T], task func() (T, error)) {
+	runner := fut.taskRunner(nil, task)
+	if pool == nil {
+		go runner()
+		return
+	}
+	if acc, ok := pool.(taskAcceptor); ok {
+		if !acc.goTask(runner) {
+			var zero T
+			fut.complete(zero, ErrTaskDropped.New())
+		}
+		return
+	}
+	pool.Go(runner)
 }
 
 // AwaitFutures represent tasks that are submitted to the pool asynchronously whose results are awaited together.
 //
-// AwaitFutures should only be used once for the same group of tasks.
+// A group is sealed on the first Await: Await returns a copy of the Futures, and
+// submitting to a sealed group panics.
+//
+// SubmitAsync appends the new Future to the group before it dispatches the task,
+// and holds the group lock only while it appends. A blocking or caller-run
+// submission therefore cannot deadlock the group.
 //
 // Use [NewAwaitFutures] to create one.
 type AwaitFutures[T any] struct {
+	// mu guards the pool, the futures and the sealed flag
+	mu      sync.Mutex
 	pool    AsyncPool
-	wg      sync.WaitGroup
+	sealed  bool
 	futures []Future[T]
 }
 
 // Submit task to AwaitFutures.
+//
+// Panics if the group is already sealed by a call to Await.
 func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
-	a.wg.Add(1)
-	delegate := func() (T, error) {
-		defer a.wg.Done()
-		return task()
+	a.mu.Lock()
+	if a.sealed {
+		a.mu.Unlock()
+		panic("AwaitFutures.SubmitAsync called after Await, the group is sealed")
 	}
-	if a.pool != nil {
-		a.futures = append(a.futures, Submit[T](a.pool, delegate))
-	} else {
-		a.futures = append(a.futures, Run[T](delegate))
-	}
+	fut := newFuture[T]()
+	a.futures = append(a.futures, fut)
+	pool := a.pool
+	a.mu.Unlock()
+
+	// dispatch outside the lock: the future is already in the group, so Await
+	// waits on it even if the group gets sealed before the task is dispatched
+	launch(pool, fut, task)
 }
 
 // Await results of all tasks.
+//
+// The returned slice is a copy, so the caller cannot observe later submissions,
+// and repeated calls return the same sealed set.
 func (a *AwaitFutures[T]) Await() []Future[T] {
-	a.wg.Wait()
-	return a.futures
+	a.mu.Lock()
+	a.sealed = true
+	futures := make([]Future[T], len(a.futures))
+	copy(futures, a.futures)
+	a.mu.Unlock()
+
+	for _, f := range futures {
+		// Only completion matters here. The value and the error are read by the
+		// callers that need them: AwaitAnyErr, AwaitResultAnyErr, AwaitResultAll
+		// and any caller iterating the returned Futures.
+		_, _ = f.Get()
+	}
+	return futures
 }
 
 // Await results of all tasks and return any error that is found in the task Futures.
@@ -169,73 +242,136 @@ func NewCompletedFuture[T any](t T, err error) Future[T] {
 }
 
 type future[T any] struct {
-	res  T
-	err  error
-	done *SignalOnce
-
-	// mutex mainly used to sync between .Then() and the task func
-	//
-	// the future's res, err doesn't really need mutex
-	thenMu *sync.Mutex
-	then   func(T, error)
+	// mu guards res, err, completed, draining and the completion hooks
+	mu        sync.Mutex
+	res       T
+	err       error
+	completed bool
+	// draining is true while the completing goroutine drains the hook queue
+	draining bool
+	hooks    []func(T, error)
+	done     *SignalOnce
 }
 
-func (f *future[T]) Then(tf func(T, error)) {
+func newFuture[T any]() *future[T] {
+	return &future[T]{done: NewSignalOnce()}
+}
+
+// Complete the future with the given result. A future completes exactly once,
+// later calls are ignored.
+//
+// The result is published and waiters are woken while holding the lock. Callbacks
+// registered before or during completion run in registration order on the
+// completing goroutine; a callback registered after the drain finished runs
+// synchronously in the caller of Then.
+func (f *future[T]) complete(t T, err error) bool {
+	f.mu.Lock()
+	if f.completed {
+		f.mu.Unlock()
+		return false
+	}
+	f.res = t
+	f.err = err
+	f.completed = true
+	draining := len(f.hooks) > 0
+	f.draining = draining
+
+	// publish the result before waking waiters, while still holding the lock
+	f.done.Notify()
+	f.mu.Unlock()
+
+	if !draining {
+		// nothing was registered before completion, so draining is already done and
+		// a later Then runs synchronously in its caller
+		return true
+	}
+
+	// pop and append under the lock, run each hook without it: a Then landing
+	// between two callbacks is appended and picked up by the loop, so it cannot
+	// overtake the ones registered before it, and a callback that registers
+	// another callback does not deadlock
+	for {
+		f.mu.Lock()
+		if len(f.hooks) == 0 {
+			f.draining = false
+			f.mu.Unlock()
+			return true
+		}
+		hook := f.hooks[0]
+		f.hooks[0] = nil
+		f.hooks = f.hooks[1:]
+		f.mu.Unlock()
+
+		hook(t, err)
+	}
+}
+
+// Create a completion hook that runs the callback and then completes the derived
+// future with the parent's result unchanged.
+func (f *future[T]) newHook(tf func(T, error), derived *future[T]) func(T, error) {
+	return func(t T, err error) {
+		func() {
+			defer recoverPanic()
+			tf(t, err)
+		}()
+		derived.complete(t, err)
+	}
+}
+
+func (f *future[T]) Then(tf func(T, error)) Future[T] {
 	if tf == nil {
 		panic("Future.Then callback cannot be nil")
 	}
 
-	f.thenMu.Lock()
-	f.then = func(t T, err error) {
-		defer recoverPanic()
-		tf(t, err)
+	f.mu.Lock()
+	if f.completed && !f.draining {
+		t, err := f.res, f.err
+		f.mu.Unlock()
+		func() {
+			defer recoverPanic()
+			tf(t, err)
+		}()
+		return NewCompletedFuture(t, err)
 	}
-
-	if f.done.Closed() {
-		doThen := f.then
-		f.thenMu.Unlock()
-		doThen(f.Get())
-	} else {
-		f.thenMu.Unlock()
-	}
+	// not completed yet, or completion is still draining the queue: append so the
+	// callback runs after the hooks registered before it
+	derived := newFuture[T]()
+	f.hooks = append(f.hooks, f.newHook(tf, derived))
+	f.mu.Unlock()
+	return derived
 }
 
-func (f *future[T]) ThenErr(tf func(error)) {
-	f.Then(func(t T, err error) {
+func (f *future[T]) ThenErr(tf func(error)) Future[T] {
+	return f.Then(func(t T, err error) {
 		tf(err)
 	})
 }
 
 // Get from Future indefinitively
 func (f *future[T]) Get() (T, error) {
-	if err := f.wait(0); err != nil {
-		return f.res, err
-	}
+	f.done.Wait()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.res, f.err
-}
-
-func (f *future[T]) wait(timeout int) error {
-	if f.done.TimedWait(time.Duration(timeout) * time.Millisecond) {
-		return ErrGetTimeout
-	}
-	return nil
 }
 
 // Get from Future with timeout (in milliseconds)
 func (f *future[T]) TimedGet(timeout int) (T, error) {
-	if err := f.wait(timeout); err != nil {
-		return f.res, err
+	if f.done.TimedWait(time.Duration(timeout) * time.Millisecond) {
+		var zero T
+		return zero, ErrGetTimeout
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.res, f.err
 }
 
-func buildFuture[T any](rail interface{ Errorf(string, ...any) }, task func() (T, error)) (Future[T], func()) {
-	sig := NewSignalOnce()
-	fut := future[T]{
-		thenMu: &sync.Mutex{},
-		done:   sig,
-	}
-	wrp := func() {
+// taskRunner builds the func that runs the task and completes this Future.
+//
+// It lets a Future be created first and dispatched later, e.g. by an await group
+// that must append the Future before handing it to a pool.
+func (f *future[T]) taskRunner(rail interface{ Errorf(string, ...any) }, task func() (T, error)) func() {
+	return func() {
 		var t T
 		var err error
 
@@ -259,23 +395,11 @@ func buildFuture[T any](rail interface{ Errorf(string, ...any) }, task func() (T
 				}
 			}
 
-			fut.thenMu.Lock()
-			fut.res = t
-			fut.err = err
-			sig.Notify()
-
-			if fut.then != nil {
-				doThen := fut.then
-				fut.thenMu.Unlock()
-				doThen(fut.res, fut.err)
-			} else {
-				fut.thenMu.Unlock()
-			}
+			f.complete(t, err)
 		}()
 
 		t, err = task()
 	}
-	return &fut, wrp
 }
 
 type completedFuture[T any] struct {
@@ -291,10 +415,17 @@ func (f *completedFuture[T]) TimedGet(timeout int) (T, error) {
 	return f.res, f.err
 }
 
-func (f *completedFuture[T]) Then(tf func(T, error)) {
-	tf(f.res, f.err)
+func (f *completedFuture[T]) Then(tf func(T, error)) Future[T] {
+	if tf == nil {
+		panic("Future.Then callback cannot be nil")
+	}
+	func() {
+		defer recoverPanic()
+		tf(f.res, f.err)
+	}()
+	return f
 }
 
-func (f *completedFuture[T]) ThenErr(tf func(error)) {
-	f.Then(func(t T, err error) { tf(err) })
+func (f *completedFuture[T]) ThenErr(tf func(error)) Future[T] {
+	return f.Then(func(t T, err error) { tf(err) })
 }
