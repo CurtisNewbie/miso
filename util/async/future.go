@@ -283,8 +283,10 @@ func (f *future[T]) complete(t T, err error) bool {
 		return true
 	}
 
-	// drain the queue under the lock so a Then landing in the window between two
-	// callbacks cannot overtake the ones registered before it
+	// pop and append under the lock, run each hook without it: a Then landing
+	// between two callbacks is appended and picked up by the loop, so it cannot
+	// overtake the ones registered before it, and a callback that registers
+	// another callback does not deadlock
 	for {
 		f.mu.Lock()
 		if len(f.hooks) == 0 {
