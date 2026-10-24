@@ -84,3 +84,7 @@ Canonical roles with default label strings (`needs-triage`, `needs-info`, `ready
 ### Domain docs
 
 Single-context: `GLOSSARY.md` at the repo root, ADRs under `doc/adr/`. See `doc/agents/domain.md`.
+
+### Code review
+
+Reviewing miso code starts by loading the miso skill (`skills/miso/SKILL.md`), then walking `skills/miso/references/code-review-checklist.md` entry by entry against the diff.
