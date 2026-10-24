@@ -113,6 +113,9 @@ func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 // A group is sealed on the first Await: Await returns a copy of the Futures, and
 // submitting to a sealed group panics.
 //
+// SubmitAsync holds the group lock while it submits, so it must not be called
+// from inside a task of the same group.
+//
 // Use [NewAwaitFutures] to create one.
 type AwaitFutures[T any] struct {
 	// mu guards the pool, the futures and the sealed flag
