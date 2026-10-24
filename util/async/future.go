@@ -23,7 +23,8 @@ var (
 	ErrGetTimeout = errors.New("future.TimedGet timeout")
 
 	// ErrTaskDropped reports that a pool refused to run a task, so the task never
-	// produced a result of its own.
+	// produced a result of its own. It is a coded *errs.MisoErr with code
+	// "ASYNC_TASK_DROPPED"; compare with errors.Is.
 	ErrTaskDropped = errs.NewErrfCode("ASYNC_TASK_DROPPED", "async task dropped, pool is full or stopped")
 )
 
@@ -45,12 +46,11 @@ type Future[T any] interface {
 
 	// Then callback to be invoked when the Future is completed.
 	//
-	// The callback runs on the goroutine that completes the Future, in the order
-	// the callbacks were registered. A derived Future is returned, it completes
-	// with the same result once the callback returns, so callbacks can be chained.
-	//
-	// If the Future is already completed, the callback runs synchronously in the
-	// caller and a completed Future is returned.
+	// A derived Future is returned; it completes with the same value and error once
+	// the callback returns, so callbacks can be chained. Callbacks registered before
+	// or during completion run in registration order on the goroutine that completes
+	// the Future. A callback registered after completion has drained runs
+	// synchronously in the caller and a completed Future is returned.
 	Then(tf func(T, error)) Future[T]
 
 	// Then callback to be invoked when the Future is completed.
@@ -239,13 +239,15 @@ func NewCompletedFuture[T any](t T, err error) Future[T] {
 }
 
 type future[T any] struct {
-	// mu guards res, err, completed and the completion hooks
+	// mu guards res, err, completed, draining and the completion hooks
 	mu        sync.Mutex
 	res       T
 	err       error
 	completed bool
-	hooks     []func(T, error)
-	done      *SignalOnce
+	// draining is true while the completing goroutine drains the hook queue
+	draining bool
+	hooks    []func(T, error)
+	done     *SignalOnce
 }
 
 func newFuture[T any]() *future[T] {
@@ -255,8 +257,10 @@ func newFuture[T any]() *future[T] {
 // Complete the future with the given result. A future completes exactly once,
 // later calls are ignored.
 //
-// The result is published and waiters are woken while holding the lock, then the
-// completion hooks run in registration order on the completing goroutine.
+// The result is published and waiters are woken while holding the lock. Callbacks
+// registered before or during completion run in registration order on the
+// completing goroutine; a callback registered after the drain finished runs
+// synchronously in the caller of Then.
 func (f *future[T]) complete(t T, err error) bool {
 	f.mu.Lock()
 	if f.completed {
@@ -266,18 +270,35 @@ func (f *future[T]) complete(t T, err error) bool {
 	f.res = t
 	f.err = err
 	f.completed = true
+	draining := len(f.hooks) > 0
+	f.draining = draining
 
 	// publish the result before waking waiters, while still holding the lock
 	f.done.Notify()
-
-	hooks := f.hooks
-	f.hooks = nil
 	f.mu.Unlock()
 
-	for _, hook := range hooks {
+	if !draining {
+		// nothing was registered before completion, so draining is already done and
+		// a later Then runs synchronously in its caller
+		return true
+	}
+
+	// drain the queue under the lock so a Then landing in the window between two
+	// callbacks cannot overtake the ones registered before it
+	for {
+		f.mu.Lock()
+		if len(f.hooks) == 0 {
+			f.draining = false
+			f.mu.Unlock()
+			return true
+		}
+		hook := f.hooks[0]
+		f.hooks[0] = nil
+		f.hooks = f.hooks[1:]
+		f.mu.Unlock()
+
 		hook(t, err)
 	}
-	return true
 }
 
 // Create a completion hook that runs the callback and then completes the derived
@@ -298,7 +319,7 @@ func (f *future[T]) Then(tf func(T, error)) Future[T] {
 	}
 
 	f.mu.Lock()
-	if f.completed {
+	if f.completed && !f.draining {
 		t, err := f.res, f.err
 		f.mu.Unlock()
 		func() {
@@ -307,6 +328,8 @@ func (f *future[T]) Then(tf func(T, error)) Future[T] {
 		}()
 		return NewCompletedFuture(t, err)
 	}
+	// not completed yet, or completion is still draining the queue: append so the
+	// callback runs after the hooks registered before it
 	derived := newFuture[T]()
 	f.hooks = append(f.hooks, f.newHook(tf, derived))
 	f.mu.Unlock()

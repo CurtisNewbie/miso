@@ -40,8 +40,9 @@ type AsyncPool interface {
 // You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour. A task refused by a
 // fallback that discards work completes its [Future] with [ErrTaskDropped].
 //
-// Stopping blocks new queue entries and drains the tasks already accepted. A task submitted after stop
-// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
+// Stopping blocks new queue entries; the tasks already accepted drain in the background, and
+// [BoundedAsyncPool.StopAndWait] returns once they finish. A task submitted after stop runs inline
+// when the pool blocks on a full queue, and goes through the configured fallback otherwise.
 type BoundedAsyncPool struct {
 	*asyncPoolCommon
 
@@ -98,8 +99,9 @@ type asyncPoolOption func(a *asyncPoolOptions)
 // You can use [FallbackDropTask] or [FallbackCallerRun] to change this behaviour. A task refused by a
 // fallback that discards work completes its [Future] with [ErrTaskDropped].
 //
-// Stopping blocks new queue entries and drains the tasks already accepted. A task submitted after stop
-// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
+// Stopping blocks new queue entries; the tasks already accepted drain in the background, and
+// [BoundedAsyncPool.StopAndWait] returns once they finish. A task submitted after stop runs inline
+// when the pool blocks on a full queue, and goes through the configured fallback otherwise.
 //
 // Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewBoundedAsyncPool(maxTasks int, maxWorkers int, opts ...asyncPoolOption) *BoundedAsyncPool {
@@ -224,9 +226,10 @@ func NewIOAsyncPool() AsyncPool {
 
 // Stop the pool.
 //
-// Stopping blocks new queue entries and drains the tasks already accepted. Tasks
-// submitted after stop run inline when the pool blocks on a full queue, and go
-// through the configured fallback otherwise.
+// Stopping blocks new submissions and closes the stop signal. The tasks already
+// accepted drain in the background; use [BoundedAsyncPool.StopAndWait] to wait for
+// them. Tasks submitted after stop run inline when the pool blocks on a full queue,
+// and go through the configured fallback otherwise.
 func (p *BoundedAsyncPool) Stop() {
 	p.stateMu.Lock()
 	defer p.stateMu.Unlock()
@@ -237,7 +240,7 @@ func (p *BoundedAsyncPool) Stop() {
 	close(p.stopCh)
 }
 
-// Stop the pool and wait until existing workers drain all the remaining tasks.
+// Stop the pool and return after the tasks it already accepted finished.
 func (p *BoundedAsyncPool) StopAndWait() {
 	p.Stop()
 	p.wg.Wait()
@@ -337,7 +340,9 @@ func (p *BoundedAsyncPool) Run(f func() error) Future[struct{}] {
 
 // Submit task to the pool.
 //
-// If the pool is stopped, the caller will execute the submitted task directly.
+// If the pool is stopped, the task runs inline when the pool blocks on a full
+// queue, and goes through the configured fallback otherwise. With
+// [FallbackDropTask] it is dropped.
 func (p *BoundedAsyncPool) Go(f func()) {
 	p.goTask(f)
 }
@@ -414,9 +419,10 @@ func (p *BoundedAsyncPool) drainTasks() {
 
 // A bounded pool of goroutines backed by ants.
 //
-// Stopping blocks new submissions and releases the ants pool. A task submitted
-// after stop runs inline when the pool blocks on a full queue, and goes through
-// the configured fallback otherwise.
+// Stopping blocks new submissions and releases the ants pool; work already accepted
+// drains in the background and [AntsAsyncPool.StopAndWait] returns once it finishes.
+// A task submitted after stop runs inline when the pool blocks on a full queue, and
+// goes through the configured fallback otherwise.
 type AntsAsyncPool struct {
 	*asyncPoolCommon
 
@@ -479,9 +485,10 @@ func (a *AntsAsyncPool) Go(f func()) {
 
 // Stop the pool.
 //
-// Stopping blocks new submissions. A task submitted after stop runs inline when
-// the pool blocks on a full queue, and goes through the configured fallback
-// otherwise.
+// Stopping blocks new submissions and releases the ants pool; work already accepted
+// drains in the background, and [AntsAsyncPool.StopAndWait] returns once it finishes.
+// A task submitted after stop runs inline when the pool blocks on a full queue, and
+// goes through the configured fallback otherwise.
 func (a *AntsAsyncPool) Stop() {
 	a.stateMu.Lock()
 	if a.stopped {
@@ -493,6 +500,7 @@ func (a *AntsAsyncPool) Stop() {
 	a.p.Release()
 }
 
+// Stop the pool and return after the tasks it already accepted finished.
 func (a *AntsAsyncPool) StopAndWait() {
 	a.Stop()
 	a.wg.Wait()
@@ -559,8 +567,9 @@ func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 // You can also use [FallbackDropTask] or [FallbackCallerRun] to customize fallback behaviour. A task
 // refused by a fallback that discards work completes its [Future] with [ErrTaskDropped].
 //
-// Stopping blocks new submissions and drains the work already accepted. A task submitted after stop
-// runs inline when the pool blocks on a full queue, and goes through the configured fallback otherwise.
+// Stopping blocks new submissions; work already accepted drains in the background, and
+// [AsyncPool.StopAndWait] returns once it finishes. A task submitted after stop runs inline when the
+// pool blocks on a full queue, and goes through the configured fallback otherwise.
 //
 // Find proper worker pool size based on N * GOMAXPROCS, e.g., in Redis connection pool, N might be 10; in web server connection pool, N can be 258 and so on.
 //

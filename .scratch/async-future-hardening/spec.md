@@ -60,10 +60,9 @@ A future completes exactly once. Publishing the result and waking waiters happen
 
 ## Testing Decisions
 
-- Tests assert external behaviour of the async package only. No test reaches into private fields or asserts on goroutine counts.
-- The single seam is the package's public API, in two groups. Future behaviour covers timeout results, chaining order, callback panic isolation, completed futures, concurrent callbacks, and await-group submit and seal. Pool behaviour covers drain on stop, post-stop submission, drop on a full pool, drop on a stopped pool, the stop barrier, ants after release, and the submit and stop storm.
-- Ordering comes from channel handshakes, not sleeps. A test that needs the worker busy closes a channel from inside the task. Two exceptions are timing tests, not ordering shortcuts: the timed-get test sleeps briefly so the timeout fires first, and the idle-exit test sets the package-private idle duration because the production value is one minute.
-- The idle-exit test is the one place that touches a private field, and it asserts only that futures resolve, never goroutine counts.
+- Tests assert external behaviour of the async package only. No test asserts on goroutine counts. Two deliberate exceptions: the idle-exit test sets the package-private idle duration because the production value is one minute, and drop tests for pools without the acceptance capability use an in-package fake pool, since that capability is unexported.
+- The single seam is the package's public API, in two groups. Future behaviour covers timeout results, chaining order, callback registration during completion, callback panic isolation and logging, completed futures, and await-group submit and seal. Pool behaviour covers drain on stop, post-stop submission, drop on a full pool, drop on a stopped pool, the stop barrier, ants after release, and the submit and stop storm for both pools.
+- Ordering comes from channel handshakes, not sleeps. A test that needs the worker busy closes a channel from inside the task. Bounded watchdog windows (`select` with `time.After`) are allowed for negative assertions, and the timed-get test sleeps briefly so the timeout fires first.
 - Every test in the seam runs under the race detector, and the existing package suite must pass under `-race`.
 - Prior art is the existing async tests, which already exercise `Run`, `Submit`, await groups, and chained callbacks, plus the existing pool lifecycle test.
 

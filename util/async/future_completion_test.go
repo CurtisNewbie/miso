@@ -242,6 +242,76 @@ func TestThenNilCallbackPanics(t *testing.T) {
 	})
 }
 
+func TestThenRegisteredDuringCompletionRunsInRegistrationOrder(t *testing.T) {
+	taskStarted := make(chan struct{})
+	releaseTask := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	firstStarted := make(chan struct{})
+	order := make(chan string, 2)
+
+	f := Run(func() (int, error) {
+		close(taskStarted)
+		<-releaseTask
+		return 1, nil
+	})
+	<-taskStarted
+
+	f.Then(func(int, error) {
+		close(firstStarted)
+		<-releaseFirst
+		order <- "first"
+	})
+
+	// let the future complete: the first hook starts and blocks inside the drain
+	close(releaseTask)
+	<-firstStarted
+
+	// registered while the first callback is still running, so it must not
+	// overtake it
+	f.Then(func(int, error) { order <- "second" })
+
+	select {
+	case got := <-order:
+		t.Fatalf("callback %q ran before the first one finished", got)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(releaseFirst)
+	if got := awaitSignal(t, order); got != "first" {
+		t.Fatalf("expected first, got %q", got)
+	}
+	if got := awaitSignal(t, order); got != "second" {
+		t.Fatalf("expected second, got %q", got)
+	}
+}
+
+func TestThenCallbackPanicIsLogged(t *testing.T) {
+	orig := utillog.ErrorLog
+	defer func() { utillog.ErrorLog = orig }()
+	logs := make(chan string, 4)
+	utillog.ErrorLog = func(pat string, args ...any) {
+		select {
+		case logs <- fmt.Sprintf(pat, args...):
+		default:
+		}
+	}
+
+	f := Run(func() (int, error) { return 1, nil })
+	f.Then(func(int, error) { panic("callback exploded") })
+
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case msg := <-logs:
+			if strings.Contains(msg, "callback exploded") {
+				return
+			}
+		case <-deadline:
+			t.Fatal("panicking callback should be logged with the panic value")
+		}
+	}
+}
+
 func TestTwoThenCallsOnOneFutureBothFire(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})

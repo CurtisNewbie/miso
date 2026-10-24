@@ -2,10 +2,14 @@ package async
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/curtisnewbie/miso/util/utillog"
 )
 
 func TestAntsPoolAfterStopRunsInlineAndStopsIdempotently(t *testing.T) {
@@ -85,17 +89,72 @@ func TestBoundedPoolStopAndSubmitStorm(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
+	seen := make(map[int]bool, len(futures))
 	for i, f := range futures {
 		v, err := f.TimedGet(5000)
-		if errors.Is(err, ErrTaskDropped) {
-			continue
+		if err != nil {
+			t.Fatalf("future %v should resolve, FallbackCallerRun can never drop, got err %v", i, err)
 		}
+		if v < 0 || v >= n {
+			t.Fatalf("future %v returned an unexpected value %v", i, v)
+		}
+		if seen[v] {
+			t.Fatalf("value %v was returned by more than one future", v)
+		}
+		seen[v] = true
+	}
+	if len(seen) != n {
+		t.Fatalf("expected %v distinct results, got %v", n, len(seen))
+	}
+}
+
+func TestAntsPoolStopAndSubmitStorm(t *testing.T) {
+	pool := NewAntsAsyncPool(4, FallbackCallerRun())
+
+	const n = 100
+	futures := make([]Future[int], 0, n)
+	var mu sync.Mutex
+	var submitters sync.WaitGroup
+
+	stop := make(chan struct{})
+	go func() {
+		<-stop
+		pool.Stop()
+	}()
+
+	for i := 0; i < n; i++ {
+		submitters.Add(1)
+		go func(v int) {
+			defer submitters.Done()
+			f := Submit(pool, func() (int, error) { return v, nil })
+			mu.Lock()
+			futures = append(futures, f)
+			mu.Unlock()
+		}(i)
+	}
+
+	close(stop)
+	submitters.Wait()
+	pool.StopAndWait()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(futures) != n {
+		t.Fatalf("expected %v futures, got %v", n, len(futures))
+	}
+	seen := make(map[int]bool, len(futures))
+	for i, f := range futures {
+		v, err := f.TimedGet(5000)
 		if err != nil {
 			t.Fatalf("future %v should resolve, got err %v", i, err)
 		}
 		if v < 0 || v >= n {
 			t.Fatalf("future %v returned an unexpected value %v", i, v)
 		}
+		seen[v] = true
+	}
+	if len(seen) != n {
+		t.Fatalf("expected %v distinct results, got %v", n, len(seen))
 	}
 }
 
@@ -298,6 +357,16 @@ func TestBoundedPoolIdleExitDoesNotStrandTasks(t *testing.T) {
 }
 
 func TestBoundedPoolDropFallbackCompletesFutureWithErrTaskDropped(t *testing.T) {
+	origWarn := utillog.WarnLog
+	defer func() { utillog.WarnLog = origWarn }()
+	warns := make(chan string, 4)
+	utillog.WarnLog = func(pat string, args ...any) {
+		select {
+		case warns <- fmt.Sprintf(pat, args...):
+		default:
+		}
+	}
+
 	// one worker, one queue slot
 	pool := NewBoundedAsyncPool(1, 1, FallbackDropTask())
 
@@ -324,6 +393,14 @@ func TestBoundedPoolDropFallbackCompletesFutureWithErrTaskDropped(t *testing.T) 
 	}
 	if v != 0 {
 		t.Fatalf("expected zero value for a dropped task, got %v", v)
+	}
+	select {
+	case msg := <-warns:
+		if !strings.Contains(msg, "dropped") {
+			t.Fatalf("drop warning should mention the drop, got %q", msg)
+		}
+	default:
+		t.Fatal("a dropped task should log a warning")
 	}
 
 	close(release)

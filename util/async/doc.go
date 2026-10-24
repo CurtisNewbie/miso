@@ -18,8 +18,8 @@
 //
 // [AsyncPool] internally maintain a pool of goroutines. Use [NewAsyncPool] create a new [AsyncPool],
 // customize the pool with options like [WithTaskQueue], [FallbackCallerRun], [FallbackDropTask] and [FallbackNewGoroutine].
-// Stopping a pool blocks new submissions and drains the tasks already accepted; a task submitted after
-// stop runs inline or goes through the configured fallback.
+// Stopping a pool blocks new submissions; accepted work drains in the background and [AsyncPool.StopAndWait]
+// returns once it finishes. A task submitted after stop runs inline or goes through the configured fallback.
 //
 // Use [CalcPoolSize] to estimate optimal worker count in the pool.
 //
