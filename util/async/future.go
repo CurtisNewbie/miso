@@ -92,22 +92,28 @@ func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ..
 // Create Future, once the future is created, it starts running on a new goroutine.
 func Run[T any](task func() (T, error)) Future[T] {
 	fut := newFuture[T]()
-	go fut.taskRunner(nil, task)()
+	launch(nil, fut, task)
 	return fut
 }
 
-// Create Future, once the future is created, it starts running on a saperate goroutine from the pool.
+// Create Future, once the future is created, it starts running on a separate goroutine from the pool.
 //
 // If the pool reports that it refused the task, the returned Future completes with [ErrTaskDropped].
+// A nil pool runs the task on a new goroutine, same as [Run].
 func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 	fut := newFuture[T]()
-	dispatchTask(pool, fut, fut.taskRunner(nil, task))
+	launch(pool, fut, task)
 	return fut
 }
 
-// dispatchTask runs an already built task runner on the pool, completing the
-// future with [ErrTaskDropped] when the pool reports that it refused the task.
-func dispatchTask[T any](pool AsyncPool, fut *future[T], runner func()) {
+// launch builds the runner for an already created future and hands it to the
+// pool, or to a new goroutine when the pool is nil.
+func launch[T any](pool AsyncPool, fut *future[T], task func() (T, error)) {
+	runner := fut.taskRunner(nil, task)
+	if pool == nil {
+		go runner()
+		return
+	}
 	if acc, ok := pool.(taskAcceptor); ok {
 		if !acc.goTask(runner) {
 			var zero T
@@ -152,12 +158,7 @@ func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
 
 	// dispatch outside the lock: the future is already in the group, so Await
 	// waits on it even if the group gets sealed before the task is dispatched
-	runner := fut.taskRunner(nil, task)
-	if pool != nil {
-		dispatchTask(pool, fut, runner)
-		return
-	}
-	go runner()
+	launch(pool, fut, task)
 }
 
 // Await results of all tasks.
