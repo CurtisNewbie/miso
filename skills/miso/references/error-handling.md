@@ -6,7 +6,7 @@ Comprehensive error handling patterns using the `errs` package and Rail logging.
 
 ### Error Creation Rules
 
-Always create errors using the `errs` package — never use `fmt.Errorf` or `errors.New`. The `errs` package provides stack traces, error codes, and structured internal messages that `fmt.Errorf` cannot.
+Prefer the `errs` package for returned errors — never use `fmt.Errorf`. The `errs` package provides stack traces, error codes, and structured internal messages that `fmt.Errorf` cannot. `errors.New` is fine for plain static errors.
 
 | Rule | Prefer | Avoid |
 |------|--------|-------|

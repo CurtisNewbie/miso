@@ -30,7 +30,7 @@ func init() {
         Name: "Redis Connection",
         CheckHealth: func(rail miso.Rail) bool {
             redis := redis.GetRedis()
-            if err := redis.Ping(rail.Context()).Err(); err != nil {
+            if err := redis.Ping(rail).Err(); err != nil {
                 rail.Errorf("Redis health check failed: %v", err)
                 return false
             }

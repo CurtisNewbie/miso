@@ -35,7 +35,7 @@ When `redis.enabled` is `true`, importing the package auto-connects at bootstrap
 
 All functions take `rail miso.Rail` as first param for trace propagation, and delegate to `GetRedis()` (a singleton `*redis.Client`).
 
-Prefer these wrappers — they convert `rail.Context()` and wrap errors in `errs` for you. Call `GetRedis()` directly only for a command no wrapper covers, and then still pass `rail.Context()` and wrap the error.
+Prefer these wrappers — they wrap errors in `errs` for you. Call `GetRedis()` directly only for a command no wrapper covers, and then still pass `rail` (it is a `context.Context`) and wrap the error.
 
 ```go
 import "github.com/curtisnewbie/miso/middleware/redis"

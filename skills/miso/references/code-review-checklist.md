@@ -5,36 +5,35 @@ Read this when reviewing miso code — a diff, a PR, your own changes before han
 **Completion criterion:** every entry walked against the diff, each marked *found at `<file:line>`* or *clear*. A review that reports "looks fine" without walking the list is not a review.
 
 **Table of Contents:**
-- Rail-as-ctx
-- fmt.Errorf / errors.New
+- rail.Context()
+- fmt.Errorf
 - return ErrFileNotFound
 - GetRedis().Set(...)
 - mysql.GetMySQL().Raw(...)
 - time.Time
 - Panic in business code
 
-## Rail-as-ctx
+## rail.Context()
 
-`Rail` satisfies `context.Context` (`flow/ctx.go:21`), so `f(rail)` compiles wherever a `ctx context.Context` is wanted. It still is the wrong argument: the framework draws the boundary deliberately — `miso.Rail` where logging and tracing happen, `rail.Context()` at stdlib and middleware boundaries. Converting at the call site keeps that boundary visible; handing the Rail over smuggles the logging wrapper into code typed to take a plain context.
+`Rail` satisfies `context.Context` (`flow/ctx.go:21`), so `f(rail)` is the right argument wherever a `ctx context.Context` is wanted. `Deadline`, `Done`, `Err` and `Value` all delegate to the wrapped context, so passing the Rail loses nothing and keeps the call visibly inside the traced request. Do not unwrap it with `rail.Context()` just to satisfy a `context.Context` parameter — that turns a traced call into an anonymous one at every call site for no gain.
 
 ```go
-// Wrong — Rail passed as ctx
-err := client.Get(rail, key)
-doWork(rail)
-
-// Right
+// Wrong — needless unwrap when a ctx context.Context is wanted
 err := client.Get(rail.Context(), key)
 doWork(rail.Context())
+
+// Right — Rail is a context.Context
+err := client.Get(rail, key)
+doWork(rail)
 ```
 
-## fmt.Errorf / errors.New
+## fmt.Errorf
 
-Never build errors with the standard library. `errs` carries the stack trace and error code; `fmt.Errorf` and `errors.New` produce opaque strings the web layer cannot render as a structured response.
+Never build returned errors with `fmt.Errorf`. `errs` carries the stack trace and error code; `fmt.Errorf` produces an opaque string the web layer cannot render as a structured response. `errors.New` is not the problem — it appears only for plain static errors — what matters is not hand-formatting a returned error and losing the wrap.
 
 ```go
 // Wrong
 return fmt.Errorf("failed to load user %d: %w", id, err)
-return errors.New("not found")
 
 // Right
 return errs.Wrapf(err, "failed to load user %d", id)
@@ -60,7 +59,7 @@ return ErrFileNotFound.New()
 
 ## GetRedis().Set(...)
 
-`GetRedis()` hands back the raw `*redis.Client`. Check whether the package-level API already covers the command before reaching past it: `redis.Set`, `redis.Get`, `redis.HIncrBy`, `redis.BRPopAny` and the `*Json` variants convert `rail.Context()` and wrap errors in `errs` for you, which a bare client call leaves to every caller.
+`GetRedis()` hands back the raw `*redis.Client`. Check whether the package-level API already covers the command before reaching past it: `redis.Set`, `redis.Get`, `redis.HIncrBy`, `redis.BRPopAny` and the `*Json` variants wrap errors in `errs` for you, which a bare client call leaves to every caller.
 
 ```go
 // Wrong — raw client reached for before checking the wrapper
@@ -70,7 +69,7 @@ return redis.GetRedis().Set(ctx, key, val, ttl).Err()
 return redis.Set(rail, key, val, ttl)
 ```
 
-`GetRedis()` is the escape hatch for a command the wrappers do not expose — and even there, pass `rail.Context()` and wrap the error. See [redis.md](redis.md).
+`GetRedis()` is the escape hatch for a command the wrappers do not expose — and even there, pass `rail` and wrap the error. See [redis.md](redis.md).
 
 ## mysql.GetMySQL().Raw(...)
 

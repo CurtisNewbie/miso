@@ -79,6 +79,8 @@ Note: `NextSpan()` is deprecated since v0.4.15 — use `rail.NewCtx().NewSpanId(
 
 ## Context Operations
 
+`Rail` is itself a `context.Context` — pass `rail` directly to anything taking a `ctx context.Context`; `rail.Context()` only unwraps to the underlying context and is rarely what you want.
+
 ```go
 ctx := rail.Context()
 
