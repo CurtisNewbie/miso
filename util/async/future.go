@@ -60,10 +60,14 @@ type Future[T any] interface {
 }
 
 // Fire async task on new goroutine and forget about it.
+//
+// A custom runner owns execution. When the runner is a pool that drops the task,
+// the pool logs a warning; Fire itself cannot observe the drop.
 func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ...func(func())) {
 	start := time.Now()
 	caller := src.GetCallerFn()
-	fut, wrp := buildFuture(rail, func() (struct{}, error) {
+	fut := newFuture[struct{}]()
+	wrp := fut.taskRunner(rail, func() (struct{}, error) {
 		return struct{}{}, task()
 	})
 	fut.ThenErr(func(err error) {
@@ -87,8 +91,8 @@ func Fire(rail interface{ Errorf(string, ...any) }, task func() error, runner ..
 
 // Create Future, once the future is created, it starts running on a new goroutine.
 func Run[T any](task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(nil, task)
-	go wrp()
+	fut := newFuture[T]()
+	go fut.taskRunner(nil, task)()
 	return fut
 }
 
@@ -96,16 +100,22 @@ func Run[T any](task func() (T, error)) Future[T] {
 //
 // If the pool reports that it refused the task, the returned Future completes with [ErrTaskDropped].
 func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
-	fut, wrp := buildFuture(nil, task)
+	fut := newFuture[T]()
+	dispatchTask(pool, fut, fut.taskRunner(nil, task))
+	return fut
+}
+
+// dispatchTask runs an already built task runner on the pool, completing the
+// future with [ErrTaskDropped] when the pool reports that it refused the task.
+func dispatchTask[T any](pool AsyncPool, fut *future[T], runner func()) {
 	if acc, ok := pool.(taskAcceptor); ok {
-		if !acc.goTask(wrp) {
+		if !acc.goTask(runner) {
 			var zero T
 			fut.complete(zero, ErrTaskDropped.New())
 		}
-		return fut
+		return
 	}
-	pool.Go(wrp)
-	return fut
+	pool.Go(runner)
 }
 
 // AwaitFutures represent tasks that are submitted to the pool asynchronously whose results are awaited together.
@@ -113,8 +123,9 @@ func Submit[T any](pool AsyncPool, task func() (T, error)) Future[T] {
 // A group is sealed on the first Await: Await returns a copy of the Futures, and
 // submitting to a sealed group panics.
 //
-// SubmitAsync holds the group lock while it submits, so it must not be called
-// from inside a task of the same group.
+// SubmitAsync appends the new Future to the group before it dispatches the task,
+// and holds the group lock only while it appends. A blocking or caller-run
+// submission therefore cannot deadlock the group.
 //
 // Use [NewAwaitFutures] to create one.
 type AwaitFutures[T any] struct {
@@ -130,17 +141,23 @@ type AwaitFutures[T any] struct {
 // Panics if the group is already sealed by a call to Await.
 func (a *AwaitFutures[T]) SubmitAsync(task func() (T, error)) {
 	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	if a.sealed {
+		a.mu.Unlock()
 		panic("AwaitFutures.SubmitAsync called after Await, the group is sealed")
 	}
+	fut := newFuture[T]()
+	a.futures = append(a.futures, fut)
+	pool := a.pool
+	a.mu.Unlock()
 
-	if a.pool != nil {
-		a.futures = append(a.futures, Submit[T](a.pool, task))
-	} else {
-		a.futures = append(a.futures, Run[T](task))
+	// dispatch outside the lock: the future is already in the group, so Await
+	// waits on it even if the group gets sealed before the task is dispatched
+	runner := fut.taskRunner(nil, task)
+	if pool != nil {
+		dispatchTask(pool, fut, runner)
+		return
 	}
+	go runner()
 }
 
 // Await results of all tasks.
@@ -321,9 +338,12 @@ func (f *future[T]) TimedGet(timeout int) (T, error) {
 	return f.res, f.err
 }
 
-func buildFuture[T any](rail interface{ Errorf(string, ...any) }, task func() (T, error)) (*future[T], func()) {
-	fut := newFuture[T]()
-	wrp := func() {
+// taskRunner builds the func that runs the task and completes this Future.
+//
+// It lets a Future be created first and dispatched later, e.g. by an await group
+// that must append the Future before handing it to a pool.
+func (f *future[T]) taskRunner(rail interface{ Errorf(string, ...any) }, task func() (T, error)) func() {
+	return func() {
 		var t T
 		var err error
 
@@ -347,12 +367,11 @@ func buildFuture[T any](rail interface{ Errorf(string, ...any) }, task func() (T
 				}
 			}
 
-			fut.complete(t, err)
+			f.complete(t, err)
 		}()
 
 		t, err = task()
 	}
-	return fut, wrp
 }
 
 type completedFuture[T any] struct {

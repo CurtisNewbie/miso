@@ -167,7 +167,7 @@ func FallbackNewGoroutine() asyncPoolOption {
 func FallbackDropTask() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
 		ap.doWhenPoolFull = func(task func()) bool {
-			utillog.DebugLog("Pool is full, task dropped")
+			utillog.WarnLog("Pool is full, task dropped")
 			return false
 		}
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
@@ -177,11 +177,7 @@ func FallbackDropTask() asyncPoolOption {
 // Fallback to caller runs when pool is full.
 func FallbackCallerRun() asyncPoolOption {
 	return func(ap *asyncPoolOptions) {
-		ap.doWhenPoolFull = func(task func()) bool {
-			utillog.DebugLog("Pool is full, caller runs task")
-			task()
-			return true
-		}
+		ap.doWhenPoolFull = callerRunFallback
 		ap.blockWhenPoolFull = ptr.BoolPtr(false)
 	}
 }
@@ -383,8 +379,10 @@ func (p *BoundedAsyncPool) spawn(first func()) {
 			}
 			p.drainTasks()
 
-			// release the slot before the final queue check, so a producer that
-			// enqueues now finds the slot free and can spawn a worker
+			// Invariant: a worker holds a workers token exactly while a live worker
+			// goroutine reads p.tasks. Release the token before the final queue
+			// check, so a producer that enqueues in this window finds the slot free
+			// and spawns a replacement through the extra-spawn path.
 			<-p.workers
 			released = true
 
@@ -422,10 +420,9 @@ func (p *BoundedAsyncPool) drainTasks() {
 type AntsAsyncPool struct {
 	*asyncPoolCommon
 
-	// stateMu guards stopped and submission, mirroring BoundedAsyncPool.
+	// stateMu guards stopped, mirroring BoundedAsyncPool.
 	stateMu sync.RWMutex
 	stopped bool
-	stopCh  chan struct{}
 
 	p *ants.Pool
 }
@@ -487,22 +484,17 @@ func (a *AntsAsyncPool) Go(f func()) {
 // otherwise.
 func (a *AntsAsyncPool) Stop() {
 	a.stateMu.Lock()
-	stopped := a.stopped
-	if !stopped {
-		a.stopped = true
-		close(a.stopCh)
+	if a.stopped {
+		a.stateMu.Unlock()
+		return
 	}
+	a.stopped = true
 	a.stateMu.Unlock()
-	if !stopped {
-		a.p.Release()
-	}
+	a.p.Release()
 }
 
 func (a *AntsAsyncPool) StopAndWait() {
 	a.Stop()
-	if a.wg == nil {
-		panic("missing wg")
-	}
 	a.wg.Wait()
 }
 
@@ -522,7 +514,6 @@ func (a *AntsAsyncPool) StopAndWait() {
 // Deprecated: Since v0.3.10, migrate to [NewAsyncPool] if possible.
 func NewAntsAsyncPool(maxWorkers int, opts ...asyncPoolOption) *AntsAsyncPool {
 	ap := &AntsAsyncPool{
-		stopCh: make(chan struct{}),
 		asyncPoolCommon: &asyncPoolCommon{
 			doWhenPoolFull:    callerRunFallback,
 			blockWhenPoolFull: true,

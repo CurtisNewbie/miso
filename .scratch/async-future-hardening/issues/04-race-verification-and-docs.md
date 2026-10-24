@@ -9,7 +9,7 @@
 - [x] The async package suite passes under the race detector, including the existing timeout test.
 - [x] Race tests for the dependents that use futures and await groups pass (`middleware/redis`, `cmd/misoapi`, `miso`).
 - [x] Package documentation and doc comments describe completion, chaining, dropped-task errors, the stop barrier, and group sealing.
-- [x] No exported API is added beyond `ErrTaskDropped` and the return value of `Then`.
+- [x] No exported API is added in the async package beyond `ErrTaskDropped` and the return value of `Then`. `utillog` gains `WarnLog` so a dropped task is visible to fire-and-forget callers.
 
 ## Comments
 

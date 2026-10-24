@@ -29,7 +29,7 @@ A future completes exactly once. Publishing the result and waking waiters happen
 11. As a service author, I want an await group to seal on first await, so that a late submit fails loudly instead of being silently unawaited.
 12. As a service author, I want await to wait for real completion, so that a returned future is already resolved when await returns.
 13. As a service author, I want a dropped task to complete its future with a specific error, so that pool pressure shows up as a failed task and not as a permanent hang.
-14. As a service author, I want fire-and-forget logging to report a dropped task, so that silent loss stops happening.
+14. As a service author, I want a pool that drops a task to log a warning, so that fire-and-forget work that never ran is still visible.
 15. As a service author, I want a pool that reports whether it accepted a task, so that a future can be completed on rejection without changing the public pool interface.
 16. As a service author, I want stopping a pool to block new submissions and drain the queue, so that queued work finishes and nothing is lost.
 17. As a service author, I want a submission that arrives after stop to run inline or use its fallback, so that the pool never wedges the caller.
@@ -50,7 +50,8 @@ A future completes exactly once. Publishing the result and waking waiters happen
 - A completed future fires its callback synchronously and returns a future completed with the same value and error.
 - `AwaitFutures` holds a mutex and a sealed flag. Submit takes the mutex, rejects submissions after seal, and appends the future. Await takes the mutex once, seals, copies the slice, then waits for every future to complete. Repeated awaits return copies of the same sealed set.
 - A dropped task completes its future with a new exported sentinel, `ErrTaskDropped`. Submission uses an internal capability that reports whether a pool accepted the task. Pools that only implement the public interface fall back to the old submission call, so external pool implementations still compile; they cannot report drops.
-- Fallback callbacks no longer touch the wait group. The pool owns one increment and exactly one decrement per accepted or dropped task, on every path.
+- Fallback callbacks no longer touch the wait group. The pool owns one increment and exactly one decrement per task accepted before stop, whether it runs on a worker, inline, through a fallback, or is dropped. A submission that arrives after stop runs inline or through the fallback and stays outside the stop barrier, because incrementing the counter after a wait has begun is unsafe.
+- A worker that exits on its idle timer releases its worker slot before the final queue check, so a task enqueued in that window gets a replacement worker instead of sitting in the queue forever.
 - `BoundedAsyncPool` stops by setting a stopped flag under a lock that also guards submission, and by closing a stop channel. The task channel is never closed. Workers drain the queue after stop and exit when it is empty.
 - A submission after stop runs inline when the pool blocks on a full queue, and otherwise goes through the configured fallback. `StopAndWait` waits on the same counter the submissions increment.
 - `AntsAsyncPool` uses the same stopped flag and wait-group discipline. A failed submit goes through the fallback, and the default fallback runs the task on the caller in both pools.
@@ -61,7 +62,8 @@ A future completes exactly once. Publishing the result and waking waiters happen
 
 - Tests assert external behaviour of the async package only. No test reaches into private fields or asserts on goroutine counts.
 - The single seam is the package's public API, in two groups. Future behaviour covers timeout results, chaining order, callback panic isolation, completed futures, concurrent callbacks, and await-group submit and seal. Pool behaviour covers drain on stop, post-stop submission, drop on a full pool, drop on a stopped pool, the stop barrier, ants after release, and the submit and stop storm.
-- Ordering comes from channel handshakes, not sleeps. A test that needs the worker busy closes a channel from inside the task.
+- Ordering comes from channel handshakes, not sleeps. A test that needs the worker busy closes a channel from inside the task. Two exceptions are timing tests, not ordering shortcuts: the timed-get test sleeps briefly so the timeout fires first, and the idle-exit test sets the package-private idle duration because the production value is one minute.
+- The idle-exit test is the one place that touches a private field, and it asserts only that futures resolve, never goroutine counts.
 - Every test in the seam runs under the race detector, and the existing package suite must pass under `-race`.
 - Prior art is the existing async tests, which already exercise `Run`, `Submit`, await groups, and chained callbacks, plus the existing pool lifecycle test.
 

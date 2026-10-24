@@ -226,8 +226,52 @@ func TestBoundedPoolCallerRunFallbackTaskCanStopOwnPool(t *testing.T) {
 	awaitSignal(t, barrier)
 }
 
+func TestBoundedPoolStoppedDropFallbackCompletesFutureWithErrTaskDropped(t *testing.T) {
+	pool := NewBoundedAsyncPool(1, 1, FallbackDropTask())
+	pool.Stop()
+
+	f := Submit(pool, func() (int, error) { return 9, nil })
+	v, err := f.TimedGet(2000)
+	if !errors.Is(err, ErrTaskDropped) {
+		t.Fatalf("expected ErrTaskDropped, got (%v, %v)", v, err)
+	}
+	if v != 0 {
+		t.Fatalf("expected zero value for a dropped task, got %v", v)
+	}
+}
+
+func TestAntsPoolStopBarrierWaitsForRunningTask(t *testing.T) {
+	pool := NewAntsAsyncPool(1)
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	pool.Go(func() {
+		close(started)
+		<-release
+	})
+	awaitSignal(t, started)
+
+	stopped := make(chan struct{})
+	go func() {
+		pool.StopAndWait()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+		t.Fatal("StopAndWait returned while a task was still running")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	close(release)
+	awaitSignal(t, stopped)
+}
+
 func TestBoundedPoolIdleExitDoesNotStrandTasks(t *testing.T) {
 	pool := NewBoundedAsyncPool(1, 1)
+	// Production idleDur is one minute, which would never expire inside a test, so
+	// the package-private field is shortened to force idle exits. The assertions
+	// below are about task resolution and stop returning, never goroutine counts.
 	pool.idleDur = time.Millisecond
 
 	const n = 100
