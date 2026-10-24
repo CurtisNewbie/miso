@@ -70,3 +70,17 @@ misopatch  # Auto-applies all patches using gopatch
 - **Go workspace** - Demo apps use go.work for local development
 - **Version migration** - Breaking changes are common between versions; `misopatch` auto-applies patches from `patch/` via gopatch (manual: `gopatch -p /path/to/miso/patch/v0.4.0.patch ./...`)
 - **Test environment** - `miso.PrepareTestEnv(t)` bootstraps the full framework; finds `conf.yml` by walking up from the test file directory
+
+## Agent skills
+
+### Issue tracker
+
+Specs and tickets live as local markdown under `.scratch/<feature-slug>/`. See `doc/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical roles with default label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `doc/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` at the repo root, ADRs under `doc/adr/`. See `doc/agents/domain.md`.
