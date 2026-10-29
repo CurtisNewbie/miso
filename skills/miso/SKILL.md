@@ -95,7 +95,7 @@ see [cmd-tools.md](references/cmd-tools.md).
 - atom.Time (always use instead of time.Time), json, strutil, slutil, retry, randutil, IDs, async, osutil, testutil, flags, excel, copyutil
 
 **Prometheus Metrics:** [prometheus.md](references/prometheus.md)
-- Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
+- Histogram/Counter/HistogramVec/CounterVec constructors, client outbound metrics, HistTimer/VecTimer, scrape endpoint config, Push Gateway
 
 **Testing:** [testing.md](references/testing.md)
 - miso.PrepareTestEnv test bootstrap, conf.yml discovery, InTestEnv, database testing with transaction + rollback cleanup, testutil fixtures

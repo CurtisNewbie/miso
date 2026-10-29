@@ -116,6 +116,17 @@ func NewPromCounter(name string) prometheus.Counter {
 	return counter
 }
 
+// Create new CounterVec.
+//
+// The CounterVec is automatically registered to the prometheus.DefaultRegisterer.
+func NewPromCounterVec(name string, labels []string) *prometheus.CounterVec {
+	vec := prometheus.NewCounterVec(prometheus.CounterOpts{Name: name}, labels)
+	if e := prometheus.DefaultRegisterer.Register(vec); e != nil {
+		panic(fmt.Errorf("failed to register CounterVec %v, %w", name, e))
+	}
+	return vec
+}
+
 func prometheusBootstrapCondition(rail Rail) (bool, error) {
 	return GetPropBool(PropMetricsEnabled) && GetPropBool(PropServerEnabled), nil
 }

@@ -57,7 +57,7 @@ The label set is the same on all three.
 
 The counters attach by wrapping the `http.Client` used for a request, at the moment the request is sent. Attaching at enable time is not enough. Service discovery and transport replacement both happen later in the chain, and the target is only known per request. Wrapping produces a shallow copy, so the shared default client, its transport, and its connection pool are never mutated.
 
-The three counter families are package level and registered once. The first client to enable metrics creates them. A later enable reuses the registered collector instead of panicking, because the existing metric constructors panic on duplicate registration. A public `NewPromCounterVec(name string, labels []string)` joins the existing histogram, histogram vector, and counter constructors and backs these three families.
+The three counter families are package level and registered once at package initialization. Registration reuses an already registered collector of the same name instead of panicking, because the existing metric constructors panic on duplicate registration. A public `NewPromCounterVec(name string, labels []string)` joins the existing histogram, histogram vector, and counter constructors and backs these three families.
 
 Every attempt is counted, with no status or error label. A request that fails before its body is fully read contributes only the bytes that were read, and a response body the caller never reads contributes nothing. A caller that streams a response to a file reads the whole body, so its byte count is complete.
 
@@ -75,7 +75,8 @@ The single seam is the client API plus the default gatherer. Tests set up a serv
 
 Cases in the seam:
 
-- A GET with a response body increments all three families once, with the expected client name, host, and app labels.
+- A POST with a request body and a response body increments all three families, with the expected client name, host, and app labels.
+- A bodyless GET increments the attempt and response byte counters and leaves the request byte counter alone.
 - A client that resolves through service discovery reports the service name in `host`.
 - A client on a direct URL reports host and port in `host`.
 - An empty client name reports an empty label value.

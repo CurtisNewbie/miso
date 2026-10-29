@@ -4,16 +4,16 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `EnableMetrics(clientName)` chains on a client and leaves clients that never call it emitting nothing.
-- [ ] One request through a metered client increments `miso_client_requests_total` and both byte families once, labeled with the given client name, the target, and the `app.name` property of the process.
-- [ ] A direct URL target labels `host` with host and port.
-- [ ] A service discovery target labels `host` with the resolved service name.
-- [ ] An empty client name produces an empty label value and does not fail the request.
-- [ ] A request that fails to connect still increments the attempt counter.
-- [ ] Two metered clients in one process work without a duplicate registration panic.
-- [ ] The shared default client's transport is the same value after a metered request.
-- [ ] A public `NewPromCounterVec(name, labels)` exists beside the existing metric constructors.
-- [ ] Tests drive the public client API against a test HTTP server and assert on gathered metric values, never on wrapper types or internal fields.
-- [ ] The `miso` package suite passes with the race detector enabled.
+- [x] `EnableMetrics(clientName)` chains on a client and leaves clients that never call it emitting nothing.
+- [x] One request through a metered client increments `miso_client_requests_total` and both byte families once, labeled with the given client name, the target, and the `app.name` property of the process.
+- [x] A direct URL target labels `host` with host and port.
+- [x] A service discovery target labels `host` with the resolved service name.
+- [x] An empty client name produces an empty label value and does not fail the request.
+- [x] A request that fails to connect still increments the attempt counter.
+- [x] Two metered clients in one process work without a duplicate registration panic.
+- [x] The shared default client's transport is the same value after a metered request.
+- [x] A public `NewPromCounterVec(name, labels)` exists beside the existing metric constructors.
+- [x] Tests drive the public client API against a test HTTP server and assert on gathered metric values, never on wrapper types or internal fields.
+- [x] `go test -race -run TestClient ./miso/` passes, and the package suite shows no new failures against the base branch.

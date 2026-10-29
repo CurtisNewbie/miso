@@ -14,6 +14,9 @@ vec := miso.NewPromHistoVec("my_op_seconds", []string{"status", "method"})
 // Counter — monotonically increasing totals
 counter := miso.NewPromCounter("my_events_total")
 
+// Counter with labels
+vec := miso.NewPromCounterVec("my_events_total", []string{"status", "method"})
+
 // Histogram with custom bucket boundaries (upper bounds, in seconds).
 // Defaults to prometheus.DefBuckets + 20, 30, 45, 60 when omitted.
 hist := miso.NewPromHisto("db_query_seconds", .005, .01, .05, .1, .5, 1, 2.5, 5, 10, 30)
@@ -59,6 +62,42 @@ Timer methods:
 ## Naming Conventions
 
 Unit suffix is **optional** (Prometheus SHOULD-level best practice, not enforced at ingestion). If used, it must be a **base unit** (`_seconds`, `_bytes`) — never `_ms` or `_milliseconds`, both fail `promtool check metrics` (promlint: "abbreviated units" / "use base unit seconds"). Counters should end with `_total` (`my_events_total`).
+
+## Client Metrics
+
+miso clients can record their outbound traffic. Enabling is per client and off by default, so a client that never calls `EnableMetrics` records nothing.
+
+```go
+client := miso.NewClient(rail, "/api/users").
+    EnableServiceDiscovery("user-service").
+    EnableMetrics("user-api")
+```
+
+The client name is whatever identifies that client in your service. An empty name is allowed and recorded as an empty label value. `EnableMetrics` may be chained in any order with the other client options.
+
+Three counters share the same label set.
+
+| Metric | Counts |
+|---|---|
+| `miso_client_requests_total` | attempts, including failed connections, non-2xx responses, and each redirect hop |
+| `miso_client_request_bytes_total` | request body bytes read by the HTTP transport |
+| `miso_client_response_bytes_total` | response body bytes read by the caller |
+
+| Label | Value |
+|---|---|
+| `client_name` | the name passed to `EnableMetrics` |
+| `host` | the resolved service name when the client uses service discovery, otherwise the URL host and port |
+| `app` | the `app.name` property of the emitting process |
+
+QPS is derived from the attempt counter rather than recorded:
+
+```promql
+rate(miso_client_requests_total{client_name="user-api"}[1m])
+```
+
+Byte counts come from the body streams, so they are payload bytes after transport decompression, not bytes on the wire. A response body that is never read is not counted; `Str`, `Bytes`, `WriteTo`, and `WriteToFile` read it in full, and `Require2xx` reads it when it builds an error.
+
+Keep `client_name` to a small, stable set chosen in code, one name per logical client. The number of time series grows with the number of clients and targets, so a name built per request would multiply them.
 
 ## Configuration
 

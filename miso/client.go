@@ -371,6 +371,8 @@ type Client struct {
 	discoverService bool
 	require2xx      bool
 	logBody         bool
+	metricsEnabled  bool
+	metricsName     string
 
 	reqStart  time.Time
 	reqMethod string
@@ -567,6 +569,23 @@ func (t *Client) Require2xx() *Client {
 func (t *Client) EnableServiceDiscovery(serviceName string) *Client {
 	t.serviceName = serviceName
 	t.discoverService = true
+	return t
+}
+
+// EnableMetrics records outbound request metrics for this client.
+//
+// Every request records three counters labeled with the given client name, the request
+// target, and the app name: attempts, request body bytes, and response body bytes. QPS is
+// derived from the attempt counter with rate().
+//
+// The target label is the resolved service name when service discovery is enabled, and the
+// URL host including port otherwise. An empty client name is allowed and recorded as an
+// empty label value. Clients that never call EnableMetrics record nothing.
+//
+// EnableMetrics may be chained in any order with the other client options.
+func (t *Client) EnableMetrics(clientName string) *Client {
+	t.metricsEnabled = true
+	t.metricsName = clientName
 	return t
 }
 
@@ -861,7 +880,12 @@ func (t *Client) send(req *http.Request) *TResponse {
 	t.reqURL = req.URL.String()
 	t.reqStart = time.Now()
 
-	r, e := t.client.Do(req) // send HTTP requests
+	cl := t.client
+	if t.metricsEnabled {
+		cl = t.meteredClient()
+	}
+
+	r, e := cl.Do(req) // send HTTP requests
 
 	var statusCode int
 	var respHeaders http.Header
