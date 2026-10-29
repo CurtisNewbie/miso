@@ -1,6 +1,7 @@
 package miso
 
 import (
+	"compress/gzip"
 	"io"
 	"net"
 	"net/http"
@@ -323,6 +324,91 @@ func TestClientMetricsLeavesDefaultClientUntouched(t *testing.T) {
 	}
 	if transportAfter != transportBefore {
 		t.Fatal("default client transport was replaced by a metered request")
+	}
+}
+
+func TestClientMetricsCountsEachRedirectHop(t *testing.T) {
+	withClientMetricsApp(t)
+
+	const redirectBody = "moved"
+	const finalBody = "final"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			w.Header().Set("Location", "/final")
+			w.WriteHeader(http.StatusFound)
+			if _, err := w.Write([]byte(redirectBody)); err != nil {
+				t.Errorf("write redirect body: %v", err)
+			}
+			return
+		}
+		if _, err := w.Write([]byte(finalBody)); err != nil {
+			t.Errorf("write final body: %v", err)
+		}
+	}))
+	defer srv.Close()
+
+	host := strings.TrimPrefix(srv.URL, "http://")
+	const clientName = "redirect"
+
+	requestsBefore := clientMetricSample(t, testMetricClientRequests, clientName, host, clientMetricsTestApp)
+	respBytesBefore := clientMetricSample(t, testMetricClientResponseBytes, clientName, host, clientMetricsTestApp)
+
+	resp := NewClient(EmptyRail(), srv.URL+"/start").EnableMetrics(clientName).Get()
+	if resp.Err != nil {
+		t.Fatalf("unexpected error: %v", resp.Err)
+	}
+	body, err := resp.Str()
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if body != finalBody {
+		t.Fatalf("response body = %q, want %q", body, finalBody)
+	}
+
+	if got := clientMetricSample(t, testMetricClientRequests, clientName, host, clientMetricsTestApp) - requestsBefore; got != 2 {
+		t.Errorf("requests delta for one redirect = %v, want 2", got)
+	}
+	wantBytes := float64(len(redirectBody) + len(finalBody))
+	if got := clientMetricSample(t, testMetricClientResponseBytes, clientName, host, clientMetricsTestApp) - respBytesBefore; got != wantBytes {
+		t.Errorf("response bytes delta = %v, want %v", got, wantBytes)
+	}
+}
+
+func TestClientMetricsCountsDecompressedResponseBytes(t *testing.T) {
+	withClientMetricsApp(t)
+
+	const reply = "hello"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		if _, err := gz.Write([]byte(reply)); err != nil {
+			t.Errorf("write gzip body: %v", err)
+		}
+		if err := gz.Close(); err != nil {
+			t.Errorf("close gzip writer: %v", err)
+		}
+	}))
+	defer srv.Close()
+
+	host := strings.TrimPrefix(srv.URL, "http://")
+	const clientName = "gzip"
+
+	respBytesBefore := clientMetricSample(t, testMetricClientResponseBytes, clientName, host, clientMetricsTestApp)
+
+	resp := NewClient(EmptyRail(), srv.URL).EnableMetrics(clientName).Get()
+	if resp.Err != nil {
+		t.Fatalf("unexpected error: %v", resp.Err)
+	}
+	body, err := resp.Str()
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if body != reply {
+		t.Fatalf("response body = %q, want %q", body, reply)
+	}
+
+	if got := clientMetricSample(t, testMetricClientResponseBytes, clientName, host, clientMetricsTestApp) - respBytesBefore; got != float64(len(reply)) {
+		t.Errorf("response bytes delta for a gzip response = %v, want %v", got, len(reply))
 	}
 }
 

@@ -82,8 +82,10 @@ Cases in the seam:
 - An empty client name reports an empty label value.
 - A connection to a closed port still increments the attempt counter.
 - A client without `EnableMetrics` emits nothing.
-- Two clients that both enable metrics work, and neither panics on registration.
+- Two metered clients that both enable metrics work, and neither panics on registration.
 - The default client's transport is the same value after a metered request.
+- A redirect counts one request per hop, and the intermediate response body counts toward response bytes.
+- A gzip response counts decompressed bytes, not compressed ones.
 
 Tests read each counter as a delta against its value before the requests, since the package level counters persist across tests in the same process. Prior art is the existing in-package client and proxy tests that run against `httptest` servers. No existing test reads the default gatherer, so its helpers are new to this file.
 
@@ -94,6 +96,7 @@ Tests read each counter as a delta against its value before the requests, since 
 - A global configuration switch. Enabling stays per client.
 - Status and error labels, success rates, and per-response-code breakdowns.
 - Bytes on the wire, including headers, TLS overhead, and pre-decompression sizes.
+- Transport-internal retries. When the HTTP transport rewinds a request and retries, that attempt never reaches the metrics transport, so neither the attempt nor the replayed request bytes are counted.
 - The package level `SendGet` and `SendPost` helpers and any `http.Client` not built through the miso client.
 - Recording rules, dashboards, and alert definitions.
 - Turning metrics on for existing call sites. The change adds the capability only.
