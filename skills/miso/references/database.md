@@ -419,6 +419,30 @@ dbquery.NewQuery(rail, mysql.GetMySQL()).
     Update(updates)
 ```
 
+### SetCols Updates
+
+`SetCols` emits a SET column for every field of the value it is given, zero values included. A partial entity struct therefore writes the zero value over every column you did not set.
+
+```go
+// Wrong — also sends id=0, gallery_no='', user_no='', create_by='', is_del=false
+dbquery.NewQuery(rail, mysql.GetMySQL()).
+    Table("gallery").
+    Where("gallery_no = ?", galleryNo).
+    SetCols(Gallery{Name: name, UpdateBy: user.Username}).
+    UpdateAny()
+
+// Right — name the columns, or Set each one
+dbquery.NewQuery(rail, mysql.GetMySQL()).
+    Table("gallery").
+    Where("gallery_no = ?", galleryNo).
+    SetCols(Gallery{Name: name, UpdateBy: user.Username}, "name", "update_by").
+    UpdateAny()
+```
+
+The zero primary key is what surfaces first: MySQL tries to store `id = 0` on the matched row and rejects the statement with `Error 1062: Duplicate entry '0' for key 'PRIMARY'`, since another row already holds that key. Without the collision the row itself would be blanked.
+
+`SetColsIgnoreEmpty` does not make the partial struct safe. Its skip logic covers empty strings and nil pointers only, so an `int64` primary key still goes out as 0 and a `bool` as false.
+
 ## Delete Operations
 
 ### Soft Delete

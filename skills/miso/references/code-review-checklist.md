@@ -12,6 +12,7 @@ Read this when reviewing miso code — a diff, a PR, your own changes before han
 - mysql.GetMySQL().Raw(...)
 - time.Time
 - Panic in business code
+- SetCols with a partial struct
 - Editing generated output
 
 ## rail.Context()
@@ -100,6 +101,22 @@ if err != nil {
 ## Panic in business code
 
 Return an `errs` error. `panic` earns its place only at startup — misconfiguration and `regexp.MustCompile`. See [golang-coding-practice.md](golang-coding-practice.md).
+
+## SetCols with a partial struct
+
+`SetCols(v)` writes a SET column for every field of `v`, zero values included, so a partial entity struct sends `id = 0`, `''` for every string you left unset, and `false` for every bool. The statement dies on the primary key first, `Error 1062: Duplicate entry '0' for key 'PRIMARY'`, and without that collision it blanks the row it matched.
+
+```go
+// Wrong — writes all eight gallery columns from a two-field struct
+SetCols(Gallery{Name: cmd.Name, UpdateBy: user.Username}).
+
+// Right — name the columns, or Set each one
+SetCols(Gallery{Name: cmd.Name, UpdateBy: user.Username}, "name", "update_by").
+Set("name", cmd.Name).
+Set("update_by", user.Username).
+```
+
+`SetColsIgnoreEmpty` is not the fix: it skips only empty strings and nil pointers, so an `int64` primary key still goes out as 0 and a `bool` as false. See [database.md](database.md#setcols-updates).
 
 ## Editing generated output
 
