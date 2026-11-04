@@ -14,6 +14,7 @@ func preTest() {
 }
 
 func TestDeclareEventBus(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 	NewEventBus("test-bus")
 
@@ -27,6 +28,7 @@ func TestDeclareEventBus(t *testing.T) {
 }
 
 func TestSendToEventBus(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct {
@@ -48,6 +50,7 @@ func TestSendToEventBus(t *testing.T) {
 }
 
 func TestSubscribeEventBus(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct {
@@ -72,6 +75,7 @@ func TestSubscribeEventBus(t *testing.T) {
 }
 
 func TestNewPipeline(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct{}
@@ -87,6 +91,7 @@ func TestNewPipeline(t *testing.T) {
 }
 
 func TestPipeSend(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct {
@@ -110,6 +115,7 @@ func TestPipeSend(t *testing.T) {
 }
 
 func TestPipeListen(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct {
@@ -132,6 +138,7 @@ func TestPipeListen(t *testing.T) {
 }
 
 func TestPipeListenRetry(t *testing.T) {
+	requireRabbitBroker(t)
 	preTest()
 
 	type dummy struct {

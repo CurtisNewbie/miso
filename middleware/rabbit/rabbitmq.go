@@ -404,6 +404,12 @@ type rabbitGeneration struct {
 
 // retire closes the generation's connection at most once, no matter how many
 // paths (supervisor, shutdown hook, failed build) race to tear it down.
+//
+// An already-closed connection is the expected case, not a failure: a generation
+// is normally retired because the broker or the network closed the connection
+// first, and amqp091 reports that as amqp.ErrClosed. That case is normalized to
+// nil so callers don't log a bogus warning on every reconnect; genuine close
+// errors still propagate.
 func (g *rabbitGeneration) retire() error {
 	var err error
 	g.once.Do(func() {
@@ -411,6 +417,9 @@ func (g *rabbitGeneration) retire() error {
 			err = g.conn.Close()
 		}
 	})
+	if errors.Is(err, amqp.ErrClosed) {
+		return nil
+	}
 	return err
 }
 
@@ -759,9 +768,12 @@ func watchChannel(ch *amqp.Channel, name string, signal chan struct{}) {
 		} else {
 			miso.Debugf("%v closed", name)
 		}
-	case queue, ok := <-cancelCh:
+	case ctag, ok := <-cancelCh:
 		if ok {
-			miso.Errorf("%v cancelled by server, queue: %v", name, queue)
+			// NotifyCancel delivers the consumer tag, which amqp091 generates
+			// from the client side, not the queue name. The watched name already
+			// carries the queue or slot this channel belongs to.
+			miso.Errorf("%v cancelled by server, consumer tag: %v", name, ctag)
 		} else {
 			miso.Debugf("%v closed", name)
 		}
