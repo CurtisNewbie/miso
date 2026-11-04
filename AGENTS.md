@@ -33,6 +33,7 @@ For framework usage — bootstrap lifecycle, Rail tracing, web development, conf
 - **caching.md** - Local cache, TTL cache, Redis cache, cache patterns
 - **redis.md** - Raw Redis operations, hash/list/set, distributed locks, scripting
 - **kafka.md** - Produce/consume messages, listener semantics, partition ordering, trace propagation
+- **rabbitmq.md** - Exchange/queue/binding registration, event bus, listeners and QoS, confirm-mode publishing, connection and consumer channel lifecycle, delayed redelivery
 - **middleware-utils.md** - crypto, JWT, expr, Lua, money, ZooKeeper leader election
 - **util.md** - atom.Time (always use instead of time.Time), json, strutil, slutil, retry, randutil, IDs, async, osutil, testutil, flags, excel, copyutil
 - **prometheus.md** - Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
@@ -72,6 +73,15 @@ misopatch  # Auto-applies all patches using gopatch
 - **Test environment** - `miso.PrepareTestEnv(t)` bootstraps the full framework; finds `conf.yml` by walking up from the test file directory
 
 ## Agent skills
+
+### Required skills
+
+Load both before any non-trivial work, and name them in the reply that opens the work:
+
+- `dev-flow` for the workflow this repo uses, which is grill, spec, tickets, TDD at agreed seams, then code review.
+- `miso` (`skills/miso/SKILL.md`) for framework usage, and `skills/miso/references/code-review-checklist.md` when reviewing.
+
+A subagent does not inherit the skills its caller loaded. Name both in every delegation prompt, and check the subagent loaded them before accepting its work.
 
 ### Issue tracker
 

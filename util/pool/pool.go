@@ -109,6 +109,7 @@ func NewEphPool[T any](filterFunc func(t T) (dropped bool)) *EphPool[T] {
 	f := new(EphPool[T])
 	f.mu = &sync.Mutex{}
 	f.list = list.New()
+	f.filterFunc = filterFunc
 	return f
 }
 
