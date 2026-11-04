@@ -1,6 +1,6 @@
 ---
 name: miso
-description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies, (14) Kafka messaging, (15) Utility middleware (crypto, JWT, expr, Lua, money, ZooKeeper), (16) Util packages (atom.Time, json, strutil, slutil, retry, randutil, async, osutil, testutil, flags, excel, copyutil), (17) HTTP reverse proxy (HttpProxy) with filter pipelines, config-driven dynamic access filters (whitelist, bearer/basic/remote auth), and WebSocket access control"
+description: "Use the miso Go framework for backend microservices. Use when working with the miso framework (https://github.com/curtisnewbie/miso) for: (1) Creating new microservices with component-based architecture, (2) Implementing RESTful APIs with Gin integration, (3) Database operations with GORM, (4) Configuration management with Viper, (5) Error handling with structured MisoErr types, (6) Distributed tracing via Rail context, (7) Distributed tasks with cron scheduling, (8) Bootstrap lifecycle management, (9) Service discovery and middleware integration, (10) Health checks and monitoring, (11) Performance profiling with pprof/FlightRecorder, (12) Request validation, (13) Caching strategies, (14) Kafka messaging, (15) RabbitMQ messaging and event bus, (16) Utility middleware (crypto, JWT, expr, Lua, money, ZooKeeper), (17) Util packages (atom.Time, json, strutil, slutil, retry, randutil, async, osutil, testutil, flags, excel, copyutil), (18) HTTP reverse proxy (HttpProxy) with filter pipelines, config-driven dynamic access filters (whitelist, bearer/basic/remote auth), and WebSocket access control"
 ---
 
 # Miso Framework
@@ -87,6 +87,9 @@ see [cmd-tools.md](references/cmd-tools.md).
 
 **Kafka:** [kafka.md](references/kafka.md)
 - Produce/consume messages, listener semantics, partition ordering, trace propagation
+
+**RabbitMQ:** [rabbitmq.md](references/rabbitmq.md)
+- Exchange/queue/binding registration, event bus, listeners and QoS, confirm-mode publishing, connection and consumer channel lifecycle, delayed redelivery
 
 **Utility Middleware:** [middleware-utils.md](references/middleware-utils.md)
 - crypto, JWT, expr, Lua, money, ZooKeeper leader election

@@ -33,6 +33,7 @@ For framework usage — bootstrap lifecycle, Rail tracing, web development, conf
 - **caching.md** - Local cache, TTL cache, Redis cache, cache patterns
 - **redis.md** - Raw Redis operations, hash/list/set, distributed locks, scripting
 - **kafka.md** - Produce/consume messages, listener semantics, partition ordering, trace propagation
+- **rabbitmq.md** - Exchange/queue/binding registration, event bus, listeners and QoS, confirm-mode publishing, connection and consumer channel lifecycle, delayed redelivery
 - **middleware-utils.md** - crypto, JWT, expr, Lua, money, ZooKeeper leader election
 - **util.md** - atom.Time (always use instead of time.Time), json, strutil, slutil, retry, randutil, IDs, async, osutil, testutil, flags, excel, copyutil
 - **prometheus.md** - Histogram/Counter/HistogramVec constructors, HistTimer/VecTimer, scrape endpoint config, Push Gateway
