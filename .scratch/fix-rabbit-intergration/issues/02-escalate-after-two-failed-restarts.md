@@ -6,10 +6,10 @@ Logging is bounded by the same rule: one warning per in-place attempt, one error
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Two consecutive failed restarts produce one escalation and no third attempt.
-- [ ] A slot that survives the stable window resets its failure count.
-- [ ] Two slots escalating together produce one generation rebuild.
-- [ ] An escalation arriving with a connection close produces one generation rebuild.
-- [ ] Log output carries one warning per attempt and one error per escalation, with no per-second repetition.
+- [x] Two consecutive failed restarts produce one escalation and no third attempt.
+- [x] A slot that survives the stable window resets its failure count.
+- [x] Two slots escalating together produce one generation rebuild.
+- [x] An escalation arriving with a connection close produces one generation rebuild.
+- [x] Log output carries one warning per attempt and one error per escalation, with no per-second repetition.

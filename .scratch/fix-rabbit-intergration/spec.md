@@ -55,13 +55,13 @@ stateDiagram-v2
 
 One restart attempt does this:
 
-1. Waits its in-place backoff, 250 milliseconds before the first attempt and 500 milliseconds before the second.
-2. Opens a new channel on the current generation's connection.
-3. Re-declares the listener's queue, the bindings that target that queue, and the exchanges and redeliver queues those bindings need.
-4. Applies the quality-of-service setting, calls consume, and starts the handler goroutines.
-5. Watches the new channel.
+1. Closes the channel whose death was just observed. A broker cancel leaves the channel open, so skipping this leaks one channel per cancel; an abnormal close is already gone and closing is a no-op.
+2. Waits its in-place backoff, 250 milliseconds before the first attempt and 500 milliseconds before the second.
+3. Opens a new channel on the current generation's connection and registers its close and cancel listeners before anything else, so a cancel that arrives during the subscribe is still observed.
+4. Re-declares the listener's queue, the bindings that target that queue, and the exchanges and redeliver queues those bindings need.
+5. Applies the quality-of-service setting, calls consume, and starts the handler goroutines.
 
-Step 3 is what makes a cancelled consumer recover. A cancel usually means the queue was deleted or its policy changed, so a bare consume on the new channel would fail with a missing queue and keep failing. Declaration is idempotent, so re-declaring on a channel close that left the queue intact costs one round trip.
+Step 4 is what makes a cancelled consumer recover. A cancel usually means the queue was deleted or its policy changed, so a bare consume on the new channel would fail with a missing queue and keep failing. Declaration is idempotent, so re-declaring on a channel close that left the queue intact costs one round trip.
 
 The publisher path needs no equivalent step, because publishing to an undeclared exchange fails the publish, not the channel, and the caller already sees that error.
 
@@ -81,7 +81,9 @@ Closing the connection wakes each slot through its channel close notification, w
 
 ### Logging
 
-An in-place restart logs one warning naming the queue and the attempt number. An escalation logs one error naming the queue. A successful restart logs at debug level.
+A channel death logs one warning naming the cause: an abnormal close or a broker cancel. A clean close logs at debug. An in-place restart logs one warning naming the queue and the attempt number. An escalation logs one error naming the queue, and that error is the only error line a recovered restart can produce. A successful restart logs at debug level.
+
+All of these carry the request rail, so the trace context survives.
 
 ### Semantics
 

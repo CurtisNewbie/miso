@@ -4,11 +4,11 @@
 
 **Blocked by:** 01, 02, 03.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Deleting one consumer's queue leaves the generation pointer unchanged, and that consumer drains the re-created queue afterwards.
-- [ ] A message published to a second queue is consumed across the affected consumer's restart, with no gap.
-- [ ] Killing the connection rebuilds the generation exactly once and every consumer resumes on it.
-- [ ] Deleting one consumer's queue past the escalation limit produces exactly one connection rebuild.
-- [ ] The log stream carries one warning per in-place attempt and one error per escalation, with no repeating line while waiting.
-- [ ] The suite runs with `MISO_RABBIT_BROKER_TESTS=1` and skips cleanly without it.
+- [x] Deleting one consumer's queue leaves the generation pointer unchanged, and that consumer drains the re-created queue afterwards.
+- [x] A message published to a second queue is consumed across the affected consumer's restart, with no gap.
+- [x] Killing the connection rebuilds the generation exactly once and every consumer resumes on it.
+- [x] Deleting one consumer's queue past the escalation limit produces exactly one connection rebuild.
+- [x] The log stream carries one warning per in-place attempt and one error per escalation, with no repeating line while waiting.
+- [x] The suite runs with `MISO_RABBIT_BROKER_TESTS=1` and skips cleanly without it.

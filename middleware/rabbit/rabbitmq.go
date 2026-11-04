@@ -375,7 +375,9 @@ func (m *rabbitMqModule) close(rail miso.Rail) error {
 		return nil
 	}
 	rail.Info("Closing RabbitMQ Connection")
-	return gen.retire()
+	err := gen.retire()
+	gen.waitConsumers(rail)
+	return err
 }
 
 var (
@@ -387,19 +389,53 @@ var (
 	reconnectStableAfter = time.Minute * 1
 )
 
+var (
+	// Backoff before each in-place consumer channel restart attempt. The last
+	// entry caps the delay once the attempt number exceeds the slice length.
+	channelRestartBackoff = []time.Duration{time.Millisecond * 250, time.Millisecond * 500}
+	// Number of consecutive in-place restart attempts before a slot escalates to
+	// a connection rebuild.
+	maxChannelRestartAttempts = 2
+	// A restarted consumer channel that stays up this long resets the slot's
+	// failure count, so an occasional death never accumulates into an escalation.
+	channelStableAfter = time.Minute * 1
+	// Upper bound on how long the connection supervisor waits for a retired
+	// generation's consumer slots to exit before it carries on with the rebuild.
+	generationConsumerWaitTimeout = time.Second * 5
+)
+
+// channelRestartDelay returns the backoff before the given zero-based attempt,
+// clamping to the last configured delay when there are more attempts than delays.
+func channelRestartDelay(attempt int) time.Duration {
+	if len(channelRestartBackoff) == 0 {
+		return 0
+	}
+	if attempt >= len(channelRestartBackoff) {
+		return channelRestartBackoff[len(channelRestartBackoff)-1]
+	}
+	return channelRestartBackoff[attempt]
+}
+
 // rabbitGeneration is one dial's worth of live resources: the connection, its
 // close listener, the publisher channel pool and the consumers bound to it.
 //
 // A generation is owned by exactly one supervisor goroutine, which retires it
-// before establishing the next one. connClose and signal are never shared
+// before establishing the next one. connCloseCh and escalateSignal are never shared
 // across generations.
 type rabbitGeneration struct {
-	conn      *amqp.Connection
-	connClose chan *amqp.Error
-	signal    chan struct{}
-	publisher *rabbitManagedPublisher
-	startedAt atom.Time
-	once      sync.Once
+	conn           *amqp.Connection
+	connCloseCh    chan *amqp.Error
+	escalateSignal chan struct{}
+	publisher      *rabbitManagedPublisher
+	startedAt      atom.Time
+	retireOnce     sync.Once
+
+	// done is closed by retire before the connection closes, so a consumer slot
+	// never opens a channel or escalates against a generation being replaced.
+	done chan struct{}
+	// consumerWg tracks the generation's consumer slot goroutines. The supervisor
+	// waits on it, bounded, after retiring the generation.
+	consumerWg sync.WaitGroup
 }
 
 // retire closes the generation's connection at most once, no matter how many
@@ -412,7 +448,10 @@ type rabbitGeneration struct {
 // errors still propagate.
 func (g *rabbitGeneration) retire() error {
 	var err error
-	g.once.Do(func() {
+	g.retireOnce.Do(func() {
+		if g.done != nil {
+			close(g.done)
+		}
 		if g.conn != nil {
 			err = g.conn.Close()
 		}
@@ -421,6 +460,236 @@ func (g *rabbitGeneration) retire() error {
 		return nil
 	}
 	return err
+}
+
+// waitConsumers blocks until the generation's consumer slots exit, or until the
+// bounded teardown timeout expires. A slot that hangs must not block a rebuild.
+func (g *rabbitGeneration) waitConsumers(rail miso.Rail) {
+	finished := make(chan struct{})
+	go func() {
+		g.consumerWg.Wait()
+		close(finished)
+	}()
+	select {
+	case <-finished:
+	case <-time.After(generationConsumerWaitTimeout):
+		rail.Warnf("Timed out waiting for RabbitMQ consumer channels to stop")
+	}
+}
+
+// channelSlot owns exactly one consumer channel for the life of a generation.
+// It reopens the channel on the generation's connection whenever it dies, and
+// escalates to the connection supervisor when restarts keep failing.
+//
+// open, prepare, start, watchCloseCancel and closeChannel are injected so the restart cycle
+// can run without a broker.
+// channelSlot owns exactly one consumer channel for the life of a generation
+// and restarts it in place when it dies. Its operations are injected so the
+// restart cycle can run without a broker.
+type channelSlot struct {
+	// name identifies the slot in logs, e.g. "Consumer 'event.bus.file.moved'".
+	name string
+
+	// open creates one channel on the current generation's connection. It
+	// declares nothing and subscribes to nothing; an error is reported once and
+	// counts as a failed restart attempt.
+	open func() (*amqp.Channel, error)
+
+	// prepare re-declares the broker resources this listener needs on a freshly
+	// opened channel: its queue, the bindings that target that queue, and the
+	// exchanges and redeliver queues those bindings reference. Declaration is
+	// idempotent, so it also recreates a queue the broker deleted. It never
+	// subscribes.
+	prepare func(*amqp.Channel) error
+
+	// start begins consuming on a prepared channel: applies the quality of
+	// service, calls Consume, and starts one handler goroutine per configured
+	// routine. Once it returns nil the slot is live and only a close or a cancel can end it.
+	startConsume func(*amqp.Channel) error
+
+	// watchCloseCancel registers the channel's close and cancel listeners and reports the
+	// first of them through the returned channel. It is called right after open,
+	// before prepare and start, so a cancel delivered during the subscribe is not
+	// lost. It never restarts anything itself.
+	watchCloseCancel func(miso.Rail, *amqp.Channel) <-chan struct{}
+
+	// closeChannel releases a channel the slot owns. Closing a channel that is
+	// already closed, or was cancelled by the broker, is a no-op, so the slot can
+	// call it on every exit path without tracking the cause of death.
+	closeChannel func(miso.Rail, *amqp.Channel)
+
+	// escalateSignal is the generation's cap-1 escalation channel. When in-place
+	// restarts are exhausted the slot sends on it without blocking; the
+	// connection supervisor answers by rebuilding the generation. Several slots
+	// escalating at once collapse into one rebuild.
+	escalateSignal chan struct{}
+
+	// done is closed when the generation is retired. Every wait in the slot
+	// selects on it, so a retired slot exits without opening a channel or
+	// escalating against a generation that is already being replaced.
+	done chan struct{}
+
+	// wg is the generation's slot WaitGroup. The slot calls Done as it returns,
+	// and the supervisor waits on it, with a bound, before installing the next
+	// generation.
+	wg *sync.WaitGroup
+
+	// failures counts consecutive failed restarts. Only the slot goroutine
+	// touches it: it is incremented in recordFailure and reset once a restarted
+	// channel survives channelStableAfter.
+	failures int
+}
+
+// liveChannel pairs a channel the slot owns with the death notification already
+// registered on it. The notification is registered before the channel is
+// prepared or consumed, so a cancel delivered during the subscribe is never
+// missed, and it stays bound to that channel for the channel's whole life.
+type liveChannel struct {
+	ch   *amqp.Channel
+	died <-chan struct{}
+}
+
+// superviseRbtChannel owns the live channel and restarts it in place each time
+// it dies. A restart counts as a failure when opening, preparing or starting the
+// replacement fails, or when the replacement dies before it has stayed up for
+// channelStableAfter. The second consecutive failure escalates to the connection
+// supervisor and stops the slot.
+func (s *channelSlot) superviseRbtChannel(rail miso.Rail, live liveChannel) {
+	defer s.wg.Done()
+
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-live.died:
+		}
+
+		// basic.cancel tells the client the consumer is gone but leaves the
+		// channel open, and an abnormal close may already have closed it. Closing
+		// is a no-op when it is already gone, so the channel whose death was just
+		// observed never leaks before its replacement opens.
+		s.closeChannel(rail, live.ch)
+
+		for attempt := 1; attempt <= maxChannelRestartAttempts; attempt++ {
+			if !s.waitBackoff(rail, channelRestartDelay(attempt-1)) {
+				return
+			}
+
+			next, err := s.openChannel(rail)
+			if err != nil {
+				if s.recordFailure(rail, attempt, err) {
+					s.escalate(rail)
+					return
+				}
+				continue
+			}
+
+			// The replacement is only a successful restart once it has stayed up
+			// for the stable window; dying earlier fails this attempt.
+			live = next
+			stable := time.NewTimer(channelStableAfter)
+			select {
+			case <-s.done:
+				stable.Stop()
+				s.closeChannel(rail, live.ch)
+				return
+			case <-live.died:
+				stable.Stop()
+				s.closeChannel(rail, live.ch)
+				if s.recordFailure(rail, attempt, "channel died before the stable window") {
+					s.escalate(rail)
+					return
+				}
+				continue
+			case <-stable.C:
+			}
+
+			s.failures = 0
+			rail.Debugf("RabbitMQ consumer '%v' restarted in place", s.name)
+			break
+		}
+	}
+}
+
+// recordFailure logs one failed in-place attempt and reports whether the slot
+// has used every attempt and must escalate.
+func (s *channelSlot) recordFailure(rail miso.Rail, attempt int, reason any) bool {
+	s.failures++
+	rail.Warnf("RabbitMQ consumer '%v' restart attempt %v/%v failed, %v", s.name, attempt, maxChannelRestartAttempts, reason)
+	return s.failures >= maxChannelRestartAttempts
+}
+
+// escalate asks the connection supervisor to rebuild the generation. The
+// generation's cap-1 signal coalesces concurrent escalations into one rebuild.
+// A retired slot escalates nothing: the failure is logged and handled elsewhere.
+func (s *channelSlot) escalate(rail miso.Rail) {
+	select {
+	case <-s.done:
+		return
+	default:
+	}
+	rail.Errorf("RabbitMQ consumer '%v' could not be restarted after %v attempts, rebuilding connection", s.name, maxChannelRestartAttempts)
+	select {
+	case s.escalateSignal <- struct{}{}:
+	default:
+	}
+}
+
+// waitBackoff sleeps for d and reports whether the slot should keep going. A
+// retired generation aborts the wait immediately, even when the timer and the
+// done signal are ready at the same time.
+func (s *channelSlot) waitBackoff(rail miso.Rail, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		select {
+		case <-s.done:
+			return false
+		default:
+			return true
+		}
+	case <-s.done:
+		return false
+	}
+}
+
+// closeSlotChannel closes a channel owned by a slot explicitly, so a restart
+// iteration never relies on a defer inside the loop.
+func closeSlotChannel(rail miso.Rail, ch *amqp.Channel) {
+	if ch == nil || ch.IsClosed() {
+		return
+	}
+	if err := ch.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+		rail.Debugf("Failed to close RabbitMQ consumer channel: %v", err)
+	}
+}
+
+// openChannel runs one restart attempt: open a channel, register its close and
+// cancel watchers immediately, then re-declare the listener's components and
+// subscribe again.
+//
+// The watcher must be registered before prepare and start: a basic.cancel can
+// arrive the moment Consume returns, and a listener registered afterwards would
+// miss it and leave the slot waiting on a channel that no longer has a consumer.
+// A failed attempt closes the channel, so its discarded watcher exits too.
+func (s *channelSlot) openChannel(rail miso.Rail) (liveChannel, error) {
+	ch, err := s.open()
+	if err != nil {
+		return liveChannel{}, errs.Wrapf(err, "failed to open channel")
+	}
+
+	live := liveChannel{ch: ch, died: s.watchCloseCancel(rail, ch)}
+
+	if err := s.prepare(ch); err != nil {
+		s.closeChannel(rail, ch)
+		return liveChannel{}, errs.Wrapf(err, "failed to prepare channel")
+	}
+	if err := s.startConsume(ch); err != nil {
+		s.closeChannel(rail, ch)
+		return liveChannel{}, errs.Wrapf(err, "failed to start channel")
+	}
+	return live, nil
 }
 
 // Dial and register the connection close listener in the same place, so that no
@@ -480,16 +749,17 @@ func (m *rabbitMqModule) declareComponents(ch *amqp.Channel) error {
 // consumers, then installs the generation. Every error path retires the partial
 // generation, so a half-built connection never keeps a live listener around.
 func (m *rabbitMqModule) establish(rail miso.Rail) (*rabbitGeneration, error) {
-	conn, connClose, err := dialRabbit(rail)
+	conn, connCloseCh, err := dialRabbit(rail)
 	if err != nil {
 		return nil, err
 	}
 
 	gen := &rabbitGeneration{
-		conn:      conn,
-		connClose: connClose,
-		signal:    make(chan struct{}, 1),
-		startedAt: atom.Now(),
+		conn:           conn,
+		connCloseCh:    connCloseCh,
+		escalateSignal: make(chan struct{}, 1),
+		startedAt:      atom.Now(),
+		done:           make(chan struct{}),
 	}
 
 	// gen is a local, not a named return: a `return nil, err` would nil a named
@@ -503,6 +773,7 @@ func (m *rabbitMqModule) establish(rail miso.Rail) (*rabbitGeneration, error) {
 		if e := gen.retire(); e != nil {
 			rail.Warnf("Failed to close half-built RabbitMQ connection: %v", e)
 		}
+		gen.waitConsumers(rail)
 	}()
 
 	ch, e := conn.Channel()
@@ -564,7 +835,7 @@ func (m *rabbitMqModule) supervise(rail miso.Rail, gen *rabbitGeneration) {
 		m.mu.Unlock()
 	}()
 
-	superviseRabbit(rail, gen,
+	superviseRbtConn(rail, gen,
 		func() (*rabbitGeneration, error) {
 			return m.establish(rail)
 		},
@@ -576,11 +847,11 @@ func (m *rabbitMqModule) supervise(rail miso.Rail, gen *rabbitGeneration) {
 		})
 }
 
-// superviseRabbit is the reconnect loop, decoupled from amqp so it can be tested
+// superviseRbtConn is the reconnect loop, decoupled from amqp so it can be tested
 // without a broker. It watches the current generation's connection and channels,
 // retires it on any event, then establishes generations with exponential backoff
 // until one succeeds or quit is closed.
-func superviseRabbit(rail miso.Rail, gen *rabbitGeneration,
+func superviseRbtConn(rail miso.Rail, gen *rabbitGeneration,
 	establish func() (*rabbitGeneration, error),
 	quit <-chan struct{},
 	retire func(*rabbitGeneration)) {
@@ -591,22 +862,24 @@ func superviseRabbit(rail miso.Rail, gen *rabbitGeneration,
 	delay := reconnectBaseDelay
 	for {
 		select {
-		case err := <-gen.connClose:
+		case err := <-gen.connCloseCh:
 			if err != nil {
 				rail.Errorf("RabbitMQ connection closed, reconnecting, %v", err)
 			} else {
 				rail.Infof("RabbitMQ connection closed, reconnecting")
 			}
-		case <-gen.signal:
-			rail.Infof("RabbitMQ channel closed or cancelled, rebuilding connection")
+		case <-gen.escalateSignal:
+			rail.Infof("Rebuilding RabbitMQ connection after a consumer channel could not be restarted")
 		case <-quit:
 			retire(gen)
+			gen.waitConsumers(rail)
 			return
 		// Bootstrap passes EmptyRail, whose Done() is nil, so this case may never
 		// be ready. It is a best-effort stop for callers that pass a cancellable
 		// rail; quit is the authoritative one.
 		case <-rail.Done():
 			retire(gen)
+			gen.waitConsumers(rail)
 			return
 		}
 
@@ -616,6 +889,7 @@ func superviseRabbit(rail miso.Rail, gen *rabbitGeneration,
 			delay = reconnectBaseDelay
 		}
 		retire(gen)
+		gen.waitConsumers(rail)
 
 		for {
 			if !waitReconnect(rail, quit, delay) {
@@ -667,18 +941,136 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, gen *rabbitGenerat
 	m.mu.Unlock()
 
 	for _, listener := range listeners {
-		consumer := rabbitManagedConsumer{
-			m:        m,
-			listener: listener,
+		slot := m.newConsumerSlot(rail, gen, listener)
+		// fail-fast bootstrap: the first channel is opened inline, so a broken
+		// declaration still fails startClient instead of failing in the background
+		live, err := slot.openChannel(rail)
+		if err != nil {
+			return errs.Wrapf(err, "failed to start %v", slot.name)
 		}
-		name := fmt.Sprintf("Consumer '%v'", listener.Queue())
-		if err := m.startManagedChannel(rail, gen, name, consumer.start); err != nil {
+		gen.consumerWg.Add(1)
+		go slot.superviseRbtChannel(rail, live)
+	}
+
+	miso.Debug("RabbitMQ consumer initialization finished")
+	return nil
+}
+
+// newConsumerSlot wires one consumer listener to the generation it belongs to.
+// The slot owns the listener's single channel and restarts it in place.
+func (m *rabbitMqModule) newConsumerSlot(rail miso.Rail, gen *rabbitGeneration, listener RabbitListener) *channelSlot {
+	name := fmt.Sprintf("Consumer '%v'", listener.Queue())
+	consumer := rabbitManagedConsumer{m: m, listener: listener}
+	return &channelSlot{
+		name: name,
+		open: func() (*amqp.Channel, error) {
+			ch, err := gen.conn.Channel()
+			if err != nil {
+				return nil, errs.Wrapf(err, "failed to obtain rabbitmq channel for %v", name)
+			}
+			return ch, nil
+		},
+		prepare: func(ch *amqp.Channel) error {
+			return m.prepareConsumerChannel(ch, listener.Queue())
+		},
+		startConsume: func(ch *amqp.Channel) error {
+			return consumer.start(rail, ch)
+		},
+		watchCloseCancel: func(rail miso.Rail, ch *amqp.Channel) <-chan struct{} {
+			return watchChannelDeath(rail, ch, name, gen.done)
+		},
+		closeChannel:   closeSlotChannel,
+		escalateSignal: gen.escalateSignal,
+		done:           gen.done,
+		wg:             &gen.consumerWg,
+	}
+}
+
+// prepareConsumerChannel re-declares the components this listener consumes:
+// its queue, the bindings that target that queue, the exchanges those bindings
+// reference, and the redeliver queues those bindings create. Declaration is
+// idempotent, so a channel death that left the queue intact costs one round
+// trip.
+func (m *rabbitMqModule) prepareConsumerChannel(ch *amqp.Channel, queue string) error {
+	if ch == nil {
+		return errMissingChannel
+	}
+
+	for _, bind := range m.bindingRegistration {
+		if bind.Queue != queue || bind.Exchange == "" {
+			continue
+		}
+		if ex, ok := m.exchangeRegistrationFor(bind.Exchange); ok {
+			if err := m.declareRabbitExchange(ch, ex); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, q := range m.queueRegistration {
+		if q.Name != queue {
+			continue
+		}
+		if err := m.declareRabbitQueue(ch, q); err != nil {
 			return err
 		}
 	}
 
-	miso.Debug("RabbitMQ publisher initialization finished")
+	for _, bind := range m.bindingRegistration {
+		if bind.Queue != queue {
+			continue
+		}
+		if err := m.declareRabbitBinding(ch, bind); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (m *rabbitMqModule) exchangeRegistrationFor(name string) (ExchangeRegistration, bool) {
+	for _, ex := range m.exchangeRegistration {
+		if ex.Name == name {
+			return ex, true
+		}
+	}
+	return ExchangeRegistration{}, false
+}
+
+// watchChannelDeath reports the death of one consumer channel through the
+// returned channel and exits. It is used by channel slots instead of the
+// generation-wide signal: a consumer channel death restarts that slot in place
+// and never wakes the connection supervisor.
+func watchChannelDeath(rail miso.Rail, ch *amqp.Channel, name string, done <-chan struct{}) <-chan struct{} {
+	died := make(chan struct{}, 1)
+	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
+	cancelCh := ch.NotifyCancel(make(chan string, 1))
+
+	go func() {
+		select {
+		case err := <-closeCh:
+			if err != nil {
+				rail.Warnf("%v closed abnormally, %v", name, err)
+			} else {
+				rail.Debugf("%v closed", name)
+			}
+		case ctag, ok := <-cancelCh:
+			if ok {
+				rail.Warnf("%v cancelled by server, consumer tag: %v", name, ctag)
+			} else {
+				rail.Debugf("%v closed", name)
+			}
+		case <-done:
+			return
+		}
+
+		select {
+		case died <- struct{}{}:
+		default:
+		}
+	}()
+
+	return died
 }
 
 func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, gen *rabbitGeneration) error {
@@ -701,23 +1093,25 @@ func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, gen *rabbitGenerat
 	}
 
 	for i := 0; i < n; i++ {
-		name := fmt.Sprintf("Publisher-%d", i)
-		if err := m.startManagedChannel(rail, gen, name, gen.publisher.start); err != nil {
-			return err
+		// publisher channels are a cache, not supervised slots: open, confirm and
+		// push into the pool. A dead one is dropped at the next borrow.
+		ch, err := m.openPublisherChannel(gen)
+		if err != nil {
+			return errs.Wrapf(err, "failed to create publisher channel")
 		}
+		gen.publisher.Push(ch)
 	}
 
-	miso.Debug("RabbitMQ consumer initialization finished")
+	miso.Debug("RabbitMQ publisher initialization finished")
 	return nil
 }
 
-// openPublisherChannel opens one publisher channel outside the bootstrap path,
-// for when the pool has been drained by dead channels. It is confirmed and
-// watched exactly like the bootstrap channels, so a lazily created channel that
-// dies still wakes the supervisor instead of silently shrinking the pool.
+// openPublisherChannel opens one confirmed publisher channel on demand, for when
+// the pool has been drained by dead channels.
 //
-// A failed open closes the channel and returns the error, leaving the retry
-// backoff of the borrow attempt in charge of when to try again.
+// Nothing watches a publisher channel: the pool drops a closed channel at the
+// next borrow and this function opens its replacement, so a dead publisher
+// channel never escalates to a connection rebuild.
 func (m *rabbitMqModule) openPublisherChannel(gen *rabbitGeneration) (*amqp.Channel, error) {
 	ch, err := gen.conn.Channel()
 	if err != nil {
@@ -729,60 +1123,7 @@ func (m *rabbitMqModule) openPublisherChannel(gen *rabbitGeneration) (*amqp.Chan
 		return nil, err
 	}
 
-	go watchChannel(ch, "Publisher (refilled)", gen.signal)
 	return ch, nil
-}
-
-// startManagedChannel opens a channel from the generation's connection, runs
-// doStart on it and starts watching it. A channel that fails to start is closed
-// immediately, the caller decides whether the whole generation is discarded.
-func (m *rabbitMqModule) startManagedChannel(rail miso.Rail, gen *rabbitGeneration, name string, doStart func(miso.Rail, *amqp.Channel) error) error {
-	ch, err := gen.conn.Channel()
-	if err != nil {
-		return errs.Wrapf(err, "failed to obtain rabbitmq channel for %v", name)
-	}
-
-	if err := doStart(rail, ch); err != nil {
-		_ = ch.Close()
-		return errs.Wrapf(err, "failed to start %v", name)
-	}
-
-	go watchChannel(ch, name, gen.signal)
-	return nil
-}
-
-// watchChannel reports the death of a channel to the supervisor and exits. It
-// never restarts anything: the supervisor rebuilds the whole generation.
-//
-// Both listeners MUST be buffered (cap >= 1): amqp091 delivers notifications
-// while holding the channel lock, so an unread unbuffered listener would block
-// the channel's shutdown.
-func watchChannel(ch *amqp.Channel, name string, signal chan struct{}) {
-	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
-	cancelCh := ch.NotifyCancel(make(chan string, 1))
-
-	select {
-	case err := <-closeCh:
-		if err != nil {
-			miso.Errorf("%v closed abnormally, %v", name, err)
-		} else {
-			miso.Debugf("%v closed", name)
-		}
-	case ctag, ok := <-cancelCh:
-		if ok {
-			// NotifyCancel delivers the consumer tag, which amqp091 generates
-			// from the client side, not the queue name. The watched name already
-			// carries the queue or slot this channel belongs to.
-			miso.Errorf("%v cancelled by server, consumer tag: %v", name, ctag)
-		} else {
-			miso.Debugf("%v closed", name)
-		}
-	}
-
-	select {
-	case signal <- struct{}{}:
-	default:
-	}
 }
 
 func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
@@ -1067,7 +1408,7 @@ func (r *rabbitManagedConsumer) start(rail miso.Rail, ch *amqp.Channel) error {
 type rabbitManagedPublisher struct {
 	*pool.EphPool[*amqp.Channel]
 
-	// open creates a confirmed, watched publisher channel from the generation's
+	// open creates a confirmed publisher channel from the generation's
 	// connection. It refills a drained pool lazily; startRabbitPublisher wires it
 	// and tests replace it so the borrow path can run without a broker.
 	open func() (*amqp.Channel, error)
@@ -1079,19 +1420,5 @@ func confirmPublisherChannel(ch *amqp.Channel) error {
 	if err := ch.Confirm(false); err != nil {
 		return errs.Wrapf(err, "channel could not be put into confirm mode")
 	}
-	return nil
-}
-
-func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
-
-	if err := confirmPublisherChannel(ch); err != nil {
-		return err
-	}
-	miso.Debug("Created new RabbitMQ publishing channel")
-
-	// push newly created channel in pool
-	r.Push(ch)
-
-	miso.Debug("RabbitMQ publishing channel added to pool")
 	return nil
 }

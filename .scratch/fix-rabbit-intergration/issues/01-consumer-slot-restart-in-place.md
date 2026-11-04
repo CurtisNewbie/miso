@@ -6,10 +6,10 @@ Every generation holds one slot per registered listener. The slot loop takes its
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] One consumer channel death opens exactly one replacement channel on the same connection.
-- [ ] A consumer channel death does not rebuild the connection.
-- [ ] The restart re-declares the listener's queue and the bindings that target it before subscribing.
-- [ ] Retiring a generation mid-backoff opens no channel, escalates nothing, and leaves no slot goroutine running.
-- [ ] The broker-free suite covers the restart cycle through the injected seam.
+- [x] One consumer channel death opens exactly one replacement channel on the same connection.
+- [x] A consumer channel death does not rebuild the connection.
+- [x] The restart re-declares the listener's queue and the bindings that target it before subscribing.
+- [x] Retiring a generation mid-backoff opens no channel, escalates nothing, and leaves no slot goroutine running.
+- [x] The broker-free suite covers the restart cycle through the injected seam.
