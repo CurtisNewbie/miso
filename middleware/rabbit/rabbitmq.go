@@ -10,6 +10,7 @@ import (
 
 	"github.com/curtisnewbie/miso/errs"
 	"github.com/curtisnewbie/miso/miso"
+	"github.com/curtisnewbie/miso/util/atom"
 	"github.com/curtisnewbie/miso/util/idutil"
 	"github.com/curtisnewbie/miso/util/json"
 	"github.com/curtisnewbie/miso/util/pool"
@@ -67,9 +68,11 @@ func init() {
 type rabbitMqModule struct {
 	mu                *sync.Mutex
 	closed            bool
+	supervising       bool
+	quit              chan struct{}
+	quitOnce          sync.Once
 	redeliverQueueMap *sync.Map
-	conn              *amqp.Connection        // connection pointer, accessing it require obtaining 'mu' lock
-	publisher         *rabbitManagedPublisher // pool of channel for publishing message
+	gen               *rabbitGeneration // current connection generation, accessing it requires obtaining 'mu' lock
 
 	listeners            []RabbitListener
 	bindingRegistration  []BindingRegistration
@@ -81,6 +84,7 @@ func newModule() *rabbitMqModule {
 	m := &rabbitMqModule{
 		redeliverQueueMap: &sync.Map{},
 		mu:                &sync.Mutex{},
+		quit:              make(chan struct{}),
 	}
 	return m
 }
@@ -200,11 +204,11 @@ func (m *rabbitMqModule) publishText(c miso.Rail, msg string, exchange string, r
 }
 
 func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, routingKey string, contentType string, headers map[string]any) error {
-	pc, err := m.borrowPubChan()
+	lease, err := m.borrowPubChan()
 	if err != nil {
 		return errs.Wrapf(err, "failed to obtain channel, unable to publish message")
 	}
-	defer m.returnPubChan(pc)
+	defer m.returnPubChan(lease)
 
 	if headers == nil {
 		headers = map[string]any{}
@@ -222,14 +226,14 @@ func (m *rabbitMqModule) publishMsg(c miso.Rail, msg []byte, exchange string, ro
 		Headers:      headers,
 		MessageId:    idutil.Id("mq_"),
 	}
-	confirm, err := pc.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
+	confirm, err := lease.ch.PublishWithDeferredConfirmWithContext(context.Background(), exchange, routingKey,
 		false, false, publishing)
 	if err != nil {
 		return errs.Wrapf(err, "failed to publish message")
 	}
 
 	if !confirm.Wait() {
-		return errs.Wrapf(errMsgNotPublished, "failed to publish message, exchange '%v' probably doesn't exist", exchange)
+		return errs.Wrapf(errMsgNotPublished, "failed to publish message, message was not confirmed by the broker, exchange '%v' may not exist or the connection was lost", exchange)
 	}
 
 	c.Debugf("Published MQ to exchange '%v', '%s'", exchange, msg)
@@ -329,71 +333,94 @@ func StartRabbitMqClient(rail miso.Rail) error {
 }
 
 func (m *rabbitMqModule) startClient(rail miso.Rail) error {
-	notifyCloseChan, err := m.initRabbitClient(rail)
+	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return nil
+	}
+	if m.supervising {
+		m.mu.Unlock()
+		return nil
+	}
+	m.supervising = true
+	m.mu.Unlock()
+
+	gen, err := m.establish(rail)
 	if err != nil {
+		m.mu.Lock()
+		m.supervising = false
+		m.mu.Unlock()
 		return err
 	}
 
-	go func(notifyCloseChan chan *amqp.Error) {
-		isInitial := true
-		doneCh := rail.Done()
-
-		for {
-			if isInitial {
-				isInitial = false
-			} else {
-				notifyCloseChan, err = m.initRabbitClient(rail)
-				if err != nil {
-					miso.Errorf("Error connecting to RabbitMQ: %v", err)
-					time.Sleep(time.Second * 5)
-					continue
-				}
-				if notifyCloseChan == nil {
-					return
-				}
-			}
-
-			select {
-			// block until connection is closed, then reconnect, thus continue
-			case <-notifyCloseChan:
-				miso.Infof("RabbitMq connection notifyCloseChan received, reconnecting")
-				time.Sleep(time.Second * 1)
-				continue
-			// context is done, close the connection, and exit
-			case <-doneCh:
-				if err := m.close(rail); err != nil {
-					miso.Warnf("Failed to close connection to RabbitMQ: %v", err)
-				}
-				return
-			}
-		}
-	}(notifyCloseChan)
-
+	go m.supervise(rail, gen)
 	return nil
 }
 
 // Disconnect from RabbitMQ server
 func (m *rabbitMqModule) close(rail miso.Rail) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.conn == nil {
+	if m.closed {
+		m.mu.Unlock()
 		return nil
 	}
-
-	rail.Info("Closing RabbitMQ Connection")
-	err := m.conn.Close()
-	m.conn = nil
 	m.closed = true
+	gen := m.gen
+	m.gen = nil
+	m.mu.Unlock()
+
+	m.quitOnce.Do(func() { close(m.quit) })
+
+	if gen == nil {
+		return nil
+	}
+	rail.Info("Closing RabbitMQ Connection")
+	return gen.retire()
+}
+
+var (
+	// Delay before the first reconnect attempt, doubled per failed attempt.
+	reconnectBaseDelay = time.Second * 1
+	// Upper bound of the reconnect backoff.
+	reconnectMaxDelay = time.Second * 30
+	// A generation that stayed alive at least this long resets the backoff.
+	reconnectStableAfter = time.Minute * 1
+)
+
+// rabbitGeneration is one dial's worth of live resources: the connection, its
+// close listener, the publisher channel pool and the consumers bound to it.
+//
+// A generation is owned by exactly one supervisor goroutine, which retires it
+// before establishing the next one. connClose and signal are never shared
+// across generations.
+type rabbitGeneration struct {
+	conn      *amqp.Connection
+	connClose chan *amqp.Error
+	signal    chan struct{}
+	publisher *rabbitManagedPublisher
+	startedAt atom.Time
+	once      sync.Once
+}
+
+// retire closes the generation's connection at most once, no matter how many
+// paths (supervisor, shutdown hook, failed build) race to tear it down.
+func (g *rabbitGeneration) retire() error {
+	var err error
+	g.once.Do(func() {
+		if g.conn != nil {
+			err = g.conn.Close()
+		}
+	})
 	return err
 }
 
-// Try to establish Connection
-func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error) {
-	if m.conn != nil && !m.conn.IsClosed() {
-		return m.conn, nil
-	}
-
+// Dial and register the connection close listener in the same place, so that no
+// path can create a connection without a receiver for its close event.
+//
+// The listener MUST be buffered (cap >= 1): amqp091 delivers the close error to
+// every listener while holding the connection lock, so an unbuffered channel
+// that nobody reads wedges the connection's shutdown forever.
+func dialRabbit(rail miso.Rail) (*amqp.Connection, chan *amqp.Error, error) {
 	c := amqp.Config{}
 	c.Properties = map[string]any{
 		"connection_name": miso.GetPropStr(miso.PropAppName),
@@ -406,12 +433,11 @@ func (m *rabbitMqModule) tryConnRabbit(rail miso.Rail) (*amqp.Connection, error)
 	dialUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost)
 
 	rail.Infof("Establish connection to RabbitMQ: '%s@%s:%d/%s'", username, host, port, vhost)
-	cn, e := amqp.DialConfig(dialUrl, c)
-	if e != nil {
-		return nil, e
+	conn, err := amqp.DialConfig(dialUrl, c)
+	if err != nil {
+		return nil, nil, errs.Wrapf(err, "failed to connect to RabbitMQ")
 	}
-	m.conn = cn
-	return m.conn, nil
+	return conn, conn.NotifyClose(make(chan *amqp.Error, 1)), nil
 }
 
 // Declare Queus, Exchanges, and Bindings
@@ -441,71 +467,203 @@ func (m *rabbitMqModule) declareComponents(ch *amqp.Channel) error {
 	return nil
 }
 
-func (m *rabbitMqModule) rabbitConnected() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.conn != nil
-}
-
-func (m *rabbitMqModule) initRabbitClient(rail miso.Rail) (notifyCloseChan chan *amqp.Error, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.closed {
-		return
+// establish dials the broker, declares components, starts the publisher and the
+// consumers, then installs the generation. Every error path retires the partial
+// generation, so a half-built connection never keeps a live listener around.
+func (m *rabbitMqModule) establish(rail miso.Rail) (*rabbitGeneration, error) {
+	conn, connClose, err := dialRabbit(rail)
+	if err != nil {
+		return nil, err
 	}
 
-	conn, err := m.tryConnRabbit(rail)
-	if err != nil {
-		rail.Errorf("Failed to connect RabbitMQ server, %v", err)
-		return
+	gen := &rabbitGeneration{
+		conn:      conn,
+		connClose: connClose,
+		signal:    make(chan struct{}, 1),
+		startedAt: atom.Now(),
 	}
 
-	notifyCloseChan = conn.NotifyClose(make(chan *amqp.Error))
-	ch, err := conn.Channel()
-	if err != nil {
+	// gen is a local, not a named return: a `return nil, err` would nil a named
+	// return and the deferred retire would then never close the half-built
+	// connection, leaking a socket per failed attempt.
+	installed := false
+	defer func() {
+		if installed {
+			return
+		}
+		if e := gen.retire(); e != nil {
+			rail.Warnf("Failed to close half-built RabbitMQ connection: %v", e)
+		}
+	}()
+
+	ch, e := conn.Channel()
+	if e != nil {
+		err = errs.Wrapf(e, "failed to create channel")
 		rail.Errorf("Failed to open RabbitMQ channel for components declaration, %v", err)
-		err = errs.Wrapf(err, "failed to create channel")
-		return
+		return nil, err
 	}
-	defer ch.Close()
-
-	// queues, exchanges, bindings
-	if err = m.declareComponents(ch); err != nil {
+	e = m.declareComponents(ch)
+	if cerr := ch.Close(); cerr != nil {
+		rail.Debugf("Failed to close RabbitMQ declaration channel, %v", cerr)
+	}
+	if e != nil {
+		err = e
 		rail.Errorf("Failed to declare RabbitMQ components, %v", err)
-		return
+		return nil, err
 	}
 
 	// publisher
-	if err = m.startRabbitPublisher(rail, conn); err != nil {
+	if err = m.startRabbitPublisher(rail, gen); err != nil {
 		rail.Errorf("Failed to bootstrap publisher: %v", err)
 		err = errs.Wrapf(err, "failed to create publisher")
-		return
+		return nil, err
 	}
 
 	// consumers
-	if err = m.startRabbitConsumers(rail, conn); err != nil {
+	if err = m.startRabbitConsumers(rail, gen); err != nil {
 		rail.Errorf("Failed to bootstrap consumer: %v", err)
 		err = errs.Wrapf(err, "failed to create consumer")
+		return nil, err
+	}
+
+	// install the new generation only if the module was not closed in the meantime
+	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		err = errs.NewErrf("rabbitmq client is closed")
+		return nil, err
+	}
+	m.gen = gen
+	m.mu.Unlock()
+
+	installed = true
+	rail.Debugf("RabbitMQ client initialization finished")
+	return gen, nil
+}
+
+// supervise owns the current generation until the connection or one of its
+// channels dies, then rebuilds. It is the only goroutine that replaces m.gen.
+func (m *rabbitMqModule) supervise(rail miso.Rail, gen *rabbitGeneration) {
+	defer func() {
+		m.mu.Lock()
+		if m.gen == gen {
+			m.gen = nil
+		}
+		if m.gen == nil || m.gen == gen {
+			m.supervising = false
+		}
+		m.mu.Unlock()
+	}()
+
+	superviseRabbit(rail, gen,
+		func() (*rabbitGeneration, error) {
+			return m.establish(rail)
+		},
+		m.quit,
+		func(g *rabbitGeneration) {
+			if err := g.retire(); err != nil {
+				rail.Warnf("Failed to close RabbitMQ connection: %v", err)
+			}
+		})
+}
+
+// superviseRabbit is the reconnect loop, decoupled from amqp so it can be tested
+// without a broker. It watches the current generation's connection and channels,
+// retires it on any event, then establishes generations with exponential backoff
+// until one succeeds or quit is closed.
+func superviseRabbit(rail miso.Rail, gen *rabbitGeneration,
+	establish func() (*rabbitGeneration, error),
+	quit <-chan struct{},
+	retire func(*rabbitGeneration)) {
+	if gen == nil {
 		return
 	}
 
-	rail.Debugf("RabbitMQ client initialization finished")
-	return
+	delay := reconnectBaseDelay
+	for {
+		select {
+		case err := <-gen.connClose:
+			if err != nil {
+				rail.Errorf("RabbitMQ connection closed, reconnecting, %v", err)
+			} else {
+				rail.Infof("RabbitMQ connection closed, reconnecting")
+			}
+		case <-gen.signal:
+			rail.Infof("RabbitMQ channel closed or cancelled, rebuilding connection")
+		case <-quit:
+			retire(gen)
+			return
+		// Bootstrap passes EmptyRail, whose Done() is nil, so this case may never
+		// be ready. It is a best-effort stop for callers that pass a cancellable
+		// rail; quit is the authoritative one.
+		case <-rail.Done():
+			retire(gen)
+			return
+		}
+
+		// A generation that stayed up long enough resets the backoff, so a single
+		// blip does not leave the next reconnect waiting for 30s.
+		if time.Since(gen.startedAt.Time) >= reconnectStableAfter {
+			delay = reconnectBaseDelay
+		}
+		retire(gen)
+
+		for {
+			if !waitReconnect(rail, quit, delay) {
+				return
+			}
+			next, err := establish()
+			if err == nil && next != nil {
+				gen = next
+				break
+			}
+			if err == nil {
+				err = errs.NewErrf("rabbitmq connection generation is nil")
+			}
+			delay = delay * 2
+			if delay > reconnectMaxDelay {
+				delay = reconnectMaxDelay
+			}
+			rail.Errorf("Failed to reconnect to RabbitMQ, retrying in %v, %v", delay, err)
+		}
+	}
 }
 
-func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connection) error {
-	for _, listener := range m.listeners {
+// waitReconnect sleeps for d and reports whether the supervisor should continue.
+func waitReconnect(rail miso.Rail, quit <-chan struct{}, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return true
+	case <-quit:
+		return false
+	case <-rail.Done():
+		return false
+	}
+}
+
+func (m *rabbitMqModule) rabbitConnected() bool {
+	m.mu.Lock()
+	gen := m.gen
+	m.mu.Unlock()
+	return gen != nil && gen.conn != nil && !gen.conn.IsClosed()
+}
+
+func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, gen *rabbitGeneration) error {
+	// snapshot the listeners, AddRabbitListener may append concurrently
+	m.mu.Lock()
+	listeners := make([]RabbitListener, len(m.listeners))
+	copy(listeners, m.listeners)
+	m.mu.Unlock()
+
+	for _, listener := range listeners {
 		consumer := rabbitManagedConsumer{
 			m:        m,
 			listener: listener,
 		}
-		rmc := &rabbitManagedChannel{
-			name:    fmt.Sprintf("Consumer '%v'", listener.Queue()),
-			conn:    conn,
-			doStart: consumer.start,
-		}
-		if err := rmc.firstStart(rail); err != nil {
+		name := fmt.Sprintf("Consumer '%v'", listener.Queue())
+		if err := m.startManagedChannel(rail, gen, name, consumer.start); err != nil {
 			return err
 		}
 	}
@@ -514,33 +672,105 @@ func (m *rabbitMqModule) startRabbitConsumers(rail miso.Rail, conn *amqp.Connect
 	return nil
 }
 
-func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, conn *amqp.Connection) error {
+func (m *rabbitMqModule) startRabbitPublisher(rail miso.Rail, gen *rabbitGeneration) error {
 
 	n := miso.GetPropInt(PropRabbitMqPublisherChanPoolSize)
 	if n < 1 {
 		n = 1
 	}
 	rail.Infof("RabbitMQ publisher channel pool size: %v", n)
-	pub := rabbitManagedPublisher{
+	gen.publisher = &rabbitManagedPublisher{
 		EphPool: pool.NewEphPool(
 			func(c *amqp.Channel) (dropped bool) { return c.IsClosed() },
 		),
 	}
-	m.publisher = &pub
+
+	// a drained pool is refilled on demand from this generation's connection,
+	// the same way the bootstrap channels are created
+	gen.publisher.open = func() (*amqp.Channel, error) {
+		return m.openPublisherChannel(gen)
+	}
 
 	for i := 0; i < n; i++ {
-		rmc := &rabbitManagedChannel{
-			name:    fmt.Sprintf("Publisher-%d", i),
-			conn:    conn,
-			doStart: pub.start,
-		}
-		if err := rmc.firstStart(rail); err != nil {
+		name := fmt.Sprintf("Publisher-%d", i)
+		if err := m.startManagedChannel(rail, gen, name, gen.publisher.start); err != nil {
 			return err
 		}
 	}
 
 	miso.Debug("RabbitMQ consumer initialization finished")
 	return nil
+}
+
+// openPublisherChannel opens one publisher channel outside the bootstrap path,
+// for when the pool has been drained by dead channels. It is confirmed and
+// watched exactly like the bootstrap channels, so a lazily created channel that
+// dies still wakes the supervisor instead of silently shrinking the pool.
+//
+// A failed open closes the channel and returns the error, leaving the retry
+// backoff of the borrow attempt in charge of when to try again.
+func (m *rabbitMqModule) openPublisherChannel(gen *rabbitGeneration) (*amqp.Channel, error) {
+	ch, err := gen.conn.Channel()
+	if err != nil {
+		return nil, errs.Wrapf(err, "failed to open rabbitmq publisher channel")
+	}
+
+	if err := confirmPublisherChannel(ch); err != nil {
+		_ = ch.Close()
+		return nil, err
+	}
+
+	go watchChannel(ch, "Publisher (refilled)", gen.signal)
+	return ch, nil
+}
+
+// startManagedChannel opens a channel from the generation's connection, runs
+// doStart on it and starts watching it. A channel that fails to start is closed
+// immediately, the caller decides whether the whole generation is discarded.
+func (m *rabbitMqModule) startManagedChannel(rail miso.Rail, gen *rabbitGeneration, name string, doStart func(miso.Rail, *amqp.Channel) error) error {
+	ch, err := gen.conn.Channel()
+	if err != nil {
+		return errs.Wrapf(err, "failed to obtain rabbitmq channel for %v", name)
+	}
+
+	if err := doStart(rail, ch); err != nil {
+		_ = ch.Close()
+		return errs.Wrapf(err, "failed to start %v", name)
+	}
+
+	go watchChannel(ch, name, gen.signal)
+	return nil
+}
+
+// watchChannel reports the death of a channel to the supervisor and exits. It
+// never restarts anything: the supervisor rebuilds the whole generation.
+//
+// Both listeners MUST be buffered (cap >= 1): amqp091 delivers notifications
+// while holding the channel lock, so an unread unbuffered listener would block
+// the channel's shutdown.
+func watchChannel(ch *amqp.Channel, name string, signal chan struct{}) {
+	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
+	cancelCh := ch.NotifyCancel(make(chan string, 1))
+
+	select {
+	case err := <-closeCh:
+		if err != nil {
+			miso.Errorf("%v closed abnormally, %v", name, err)
+		} else {
+			miso.Debugf("%v closed", name)
+		}
+	case queue, ok := <-cancelCh:
+		if ok {
+			miso.Errorf("%v cancelled by server, queue: %v", name, queue)
+		} else {
+			miso.Debugf("%v closed", name)
+		}
+	}
+
+	select {
+	case signal <- struct{}{}:
+	default:
+	}
 }
 
 func (m *rabbitMqModule) startListening(rail miso.Rail, msgCh <-chan amqp.Delivery, listener RabbitListener, routineNo int) {
@@ -639,31 +869,55 @@ var borrowPubChanBackoff = []time.Duration{
 	time.Millisecond * 250,
 }
 
-// borrow a publishing channel from the pool.
-func (m *rabbitMqModule) borrowPubChan() (*amqp.Channel, error) {
-	if m.publisher == nil {
+// rabbitPublisherLease is a publishing channel plus the pool it came from. The
+// pool belongs to a single generation, so returning the channel can never push
+// it into the pool of a newer connection.
+type rabbitPublisherLease struct {
+	pub *rabbitManagedPublisher
+	ch  *amqp.Channel
+}
+
+// borrow a publishing channel from the pool of the current generation.
+func (m *rabbitMqModule) borrowPubChan() (*rabbitPublisherLease, error) {
+	m.mu.Lock()
+	gen := m.gen
+	m.mu.Unlock()
+
+	if gen == nil || gen.publisher == nil || gen.publisher.open == nil {
 		return nil, errs.NewErrf("publisher is missing")
 	}
 
-	return retry.GetOneWithBackoff(borrowPubChanBackoff, func() (*amqp.Channel, error) {
-		ch, ok := m.publisher.Pop()
-		if !ok {
-			return nil, errs.NewErrf("could not obtain publish channel")
+	pub := gen.publisher
+	ch, err := retry.GetOneWithBackoff(borrowPubChanBackoff, func() (*amqp.Channel, error) {
+		if ch, ok := pub.Pop(); ok {
+			return ch, nil
 		}
-		return ch, nil
+		// The pool is drained: channels died and returnPubChan discards closed
+		// ones instead of putting them back. Open a replacement instead of
+		// failing every publish until the supervisor rebuilds the connection.
+		// The lease returns it to the pool, so the pool only ever holds channels
+		// that were handed out.
+		return pub.open()
 	})
+	if err != nil {
+		return nil, err
+	}
+	return &rabbitPublisherLease{pub: pub, ch: ch}, nil
 }
 
-// return a publishing channel back to the pool.
+// return a publishing channel back to the pool it was borrowed from.
 //
 // if the channel is closed already, it's simply ignored.
-func (m *rabbitMqModule) returnPubChan(ch *amqp.Channel) {
-	if ch.IsClosed() {
+func (m *rabbitMqModule) returnPubChan(lease *rabbitPublisherLease) {
+	if lease == nil || lease.ch == nil || lease.pub == nil {
+		return
+	}
+	if lease.ch.IsClosed() {
 		return // for some errors, the channel may be closed, we simply dump it
 	}
 
 	// put it back to the pool
-	m.publisher.Push(ch)
+	lease.pub.Push(lease.ch)
 }
 
 func rabbitBootstrap(rail miso.Rail) error {
@@ -798,100 +1052,28 @@ func (r *rabbitManagedConsumer) start(rail miso.Rail, ch *amqp.Channel) error {
 	return nil
 }
 
-type rabbitManagedChannel struct {
-	name    string
-	conn    *amqp.Connection
-	doStart func(rail miso.Rail, ch *amqp.Channel) error
-}
-
-func (r *rabbitManagedChannel) channel(rail miso.Rail) (*amqp.Channel, error) {
-	if r.conn.IsClosed() {
-		rail.Warn("RabbitMQ connection has been closed, stopping rabbitManagedChannel, new rabbitManagedChannel will be created")
-		return nil, errs.NewErrf("rabbitmq connection is closed, unabled to create channel")
-	}
-
-	ch, err := r.conn.Channel()
-	if err != nil {
-		return nil, errs.Wrapf(err, "failed to obtain rabbitmq channel")
-	}
-	r.onNotifyCancelClose(ch)
-	return ch, nil
-}
-
-func (r *rabbitManagedChannel) onNotifyCancelClose(ch *amqp.Channel) {
-	go func() {
-		notifyCloseChan := ch.NotifyClose(make(chan *amqp.Error, 1))
-		notifyCancelChan := ch.NotifyCancel(make(chan string, 1))
-
-		select {
-		case err := <-notifyCloseChan:
-			if err != nil {
-				rail := miso.EmptyRail()
-				rail.Errorf("receive from notifyCloseChan, %v reconnecting to amqp server, %v", r.name, err)
-				r.retryStart(rail)
-				return
-			}
-			miso.Debugf("receive from notifyCloseChan, %v exiting", r.name)
-		case err := <-notifyCancelChan:
-			rail := miso.EmptyRail()
-			rail.Errorf("receive from notifyCancelChan, %v reconnecting to amqp server, %v", r.name, err)
-			r.retryStart(rail)
-		}
-	}()
-}
-
-func (r *rabbitManagedChannel) firstStart(rail miso.Rail) error {
-	ch, err := r.channel(rail)
-	if err != nil {
-		return errs.Wrapf(err, "failed to obtain channel")
-	}
-
-	if ch == nil { // connection is closed
-		return errs.NewErrf("failed to obtain channel, connection may be closed")
-	}
-
-	err = r.doStart(rail, ch)
-	if err == nil {
-		return nil
-	}
-
-	_ = ch.Close()
-	return errs.Wrapf(err, "failed to start %v", r.name)
-}
-
-func (r *rabbitManagedChannel) retryStart(rail miso.Rail) {
-	for {
-		ch, err := r.channel(rail)
-		if err != nil {
-			rail.Errorf("Failed to start %v, restarting, %v", r.name, err)
-			time.Sleep(time.Second * 1)
-			continue
-		}
-
-		if ch == nil { // connection is closed
-			rail.Errorf("Failed to start %v, connection may be closed", r.name)
-			return
-		}
-
-		err = r.doStart(rail, ch)
-		if err == nil {
-			return
-		}
-
-		_ = ch.Close()
-		rail.Errorf("Failed to start %v, restarting, %v", r.name, err)
-		time.Sleep(time.Second * 1)
-	}
-}
-
 type rabbitManagedPublisher struct {
 	*pool.EphPool[*amqp.Channel]
+
+	// open creates a confirmed, watched publisher channel from the generation's
+	// connection. It refills a drained pool lazily; startRabbitPublisher wires it
+	// and tests replace it so the borrow path can run without a broker.
+	open func() (*amqp.Channel, error)
+}
+
+// confirmPublisherChannel puts a publishing channel into confirm mode, which the
+// publish path relies on for every channel it borrows.
+func confirmPublisherChannel(ch *amqp.Channel) error {
+	if err := ch.Confirm(false); err != nil {
+		return errs.Wrapf(err, "channel could not be put into confirm mode")
+	}
+	return nil
 }
 
 func (r *rabbitManagedPublisher) start(rail miso.Rail, ch *amqp.Channel) error {
 
-	if err := ch.Confirm(false); err != nil {
-		return errs.Wrapf(err, "channel could not be put into confirm mode")
+	if err := confirmPublisherChannel(ch); err != nil {
+		return err
 	}
 	miso.Debug("Created new RabbitMQ publishing channel")
 
