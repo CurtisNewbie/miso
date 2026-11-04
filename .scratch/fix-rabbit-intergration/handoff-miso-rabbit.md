@@ -1,74 +1,73 @@
-# Handoff — miso RabbitMQ reconnect fix + vfm disconnect investigation
+# Handoff: miso RabbitMQ reconnection and channel isolation
 
-Read this, then **wait for the user's instructions. Do not ask clarifying questions on the basis of this document.**
+Read this, then wait for the user's instructions. Do not ask clarifying questions on the basis of this document.
 
 ## Goal
 
-Two objectives, in order:
+Two objectives.
 
-1. **Explain and fix why `vfm` lost its RabbitMQ client entirely** during the incident of 2026-11-03 ~23:22 (UTC+8): vfm missing from the broker's connection list, a queue sitting at ~176k ready with `Deliver ≈ 0` for over an hour, its log spamming `Failed to start Consumer 'event.bus.vfm.file.moved', restarting, rabbitmq connection is closed` once a second, recovery only by process restart.
-2. **Improve the miso framework's RabbitMQ lifecycle** so this class of failure cannot recur, then (as a separate follow-up) redesign channel-level failure isolation.
+1. Explain why `vfm` lost its RabbitMQ client during the incident of 2026-11-03 around 23:22 (UTC+8): vfm absent from the broker's connection list, one queue at roughly 176k ready with `Deliver` near zero for over an hour, logs repeating `Failed to start Consumer 'event.bus.vfm.file.moved', restarting, rabbitmq connection is closed` once a second, recovery only by restarting the process.
+2. Make the miso RabbitMQ lifecycle resilient enough that this class of failure cannot recur, then isolate channel-level failures from connection-level ones.
 
-Objective 1 is **not closed**: the implemented fix is a defensible improvement, but the empirical repro **refuted** the causal story that motivated it. Do not treat the current diff as "the fix for the incident" until the gap in §4 is closed.
+Objective 1 stays open on the incident's root cause. The evidence that would settle it is gone, so the code fix is not claimed as that root cause. See the section on the incident below.
 
-## 1. Repo state (uncommitted work)
+## Repo state
 
 | Location | State |
 |---|---|
-| `/Users/zhuangyongjie/dev/git/miso` (main) | **Uncommitted** fix, 4 files: `middleware/rabbit/rabbitmq.go`, `middleware/rabbit/rabbitmq_test.go`, `util/pool/pool.go`, `util/pool/pool_test.go`. Nothing committed, no tag. |
-| `/Users/zhuangyongjie/dev/git/miso-bugverify` | Detached-HEAD worktree (`3480645`, pre-fix code) holding the reproducer `middleware/rabbit/rabbit_wedge_repro_test.go` (untracked) plus one uncommitted control edit (`rabbitmq.go:464`, chan cap 1 — restore with `git checkout -- middleware/rabbit/rabbitmq.go`). |
-| `/Users/zhuangyongjie/dev/git/moon-monorepo` | Clean. `backend/mini-fstore` commit `43adac4` fixes an unrelated unzip temp-dir permission bug (0755 vs 0666). An earlier experiment that replaced the unzip listener with an empty one was **reverted**; `event.go` is back to `UnzipPipeline.Listen(1, OnUnzipFileEvent)`. |
+| `/Users/photon/dev/git/miso` | Branch `fix-rabbitit`. `eed839f` commits the supervisor rewrite. The current working tree adds the fixes listed under uncommitted work. Nothing tagged. |
+| Dependent services | Not touched in this session. `vfm` lives at `/Users/photon/dev/git/vfm`, the monorepo at `/Users/photon/dev/git/moon-monorepo`. `moon-monorepo` is clean. |
 
-Read the diff rather than trusting prose: `git -C /Users/zhuangyongjie/dev/git/miso diff`.
+Read the diff instead of trusting prose: `git -C /Users/photon/dev/git/miso log -1 --stat` and `git -C /Users/photon/dev/git/miso diff`.
 
-## 2. What the uncommitted miso fix does
+The reproducer worktree and the logs that produced the defect verdicts no longer exist on this machine. Do not look for them.
 
-Single-owner lifecycle: one supervisor goroutine owns a `rabbitGeneration` (conn + cap-1 connClose + cap-1 coalescing signal + publisher pool + `startedAt`); on connection close or any channel death it retires the generation (`once`-guarded `conn.Close()`), backs off 1s→30s (reset only after a 60s-stable generation), re-dials, re-declares and re-`Consume`s every listener. `rabbitManagedChannel`/`retryStart`/`channel()`/`onNotifyCancelClose()` are gone, replaced by `startManagedChannel` + non-deciding `watchChannel`. `NotifyClose` is cap-1 and registered inside `dialRabbit`. `establish` uses a local `gen` + `installed` flag so every error path retires the half-built connection (a real leak in the first draft, found by the integration tests). Publisher leasing carries the originating pool; drained pools refill lazily through `gen.publisher.open`; `NewEphPool` finally assigns its `filterFunc`; `RabbitConnected()` checks `IsClosed()`.
+## What `eed839f` does
 
-Broker-free tests: `TestSupervisor*`, `TestPublishChannel*`. Live-broker tests: five `TestIntegration*` funcs, **commented out** at `middleware/rabbit/rabbitmq_test.go:433` (all five passed before being disabled). The package's older broker tests (`TestInitClient`, `TestPublishMessage`, `TestDeclareEventBus`, …) still dial the broker, so the package as a whole is **not** broker-free yet.
+Single-owner connection lifecycle. One supervisor goroutine owns a generation: the connection, a cap-1 close listener, a cap-1 coalescing signal, the publisher pool and its start time. On a connection close or any channel death it retires the generation with a once guard, backs off from 1 second to 30 seconds, resets the backoff only after a generation stayed up 60 seconds, then dials, re-declares every component and re-subscribes every listener.
 
-## 3. Evidence (reproducer verdicts, old code)
+`establish` builds a local generation with an installed flag, so every error path retires a half-built connection instead of leaking the socket. Notifications are registered inside the dial function, so no path creates a connection without a receiver for its close event. Both the connection listener and the per-channel listeners are buffered, because amqp091 delivers those notifications while holding a lock, and an unread unbuffered listener wedges shutdown.
 
-Reproducer logs: `/tmp/final_A_old.log`, `/tmp/final_B_old.log`, `/tmp/final_C_old.log`; cap-1 controls: `/tmp/final_A_control.log`, `/tmp/final_B_control.log`.
+Publisher leasing carries the originating pool. A drained pool refills on demand through the generation's open function, and a lazily opened publisher channel is confirmed and watched like a bootstrap one.
 
-- **CONFIRMED** — `rabbitmq.go:464` registered an unbuffered `NotifyClose` and error paths abandoned it; the abandoned receiver permanently wedges `amqp091.Connection.shutdown` (goroutine stuck in `chan send` at `connection.go:609`, client FD leaked in `(CLOSED)` state). Cap-1 control: 0 wedges, FD released. Cause attribution solid.
-- **REFUTED** — `conn.Close()` never returning: it returns `nil` on a healthy conn and `Exception (504)` after the wedge (`Close()` short-circuits on `IsClosed()`); 0/8 race offsets hung.
-- **REFUTED** — "only recovery is a process restart": with a successful re-declare, the old module-level reconnect rebuilt consumers on a new connection and messages flowed again (Test C). Consumers stayed dead in Test B only because that test's own re-declare returned 406 — identical with a buffered listener.
-- **CONFIRMED** — `retryStart` loops forever on the captured `*amqp.Connection` (31 retries/14s), i.e. log spam + leaked goroutines, not a dead client.
-- **CONFIRMED (incidental)** — `-race` flags a genuine data race on `m.publisher` (`:529` write vs `:644` read) in the old code; the new code removes it.
+## Uncommitted work in the tree
 
-## 4. The open question (why nothing was committed)
+- `rabbitGeneration.retire()` normalizes `amqp.ErrClosed` to nil. An already-closed connection is the normal retire path, so every genuine reconnect used to log a bogus warning from the supervisor and from the half-built cleanup.
+- The RabbitMQ test package is broker-free by default. A `requireRabbitBroker` gate skips every broker-backed test unless `MISO_RABBIT_BROKER_TESTS=1`. The five `TestIntegration*` functions and their helpers are restored and gated the same way, so they can be run on demand instead of sitting commented out.
+- `.scratch/fix-rabbit-intergration/spec.md` writes the per-channel supervisor design: a channel restarts on its own connection, two consecutive failed restarts escalate to a connection rebuild, publisher channels stay pool-managed.
 
-The reproduced defect is a socket/goroutine leak, **not** a permanent reconnect stall. So it does not by itself explain vfm's total disappearance from the broker with no recovery. To close objective 1, establish what actually happened to vfm at 23:22:
+Verification: `go test ./middleware/rabbit/ ./util/pool/` passes without a broker, and the broker-backed tests skip. Five packages elsewhere in the repo fail for environmental reasons only: `middleware/redis` and `middleware/task` need a local Redis, `miso/docgen` trips a `go.work` version mismatch, `util/osutil` uses a cwd-relative path, and `miso` fails `TestWrapMisoErr`. None of them touch RabbitMQ.
 
-- Did the broker refuse vfm's reconnect (dial error), or did the re-declare fail (e.g. 406/404)?
-- Did the vfm process restart, get OOM-killed, or stay up?
-- Did the module-level reconnect goroutine run at all, and if not, where was it blocked?
+## The vfm incident
 
-The deciding artifact is vfm's own logs after 23:22. The `es-access` skill is **not configured** here (`~/.esaccess/es.json` missing); it needs the Kibana base URL from the user. Alternatively, container logs/state where the services run.
+The reproduced defect on the old code was a leak, not a reconnect stall. `NotifyClose` was unbuffered and abandoned on error paths, so the abandoned receiver wedged the connection's shutdown with a goroutine stuck on a channel send and a client socket left in the closed state. Separately, the old retry loop kept retrying against a captured dead connection, which is the once-a-second log spam.
 
-## 5. Decisions the user has not made
+That set of defects does not explain vfm disappearing from the broker's connection list with no recovery. The artifacts that would answer the remaining questions are gone: vfm's own logs after 23:22, the container state, whether the process restarted or was killed. Treat the root cause as unknown. The code fix stands on its own merits: unbuffered listeners, the socket leak, a data race on the publisher field, log spam.
 
-- Whether to commit the current miso fix at all, given §4 (it fixes real defects — buffered-listener invariant, leak, `m.publisher` race, log spam — but is not proven to be the incident's cause).
-- Version/tag for miso if committed, then the module bump + redeploy of vfm (and other services).
-- The follow-up design the user leaned toward: keep the connection-level supervisor, add a **per-channel supervisor** that restarts only the dead channel (AMQP-correct isolation), escalating to a full connection rebuild after two failed in-place restarts. The user asked for a spec for this **separately from the code commit**; the spec was never written because the work stopped.
-- Known small defect still unfixed: `retire()` on an already-closed connection returns `ErrClosed`, which the supervisor wrapper logs as `WARN Failed to close RabbitMQ connection` on every genuine reconnect (`rabbitmq.go` ~:558).
+## Decisions still pending
 
-## 6. Useful facts
+- Version and tag for miso. The latest tag is `v0.4.24`.
+- The module bump and redeploy of `vfm` and the other services once it is tagged.
+- Whether to implement the per-channel supervisor spec, and whether to write its tickets.
 
-- Local RabbitMQ: `localhost:5672`, default local guest credentials, management API on `:15672`; `rabbitmqctl` is **not** installed here — use the management API. Dials against this broker take ~5s, which slows reconnect tests and masks backoff timing.
-- `basic.cancel` (e.g. queue deleted under a consumer) → `watchChannel` cancel branch → `signal` → full generation rebuild; observed live (`consumer-cancelled=true`).
-- Delete `misorepro-*` queues / stray connections if any repro leftovers are found (`/api/queues`, `/api/connections`).
+## Running things
 
-## 7. Suggested skills to load
+```bash
+go test ./middleware/rabbit/ ./util/pool/ -count=1                  # broker-free, default
+MISO_RABBIT_BROKER_TESTS=1 go test ./middleware/rabbit/ -count=1    # needs localhost:5672
+```
 
-- `miso` (repo-local `skills/miso/SKILL.md`) — mandatory before writing miso Go code; plus `skills/miso/references/code-review-checklist.md` when reviewing.
-- `dev-flow` — when writing the per-channel spec/tickets (`.scratch/<slug>/` in the miso repo).
-- `es-access` — only if the user provides a Kibana URL for vfm's incident logs.
-- `offloaded-skill` — to load `handoff` or other offloaded skills by name.
+No broker and no Redis run on this machine right now; port 5672 and the management API on 15672 are both closed, and 6379 refuses connections. Dialing a missing broker takes about 5 seconds, which stretches the broker-backed tests and hides backoff timing.
 
-## 8. Files worth reading first
+`rabbitmqctl` is not installed. Use the management API on `localhost:15672` when a broker is up. Delete leftover `misorepro-*` and `it-*` queues and stray connections after a run.
 
-- `/Users/zhuangyongjie/dev/git/miso/middleware/rabbit/rabbitmq.go` (the uncommitted rewrite; `superviseRabbit`, `establish`, `dialRabbit`, `watchChannel`, `borrowPubChan`).
-- `/Users/zhuangyongjie/dev/git/miso/middleware/rabbit/rabbitmq_test.go:433` — the commented integration block, including the leak assertion and the broker-path recording.
-- `/Users/zhuangyongjie/dev/git/miso-bugverify/middleware/rabbit/rabbit_wedge_repro_test.go` — the reproducer that produced §3.
+## Files worth reading first
+
+- `middleware/rabbit/rabbitmq.go`: `superviseRabbit`, `establish`, `dialRabbit`, `watchChannel`, `borrowPubChan`, `retire`.
+- `middleware/rabbit/rabbitmq_test.go`: supervisor and publisher unit tests first, then the gated integration block at the end.
+- `.scratch/fix-rabbit-intergration/spec.md`: the channel isolation design.
+
+## Skills
+
+- `miso` (`skills/miso/SKILL.md`) before writing miso Go code, plus `skills/miso/references/code-review-checklist.md` when reviewing.
+- `dev-flow` for specs and tickets under `.scratch/<slug>/`.
