@@ -1,6 +1,6 @@
 # Nacos config-log masking covers credential keywords
 
-Status: ready-for-agent
+Status: done
 
 ## Problem
 
@@ -23,16 +23,16 @@ Extend the keyword list, and change how a keyword is matched so the new words do
   `strutil.CamelCase` loop stays as it is.
 - Compile the pattern case insensitively (`(?i)`).
 - Let a keyword sit anywhere inside the key, bounded by key characters:
-  `([A-Za-z0-9_.\-]*(kw)[A-Za-z0-9_.\-]*)`.
+  `([A-Za-z0-9_.\-]*(?:kw)[A-Za-z0-9_.\-]*)`.
 - Keep the value side `("?[^\n"]+"?)` and replace it with `***`, so the key, the separator and the
   indentation survive in the log.
 
 ## Contract and invariants
 
-- `desensitizeConfigContent(s)` masks the value of any line whose key contains a keyword, ignoring
-  case.
+- `desensitizeConfigContent(s)` masks the value that follows a keyword and its separator, anywhere
+  on the line, ignoring case.
 - Key, separator, quote characters and indentation stay readable. Only the value becomes `***`.
-- A line with no keyword in its key comes back unchanged.
+- A line with no keyword comes back unchanged.
 - The pattern compiles once in `init()`; matching costs nothing extra per call.
 - Over-masking is accepted. `key` and `token` now match inside any key, so a line such as
   `hotkey: 1` also loses its value. A masked non-secret is a cosmetic log defect; an unmasked
@@ -40,13 +40,13 @@ Extend the keyword list, and change how a keyword is matched so the new words do
 
 ## Acceptance criteria
 
-- [ ] `middleware/nacos/nacos_test.go` (package `nacos`, so it can reach the unexported
+- [x] `middleware/nacos/nacos_test.go` (package `nacos`, so it can reach the unexported
       `desensitizeConfigContent`) is a table test covering, for the five new keywords, the plain
       lowercase key, the mixed-case key, and the key with the word followed by more characters.
-- [ ] The control key `username` comes back unchanged.
-- [ ] Existing keywords still mask: `secret-key`, `access-token`, `password`.
-- [ ] `go test ./middleware/nacos/` passes.
-- [ ] `go build ./...` passes.
+- [x] The control key `username` comes back unchanged.
+- [x] Existing keywords still mask: `secret-key`, `access-token`, `password`.
+- [x] `go test ./middleware/nacos/` passes.
+- [x] `go build ./...` passes.
 
 ## Out of scope
 

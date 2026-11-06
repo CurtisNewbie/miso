@@ -51,6 +51,7 @@ var (
 func init() {
 	desensitizeKw := []string{"access-token", "access-key", "password", "secret", "token", "app-id", "app-key", "app-secret", "secret-key",
 		"api-key", "api-token", "api-secret", "key", "client-key", "client-secret", "client-token", "private-key", "private-token",
+		"pwd", "passwd", "credential", "authorization", "pem",
 	}
 	lwm := make([]string, 0, len(desensitizeKw)*2)
 	for _, k := range desensitizeKw {
@@ -61,7 +62,7 @@ func init() {
 		}
 	}
 	kwset := strings.Join(lwm, "|")
-	desensitizeContentRegex = regexp.MustCompile(`((` + kwset + `)[ "]*[=:] *)("?[^\n"]+"?)`)
+	desensitizeContentRegex = regexp.MustCompile(`(?i)(([A-Za-z0-9_.\-]*(?:` + kwset + `)[A-Za-z0-9_.\-]*)[ "]*[=:] *)("?[^\n"]+"?)`)
 
 	completeReload.Store(true)
 	miso.RegisterConfigLoader(func(rail miso.Rail) error {
