@@ -76,10 +76,10 @@ misopatch  # Auto-applies all patches using gopatch
 
 ### Required skills
 
-Load both before any non-trivial work, and name them in the reply that opens the work:
+Load `dev-flow`, and read the miso skill file, before any non-trivial work, then name both in the reply that opens the work:
 
 - `dev-flow` for the workflow this repo uses, which is grill, spec, tickets, TDD at agreed seams, then code review.
-- `miso` (`skills/miso/SKILL.md`) for framework usage, and `skills/miso/references/code-review-checklist.md` when reviewing.
+- `miso`: read `skills/miso/SKILL.md` with the read tool, since the skill tool cannot load a repo file, for framework usage. Read `skills/miso/references/code-review-checklist.md` when reviewing.
 
 A subagent does not inherit the skills its caller loaded. Name both in every delegation prompt, and check the subagent loaded them before accepting its work.
 
